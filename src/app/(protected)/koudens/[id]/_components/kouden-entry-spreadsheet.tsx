@@ -49,7 +49,7 @@ const COLUMNS: {
 	data: keyof SpreadsheetData;
 	title: string;
 	type?: "dropdown";
-	source?: readonly string[];
+	source?: string[];
 	numericFormat?: {
 		pattern: string;
 		culture: string;
@@ -75,7 +75,7 @@ const COLUMNS: {
 		data: "amount",
 		title: "金額",
 		type: "dropdown",
-		source: AMOUNT_OPTIONS.map(String),
+		source: Array.from(AMOUNT_OPTIONS).map(String),
 		numericFormat: {
 			pattern: "¥ 0,0",
 			culture: "ja-JP",
@@ -97,19 +97,19 @@ const COLUMNS: {
 		data: "attendance_type",
 		title: "参列",
 		type: "dropdown",
-		source: [...ATTENDANCE_OPTIONS],
+		source: Array.from(ATTENDANCE_OPTIONS),
 	},
 	{
 		data: "has_offering",
 		title: "供物",
 		type: "dropdown",
-		source: [...BOOLEAN_OPTIONS],
+		source: Array.from(BOOLEAN_OPTIONS),
 	},
 	{
 		data: "is_return_completed",
 		title: "香典返し済",
 		type: "dropdown",
-		source: [...COMPLETION_OPTIONS],
+		source: Array.from(COMPLETION_OPTIONS),
 	},
 	{ data: "notes", title: "備考" },
 ];
