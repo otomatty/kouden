@@ -1,0 +1,297 @@
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { z } from "zod";
+import type {
+	CreateKoudenParams,
+	GetKoudensParams,
+	Kouden,
+	KoudenEntry,
+} from "@/types/kouden";
+import { initializeDefaultRelationships } from "./relationships";
+
+const koudenSchema = z.object({
+	title: z.string().min(1, "香典帳のタイトルを入力してください"),
+	description: z.string().optional(),
+});
+
+export type CreateKoudenInput = z.infer<typeof koudenSchema>;
+
+export async function createKouden({
+	title,
+	description,
+	userId,
+}: CreateKoudenParams): Promise<{ kouden?: Kouden; error?: string }> {
+	try {
+		const supabase = await createClient();
+
+		// ユーザーIDが渡されていない場合は現在のユーザーのIDを使用
+		if (!userId) {
+			const {
+				data: { user },
+			} = await supabase.auth.getUser();
+			if (!user) {
+				return { error: "認証が必要です" };
+			}
+			userId = user.id;
+		}
+
+		console.log("[DEBUG] createKouden called with:", { title, userId });
+
+		// トランザクションを開始
+		const { data: kouden, error: koudenError } = await supabase
+			.from("koudens")
+			.insert({
+				title,
+				description,
+				owner_id: userId,
+				created_by: userId,
+			})
+			.select(
+				`
+        *,
+        owner:profiles!koudens_owner_id_fkey(
+          display_name
+        )
+      `,
+			)
+			.single();
+
+		if (koudenError) {
+			throw koudenError;
+		}
+
+		// kouden_membersテーブルに作成者を登録
+		const { error: memberError } = await supabase
+			.from("kouden_members")
+			.insert({
+				kouden_id: kouden.id,
+				user_id: userId,
+				role: "owner",
+				created_by: userId,
+			});
+
+		if (memberError) {
+			throw memberError;
+		}
+
+		// デフォルトの関係性を初期化
+		await initializeDefaultRelationships(kouden.id);
+
+		return {
+			kouden: {
+				...kouden,
+				owner: kouden.owner,
+			} as unknown as Kouden,
+		};
+	} catch (error) {
+		console.error("[ERROR] Error creating kouden:", error);
+		return { error: "香典帳の作成に失敗しました" };
+	}
+}
+
+export async function getKoudens({
+	userId,
+}: GetKoudensParams): Promise<{ koudens?: Kouden[]; error?: string }> {
+	try {
+		console.log("[DEBUG] getKoudens called with userId:", userId);
+		const supabase = await createClient();
+
+		const { data: koudens, error } = await supabase
+			.from("koudens")
+			.select(
+				`
+        *,
+        owner:profiles!koudens_owner_id_fkey(
+          display_name
+        )
+      `,
+			)
+			.or(`owner_id.eq.${userId},kouden_members.user_id.eq.${userId}`)
+			.order("created_at", { ascending: false });
+
+		console.log("[DEBUG] getKoudens result:", { koudens, error });
+
+		if (error) {
+			throw error;
+		}
+
+		return {
+			koudens: koudens?.map((kouden) => ({
+				...kouden,
+				owner: kouden.owner,
+			})) as unknown as Kouden[],
+		};
+	} catch (error) {
+		console.error("[ERROR] Error getting koudens:", error);
+		return { error: "香典帳の取得に失敗しました" };
+	}
+}
+
+export async function getKouden(id: string) {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	if (!user) {
+		throw new Error("認証が必要です");
+	}
+
+	const { data, error } = await supabase
+		.from("koudens")
+		.select("*")
+		.eq("id", id)
+		.single();
+
+	if (error) {
+		throw new Error("香典帳の取得に失敗しました");
+	}
+
+	return data;
+}
+
+export async function getKoudenWithEntries(id: string) {
+	const supabase = await createClient();
+	const {
+		data: { user },
+		error: userError,
+	} = await supabase.auth.getUser();
+
+	if (userError || !user) {
+		throw new Error("認証が必要です");
+	}
+
+	const { data: kouden } = await supabase
+		.from("koudens")
+		.select(`
+			*,
+			owner:profiles!koudens_owner_id_fkey(
+				display_name
+			)
+		`)
+		.eq("id", id)
+		.single();
+
+	if (!kouden) {
+		return null;
+	}
+
+	const { data: entries } = await supabase
+		.from("kouden_entries")
+		.select(`
+			*,
+			offerings:offerings(*),
+			return_items:return_items(*)
+		`)
+		.eq("kouden_id", id)
+		.order("created_at", { ascending: false });
+
+	return {
+		kouden,
+		entries: entries as unknown as KoudenEntry[],
+	};
+}
+
+export async function updateKouden(
+	id: string,
+	input: { title: string; description?: string },
+) {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	if (!user) {
+		throw new Error("認証が必要です");
+	}
+
+	const { error } = await supabase.from("koudens").update(input).eq("id", id);
+
+	if (error) {
+		throw new Error("香典帳の更新に失敗しました");
+	}
+
+	revalidatePath(`/koudens/${id}`);
+}
+
+export async function deleteKouden(id: string) {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	if (!user) {
+		throw new Error("認証が必要です");
+	}
+
+	const { error } = await supabase.from("koudens").delete().eq("id", id);
+
+	if (error) {
+		throw new Error("香典帳の削除に失敗しました");
+	}
+
+	revalidatePath("/koudens");
+	redirect("/koudens");
+}
+
+export async function shareKouden(id: string, userIds: string[]) {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	if (!user) {
+		throw new Error("認証が必要です");
+	}
+
+	await supabase
+		.from("kouden_members")
+		.delete()
+		.eq("kouden_id", id)
+		.neq("user_id", user.id);
+
+	const { error } = await supabase.from("kouden_members").insert(
+		userIds.map((userId) => ({
+			kouden_id: id,
+			user_id: userId,
+			role: "viewer",
+			created_by: user.id,
+		})),
+	);
+
+	if (error) {
+		throw new Error("香典帳の共有に失敗しました");
+	}
+
+	revalidatePath(`/koudens/${id}`);
+}
+
+export async function archiveKouden(id: string) {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	if (!user) {
+		throw new Error("認証が必要です");
+	}
+
+	const { data, error } = await supabase
+		.from("koudens")
+		.update({
+			status: "archived",
+		})
+		.eq("id", id)
+		.select()
+		.single();
+
+	if (error) {
+		throw new Error("香典帳のアーカイブに失敗しました");
+	}
+
+	revalidatePath(`/koudens/${id}`);
+	return data;
+}
