@@ -7,12 +7,13 @@ export interface KoudenMember {
 	role: MemberRole;
 	created_at: string;
 	updated_at: string;
-	created_by: string;
-	// プロフィール情報を含める
-	profile?: {
-		display_name: string;
-		avatar_url: string | null;
-	};
+	user: {
+		id: string;
+		profile: {
+			display_name: string;
+			avatar_url: string | null;
+		} | null;
+	} | null;
 }
 
 export interface KoudenInvitation {

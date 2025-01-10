@@ -1,6 +1,13 @@
+import type { Metadata } from "next";
+
 import { createClient } from "@/lib/supabase/server";
 import { KoudenList } from "./_components/kouden-list";
 import { CreateKoudenForm } from "./_components/create-kouden-form";
+
+export const metadata: Metadata = {
+	title: "香典帳一覧",
+	description: "香典帳一覧",
+};
 
 export default async function KoudensPage() {
 	const supabase = await createClient();

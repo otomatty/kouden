@@ -5,70 +5,91 @@ import * as XLSX from "xlsx";
 import type { Database } from "@/types/supabase";
 
 type KoudenEntry = Database["public"]["Tables"]["kouden_entries"]["Row"] & {
-	offerings?: Database["public"]["Tables"]["offerings"]["Row"][];
-	return_items?: Database["public"]["Tables"]["return_items"]["Row"][];
+	relationship: {
+		name: string;
+	} | null;
 };
 
 export async function exportKoudenToExcel(koudenId: string) {
 	const supabase = await createClient();
 
-	// 香典帳の基本情報を取得
-	const { data: kouden } = await supabase
+	// 香典帳の情報を取得
+	const { data: kouden, error: koudenError } = await supabase
 		.from("koudens")
-		.select("*")
+		.select("title")
 		.eq("id", koudenId)
 		.single();
 
-	if (!kouden) {
-		throw new Error("香典帳が見つかりません");
+	if (koudenError) {
+		throw new Error("香典帳の取得に失敗しました");
 	}
 
-	// エントリー情報を取得
-	const { data: entries } = await supabase
+	// 香典データを取得
+	const { data: entries, error: entriesError } = await supabase
 		.from("kouden_entries")
-		.select(`
-			*,
-			offerings:offerings(*),
-			return_items:return_items(*)
-		`)
+		.select("*")
 		.eq("kouden_id", koudenId)
-		.order("created_at", { ascending: true });
+		.order("created_at", { ascending: false });
 
-	if (!entries) {
-		throw new Error("エントリーの取得に失敗しました");
+	if (entriesError) {
+		throw new Error("香典データの取得に失敗しました");
 	}
 
-	// エクセルデータの作成
-	const worksheetData = (entries as unknown as KoudenEntry[]).map((entry) => ({
-		日付: new Date(entry.created_at).toLocaleDateString(),
-		氏名: entry.name,
-		金額: entry.amount,
-		供物: entry.offerings?.map((o) => o.type).join(", ") || "",
-		返礼品: entry.return_items?.map((r) => r.name).join(", ") || "",
+	// 関係性データを取得
+	const { data: relationships, error: relationshipsError } = await supabase
+		.from("relationships")
+		.select("id, name")
+		.eq("kouden_id", koudenId);
+
+	if (relationshipsError) {
+		throw new Error("関係性データの取得に失敗しました");
+	}
+
+	// データを結合
+	const mergedEntries = entries.map((entry) => ({
+		...entry,
+		relationship: relationships.find((r) => r.id === entry.relationship_id),
 	}));
 
-	// ワークブックとワークシートの作成
-	const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+	// Excelワークブックを作成
 	const workbook = XLSX.utils.book_new();
-	XLSX.utils.book_append_sheet(workbook, worksheet, "エントリー一覧");
 
-	// エクセルファイルの生成
+	// データを変換
+	const excelData = (mergedEntries as unknown as KoudenEntry[]).map(
+		(entry) => ({
+			ご芳名: entry.name,
+			団体名: entry.organization || "",
+			役職: entry.position || "",
+			ご関係: entry.relationship?.name || "",
+			金額: entry.amount,
+			郵便番号: entry.postal_code || "",
+			住所: entry.address,
+			電話番号: entry.phone_number || "",
+			参列:
+				entry.attendance_type === "FUNERAL"
+					? "葬儀"
+					: entry.attendance_type === "CONDOLENCE_VISIT"
+						? "弔問"
+						: "欠席",
+			供物: entry.has_offering ? "有" : "無",
+			備考: entry.notes || "",
+		}),
+	);
+
+	// ワークシートを作成
+	const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+	// ワークブックにワークシートを追加
+	XLSX.utils.book_append_sheet(workbook, worksheet, "香典帳");
+
+	// Excelファイルをバイナリ形式で生成
 	const excelBuffer = XLSX.write(workbook, {
-		type: "buffer",
+		type: "base64",
 		bookType: "xlsx",
 	});
 
-	// フッファーをBase64文字列に変換
-	const base64 = Buffer.from(excelBuffer).toString("base64");
-
-	// ファイル名の生成（日本時間で）
-	const date = new Date()
-		.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })
-		.replace(/[\/\s:]/g, "");
-	const fileName = `${kouden.title}_${date}.xlsx`;
-
 	return {
-		base64,
-		fileName,
+		base64: excelBuffer,
+		fileName: `${kouden.title}_${new Date().toISOString().split("T")[0]}.xlsx`,
 	};
 }

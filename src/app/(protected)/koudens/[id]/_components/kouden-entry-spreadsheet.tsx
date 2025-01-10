@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
-import { HotTable, type HotTableClass } from "@handsontable/react";
-import { registerAllModules } from "handsontable/registry";
-import type { CellChange, ChangeSource } from "handsontable/common";
-import type Handsontable from "handsontable";
-import "handsontable/dist/handsontable.full.min.css";
-import type { Database } from "@/types/supabase";
+import { useState, useCallback, useEffect } from "react";
+import {
+	useReactTable,
+	getCoreRowModel,
+	flexRender,
+	createColumnHelper,
+} from "@tanstack/react-table";
 import type {
 	UpdateKoudenEntryInput,
 	KoudenEntryResponse,
@@ -21,9 +21,14 @@ import {
 	createRelationship,
 	getRelationships,
 } from "@/app/_actions/relationships";
-
-// すべてのHandsontableモジュールを登録
-registerAllModules();
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 
 interface KoudenEntrySpreadsheetProps {
 	entries: KoudenEntry[];
@@ -40,98 +45,9 @@ interface KoudenEntrySpreadsheetProps {
 const ATTENDANCE_OPTIONS = ["葬儀", "弔問", "欠席"] as const;
 const BOOLEAN_OPTIONS = ["有", "無"] as const;
 const COMPLETION_OPTIONS = ["済", "未"] as const;
-
 const AMOUNT_OPTIONS = [
 	1000, 2000, 3000, 5000, 10000, 20000, 30000, 50000, 100000,
 ] as const;
-
-const COLUMNS: {
-	data: keyof SpreadsheetData;
-	title: string;
-	type?: "dropdown";
-	source?: string[];
-	numericFormat?: {
-		pattern: string;
-		culture: string;
-	};
-	allowInvalid?: boolean;
-	className?: string;
-	validator?: (
-		value: string | null,
-		callback: (isValid: boolean) => void,
-	) => void;
-}[] = [
-	{ data: "name", title: "ご芳名" },
-	{ data: "organization", title: "団体名" },
-	{ data: "position", title: "役職" },
-	{
-		data: "relationship",
-		title: "ご関係",
-		type: "dropdown",
-		source: [], // 動的に更新
-		allowInvalid: false,
-	},
-	{
-		data: "amount",
-		title: "金額",
-		type: "dropdown",
-		source: Array.from(AMOUNT_OPTIONS).map(String),
-		numericFormat: {
-			pattern: "¥ 0,0",
-			culture: "ja-JP",
-		},
-		allowInvalid: false,
-		className: "htRight htMiddle",
-		validator: (value: string | null, callback: (isValid: boolean) => void) => {
-			if (value === null || value === "") {
-				callback(true);
-				return;
-			}
-			callback(Number.isInteger(Number(value)) && Number(value) >= 0);
-		},
-	},
-	{ data: "postal_code", title: "郵便番号" },
-	{ data: "address", title: "住所" },
-	{ data: "phone_number", title: "電話番号" },
-	{
-		data: "attendance_type",
-		title: "参列",
-		type: "dropdown",
-		source: Array.from(ATTENDANCE_OPTIONS),
-	},
-	{
-		data: "has_offering",
-		title: "供物",
-		type: "dropdown",
-		source: Array.from(BOOLEAN_OPTIONS),
-	},
-	{
-		data: "is_return_completed",
-		title: "香典返し済",
-		type: "dropdown",
-		source: Array.from(COMPLETION_OPTIONS),
-	},
-	{ data: "notes", title: "備考" },
-];
-
-// 郵便番号検索関数
-async function searchAddress(postalCode: string): Promise<string | null> {
-	try {
-		const response = await fetch(
-			`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${postalCode}`,
-		);
-		const data = await response.json();
-
-		if (data.results?.[0]) {
-			const { address1, address2, address3 } = data.results[0];
-			return `${address1}${address2}${address3}`;
-		}
-		return null;
-	} catch (error) {
-		console.error("Failed to fetch address:", error);
-		return null;
-	}
-}
 
 interface SpreadsheetData {
 	id: string;
@@ -145,7 +61,6 @@ interface SpreadsheetData {
 	phone_number: string;
 	attendance_type: "葬儀" | "弔問" | "欠席" | null;
 	has_offering: "有" | "無";
-	is_return_completed: "済" | "未";
 	notes: string;
 }
 
@@ -155,15 +70,36 @@ export function KoudenEntrySpreadsheet({
 	updateKoudenEntry,
 	createKoudenEntry,
 }: KoudenEntrySpreadsheetProps) {
-	const hotTableRef = useRef<HotTableClass>(null);
-	const [data, setData] = useState<SpreadsheetData[]>(
-		() =>
-			initialEntries?.map((entry) => ({
+	const [data, setData] = useState<SpreadsheetData[]>([]);
+	const [relationships, setRelationships] = useState<
+		Array<{ id: string; name: string }>
+	>([]);
+	const router = useRouter();
+	const columnHelper = createColumnHelper<SpreadsheetData>();
+
+	// 関係性のリストを読み込む
+	useEffect(() => {
+		async function loadRelationships() {
+			try {
+				const relations = await getRelationships(koudenId);
+				setRelationships(relations);
+			} catch (error) {
+				console.error("Failed to load relationships:", error);
+			}
+		}
+		loadRelationships();
+	}, [koudenId]);
+
+	// データの初期化を関係性の読み込み後に行う
+	useEffect(() => {
+		if (relationships.length > 0 && initialEntries) {
+			const mappedData: SpreadsheetData[] = initialEntries.map((entry) => ({
 				id: entry.id,
 				name: entry.name,
 				organization: entry.organization || "",
 				position: entry.position || "",
-				relationship: entry.relationship_id || "",
+				relationship:
+					relationships.find((r) => r.id === entry.relationship_id)?.name || "",
 				amount: entry.amount,
 				postal_code: entry.postal_code || "",
 				address: entry.address,
@@ -173,40 +109,17 @@ export function KoudenEntrySpreadsheet({
 						? "葬儀"
 						: entry.attendance_type === "CONDOLENCE_VISIT"
 							? "弔問"
-							: ("欠席" as const),
+							: "欠席",
 				has_offering: entry.has_offering ? "有" : "無",
-				is_return_completed: entry.is_return_completed ? "済" : "未",
 				notes: entry.notes || "",
-			})) || [],
-	);
-	const [entries, setEntries] = useState(initialEntries);
-	const [relationships, setRelationships] = useState<string[]>([]);
-	const router = useRouter();
-
-	// 関係性のリストを読み込む
-	useEffect(() => {
-		async function loadRelationships() {
-			try {
-				const relations = await getRelationships(koudenId);
-				const relationNames = relations.map((r) => r.name);
-				setRelationships(relationNames);
-				// COLUMNSの関係性のsourceを更新
-				const relationshipColumn = COLUMNS.find(
-					(col) => col.data === "relationship",
-				);
-				if (relationshipColumn) {
-					relationshipColumn.source = relationNames;
-				}
-			} catch (error) {
-				console.error("Failed to load relationships:", error);
-			}
+			}));
+			setData(mappedData);
 		}
-		loadRelationships();
-	}, [koudenId]);
+	}, [relationships, initialEntries]);
 
+	// Supabaseのリアルタイム購読を設定
 	useEffect(() => {
 		const supabase = createClient();
-		console.log("Setting up subscription for koudenId:", koudenId);
 
 		const koudenEntriesSubscription = supabase
 			.channel("kouden_entries_changes")
@@ -219,74 +132,47 @@ export function KoudenEntrySpreadsheet({
 					filter: `kouden_id=eq.${koudenId}`,
 				},
 				async (payload) => {
-					console.log("Received payload:", payload);
 					if (payload.eventType === "INSERT") {
-						console.log("INSERT event received");
-						const { data: newEntry, error } = await supabase
+						const { data: newEntry } = await supabase
 							.from("kouden_entries")
-							.select(`
-								*,
-								offerings:offerings(*),
-								return_items:return_items(*)
-							`)
+							.select("*")
 							.eq("id", payload.new.id)
 							.single();
 
-						console.log("Fetched new entry:", newEntry, "Error:", error);
-
-						if (newEntry) {
-							setEntries((prev) => {
-								console.log("Previous entries:", prev);
-								const updated = [...prev, newEntry as unknown as KoudenEntry];
-								console.log("Updated entries:", updated);
-								return updated;
-							});
-							setData((prev) => {
-								console.log("Previous data:", prev);
-								const updated = [
-									...prev,
-									{
-										id: newEntry.id,
-										name: newEntry.name,
-										organization: newEntry.organization || "",
-										position: newEntry.position || "",
-										relationship: newEntry.relationship_id || "",
-										amount: newEntry.amount,
-										postal_code: newEntry.postal_code || "",
-										address: newEntry.address,
-										phone_number: newEntry.phone_number || "",
-										attendance_type:
-											newEntry.attendance_type === "FUNERAL"
-												? ("葬儀" as const)
-												: newEntry.attendance_type === "CONDOLENCE_VISIT"
-													? ("弔問" as const)
-													: ("欠席" as const),
-										has_offering: newEntry.has_offering ? "有" : "無",
-										is_return_completed: newEntry.is_return_completed
-											? "済"
-											: "未",
-										notes: newEntry.notes || "",
-									} satisfies SpreadsheetData,
-								];
-								console.log("Updated data:", updated);
-								return updated;
-							});
+						if (newEntry && relationships.length > 0) {
+							setData((prev) => [
+								...prev,
+								{
+									id: newEntry.id,
+									name: newEntry.name,
+									organization: newEntry.organization || "",
+									position: newEntry.position || "",
+									relationship:
+										relationships.find((r) => r.id === newEntry.relationship_id)
+											?.name || "",
+									amount: newEntry.amount,
+									postal_code: newEntry.postal_code || "",
+									address: newEntry.address,
+									phone_number: newEntry.phone_number || "",
+									attendance_type:
+										newEntry.attendance_type === "FUNERAL"
+											? "葬儀"
+											: newEntry.attendance_type === "CONDOLENCE_VISIT"
+												? "弔問"
+												: "欠席",
+									has_offering: newEntry.has_offering ? "有" : "無",
+									notes: newEntry.notes || "",
+								},
+							]);
 						}
 					} else if (payload.eventType === "UPDATE") {
 						const { data: updatedEntry } = await supabase
 							.from("kouden_entries")
-							.select("*, offerings (*), return_items (*)")
+							.select("*")
 							.eq("id", payload.new.id)
 							.single();
 
-						if (updatedEntry) {
-							setEntries((prev) =>
-								prev.map((entry) =>
-									entry.id === updatedEntry.id
-										? (updatedEntry as unknown as KoudenEntry)
-										: entry,
-								),
-							);
+						if (updatedEntry && relationships.length > 0) {
 							setData((prev) =>
 								prev.map((entry) =>
 									entry.id === updatedEntry.id
@@ -295,6 +181,10 @@ export function KoudenEntrySpreadsheet({
 												name: updatedEntry.name,
 												organization: updatedEntry.organization || "",
 												position: updatedEntry.position || "",
+												relationship:
+													relationships.find(
+														(r) => r.id === updatedEntry.relationship_id,
+													)?.name || "",
 												amount: updatedEntry.amount,
 												postal_code: updatedEntry.postal_code || "",
 												address: updatedEntry.address,
@@ -305,11 +195,8 @@ export function KoudenEntrySpreadsheet({
 														: updatedEntry.attendance_type ===
 																"CONDOLENCE_VISIT"
 															? "弔問"
-															: null,
+															: "欠席",
 												has_offering: updatedEntry.has_offering ? "有" : "無",
-												is_return_completed: updatedEntry.is_return_completed
-													? "済"
-													: "未",
 												notes: updatedEntry.notes || "",
 											}
 										: entry,
@@ -317,137 +204,332 @@ export function KoudenEntrySpreadsheet({
 							);
 						}
 					} else if (payload.eventType === "DELETE") {
-						setEntries((prev) => prev.filter((e) => e.id !== payload.old.id));
-						setData((prev) =>
-							prev.filter((entry) => entry.id !== payload.old.id),
-						);
+						setData((prev) => prev.filter((e) => e.id !== payload.old.id));
 					}
 				},
 			);
 
-		koudenEntriesSubscription.subscribe((status) => {
-			console.log("Subscription status:", status);
-		});
+		koudenEntriesSubscription.subscribe();
 
 		return () => {
-			console.log("Cleaning up subscription");
 			supabase.channel("kouden_entries_changes").unsubscribe();
 		};
-	}, [koudenId]);
+	}, [koudenId, relationships]);
+
+	// 郵便番号検索関数
+	const searchAddress = async (postalCode: string) => {
+		if (!postalCode || postalCode.length < 7) return null;
+
+		try {
+			const res = await fetch(
+				`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${postalCode}`,
+			);
+			const data = await res.json();
+
+			if (data.results?.[0]) {
+				const { address1, address2, address3 } = data.results[0];
+				return `${address1}${address2}${address3}`;
+			}
+			return null;
+		} catch (error) {
+			console.error("Failed to search address:", error);
+			return null;
+		}
+	};
+
+	// セルコンポーネント
+	const createCellComponent = (
+		key: keyof SpreadsheetData,
+		type: "text" | "number" | "select",
+		options?: { value: string; label: string }[],
+	) => {
+		return ({
+			getValue,
+			row,
+		}: {
+			getValue: () => SpreadsheetData[typeof key];
+			row: { original: SpreadsheetData };
+		}) => {
+			const value = getValue();
+			const [localValue, setLocalValue] = useState(value);
+
+			const handleBlur = async () => {
+				if (localValue === value) return;
+
+				// 郵便番号が入力された場合、住所を自動入力
+				if (key === "postal_code" && typeof localValue === "string") {
+					const formattedPostalCode = localValue.replace(/[^\d]/g, "");
+					if (formattedPostalCode.length === 7) {
+						const address = await searchAddress(formattedPostalCode);
+						if (address) {
+							// 郵便番号と住所を同時に更新
+							const rowData = data.find((r) => r.id === row.original.id);
+							if (rowData) {
+								try {
+									await updateKoudenEntry(row.original.id, {
+										name: rowData.name,
+										organization: rowData.organization || undefined,
+										position: rowData.position || undefined,
+										relationship_id: relationships.find(
+											(r) => r.name === rowData.relationship,
+										)?.id,
+										amount: Number(rowData.amount),
+										postal_code: formattedPostalCode,
+										address: address,
+										phone_number: rowData.phone_number || undefined,
+										attendance_type:
+											rowData.attendance_type === "葬儀"
+												? "FUNERAL"
+												: rowData.attendance_type === "弔問"
+													? "CONDOLENCE_VISIT"
+													: null,
+										has_offering: rowData.has_offering === "有",
+										notes: rowData.notes || undefined,
+									});
+
+									// 更新が成功したら、ローカルの状態を更新
+									setData((prev) =>
+										prev.map((r) =>
+											r.id === row.original.id
+												? {
+														...r,
+														postal_code: formattedPostalCode,
+														address: address,
+													}
+												: r,
+										),
+									);
+									return; // 郵便番号と住所を更新したので、以降の処理は不要
+								} catch (error) {
+									console.error(
+										"Failed to update postal code and address:",
+										error,
+									);
+								}
+							}
+						}
+					}
+				}
+
+				handleCellChange(row.original.id, key, localValue);
+			};
+
+			if (type === "select" && options) {
+				return (
+					<Select
+						value={String(localValue || options[0].value)}
+						onValueChange={(newValue: string) => {
+							setLocalValue(newValue);
+						}}
+						onOpenChange={(open) => {
+							if (!open) handleBlur();
+						}}
+					>
+						<SelectTrigger className="w-full">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{options.map((option) => (
+								<SelectItem key={option.value} value={option.value}>
+									{option.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				);
+			}
+
+			return (
+				<Input
+					type={type}
+					value={localValue?.toString() || ""}
+					min={type === "number" ? 0 : undefined}
+					step={type === "number" ? 1000 : undefined}
+					onChange={(e) => {
+						const newValue =
+							type === "number" ? Number(e.target.value) : e.target.value;
+						setLocalValue(newValue);
+					}}
+					onBlur={handleBlur}
+					className={`w-full ${type === "number" ? "text-right" : ""}`}
+				/>
+			);
+		};
+	};
+
+	// カラム定義を修正
+	const columns = [
+		columnHelper.accessor("name", {
+			header: "ご芳名",
+			cell: createCellComponent("name", "text"),
+		}),
+		columnHelper.accessor("organization", {
+			header: "団体名",
+			cell: createCellComponent("organization", "text"),
+		}),
+		columnHelper.accessor("position", {
+			header: "役職",
+			cell: createCellComponent("position", "text"),
+		}),
+		columnHelper.accessor("relationship", {
+			header: "ご関係",
+			cell: createCellComponent(
+				"relationship",
+				"select",
+				relationships.map((rel) => ({
+					value: rel.name,
+					label: rel.name,
+				})),
+			),
+		}),
+		columnHelper.accessor("amount", {
+			header: "金額",
+			cell: createCellComponent("amount", "number"),
+		}),
+		columnHelper.accessor("postal_code", {
+			header: "郵便番号",
+			cell: createCellComponent("postal_code", "text"),
+		}),
+		columnHelper.accessor("address", {
+			header: "住所",
+			cell: createCellComponent("address", "text"),
+		}),
+		columnHelper.accessor("phone_number", {
+			header: "電話番号",
+			cell: createCellComponent("phone_number", "text"),
+		}),
+		columnHelper.accessor("attendance_type", {
+			header: "参列",
+			cell: createCellComponent(
+				"attendance_type",
+				"select",
+				ATTENDANCE_OPTIONS.map((option) => ({
+					value: option,
+					label: option,
+				})),
+			),
+		}),
+		columnHelper.accessor("has_offering", {
+			header: "供物",
+			cell: createCellComponent(
+				"has_offering",
+				"select",
+				BOOLEAN_OPTIONS.map((option) => ({
+					value: option,
+					label: option,
+				})),
+			),
+		}),
+		columnHelper.accessor("notes", {
+			header: "備考",
+			cell: createCellComponent("notes", "text"),
+		}),
+	];
+
+	const table = useReactTable({
+		data,
+		columns,
+		getCoreRowModel: getCoreRowModel(),
+	});
+
+	const handleCellChange = useCallback(
+		async (
+			entryId: string,
+			field: keyof SpreadsheetData,
+			value: SpreadsheetData[keyof SpreadsheetData],
+		) => {
+			const rowData = data.find((row) => row.id === entryId);
+			if (!rowData) return;
+
+			const updatedRowData = {
+				...rowData,
+				[field]: value,
+			};
+
+			try {
+				await updateKoudenEntry(entryId, {
+					name: updatedRowData.name,
+					organization: updatedRowData.organization || undefined,
+					position: updatedRowData.position || undefined,
+					relationship_id: relationships.find(
+						(r) => r.name === updatedRowData.relationship,
+					)?.id,
+					amount: Number(updatedRowData.amount),
+					postal_code: updatedRowData.postal_code || undefined,
+					address: updatedRowData.address,
+					phone_number: updatedRowData.phone_number || undefined,
+					attendance_type:
+						updatedRowData.attendance_type === "葬儀"
+							? "FUNERAL"
+							: updatedRowData.attendance_type === "弔問"
+								? "CONDOLENCE_VISIT"
+								: null,
+					has_offering: updatedRowData.has_offering === "有",
+					notes: updatedRowData.notes || undefined,
+				});
+
+				// 更新が成功したら、ローカルの状態を更新
+				setData((prev) =>
+					prev.map((row) => (row.id === entryId ? updatedRowData : row)),
+				);
+			} catch (error) {
+				console.error("Failed to update entry:", error);
+			}
+		},
+		[data, relationships, updateKoudenEntry],
+	);
 
 	const handleAddRow = useCallback(async () => {
-		console.log("Adding new row for koudenId:", koudenId);
 		try {
-			const response = await createKoudenEntry({
+			await createKoudenEntry({
 				kouden_id: koudenId,
 				name: "",
 				amount: 0,
 				attendance_type: "FUNERAL",
 				has_offering: false,
-				is_return_completed: false,
 				postal_code: "",
 				address: "",
+				is_return_completed: false,
 			});
-			console.log("Created new entry:", response);
-
 			router.refresh();
 		} catch (error) {
 			console.error("Failed to add row:", error);
 		}
 	}, [koudenId, createKoudenEntry, router]);
 
-	const handleChange = useCallback(
-		async (changes: CellChange[] | null, source: ChangeSource) => {
-			if (!changes) return;
-
-			for (const [row, prop, oldValue, newValue] of changes) {
-				const entryId = data[row].id;
-				if (!entryId) continue;
-
-				// 関係性が新しく追加された場合
-				if (
-					prop === "relationship" &&
-					newValue &&
-					!relationships.includes(newValue)
-				) {
-					try {
-						await createRelationship({
-							koudenId,
-							name: newValue,
-							description: `${newValue}として追加`,
-						});
-						setRelationships((prev) => [...prev, newValue]);
-					} catch (error) {
-						console.error("Failed to create relationship:", error);
-						// エラー時は古い値に戻す
-						const hot = hotTableRef.current?.hotInstance;
-						if (hot) {
-							hot.setDataAtCell(row, hot.propToCol(prop), oldValue);
-						}
-						return;
-					}
-				}
-
-				// データの更新
-				const rowData = data[row];
-				try {
-					await updateKoudenEntry(entryId, {
-						name: rowData.name,
-						organization: rowData.organization || undefined,
-						position: rowData.position || undefined,
-						relationship_id: rowData.relationship || undefined,
-						amount: Number(rowData.amount),
-						postal_code: rowData.postal_code || undefined,
-						address: rowData.address,
-						phone_number: rowData.phone_number || undefined,
-						attendance_type:
-							rowData.attendance_type === "葬儀"
-								? "FUNERAL"
-								: rowData.attendance_type === "弔問"
-									? "CONDOLENCE_VISIT"
-									: null,
-						has_offering: rowData.has_offering === "有",
-						is_return_completed: rowData.is_return_completed === "済",
-						notes: rowData.notes || undefined,
-					});
-				} catch (error) {
-					console.error("Failed to update entry:", error);
-					// エラー時は古い値に戻す
-					const hot = hotTableRef.current?.hotInstance;
-					if (hot) {
-						hot.setDataAtCell(row, hot.propToCol(prop), oldValue);
-					}
-				}
-			}
-		},
-		[data, koudenId, relationships, updateKoudenEntry],
-	);
-
 	return (
 		<div className="space-y-4">
-			<div className="overflow-auto">
-				<div className="min-w-[1200px]">
-					<HotTable
-						ref={hotTableRef}
-						data={data}
-						colHeaders={COLUMNS.map((col) => col.title)}
-						columns={COLUMNS}
-						rowHeaders={true}
-						width="100%"
-						height="auto"
-						licenseKey="non-commercial-and-evaluation"
-						afterChange={handleChange}
-						stretchH="all"
-						className="htMiddle"
-						beforeKeyDown={(event) => {
-							// Ctrl+Enter または Cmd+Enter で行を追加
-							if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
-								event.stopImmediatePropagation();
-								handleAddRow();
-							}
-						}}
-					/>
-				</div>
+			<div className="overflow-x-auto">
+				<table className="w-full border-collapse">
+					<thead>
+						{table.getHeaderGroups().map((headerGroup) => (
+							<tr key={headerGroup.id}>
+								{headerGroup.headers.map((header) => (
+									<th
+										key={header.id}
+										className="border border-gray-200 bg-gray-50 p-2 text-left text-sm font-medium text-gray-500"
+									>
+										{flexRender(
+											header.column.columnDef.header,
+											header.getContext(),
+										)}
+									</th>
+								))}
+							</tr>
+						))}
+					</thead>
+					<tbody>
+						{table.getRowModel().rows.map((row) => (
+							<tr key={row.id}>
+								{row.getVisibleCells().map((cell) => (
+									<td key={cell.id} className="border border-gray-200 p-2">
+										{flexRender(cell.column.columnDef.cell, cell.getContext())}
+									</td>
+								))}
+							</tr>
+						))}
+					</tbody>
+				</table>
 			</div>
 			<div className="flex justify-center">
 				<Button

@@ -155,6 +155,7 @@ export async function getKouden(id: string) {
 
 export async function getKoudenWithEntries(id: string) {
 	const supabase = await createClient();
+
 	const {
 		data: { user },
 		error: userError,
@@ -164,30 +165,34 @@ export async function getKoudenWithEntries(id: string) {
 		throw new Error("認証が必要です");
 	}
 
-	const { data: kouden } = await supabase
+	const { data: kouden, error: koudenError } = await supabase
 		.from("koudens")
 		.select(`
 			*,
 			owner:profiles!koudens_owner_id_fkey(
 				display_name
 			)
-		`)
+			`)
 		.eq("id", id)
 		.single();
+
+	if (koudenError) {
+		return null;
+	}
 
 	if (!kouden) {
 		return null;
 	}
 
-	const { data: entries } = await supabase
+	const { data: entries, error: entriesError } = await supabase
 		.from("kouden_entries")
-		.select(`
-			*,
-			offerings:offerings(*),
-			return_items:return_items(*)
-		`)
+		.select("*")
 		.eq("kouden_id", id)
 		.order("created_at", { ascending: false });
+
+	if (entriesError) {
+		return null;
+	}
 
 	return {
 		kouden,

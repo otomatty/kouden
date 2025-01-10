@@ -49,10 +49,15 @@ CREATE POLICY "ユーザーは自分が作成した香典帳の関係性を閲�
 -- 作成ポリシー
 CREATE POLICY "ユーザーは自分が作成した香典帳に関係性を追加できる" ON relationships
     FOR INSERT WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM koudens
-            WHERE koudens.id = relationships.kouden_id
-            AND koudens.created_by = auth.uid()
+        (
+            EXISTS (
+                SELECT 1 FROM koudens
+                WHERE koudens.id = relationships.kouden_id
+                AND koudens.created_by = auth.uid()
+            )
+        ) OR (
+            -- トリガー関数からの挿入を許可
+            auth.uid() IS NULL
         )
     );
 

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-
+import type { Metadata } from "next";
 import {
 	createKoudenEntry,
 	updateKoudenEntry,
@@ -22,18 +22,17 @@ import {
 } from "@/app/_actions/koudens";
 import { KoudenDetail } from "./_components/kouden-detail";
 
-interface KoudenDetailPageProps {
-	params: {
-		id: string;
-	};
-	searchParams: { [key: string]: string | string[] | undefined };
-}
+export const metadata: Metadata = {
+	title: "香典帳詳細",
+	description: "香典帳詳細",
+};
 
-export default async function KoudenDetailPage({
-	params,
-	searchParams,
-}: KoudenDetailPageProps) {
-	const { id } = await Promise.resolve(params);
+type Props = {
+	params: Promise<{ id: string }>;
+};
+
+export default async function KoudenDetailPage({ params }: Props) {
+	const { id } = await params;
 	const data = await getKoudenWithEntries(id);
 
 	if (!data) {

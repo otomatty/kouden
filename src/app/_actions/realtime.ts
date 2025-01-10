@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/types/supabase";
 
 export async function subscribeToKoudenEntries(koudenId: string) {
 	const supabase = await createClient();

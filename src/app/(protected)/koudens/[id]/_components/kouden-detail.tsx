@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { KoudenEntrySpreadsheet } from "./kouden-entry-spreadsheet";
+import { KoudenEntrySpreadsheet } from "./spreadsheet/kouden-entry-spreadsheet";
 import { ExportExcelButton } from "./export-excel-button";
-import { ManageMembersDialog } from "./manage-members-dialog";
 import { DeleteKoudenDialog } from "./delete-kouden-dialog";
 import type { Database } from "@/types/supabase";
 import type { KoudenEntry } from "@/types/kouden";
@@ -150,7 +149,6 @@ export function KoudenDetail({
 						koudenTitle={kouden.title}
 						onDelete={deleteKouden}
 					/>
-					<ManageMembersDialog koudenId={kouden.id} />
 					<ExportExcelButton koudenId={kouden.id} />
 					<Button
 						variant="outline"
@@ -169,6 +167,9 @@ export function KoudenDetail({
 				koudenId={kouden.id}
 				updateKoudenEntry={updateKoudenEntry}
 				createKoudenEntry={createKoudenEntry}
+				deleteKoudenEntries={async (ids) => {
+					await Promise.all(ids.map((id) => deleteKoudenEntry(id, kouden.id)));
+				}}
 			/>
 		</div>
 	);

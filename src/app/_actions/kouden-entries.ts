@@ -40,16 +40,20 @@ export async function createKoudenEntry(input: CreateKoudenEntryInput) {
 			attendance_type: input.attendance_type ?? "ABSENT",
 			created_by: user.id,
 		})
-		.select(`
-			*,
-			offerings:offerings(*),
-			return_items:return_items(*)
-		`)
+		.select("*")
 		.single();
 
 	if (error) {
+		console.error("[DEBUG] Error creating kouden entry:", error);
+		console.error("[DEBUG] Error details:", {
+			code: error.code,
+			message: error.message,
+			details: error.details,
+		});
 		throw new Error("香典情報の作成に失敗しました");
 	}
+
+	console.log("[DEBUG] Successfully created kouden entry:", data);
 
 	revalidatePath(`/koudens/${input.kouden_id}`);
 	return data;
@@ -67,17 +71,16 @@ export async function getKoudenEntries(koudenId: string) {
 
 	const { data, error } = await supabase
 		.from("kouden_entries")
-		.select(`
-			*,
-			offerings:offerings(*),
-			return_items:return_items(*)
-		`)
+		.select("*")
 		.eq("kouden_id", koudenId)
 		.order("created_at", { ascending: false });
 
 	if (error) {
+		console.error("[DEBUG] Error fetching kouden entries:", error);
 		throw new Error("香典情報の取得に失敗しました");
 	}
+
+	console.log("[DEBUG] Successfully fetched kouden entries:", data);
 
 	return data;
 }
@@ -92,19 +95,20 @@ export async function getKoudenEntry(id: string) {
 		throw new Error("認証が必要です");
 	}
 
+	console.log("[DEBUG] Fetching kouden entry for id:", id);
+
 	const { data, error } = await supabase
 		.from("kouden_entries")
-		.select(`
-			*,
-			offerings:offerings(*),
-			return_items:return_items(*)
-		`)
+		.select("*")
 		.eq("id", id)
 		.single();
 
 	if (error) {
+		console.error("[DEBUG] Error fetching kouden entry:", error);
 		throw new Error("香典情報の取得に失敗しました");
 	}
+
+	console.log("[DEBUG] Successfully fetched kouden entry:", data);
 
 	return data;
 }
