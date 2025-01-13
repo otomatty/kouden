@@ -177,21 +177,27 @@ export async function getKoudenWithEntries(id: string) {
 		.single();
 
 	if (koudenError) {
-		return null;
+		console.error("[ERROR] Error fetching kouden:", koudenError);
+		throw new Error("香典帳の取得に失敗しました");
 	}
 
 	if (!kouden) {
-		return null;
+		throw new Error("指定された香典帳が見つかりません");
 	}
 
 	const { data: entries, error: entriesError } = await supabase
 		.from("kouden_entries")
-		.select("*")
+		.select(`
+			*,
+			offerings (*),
+			return_items (*)
+		`)
 		.eq("kouden_id", id)
 		.order("created_at", { ascending: false });
 
 	if (entriesError) {
-		return null;
+		console.error("[ERROR] Error fetching kouden entries:", entriesError);
+		throw new Error("香典帳の記帳データの取得に失敗しました");
 	}
 
 	return {
