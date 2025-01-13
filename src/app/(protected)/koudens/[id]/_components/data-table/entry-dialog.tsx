@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import type { EditKoudenEntryFormData, KoudenEntryTableData } from "./types";
-import type { CreateKoudenInput } from "@/app/_actions/koudens";
+import type { CreateKoudenEntryInput } from "@/types/actions";
 import { formatCurrency, formatInputCurrency } from "./utils";
 import { toast } from "@/hooks/use-toast";
 import { getRelationships } from "@/app/_actions/relationships";
@@ -56,7 +56,7 @@ function formatPostalCode(value: string): string {
 }
 
 // 郵便番号から数字のみを抽出
-function normalizePostalCode(value?: string): string {
+function normalizePostalCode(value?: string | null): string {
 	return value ? value.replace(/[^\d]/g, "") : "";
 }
 
@@ -94,17 +94,18 @@ export function EntryDialog({
 		formState: { errors },
 	} = useForm<EditKoudenEntryFormData>({
 		defaultValues: {
-			name: "",
-			organization: "",
-			position: "",
+			name: undefined,
+			organization: undefined,
+			position: undefined,
 			amount: 0,
-			postal_code: "",
-			address: "",
-			phone_number: "",
+			postal_code: undefined,
+			address: null,
+			phone_number: undefined,
+			relationship_id: undefined,
 			attendance_type: "FUNERAL",
 			has_offering: false,
 			is_return_completed: false,
-			notes: "",
+			notes: undefined,
 		},
 	});
 
@@ -192,21 +193,21 @@ export function EntryDialog({
 
 	const onSubmit = handleSubmit(async (data) => {
 		try {
-			const input: CreateKoudenInput = {
-				name: data.name || "",
-				organization: data.organization || "",
-				position: data.position || "",
+			const input: CreateKoudenEntryInput = {
+				name: data.name || null,
+				organization: data.organization || null,
+				position: data.position || null,
 				amount: Number(data.amount),
 				postal_code: data.postal_code
 					? normalizePostalCode(data.postal_code)
-					: "",
-				address: data.address || "",
-				phone_number: data.phone_number || "",
+					: null,
+				address: data.address || null,
+				phone_number: data.phone_number || null,
 				relationship_id: data.relationship_id || null,
 				attendance_type: data.attendance_type || "FUNERAL",
 				has_offering: data.has_offering || false,
 				is_return_completed: data.is_return_completed || false,
-				notes: data.notes || "",
+				notes: data.notes || null,
 				kouden_id: koudenId,
 			};
 			await onSave(input);
@@ -259,9 +260,12 @@ export function EntryDialog({
 					<Label htmlFor="postal_code">郵便番号</Label>
 					<Input
 						id="postal_code"
-						value={postal_code}
+						value={postal_code || ""}
 						onChange={(e) =>
-							setValue("postal_code", formatPostalCode(e.target.value))
+							setValue(
+								"postal_code",
+								formatPostalCode(e.target.value) || undefined,
+							)
 						}
 						placeholder="000-0000"
 						maxLength={8}
@@ -322,12 +326,9 @@ export function EntryDialog({
 				<div className="grid gap-2">
 					<Label htmlFor="attendance_type">参列</Label>
 					<Select
-						value={watch("attendance_type")}
-						onValueChange={(value) =>
-							setValue(
-								"attendance_type",
-								value as EditKoudenEntryFormData["attendance_type"],
-							)
+						value={watch("attendance_type") || "FUNERAL"}
+						onValueChange={(value: "FUNERAL" | "CONDOLENCE_VISIT" | "ABSENT") =>
+							setValue("attendance_type", value)
 						}
 					>
 						<SelectTrigger>

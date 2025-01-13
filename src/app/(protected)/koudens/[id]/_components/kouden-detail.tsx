@@ -31,9 +31,21 @@ type Kouden = Database["public"]["Tables"]["koudens"]["Row"];
 interface KoudenDetailProps {
 	kouden: Kouden;
 	entries: KoudenEntry[];
-	createKoudenEntry: (
-		input: CreateKoudenEntryInput,
-	) => Promise<KoudenEntryResponse>;
+	createKoudenEntry: (input: {
+		kouden_id: string;
+		name?: string | null;
+		organization?: string | null;
+		position?: string | null;
+		amount: number;
+		postal_code?: string | null;
+		address: string | null;
+		phone_number?: string | null;
+		attendance_type: "FUNERAL" | "CONDOLENCE_VISIT" | "ABSENT" | null;
+		has_offering: boolean;
+		is_return_completed: boolean;
+		notes?: string | null;
+		relationship_id?: string | null;
+	}) => Promise<KoudenEntryResponse>;
 	updateKoudenEntry: (
 		id: string,
 		input: UpdateKoudenEntryInput,
@@ -179,7 +191,7 @@ export function KoudenDetail({
 						updateKoudenEntry={async (id, data) => {
 							const input = {
 								...data,
-								address: data.address || "",
+								address: data.address ?? null,
 								attendance_type:
 									data.attendance_type === "ABSENT"
 										? null
@@ -199,7 +211,8 @@ export function KoudenDetail({
 						createKoudenEntry={async (data) => {
 							const input = {
 								...data,
-								address: data.address || "",
+								name: data.name ?? null,
+								address: data.address ?? null,
 								attendance_type:
 									data.attendance_type === "ABSENT"
 										? null

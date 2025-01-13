@@ -4,6 +4,7 @@ import {
 	createKoudenEntry,
 	updateKoudenEntry,
 	deleteKoudenEntry,
+	type CreateKoudenEntryInput,
 } from "@/app/_actions/kouden-entries";
 import {
 	createOffering,
@@ -39,11 +40,40 @@ export default async function KoudenDetailPage({ params }: Props) {
 		notFound();
 	}
 
+	const wrappedCreateKoudenEntry = async (input: {
+		kouden_id: string;
+		name?: string | null;
+		organization?: string | null;
+		position?: string | null;
+		amount: number;
+		postal_code?: string | null;
+		address: string | null;
+		phone_number?: string | null;
+		attendance_type: "FUNERAL" | "CONDOLENCE_VISIT" | "ABSENT" | null;
+		has_offering: boolean;
+		is_return_completed: boolean;
+		notes?: string | null;
+		relationship_id?: string | null;
+	}) => {
+		const transformedInput = {
+			...input,
+			name: input.name ?? null,
+			organization: input.organization ?? null,
+			position: input.position ?? null,
+			postal_code: input.postal_code ?? null,
+			address: input.address ?? null,
+			phone_number: input.phone_number ?? null,
+			notes: input.notes ?? null,
+			relationship_id: input.relationship_id ?? null,
+		};
+		return createKoudenEntry(transformedInput);
+	};
+
 	return (
 		<KoudenDetail
 			kouden={data.kouden}
 			entries={data.entries}
-			createKoudenEntry={createKoudenEntry}
+			createKoudenEntry={wrappedCreateKoudenEntry}
 			updateKoudenEntry={updateKoudenEntry}
 			deleteKoudenEntry={deleteKoudenEntry}
 			createOffering={createOffering}

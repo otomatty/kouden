@@ -6,18 +6,18 @@ import { z } from "zod";
 
 const koudenEntrySchema = z.object({
 	kouden_id: z.string().uuid(),
-	name: z.string().min(1, "ご芳名を入力してください"),
-	organization: z.string().optional(),
-	position: z.string().optional(),
+	name: z.string().nullable(),
+	organization: z.string().nullable(),
+	position: z.string().nullable(),
 	amount: z.number().min(1, "金額を入力してください"),
-	postal_code: z.string().optional(),
-	address: z.string().min(1, "住所を入力してください"),
-	phone_number: z.string().optional(),
+	postal_code: z.string().nullable(),
+	address: z.string().nullable(),
+	phone_number: z.string().nullable(),
 	attendance_type: z.enum(["FUNERAL", "CONDOLENCE_VISIT", "ABSENT"]).nullable(),
 	has_offering: z.boolean().default(false),
 	is_return_completed: z.boolean().default(false),
-	notes: z.string().optional(),
-	relationship_id: z.string().uuid().optional(),
+	notes: z.string().nullable(),
+	relationship_id: z.string().uuid().nullable(),
 });
 
 export type CreateKoudenEntryInput = z.infer<typeof koudenEntrySchema>;

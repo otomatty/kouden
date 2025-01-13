@@ -26,7 +26,7 @@ export function TextCell({
 	getValue,
 	onValueChange,
 	minWidth,
-}: CellProps<string>) {
+}: CellProps<string | null>) {
 	const value = getValue();
 	const [localValue, setLocalValue] = useState(value);
 
@@ -37,7 +37,7 @@ export function TextCell({
 			onChange={(e) => setLocalValue(e.target.value)}
 			onBlur={() => {
 				if (localValue === value) return;
-				onValueChange(localValue);
+				onValueChange(localValue || null);
 			}}
 			className="w-full"
 			style={{ minWidth }}
@@ -49,13 +49,13 @@ export function PopoverTextCell({
 	getValue,
 	onValueChange,
 	minWidth,
-}: CellProps<string>) {
+}: CellProps<string | null>) {
 	const value = getValue();
 	const [localValue, setLocalValue] = useState(value);
 	const [open, setOpen] = useState(false);
 
 	const handleSave = () => {
-		onValueChange(localValue || "");
+		onValueChange(localValue || null);
 		setOpen(false);
 	};
 

@@ -3,18 +3,18 @@ import type { Database } from "./supabase";
 // Kouden Entry types
 export interface CreateKoudenEntryInput {
 	kouden_id: string;
-	name: string;
-	organization?: string;
-	position?: string;
+	name?: string | null;
+	organization?: string | null;
+	position?: string | null;
 	amount: number;
-	postal_code?: string;
-	address: string;
-	phone_number?: string;
-	attendance_type: "FUNERAL" | "CONDOLENCE_VISIT" | null;
+	postal_code?: string | null;
+	address: string | null;
+	phone_number?: string | null;
+	attendance_type: "FUNERAL" | "CONDOLENCE_VISIT" | "ABSENT" | null;
 	has_offering: boolean;
 	is_return_completed: boolean;
-	notes?: string;
-	relationship_id?: string;
+	notes?: string | null;
+	relationship_id?: string | null;
 }
 
 export type UpdateKoudenEntryInput = Partial<CreateKoudenEntryInput>;

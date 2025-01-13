@@ -73,6 +73,8 @@ export function useKoudenEntryTable({
 				const response = await createKoudenEntry({
 					...formData,
 					kouden_id: koudenId,
+					name: formData.name ?? null,
+					address: formData.address ?? null,
 				});
 				console.log("Create response:", response);
 				setData((prev) => [...prev, response]);

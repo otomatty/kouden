@@ -20,17 +20,17 @@ export interface KoudenEntrySpreadsheetProps {
 
 export interface SpreadsheetData {
 	id: string;
-	name: string;
-	organization: string;
-	position: string;
-	relationship?: string;
+	name: string | null;
+	organization: string | null;
+	position: string | null;
+	relationship?: string | null;
 	amount: number;
-	postal_code: string;
-	address: string;
-	phone_number: string;
+	postal_code: string | null;
+	address: string | null;
+	phone_number: string | null;
 	attendance_type: "葬儀" | "弔問" | "欠席" | null;
 	has_offering: "有" | "無";
-	notes: string;
+	notes: string | null;
 	isSelected?: boolean;
 }
 

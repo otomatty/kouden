@@ -1,4 +1,4 @@
-export type AttendanceType = "FUNERAL" | "CONDOLENCE_VISIT" | "ABSENT";
+export type AttendanceType = "FUNERAL" | "CONDOLENCE_VISIT" | "ABSENT" | null;
 
 export interface KoudenEntryTableData {
 	id: string;
@@ -10,7 +10,7 @@ export interface KoudenEntryTableData {
 	position?: string | null;
 	amount: number;
 	postal_code?: string | null;
-	address: string;
+	address: string | null;
 	phone_number?: string | null;
 	relationship_id?: string | null;
 	relationship?: {
@@ -31,18 +31,18 @@ export interface KoudenEntryTableData {
 }
 
 export interface EditKoudenEntryFormData {
-	name?: string;
-	organization?: string;
-	position?: string;
+	name?: string | null;
+	organization?: string | null;
+	position?: string | null;
 	amount: number;
-	postal_code?: string;
-	address: string;
-	phone_number?: string;
-	relationship_id?: string;
+	postal_code?: string | null;
+	address: string | null;
+	phone_number?: string | null;
+	relationship_id?: string | null;
 	attendance_type: AttendanceType;
 	has_offering: boolean;
 	is_return_completed: boolean;
-	notes?: string;
+	notes?: string | null;
 }
 
 export interface KoudenEntryTableProps {
@@ -53,7 +53,11 @@ export interface KoudenEntryTableProps {
 		data: EditKoudenEntryFormData,
 	) => Promise<KoudenEntryTableData>;
 	createKoudenEntry: (
-		data: EditKoudenEntryFormData & { kouden_id: string },
+		data: EditKoudenEntryFormData & {
+			kouden_id: string;
+			name: string | null;
+			address: string | null;
+		},
 	) => Promise<KoudenEntryTableData>;
 	deleteKoudenEntries: (ids: string[]) => Promise<void>;
 }
