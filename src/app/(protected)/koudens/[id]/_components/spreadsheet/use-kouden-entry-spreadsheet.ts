@@ -159,16 +159,29 @@ export function useKoudenEntrySpreadsheet({
 	);
 
 	// 選択された行の削除
-	const handleDeleteSelectedRows = useCallback(async () => {
-		if (selectedRows.size === 0) return;
+	const handleDeleteSelectedRows = useCallback(
+		async (ids?: string[]) => {
+			try {
+				const idsToDelete = ids || Array.from(selectedRows);
+				if (idsToDelete.length === 0) return;
 
-		try {
-			await deleteKoudenEntries(Array.from(selectedRows));
-			setSelectedRows(new Set());
-		} catch (error) {
-			console.error("Failed to delete entries:", error);
-		}
-	}, [selectedRows, deleteKoudenEntries]);
+				await deleteKoudenEntries(idsToDelete);
+
+				// 状態を更新
+				setData((prev) => prev.filter((row) => !idsToDelete.includes(row.id)));
+				setSelectedRows((prev) => {
+					const next = new Set(prev);
+					for (const id of idsToDelete) {
+						next.delete(id);
+					}
+					return next;
+				});
+			} catch (error) {
+				console.error("Failed to delete entries:", error);
+			}
+		},
+		[selectedRows, deleteKoudenEntries, setData],
+	);
 
 	// 新しい行の追加
 	const handleAddRow = useCallback(async () => {

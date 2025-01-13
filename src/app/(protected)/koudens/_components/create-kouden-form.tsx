@@ -52,9 +52,9 @@ export function CreateKoudenForm() {
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>
-				<Button>新規作成</Button>
+				<Button className="create-kouden-button">新規作成</Button>
 			</DialogTrigger>
-			<DialogContent>
+			<DialogContent className="create-kouden-form">
 				<DialogHeader>
 					<DialogTitle>新しい香典帳を作成</DialogTitle>
 				</DialogHeader>
@@ -62,6 +62,7 @@ export function CreateKoudenForm() {
 					<div className="space-y-2">
 						<Label htmlFor="title">タイトル</Label>
 						<Input
+							className="create-kouden-form-title"
 							id="title"
 							name="title"
 							placeholder="例：〇〇家 告別式"
@@ -77,7 +78,11 @@ export function CreateKoudenForm() {
 						/>
 					</div>
 					<div className="flex justify-end">
-						<Button type="submit" disabled={loading}>
+						<Button
+							type="submit"
+							disabled={loading}
+							className="create-kouden-form-button"
+						>
 							{loading ? "作成中..." : "作成"}
 						</Button>
 					</div>

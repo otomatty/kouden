@@ -5,6 +5,7 @@ import { FileSpreadsheet } from "lucide-react";
 import { exportKoudenToExcel } from "@/app/_actions/export";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 interface ExportExcelButtonProps {
 	koudenId: string;
@@ -63,6 +64,11 @@ export function ExportExcelButton({ koudenId }: ExportExcelButtonProps) {
 			size="sm"
 			onClick={handleExport}
 			disabled={isExporting}
+			className={cn(
+				"bg-[#217346] text-white hover:bg-[#1e6b41] border-[#217346]",
+				"hover:text-white",
+				isExporting && "opacity-50 cursor-not-allowed",
+			)}
 		>
 			<FileSpreadsheet className="mr-2 h-4 w-4" />
 			{isExporting ? "出力中..." : "エクセル出力"}

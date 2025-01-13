@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { ensureProfile } from "@/app/_actions/auth";
 import { Header } from "./_components/header";
+import { TourGuide } from "@/components/custom/TourGuide/TourGuide";
 
 interface ProtectedLayoutProps {
 	children: React.ReactNode;
@@ -26,9 +27,13 @@ export default async function ProtectedLayout({
 	}
 
 	return (
-		<div className="min-h-screen bg-gray-50">
-			<Header user={user} />
-			<main className="container mx-auto px-4 py-8">{children}</main>
-		</div>
+		<TourGuide>
+			<div className="min-h-screen bg-gray-50">
+				<Header user={user} />
+				<div className="app-body container mx-auto px-4 py-8">
+					<main>{children}</main>
+				</div>
+			</div>
+		</TourGuide>
 	);
 }

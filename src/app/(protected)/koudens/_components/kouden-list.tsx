@@ -30,9 +30,9 @@ export function KoudenList({ koudens }: KoudenListProps) {
 	}
 
 	return (
-		<div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+		<div className="koudens-list grid gap-6 md:grid-cols-2 lg:grid-cols-3">
 			{koudens.map((kouden) => (
-				<Card key={kouden.id}>
+				<Card key={kouden.id} className="kouden-card">
 					<CardHeader>
 						<CardTitle>{kouden.title}</CardTitle>
 						<CardDescription>
@@ -49,7 +49,7 @@ export function KoudenList({ koudens }: KoudenListProps) {
 					)}
 					<CardFooter>
 						<Link href={`/koudens/${kouden.id}`} className="w-full">
-							<Button variant="outline" className="w-full">
+							<Button variant="outline" className="w-full kouden-card-button">
 								詳細を見る
 							</Button>
 						</Link>

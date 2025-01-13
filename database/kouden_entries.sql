@@ -8,17 +8,17 @@ CREATE TABLE IF NOT EXISTS kouden_entries (
     kouden_id UUID NOT NULL REFERENCES koudens(id) ON DELETE CASCADE,
     
     -- 基本情報
-    -- ご芳名
-    name TEXT NOT NULL,
+    -- ご芳名(任意)
+    name TEXT,
     -- 団体名（任意）
     organization TEXT,
     -- 役職（任意）
     position TEXT,
     -- 香典の金額（円）
-    amount INTEGER NOT NULL,
-    -- 住所
+    amount INTEGER NOT NULL DEFAULT 0,
+    -- 住所(任意)
     postal_code TEXT,
-    address TEXT NOT NULL,
+    address TEXT,
     -- 電話番号（任意）
     phone_number TEXT,
     -- 故人との関係性
@@ -26,12 +26,12 @@ CREATE TABLE IF NOT EXISTS kouden_entries (
     
     -- 参列情報
     -- 参列タイプ（葬儀/弔問/欠席）
-    attendance_type TEXT NOT NULL CHECK (attendance_type IN ('FUNERAL', 'CONDOLENCE_VISIT', 'ABSENT')),
+    attendance_type TEXT NOT NULL DEFAULT 'FUNERAL',
     
     -- 供物の有無
-    has_offering BOOLEAN DEFAULT FALSE NOT NULL,
+    has_offering BOOLEAN NOT NULL DEFAULT FALSE,
     -- 香典返し済みかどうか
-    is_return_completed BOOLEAN DEFAULT FALSE NOT NULL,
+    is_return_completed BOOLEAN NOT NULL DEFAULT FALSE,
     
     -- その他
     -- 備考

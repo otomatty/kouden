@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { KoudenEntrySpreadsheet } from "./spreadsheet/kouden-entry-spreadsheet";
+import { KoudenEntryTable } from "./kouden-entry-table";
+import { KoudenStatistics } from "./kouden-statistics";
 import { ExportExcelButton } from "./export-excel-button";
 import { DeleteKoudenDialog } from "./delete-kouden-dialog";
 import type { Database } from "@/types/supabase";
 import type { KoudenEntry } from "@/types/kouden";
+import type { AttendanceType } from "./data-table/types";
 import type {
 	CreateKoudenEntryInput,
 	UpdateKoudenEntryInput,
@@ -22,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Kouden = Database["public"]["Tables"]["koudens"]["Row"];
 
@@ -63,12 +66,6 @@ export function KoudenDetail({
 	createKoudenEntry,
 	updateKoudenEntry,
 	deleteKoudenEntry,
-	createOffering,
-	updateOffering,
-	deleteOffering,
-	createReturnItem,
-	updateReturnItem,
-	deleteReturnItem,
 	updateKouden,
 	deleteKouden,
 }: KoudenDetailProps) {
@@ -76,6 +73,7 @@ export function KoudenDetail({
 	const [isEditing, setIsEditing] = useState(false);
 	const [title, setTitle] = useState(kouden.title);
 	const [description, setDescription] = useState(kouden.description || "");
+	const [viewMode, setViewMode] = useState<"table" | "statistics">("table");
 
 	const handleSave = async () => {
 		try {
@@ -162,15 +160,73 @@ export function KoudenDetail({
 				</div>
 			</div>
 
-			<KoudenEntrySpreadsheet
-				entries={entries}
-				koudenId={kouden.id}
-				updateKoudenEntry={updateKoudenEntry}
-				createKoudenEntry={createKoudenEntry}
-				deleteKoudenEntries={async (ids) => {
-					await Promise.all(ids.map((id) => deleteKoudenEntry(id, kouden.id)));
-				}}
-			/>
+			<Tabs
+				value={viewMode}
+				onValueChange={(value) => setViewMode(value as "table" | "statistics")}
+			>
+				<TabsList>
+					<TabsTrigger value="table">香典帳</TabsTrigger>
+					<TabsTrigger value="statistics">統計</TabsTrigger>
+				</TabsList>
+
+				<TabsContent value="table">
+					<KoudenEntryTable
+						entries={entries.map((entry) => ({
+							...entry,
+							attendance_type: entry.attendance_type as AttendanceType,
+						}))}
+						koudenId={kouden.id}
+						updateKoudenEntry={async (id, data) => {
+							const input = {
+								...data,
+								address: data.address || "",
+								attendance_type:
+									data.attendance_type === "ABSENT"
+										? null
+										: data.attendance_type,
+							};
+							try {
+								const response = await updateKoudenEntry(id, input);
+								return {
+									...response,
+									attendance_type: response.attendance_type as AttendanceType,
+								};
+							} catch (error) {
+								console.error("更新エラー:", error);
+								throw error;
+							}
+						}}
+						createKoudenEntry={async (data) => {
+							const input = {
+								...data,
+								address: data.address || "",
+								attendance_type:
+									data.attendance_type === "ABSENT"
+										? null
+										: data.attendance_type,
+							};
+							try {
+								const response = await createKoudenEntry(input);
+								return {
+									...response,
+									attendance_type: response.attendance_type as AttendanceType,
+								};
+							} catch (error) {
+								console.error("作成エラー:", error);
+								throw error;
+							}
+						}}
+						deleteKoudenEntries={async (ids) => {
+							await Promise.all(
+								ids.map((id) => deleteKoudenEntry(id, kouden.id)),
+							);
+						}}
+					/>
+				</TabsContent>
+				<TabsContent value="statistics">
+					<KoudenStatistics entries={entries} />
+				</TabsContent>
+			</Tabs>
 		</div>
 	);
 }

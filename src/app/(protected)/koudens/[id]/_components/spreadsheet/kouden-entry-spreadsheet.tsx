@@ -57,7 +57,7 @@ export function KoudenEntrySpreadsheet(props: KoudenEntrySpreadsheetProps) {
 					<Button
 						variant="destructive"
 						size="sm"
-						onClick={handleDeleteSelectedRows}
+						onClick={() => handleDeleteSelectedRows()}
 						className="flex items-center gap-2"
 					>
 						<Trash2 className="h-4 w-4" />
@@ -112,7 +112,7 @@ export function KoudenEntrySpreadsheet(props: KoudenEntrySpreadsheetProps) {
 					variant="ghost"
 					size="sm"
 					onClick={handleAddRow}
-					className="flex items-center gap-2"
+					className="kouden-entry-add flex items-center gap-2"
 				>
 					<PlusCircle className="h-4 w-4" />
 					<span>行を追加 (Ctrl+Enter)</span>
