@@ -3,16 +3,20 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import type { Database } from "@/types/supabase";
+
+export type OfferingResponse = Database["public"]["Tables"]["offerings"]["Row"];
 
 const offeringSchema = z.object({
 	kouden_entry_id: z.string().uuid(),
 	type: z.enum(["FLOWER", "FOOD", "OTHER"]),
 	description: z.string().min(1, "内容を入力してください"),
 	price: z.number().optional(),
-	notes: z.string().optional(),
+	notes: z.string().nullish(),
 });
 
 export type CreateOfferingInput = z.infer<typeof offeringSchema>;
+export type UpdateOfferingInput = Partial<CreateOfferingInput>;
 
 export async function createOffering(input: CreateOfferingInput) {
 	const supabase = await createClient();

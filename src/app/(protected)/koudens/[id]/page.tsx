@@ -5,16 +5,21 @@ import {
 	updateKoudenEntry,
 	deleteKoudenEntry,
 	type CreateKoudenEntryInput,
+	type UpdateKoudenEntryInput,
 } from "@/app/_actions/kouden-entries";
 import {
 	createOffering,
 	updateOffering,
 	deleteOffering,
+	type CreateOfferingInput,
+	type UpdateOfferingInput,
 } from "@/app/_actions/offerings";
 import {
 	createReturnItem,
 	updateReturnItem,
 	deleteReturnItem,
+	type CreateReturnItemInput,
+	type UpdateReturnItemInput,
 } from "@/app/_actions/return-items";
 import {
 	getKoudenWithEntries,
@@ -32,6 +37,73 @@ type Props = {
 	params: Promise<{ id: string }>;
 };
 
+const wrappedCreateKoudenEntry = async (input: CreateKoudenEntryInput) => {
+	"use server";
+	return createKoudenEntry(input);
+};
+
+const wrappedUpdateKoudenEntry = async (
+	id: string,
+	input: UpdateKoudenEntryInput,
+) => {
+	"use server";
+	return updateKoudenEntry(id, input);
+};
+
+const wrappedDeleteKoudenEntry = async (id: string, koudenId: string) => {
+	"use server";
+	return deleteKoudenEntry(id, koudenId);
+};
+
+const wrappedCreateOffering = async (input: CreateOfferingInput) => {
+	"use server";
+	return createOffering(input);
+};
+
+const wrappedUpdateOffering = async (
+	id: string,
+	input: UpdateOfferingInput,
+) => {
+	"use server";
+	return updateOffering(id, input);
+};
+
+const wrappedDeleteOffering = async (id: string, koudenEntryId: string) => {
+	"use server";
+	return deleteOffering(id, koudenEntryId);
+};
+
+const wrappedCreateReturnItem = async (input: CreateReturnItemInput) => {
+	"use server";
+	return createReturnItem(input);
+};
+
+const wrappedUpdateReturnItem = async (
+	id: string,
+	input: UpdateReturnItemInput,
+) => {
+	"use server";
+	return updateReturnItem(id, input);
+};
+
+const wrappedDeleteReturnItem = async (id: string, koudenEntryId: string) => {
+	"use server";
+	return deleteReturnItem(id, koudenEntryId);
+};
+
+const wrappedUpdateKouden = async (
+	id: string,
+	input: { title: string; description?: string },
+) => {
+	"use server";
+	return updateKouden(id, input);
+};
+
+const wrappedDeleteKouden = async (id: string) => {
+	"use server";
+	return deleteKouden(id);
+};
+
 export default async function KoudenDetailPage({ params }: Props) {
 	const { id } = await params;
 	const data = await getKoudenWithEntries(id);
@@ -40,50 +112,21 @@ export default async function KoudenDetailPage({ params }: Props) {
 		notFound();
 	}
 
-	const wrappedCreateKoudenEntry = async (input: {
-		kouden_id: string;
-		name?: string | null;
-		organization?: string | null;
-		position?: string | null;
-		amount: number;
-		postal_code?: string | null;
-		address: string | null;
-		phone_number?: string | null;
-		attendance_type: "FUNERAL" | "CONDOLENCE_VISIT" | "ABSENT" | null;
-		has_offering: boolean;
-		is_return_completed: boolean;
-		notes?: string | null;
-		relationship_id?: string | null;
-	}) => {
-		const transformedInput = {
-			...input,
-			name: input.name ?? null,
-			organization: input.organization ?? null,
-			position: input.position ?? null,
-			postal_code: input.postal_code ?? null,
-			address: input.address ?? null,
-			phone_number: input.phone_number ?? null,
-			notes: input.notes ?? null,
-			relationship_id: input.relationship_id ?? null,
-		};
-		return createKoudenEntry(transformedInput);
-	};
-
 	return (
 		<KoudenDetail
 			kouden={data.kouden}
 			entries={data.entries}
 			createKoudenEntry={wrappedCreateKoudenEntry}
-			updateKoudenEntry={updateKoudenEntry}
-			deleteKoudenEntry={deleteKoudenEntry}
-			createOffering={createOffering}
-			updateOffering={updateOffering}
-			deleteOffering={deleteOffering}
-			createReturnItem={createReturnItem}
-			updateReturnItem={updateReturnItem}
-			deleteReturnItem={deleteReturnItem}
-			updateKouden={updateKouden}
-			deleteKouden={deleteKouden}
+			updateKoudenEntry={wrappedUpdateKoudenEntry}
+			deleteKoudenEntry={wrappedDeleteKoudenEntry}
+			createOffering={wrappedCreateOffering}
+			updateOffering={wrappedUpdateOffering}
+			deleteOffering={wrappedDeleteOffering}
+			createReturnItem={wrappedCreateReturnItem}
+			updateReturnItem={wrappedUpdateReturnItem}
+			deleteReturnItem={wrappedDeleteReturnItem}
+			updateKouden={wrappedUpdateKouden}
+			deleteKouden={wrappedDeleteKouden}
 		/>
 	);
 }

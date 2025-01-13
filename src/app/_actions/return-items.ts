@@ -3,6 +3,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import type { Database } from "@/types/supabase";
+
+export type ReturnItemResponse =
+	Database["public"]["Tables"]["return_items"]["Row"];
 
 const returnItemSchema = z.object({
 	kouden_entry_id: z.string().uuid(),
@@ -10,10 +14,11 @@ const returnItemSchema = z.object({
 	price: z.number().min(1, "価格を入力してください"),
 	delivery_method: z.enum(["MAIL", "HAND", "DELIVERY", "OTHER"]).nullable(),
 	sent_date: z.string().optional(),
-	notes: z.string().optional(),
+	notes: z.string().nullish(),
 });
 
 export type CreateReturnItemInput = z.infer<typeof returnItemSchema>;
+export type UpdateReturnItemInput = Partial<CreateReturnItemInput>;
 
 export async function createReturnItem(input: CreateReturnItemInput) {
 	const supabase = await createClient();

@@ -3,27 +3,33 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import type { Database } from "@/types/supabase";
+
+export type KoudenEntryResponse =
+	Database["public"]["Tables"]["kouden_entries"]["Row"];
 
 const koudenEntrySchema = z.object({
 	kouden_id: z.string().uuid(),
-	name: z.string().nullable(),
-	organization: z.string().nullable(),
-	position: z.string().nullable(),
+	name: z.string().nullish(),
+	organization: z.string().nullish(),
+	position: z.string().nullish(),
 	amount: z.number().min(1, "金額を入力してください"),
-	postal_code: z.string().nullable(),
-	address: z.string().nullable(),
-	phone_number: z.string().nullable(),
-	attendance_type: z.enum(["FUNERAL", "CONDOLENCE_VISIT", "ABSENT"]).nullable(),
+	postal_code: z.string().nullish(),
+	address: z.string().nullish(),
+	phone_number: z.string().nullish(),
+	attendance_type: z.enum(["FUNERAL", "CONDOLENCE_VISIT", "ABSENT"]).nullish(),
 	has_offering: z.boolean().default(false),
 	is_return_completed: z.boolean().default(false),
-	notes: z.string().nullable(),
-	relationship_id: z.string().uuid().nullable(),
+	notes: z.string().nullish(),
+	relationship_id: z.string().uuid().nullish(),
 });
 
 export type CreateKoudenEntryInput = z.infer<typeof koudenEntrySchema>;
 export type UpdateKoudenEntryInput = Partial<CreateKoudenEntryInput>;
 
-export async function createKoudenEntry(input: CreateKoudenEntryInput) {
+export async function createKoudenEntry(
+	input: CreateKoudenEntryInput,
+): Promise<KoudenEntryResponse> {
 	const supabase = await createClient();
 	const {
 		data: { user },
@@ -100,7 +106,7 @@ export async function getKoudenEntry(id: string) {
 export async function updateKoudenEntry(
 	id: string,
 	input: UpdateKoudenEntryInput,
-) {
+): Promise<KoudenEntryResponse> {
 	const supabase = await createClient();
 	const {
 		data: { user },
@@ -131,7 +137,10 @@ export async function updateKoudenEntry(
 	return data;
 }
 
-export async function deleteKoudenEntry(id: string, koudenId: string) {
+export async function deleteKoudenEntry(
+	id: string,
+	koudenId: string,
+): Promise<void> {
 	const supabase = await createClient();
 	const {
 		data: { user },
