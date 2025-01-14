@@ -22,7 +22,7 @@ export function Header({ user }: HeaderProps) {
 		<header className="bg-white shadow">
 			<div className="container mx-auto px-4 py-4">
 				<div className="flex items-center justify-between">
-					<h1 className="text-xl font-semibold">葬儀会計アプリ</h1>
+					<h1 className="text-xl font-semibold">香典帳アプリ</h1>
 					<div className="flex items-center gap-4">
 						<span className="text-sm text-gray-600">{user.email}</span>
 						<Button variant="outline" onClick={handleSignOut}>

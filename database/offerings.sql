@@ -10,8 +10,18 @@ CREATE TABLE IF NOT EXISTS offerings (
     type TEXT NOT NULL CHECK (type IN ('FLOWER', 'FOOD', 'OTHER')),
     -- 供物の内容
     description TEXT NOT NULL,
+    -- 数量
+    quantity INTEGER NOT NULL DEFAULT 1,
     -- 価格（任意）
     price INTEGER,
+    -- 配送方法（配送/持参）
+    delivery_method TEXT NOT NULL CHECK (delivery_method IN ('SHIPPING', 'HAND_DELIVERY')),
+    -- 配送状況
+    delivery_status TEXT NOT NULL CHECK (delivery_status IN ('PENDING', 'DELIVERED', 'CANCELED')) DEFAULT 'PENDING',
+    -- 配送予定日時
+    scheduled_delivery_at TIMESTAMP WITH TIME ZONE,
+    -- 配送完了日時
+    delivered_at TIMESTAMP WITH TIME ZONE,
     -- 備考
     notes TEXT,
     -- 作成日時
@@ -33,9 +43,13 @@ CREATE TRIGGER update_offerings_updated_at
 
 -- Drop existing indexes
 DROP INDEX IF EXISTS idx_offerings_kouden_entry_id;
+DROP INDEX IF EXISTS idx_offerings_delivery_status;
+DROP INDEX IF EXISTS idx_offerings_scheduled_delivery_at;
 
 -- Create indexes
 CREATE INDEX idx_offerings_kouden_entry_id ON offerings(kouden_entry_id);
+CREATE INDEX idx_offerings_delivery_status ON offerings(delivery_status);
+CREATE INDEX idx_offerings_scheduled_delivery_at ON offerings(scheduled_delivery_at);
 
 -- Enable Row Level Security
 ALTER TABLE offerings ENABLE ROW LEVEL SECURITY;

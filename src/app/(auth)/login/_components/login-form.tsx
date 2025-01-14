@@ -3,13 +3,23 @@
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { GoogleIcon } from "@/components/custom/icons/google";
 
 export function LoginForm() {
 	const router = useRouter();
 	const supabase = createClient();
 
+	useEffect(() => {
+		console.log("🎯 LoginFormコンポーネントがマウントされました");
+	}, []);
+
 	const handleGoogleLogin = async () => {
+		console.log("🔍 ログインボタンがクリックされました");
+		console.log("📍 現在のURL:", window.location.origin);
+
 		try {
+			console.log("🔄 Google OAuth処理を開始します");
 			const { error } = await supabase.auth.signInWithOAuth({
 				provider: "google",
 				options: {
@@ -18,10 +28,17 @@ export function LoginForm() {
 			});
 
 			if (error) {
+				console.error("❌ OAuth処理でエラーが発生:", error.message);
 				throw error;
 			}
+
+			console.log("✅ OAuth処理が正常に完了しました");
 		} catch (error) {
-			console.error("Error:", error);
+			console.error("🚨 エラーの詳細:", error);
+			if (error instanceof Error) {
+				console.error("エラーメッセージ:", error.message);
+				console.error("エラースタック:", error.stack);
+			}
 		}
 	};
 
@@ -30,17 +47,13 @@ export function LoginForm() {
 			<Button
 				type="button"
 				variant="outline"
-				onClick={handleGoogleLogin}
+				onClick={(e) => {
+					console.log("👆 ボタンがクリックされました - イベント:", e);
+					handleGoogleLogin();
+				}}
 				className="flex items-center justify-center gap-2"
 			>
-				<svg
-					className="h-5 w-5"
-					aria-hidden="true"
-					fill="currentColor"
-					viewBox="0 0 24 24"
-				>
-					<path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z" />
-				</svg>
+				<GoogleIcon className="h-5 w-5" />
 				<span>Googleでログイン</span>
 			</Button>
 		</div>

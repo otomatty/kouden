@@ -190,16 +190,5 @@ export const TourGuide = ({ children }: { children: React.ReactNode }) => {
 		};
 	}, [setTourState, startTour]);
 
-	return (
-		<>
-			<button
-				type="button"
-				onClick={startTour}
-				className="fixed bottom-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-full shadow-lg hover:bg-blue-600 transition-colors"
-			>
-				ガイドを表示
-			</button>
-			{children}
-		</>
-	);
+	return <>{children}</>;
 };

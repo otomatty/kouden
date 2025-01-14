@@ -25,6 +25,9 @@ import { ArrowLeft, Pencil } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { OfferingTable } from "./offering-table";
+import { TelegramTable } from "./telegram-table";
+import { ReturnItemTable } from "./return-item-table";
 
 type Kouden = Database["public"]["Tables"]["koudens"]["Row"];
 
@@ -85,7 +88,9 @@ export function KoudenDetail({
 	const [isEditing, setIsEditing] = useState(false);
 	const [title, setTitle] = useState(kouden.title);
 	const [description, setDescription] = useState(kouden.description || "");
-	const [viewMode, setViewMode] = useState<"table" | "statistics">("table");
+	const [viewMode, setViewMode] = useState<
+		"table" | "statistics" | "offerings" | "telegrams" | "return-items"
+	>("table");
 
 	const handleSave = async () => {
 		try {
@@ -101,6 +106,15 @@ export function KoudenDetail({
 
 	return (
 		<div className="space-y-8">
+			<Button
+				variant="ghost"
+				onClick={() => router.push("/koudens")}
+				className="flex items-center gap-2"
+			>
+				<ArrowLeft className="h-4 w-4" />
+				<span>一覧に戻る</span>
+			</Button>
+
 			<div className="flex justify-between items-start">
 				<div className="space-y-2 flex-1 mr-4">
 					{isEditing ? (
@@ -154,30 +168,24 @@ export function KoudenDetail({
 					)}
 				</div>
 				<div className="flex items-center gap-2">
+					<ExportExcelButton koudenId={kouden.id} />
 					<DeleteKoudenDialog
 						koudenId={kouden.id}
 						koudenTitle={kouden.title}
 						onDelete={deleteKouden}
 					/>
-					<ExportExcelButton koudenId={kouden.id} />
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={() => router.push("/koudens")}
-						className="flex items-center gap-2"
-					>
-						<ArrowLeft className="h-4 w-4" />
-						<span>一覧に戻る</span>
-					</Button>
 				</div>
 			</div>
 
 			<Tabs
 				value={viewMode}
-				onValueChange={(value) => setViewMode(value as "table" | "statistics")}
+				onValueChange={(value) => setViewMode(value as typeof viewMode)}
 			>
 				<TabsList>
 					<TabsTrigger value="table">香典帳</TabsTrigger>
+					<TabsTrigger value="offerings">お供物</TabsTrigger>
+					<TabsTrigger value="telegrams">弔電</TabsTrigger>
+					<TabsTrigger value="return-items">返礼品</TabsTrigger>
 					<TabsTrigger value="statistics">統計</TabsTrigger>
 				</TabsList>
 
@@ -235,6 +243,15 @@ export function KoudenDetail({
 							);
 						}}
 					/>
+				</TabsContent>
+				<TabsContent value="offerings">
+					<OfferingTable koudenId={kouden.id} />
+				</TabsContent>
+				<TabsContent value="telegrams">
+					<TelegramTable koudenId={kouden.id} />
+				</TabsContent>
+				<TabsContent value="return-items">
+					<ReturnItemTable koudenId={kouden.id} />
 				</TabsContent>
 				<TabsContent value="statistics">
 					<KoudenStatistics entries={entries} />

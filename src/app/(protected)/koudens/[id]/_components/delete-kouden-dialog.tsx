@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface DeleteKoudenDialogProps {
 	koudenId: string;
@@ -24,8 +26,13 @@ export function DeleteKoudenDialog({
 }: DeleteKoudenDialogProps) {
 	const [isOpen, setIsOpen] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
+	const [confirmTitle, setConfirmTitle] = useState("");
 
 	const handleDelete = async () => {
+		if (confirmTitle !== koudenTitle) {
+			return;
+		}
+
 		try {
 			setIsDeleting(true);
 			await onDelete(koudenId);
@@ -34,11 +41,22 @@ export function DeleteKoudenDialog({
 		} finally {
 			setIsDeleting(false);
 			setIsOpen(false);
+			setConfirmTitle("");
 		}
 	};
 
+	const isDeleteDisabled = confirmTitle !== koudenTitle || isDeleting;
+
 	return (
-		<Dialog open={isOpen} onOpenChange={setIsOpen}>
+		<Dialog
+			open={isOpen}
+			onOpenChange={(open) => {
+				setIsOpen(open);
+				if (!open) {
+					setConfirmTitle("");
+				}
+			}}
+		>
 			<DialogTrigger asChild>
 				<Button
 					variant="destructive"
@@ -53,11 +71,19 @@ export function DeleteKoudenDialog({
 				<DialogHeader>
 					<DialogTitle>香典帳の削除</DialogTitle>
 					<DialogDescription>
-						「{koudenTitle}」を削除してもよろしいですか？
-						<br />
-						この操作は取り消せません。
+						この操作は取り消せません。削除を確認するには、以下にタイトルを入力してください。
 					</DialogDescription>
 				</DialogHeader>
+				<div className="space-y-4 py-4">
+					<div className="space-y-2">
+						<Label>タイトル: {koudenTitle}</Label>
+						<Input
+							value={confirmTitle}
+							onChange={(e) => setConfirmTitle(e.target.value)}
+							placeholder="タイトルを入力して削除を確認"
+						/>
+					</div>
+				</div>
 				<DialogFooter>
 					<Button
 						variant="outline"
@@ -69,7 +95,7 @@ export function DeleteKoudenDialog({
 					<Button
 						variant="destructive"
 						onClick={handleDelete}
-						disabled={isDeleting}
+						disabled={isDeleteDisabled}
 					>
 						{isDeleting ? "削除中..." : "削除する"}
 					</Button>

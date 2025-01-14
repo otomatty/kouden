@@ -8,10 +8,26 @@ CREATE TABLE IF NOT EXISTS return_items (
     kouden_entry_id UUID NOT NULL REFERENCES kouden_entries(id) ON DELETE CASCADE,
     -- 品名
     name TEXT NOT NULL,
+    -- 数量
+    quantity INTEGER NOT NULL DEFAULT 1,
     -- 価格
     price INTEGER NOT NULL,
     -- 配送方法（配送/手渡し）
-    delivery_method TEXT NOT NULL CHECK (delivery_method IN ('shipping', 'hand_delivery')),
+    delivery_method TEXT NOT NULL CHECK (delivery_method IN ('SHIPPING', 'HAND_DELIVERY')),
+    -- 配送状況
+    delivery_status TEXT NOT NULL CHECK (delivery_status IN ('PENDING', 'DELIVERED', 'CANCELED')) DEFAULT 'PENDING',
+    -- 配送予定日時
+    scheduled_delivery_at TIMESTAMP WITH TIME ZONE,
+    -- 配送完了日時
+    delivered_at TIMESTAMP WITH TIME ZONE,
+    -- 配送先の緯度
+    latitude DOUBLE PRECISION,
+    -- 配送先の経度
+    longitude DOUBLE PRECISION,
+    -- 配送エリアID
+    delivery_area_id TEXT,
+    -- 配送ルートの順序（同じエリア内での配送順序）
+    delivery_order INTEGER,
     -- 送付日
     sent_date DATE,
     -- 備考
@@ -35,9 +51,19 @@ CREATE TRIGGER update_return_items_updated_at
 
 -- Drop existing indexes
 DROP INDEX IF EXISTS idx_return_items_kouden_entry_id;
+DROP INDEX IF EXISTS idx_return_items_delivery_status;
+DROP INDEX IF EXISTS idx_return_items_scheduled_delivery_at;
+DROP INDEX IF EXISTS idx_return_items_delivery_area;
+DROP INDEX IF EXISTS idx_return_items_location;
 
 -- Create indexes
 CREATE INDEX idx_return_items_kouden_entry_id ON return_items(kouden_entry_id);
+CREATE INDEX idx_return_items_delivery_status ON return_items(delivery_status);
+CREATE INDEX idx_return_items_scheduled_delivery_at ON return_items(scheduled_delivery_at);
+CREATE INDEX idx_return_items_delivery_area ON return_items(delivery_area_id);
+CREATE INDEX idx_return_items_location ON return_items USING gist (
+    ll_to_earth(latitude, longitude)
+) WHERE latitude IS NOT NULL AND longitude IS NOT NULL;
 
 -- Enable Row Level Security
 ALTER TABLE return_items ENABLE ROW LEVEL SECURITY;

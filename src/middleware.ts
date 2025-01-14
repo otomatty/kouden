@@ -1,8 +1,30 @@
+import { createClient } from "@/lib/supabase/server";
+import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { updateSession } from "@/lib/supabase/middleware";
 
 export async function middleware(request: NextRequest) {
-	return await updateSession(request);
+	const supabase = await createClient();
+
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	// 保護されたルートへのアクセス時に認証チェック
+	if (
+		request.nextUrl.pathname.startsWith("/(protected)") ||
+		request.nextUrl.pathname.startsWith("/koudens")
+	) {
+		if (!user) {
+			return NextResponse.redirect(new URL("/login", request.url));
+		}
+	}
+
+	// ログイン済みユーザーがログインページにアクセスした場合はリダイレクト
+	if (request.nextUrl.pathname.startsWith("/login") && user) {
+		return NextResponse.redirect(new URL("/koudens", request.url));
+	}
+
+	return NextResponse.next();
 }
 
 export const config = {

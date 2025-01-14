@@ -1,31 +1,43 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { Header } from "@/app/_components/header";
 import { LoginForm } from "./_components/login-form";
 
-export default async function LoginPage() {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-
-	if (user) {
-		redirect("/koudens");
-	}
-
+export default function LoginPage() {
 	return (
-		<div className="flex min-h-screen flex-col items-center justify-center py-12 sm:px-6 lg:px-8">
-			<div className="sm:mx-auto sm:w-full sm:max-w-md">
-				<h1 className="mt-6 text-center text-3xl font-bold tracking-tight">
-					香典帳アプリ
-				</h1>
-				<h2 className="mt-6 text-center text-2xl">ログイン</h2>
-			</div>
-
-			<div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-				<div className="bg-white px-4 py-8 shadow sm:rounded-lg sm:px-10">
-					<LoginForm />
-				</div>
-			</div>
-		</div>
+		<>
+			<Header />
+			<main className="min-h-screen pt-16">
+				<section className="py-24">
+					<div className="container px-4 md:px-6 mx-auto">
+						<div className="flex flex-col items-center space-y-8 text-center">
+							<div className="space-y-2">
+								<h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
+									ログイン
+								</h1>
+								<p className="text-gray-500 dark:text-gray-400 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+									香典帳アプリへようこそ
+								</p>
+							</div>
+							<div className="w-full max-w-sm space-y-4">
+								<LoginForm />
+								<p className="text-sm text-gray-500 dark:text-gray-400">
+									※ ご利用にはGoogleアカウントが必要です
+									<br />
+									アカウントをお持ちでない方は
+									<a
+										href="https://accounts.google.com/signup"
+										target="_blank"
+										rel="noopener noreferrer"
+										className="text-primary hover:underline"
+									>
+										こちら
+									</a>
+									から作成できます
+								</p>
+							</div>
+						</div>
+					</div>
+				</section>
+			</main>
+		</>
 	);
 }
