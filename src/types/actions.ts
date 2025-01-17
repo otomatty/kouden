@@ -35,9 +35,9 @@ export type CreateReturnItemInput = {
 	kouden_entry_id: string;
 	name: string;
 	price: number;
-	delivery_method: "OTHER" | "MAIL" | "HAND" | "DELIVERY" | null;
+	delivery_method: "OTHER" | "MAIL" | "HAND" | "DELIVERY";
 	sent_date?: string;
-	notes?: string;
+	notes?: string | null;
 };
 
 export type UpdateReturnItemInput = Partial<CreateReturnItemInput>;

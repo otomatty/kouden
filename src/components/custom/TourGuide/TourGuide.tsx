@@ -48,7 +48,6 @@ export const waitForElement = (
 						});
 						// インスタンス作成後、少し待ってからツアーを再開
 						setTimeout(() => {
-							console.log("Restarting tour at step:", currentStepIndex + 1);
 							driverInstance?.drive(currentStepIndex + 1);
 							resolve(true);
 						}, 500);

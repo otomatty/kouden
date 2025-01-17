@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { KoudenList } from "./_components/kouden-list";
 import { CreateKoudenForm } from "./_components/create-kouden-form";
+import { getKoudens } from "@/app/_actions/koudens";
 
 export const metadata: Metadata = {
 	title: "香典帳一覧",
@@ -11,10 +12,20 @@ export const metadata: Metadata = {
 
 export default async function KoudensPage() {
 	const supabase = await createClient();
-	const { data: koudens } = await supabase
-		.from("koudens")
-		.select("*")
-		.order("created_at", { ascending: false });
+	const {
+		data: { user },
+		error: userError,
+	} = await supabase.auth.getUser();
+
+	if (userError || !user) {
+		throw new Error("認証が必要です");
+	}
+
+	const { koudens = [], error } = await getKoudens({ userId: user.id });
+
+	if (error) {
+		throw new Error(error);
+	}
 
 	return (
 		<div className="space-y-8">

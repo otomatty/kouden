@@ -9,6 +9,30 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      debug_logs: {
+        Row: {
+          action: string | null
+          created_at: string | null
+          details: Json | null
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          action?: string | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       kouden_entries: {
         Row: {
           address: string | null
@@ -162,33 +186,48 @@ export type Database = {
       kouden_invitations: {
         Row: {
           created_at: string
-          email: string
+          created_by: string
           expires_at: string
+          gmail_message_id: string | null
           id: string
           invitation_token: string
+          invitation_type: Database["public"]["Enums"]["invitation_type"]
           kouden_id: string
-          role: string
+          max_uses: number | null
+          role_id: string
+          status: string
           updated_at: string
+          used_count: number
         }
         Insert: {
           created_at?: string
-          email: string
+          created_by: string
           expires_at: string
+          gmail_message_id?: string | null
           id?: string
-          invitation_token: string
+          invitation_token?: string
+          invitation_type?: Database["public"]["Enums"]["invitation_type"]
           kouden_id: string
-          role: string
+          max_uses?: number | null
+          role_id: string
+          status?: string
           updated_at?: string
+          used_count?: number
         }
         Update: {
           created_at?: string
-          email?: string
+          created_by?: string
           expires_at?: string
+          gmail_message_id?: string | null
           id?: string
           invitation_token?: string
+          invitation_type?: Database["public"]["Enums"]["invitation_type"]
           kouden_id?: string
-          role?: string
+          max_uses?: number | null
+          role_id?: string
+          status?: string
           updated_at?: string
+          used_count?: number
         }
         Relationships: [
           {
@@ -198,36 +237,104 @@ export type Database = {
             referencedRelation: "koudens"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "kouden_invitations_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "kouden_roles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       kouden_members: {
         Row: {
+          added_by: string
           created_at: string
           id: string
+          invitation_id: string | null
           kouden_id: string
-          role: string
+          role_id: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          added_by: string
           created_at?: string
           id?: string
+          invitation_id?: string | null
           kouden_id: string
-          role: string
+          role_id: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          added_by?: string
           created_at?: string
           id?: string
+          invitation_id?: string | null
           kouden_id?: string
-          role?: string
+          role_id?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
+            foreignKeyName: "kouden_members_invitation_id_fkey"
+            columns: ["invitation_id"]
+            isOneToOne: false
+            referencedRelation: "kouden_invitations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "kouden_members_kouden_id_fkey"
+            columns: ["kouden_id"]
+            isOneToOne: false
+            referencedRelation: "koudens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kouden_members_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "kouden_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kouden_roles: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          kouden_id: string
+          name: string
+          permissions: string[]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          kouden_id: string
+          name: string
+          permissions: string[]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          kouden_id?: string
+          name?: string
+          permissions?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kouden_roles_kouden_id_fkey"
             columns: ["kouden_id"]
             isOneToOne: false
             referencedRelation: "koudens"
@@ -396,7 +503,7 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string
-          delivery_method: Database["public"]["Enums"]["delivery_method"] | null
+          delivery_method: string
           id: string
           kouden_entry_id: string
           name: string
@@ -408,9 +515,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by: string
-          delivery_method?:
-            | Database["public"]["Enums"]["delivery_method"]
-            | null
+          delivery_method: string
           id?: string
           kouden_entry_id: string
           name: string
@@ -422,9 +527,7 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string
-          delivery_method?:
-            | Database["public"]["Enums"]["delivery_method"]
-            | null
+          delivery_method?: string
           id?: string
           kouden_entry_id?: string
           name?: string
@@ -433,16 +536,42 @@ export type Database = {
           sent_date?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "return_items_kouden_entry_id_fkey"
+            columns: ["kouden_entry_id"]
+            isOneToOne: false
+            referencedRelation: "kouden_entries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      accept_invitation: {
+        Args: {
+          p_invitation_token: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       cleanup_expired_locks: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      create_invitation: {
+        Args: {
+          p_kouden_id: string
+          p_email: string
+          p_role_id: string
+          p_created_by: string
+          p_type?: Database["public"]["Enums"]["invitation_type"]
+          p_max_uses?: number
+        }
+        Returns: string
       }
       initialize_default_relationships: {
         Args: {
@@ -451,10 +580,39 @@ export type Database = {
         }
         Returns: undefined
       }
+      log_debug: {
+        Args: {
+          p_action: string
+          p_details: Json
+        }
+        Returns: string
+      }
+      remove_member: {
+        Args: {
+          p_kouden_id: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      update_member_role: {
+        Args: {
+          p_kouden_id: string
+          p_user_id: string
+          p_role_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       attendance_type: "FUNERAL" | "CONDOLENCE_VISIT"
       delivery_method: "MAIL" | "HAND" | "DELIVERY" | "OTHER"
+      invitation_status:
+        | "pending"
+        | "accepted"
+        | "rejected"
+        | "expired"
+        | "canceled"
+      invitation_type: "email" | "share"
       offering_type: "FLOWER" | "INCENSE" | "FOOD" | "MONEY" | "OTHER"
     }
     CompositeTypes: {

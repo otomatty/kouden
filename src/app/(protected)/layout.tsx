@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ensureProfile } from "@/app/_actions/auth";
 import { Header } from "./_components/header";
 import { TourGuide } from "@/components/custom/TourGuide/TourGuide";
+import { FeedbackButton } from "@/components/custom/feedback-button";
 
 interface ProtectedLayoutProps {
 	children: React.ReactNode;
@@ -33,6 +34,7 @@ export default async function ProtectedLayout({
 				<div className="app-body container mx-auto px-4 py-8">
 					<main>{children}</main>
 				</div>
+				<FeedbackButton />
 			</div>
 		</TourGuide>
 	);

@@ -4,17 +4,12 @@ import type { Database } from "./supabase";
 export interface Kouden {
 	id: string;
 	title: string;
-	description?: string | null;
+	description: string | null;
+	owner_id: string;
+	created_by: string;
 	created_at: string;
 	updated_at: string;
-	created_by: string;
-	owner_id: string;
-	shared_user_ids: string[];
-	status: "active" | "archived";
-	// 関連情報
-	owner?: {
-		display_name: string;
-	};
+	status: string;
 }
 
 export type KoudenEntry =

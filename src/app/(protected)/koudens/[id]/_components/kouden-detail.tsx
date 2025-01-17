@@ -28,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OfferingTable } from "./offering-table";
 import { TelegramTable } from "./telegram-table";
 import { ReturnItemTable } from "./return-item-table";
+import { MemberTable } from "./member-table";
 
 type Kouden = Database["public"]["Tables"]["koudens"]["Row"];
 
@@ -89,7 +90,12 @@ export function KoudenDetail({
 	const [title, setTitle] = useState(kouden.title);
 	const [description, setDescription] = useState(kouden.description || "");
 	const [viewMode, setViewMode] = useState<
-		"table" | "statistics" | "offerings" | "telegrams" | "return-items"
+		| "table"
+		| "statistics"
+		| "offerings"
+		| "telegrams"
+		| "return-items"
+		| "members"
 	>("table");
 
 	const handleSave = async () => {
@@ -187,6 +193,7 @@ export function KoudenDetail({
 					<TabsTrigger value="telegrams">弔電</TabsTrigger>
 					<TabsTrigger value="return-items">返礼品</TabsTrigger>
 					<TabsTrigger value="statistics">統計</TabsTrigger>
+					<TabsTrigger value="members">メンバー</TabsTrigger>
 				</TabsList>
 
 				<TabsContent value="table">
@@ -255,6 +262,9 @@ export function KoudenDetail({
 				</TabsContent>
 				<TabsContent value="statistics">
 					<KoudenStatistics entries={entries} />
+				</TabsContent>
+				<TabsContent value="members">
+					<MemberTable koudenId={kouden.id} />
 				</TabsContent>
 			</Tabs>
 		</div>
