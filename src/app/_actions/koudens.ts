@@ -134,7 +134,7 @@ export async function getKoudens({
 		const { data: memberKoudens, error: memberError } = await supabase
 			.from("kouden_members")
 			.select(`
-				kouden:koudens (
+				kouden:koudens!inner (
 					id,
 					title,
 					description,
@@ -146,7 +146,7 @@ export async function getKoudens({
 				)
 			`)
 			.eq("user_id", userId)
-			.order("kouden.created_at", { ascending: false });
+			.order("created_at", { ascending: false, foreignTable: "koudens" });
 
 		if (memberError) throw memberError;
 
