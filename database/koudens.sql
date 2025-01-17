@@ -19,8 +19,6 @@ CREATE TABLE IF NOT EXISTS koudens (
     created_by UUID NOT NULL REFERENCES auth.users(id),
     -- 所有者のユーザーID（authテーブルの参照）
     owner_id UUID NOT NULL REFERENCES auth.users(id),
-    -- 共有ユーザーのID配列（authテーブルの参照）
-    shared_user_ids UUID[] DEFAULT '{}'::UUID[] NOT NULL,
     -- 香典帳の状態（active/archived）
     status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived'))
 );
@@ -46,31 +44,48 @@ CREATE INDEX idx_koudens_created_by ON koudens(created_by);
 ALTER TABLE koudens ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies
-DROP POLICY IF EXISTS "Users can view their own koudens" ON koudens;
-DROP POLICY IF EXISTS "Users can insert their own koudens" ON koudens;
-DROP POLICY IF EXISTS "Users can update their own koudens" ON koudens;
-DROP POLICY IF EXISTS "Users can delete their own koudens" ON koudens;
+DROP POLICY IF EXISTS "authenticated_access" ON koudens;
+DROP POLICY IF EXISTS "invitation_access" ON koudens;
+DROP POLICY IF EXISTS "owner_management" ON koudens;
 
--- Create RLS policies
-CREATE POLICY "Users can view their own koudens"
-    ON koudens FOR SELECT
+-- 1. オーナー用のポリシー（全ての操作を許可）
+CREATE POLICY "owner_all_access" ON koudens
+    FOR ALL
+    TO authenticated
+    USING (owner_id = auth.uid())
+    WITH CHECK (owner_id = auth.uid());
+
+-- 2. メンバー用の閲覧ポリシー（SELECTのみ）
+CREATE POLICY "member_read_access" ON koudens
+    FOR SELECT
+    TO authenticated
     USING (
-        auth.uid()::uuid = owner_id
-        OR auth.uid()::uuid = ANY(shared_user_ids)
+        EXISTS (
+            SELECT 1 FROM kouden_members
+            WHERE kouden_id = id
+            AND user_id = auth.uid()
+        )
     );
 
-CREATE POLICY "Users can insert their own koudens"
-    ON koudens FOR INSERT
-    WITH CHECK (
-        auth.uid()::uuid = owner_id
-        AND auth.uid()::uuid = created_by
-    );
-
-CREATE POLICY "Users can update their own koudens"
-    ON koudens FOR UPDATE
-    USING (auth.uid()::uuid = owner_id)
-    WITH CHECK (auth.uid()::uuid = owner_id);
-
-CREATE POLICY "Users can delete their own koudens"
-    ON koudens FOR DELETE
-    USING (auth.uid()::uuid = owner_id); 
+-- 3. 招待された人用の閲覧ポリシー（SELECTのみ）
+CREATE POLICY "invitee_read_access" ON koudens
+    FOR SELECT
+    TO public
+    USING (
+        EXISTS (
+            SELECT 1 FROM kouden_invitations
+            WHERE kouden_id = id
+            AND status = 'pending'
+            AND expires_at > now()
+            AND (
+                -- メールタイプの招待
+                (invitation_type = 'email' AND email = (
+                    SELECT email FROM auth.users WHERE id = auth.uid()
+                ))
+                OR
+                -- 共有リンクタイプの招待
+                (invitation_type = 'share' 
+                AND (max_uses IS NULL OR used_count < max_uses))
+            )
+        )
+    ); 

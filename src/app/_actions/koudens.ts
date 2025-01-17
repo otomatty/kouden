@@ -38,7 +38,7 @@ export async function createKouden({
 			userId = user.id;
 		}
 
-		// トランザクションを開始
+		// 1. 香典帳を作成
 		const { data: kouden, error: koudenError } = await supabase
 			.from("koudens")
 			.insert({
@@ -47,21 +47,25 @@ export async function createKouden({
 				owner_id: userId,
 				created_by: userId,
 			})
-			.select(
-				`
-        *,
-        owner:profiles!koudens_owner_id_fkey(
-          display_name
-        )
-      `,
-			)
+			.select("*")
 			.single();
 
 		if (koudenError) {
 			throw koudenError;
 		}
 
-		// kouden_membersテーブルに作成者を登録
+		// 2. オーナー情報を取得
+		const { data: owner, error: ownerError } = await supabase
+			.from("profiles")
+			.select("id, display_name")
+			.eq("id", userId)
+			.single();
+
+		if (ownerError) {
+			throw ownerError;
+		}
+
+		// 3. 編集者ロールを取得
 		const { data: ownerRole, error: roleError } = await supabase
 			.from("kouden_roles")
 			.select("id")
@@ -73,6 +77,7 @@ export async function createKouden({
 			throw new Error("編集者ロールの取得に失敗しました");
 		}
 
+		// 4. メンバーとして登録
 		const { error: memberError } = await supabase
 			.from("kouden_members")
 			.insert({
@@ -86,13 +91,13 @@ export async function createKouden({
 			throw memberError;
 		}
 
-		// デフォルトの関係性を初期化
+		// 5. デフォルトの関係性を初期化
 		await initializeDefaultRelationships(kouden.id);
 
 		return {
 			kouden: {
 				...kouden,
-				owner: kouden.owner,
+				owner,
 			} as unknown as Kouden,
 		};
 	} catch (error) {
@@ -107,65 +112,52 @@ export async function getKoudens({
 	try {
 		const supabase = await createClient();
 
-		// まず所有している香典帳を取得
-		const { data: ownedKoudens, error: ownedError } = await supabase
+		// アクセス可能な全ての香典帳を取得
+		const { data: accessibleKoudens, error: accessError } = await supabase
 			.from("koudens")
 			.select(`
-				*,
-				owner:profiles!koudens_owner_id_fkey(
-					display_name
-				)
+				id,
+				title,
+				description,
+				created_at,
+				updated_at,
+				owner_id,
+				created_by,
+				status
 			`)
-			.eq("owner_id", userId)
+			.or(`owner_id.eq.${userId},id.in.(
+				select kouden_id from kouden_members where user_id = '${userId}'
+			)`)
 			.order("created_at", { ascending: false });
 
-		if (ownedError) {
-			console.error("[ERROR] Error fetching owned koudens:", ownedError);
-			throw ownedError;
+		if (accessError) {
+			console.error("[ERROR] Error fetching koudens:", accessError);
+			throw accessError;
 		}
 
-		// 次にメンバーとして参加している香典帳を取得
-		const { data: memberKoudens, error: memberError } = await supabase
-			.from("kouden_members")
-			.select(`
-				koudens (
-					*,
-					owner:profiles!koudens_owner_id_fkey(
-						display_name
-					)
-				)
-			`)
-			.eq("user_id", userId);
-
-		if (memberError) {
-			console.error("[ERROR] Error fetching member koudens:", memberError);
-			throw memberError;
+		if (!accessibleKoudens || accessibleKoudens.length === 0) {
+			return { koudens: [] };
 		}
 
-		// 重複を排除して結果を結合
-		const koudenMap = new Map();
+		// 関連するプロフィール情報を取得
+		const ownerIds = [...new Set(accessibleKoudens.map((k) => k.owner_id))];
+		const { data: profiles, error: profilesError } = await supabase
+			.from("profiles")
+			.select("id, display_name")
+			.in("id", ownerIds);
 
-		// 所有している香典帳を追加
-		for (const kouden of ownedKoudens) {
-			koudenMap.set(kouden.id, kouden);
+		if (profilesError) {
+			throw profilesError;
 		}
 
-		// メンバーとして参加している香典帳を追加（既に存在する場合は上書きしない）
-		for (const member of memberKoudens) {
-			const kouden = member.koudens;
-			if (!koudenMap.has(kouden.id)) {
-				koudenMap.set(kouden.id, kouden);
-			}
-		}
-
-		// Map から配列に変換し、作成日時でソート
-		const koudens = Array.from(koudenMap.values()).sort(
-			(a, b) =>
-				new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-		);
+		// データを結合
+		const koudensWithProfiles = accessibleKoudens.map((kouden) => ({
+			...kouden,
+			owner: profiles?.find((p) => p.id === kouden.owner_id),
+		}));
 
 		return {
-			koudens: koudens as unknown as Kouden[],
+			koudens: koudensWithProfiles as unknown as Kouden[],
 		};
 	} catch (error) {
 		console.error("[ERROR] Error getting koudens:", error);
@@ -185,7 +177,16 @@ export async function getKouden(id: string) {
 
 	const { data, error } = await supabase
 		.from("koudens")
-		.select("*")
+		.select(`
+			id,
+			title,
+			description,
+			created_at,
+			updated_at,
+			owner_id,
+			created_by,
+			status
+		`)
 		.eq("id", id)
 		.single();
 
@@ -208,14 +209,19 @@ export async function getKoudenWithEntries(id: string) {
 		throw new Error("認証が必要です");
 	}
 
+	// 1. 香典帳の基本情報を取得
 	const { data: kouden, error: koudenError } = await supabase
 		.from("koudens")
 		.select(`
-			*,
-			owner:profiles!koudens_owner_id_fkey(
-				display_name
-			)
-			`)
+			id,
+			title,
+			description,
+			created_at,
+			updated_at,
+			owner_id,
+			created_by,
+			status
+		`)
 		.eq("id", id)
 		.single();
 
@@ -228,6 +234,19 @@ export async function getKoudenWithEntries(id: string) {
 		throw new Error("指定された香典帳が見つかりません");
 	}
 
+	// 2. オーナー情報を取得
+	const { data: owner, error: ownerError } = await supabase
+		.from("profiles")
+		.select("id, display_name")
+		.eq("id", kouden.owner_id)
+		.single();
+
+	if (ownerError) {
+		console.error("[ERROR] Error fetching owner profile:", ownerError);
+		throw new Error("オーナー情報の取得に失敗しました");
+	}
+
+	// 3. エントリー情報を取得
 	const { data: entries, error: entriesError } = await supabase
 		.from("kouden_entries")
 		.select(`
@@ -244,7 +263,10 @@ export async function getKoudenWithEntries(id: string) {
 	}
 
 	return {
-		kouden,
+		kouden: {
+			...kouden,
+			owner,
+		},
 		entries: entries as unknown as KoudenEntry[],
 	};
 }
