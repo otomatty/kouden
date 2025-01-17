@@ -112,8 +112,8 @@ export async function getKoudens({
 	try {
 		const supabase = await createClient();
 
-		// アクセス可能な全ての香典帳を取得
-		const { data: accessibleKoudens, error: accessError } = await supabase
+		// 1. オーナーとして持っている香典帳を取得
+		const { data: ownedKoudens, error: ownedError } = await supabase
 			.from("koudens")
 			.select(`
 				id,
@@ -125,33 +125,51 @@ export async function getKoudens({
 				created_by,
 				status
 			`)
-			.or(`owner_id.eq.${userId},id.in.(
-				select kouden_id from kouden_members where user_id = '${userId}'
-			)`)
+			.eq("owner_id", userId)
 			.order("created_at", { ascending: false });
 
-		if (accessError) {
-			console.error("[ERROR] Error fetching koudens:", accessError);
-			throw accessError;
-		}
+		if (ownedError) throw ownedError;
 
-		if (!accessibleKoudens || accessibleKoudens.length === 0) {
-			return { koudens: [] };
-		}
+		// 2. メンバーとして参加している香典帳を取得
+		const { data: memberKoudens, error: memberError } = await supabase
+			.from("kouden_members")
+			.select(`
+				kouden:koudens (
+					id,
+					title,
+					description,
+					created_at,
+					updated_at,
+					owner_id,
+					created_by,
+					status
+				)
+			`)
+			.eq("user_id", userId)
+			.order("kouden.created_at", { ascending: false });
 
-		// 関連するプロフィール情報を取得
-		const ownerIds = [...new Set(accessibleKoudens.map((k) => k.owner_id))];
+		if (memberError) throw memberError;
+
+		// 3. 結果をマージして重複を除去
+		const allKoudens = [
+			...(ownedKoudens || []),
+			...(memberKoudens?.map((m) => m.kouden) || []),
+		];
+		const uniqueKoudens = Array.from(
+			new Map(allKoudens.map((k) => [k.id, k])).values(),
+		);
+
+		// 4. オーナー情報を取得
+		const ownerIds = [...new Set(uniqueKoudens.map((k) => k.owner_id))];
 		const { data: profiles, error: profilesError } = await supabase
 			.from("profiles")
 			.select("id, display_name")
 			.in("id", ownerIds);
 
-		if (profilesError) {
-			throw profilesError;
-		}
+		if (profilesError) throw profilesError;
 
-		// データを結合
-		const koudensWithProfiles = accessibleKoudens.map((kouden) => ({
+		// 5. データを結合
+		const koudensWithProfiles = uniqueKoudens.map((kouden) => ({
 			...kouden,
 			owner: profiles?.find((p) => p.id === kouden.owner_id),
 		}));
