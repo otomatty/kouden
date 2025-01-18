@@ -1,6 +1,11 @@
+import withPWA from "next-pwa";
 import type { NextConfig } from "next";
 
-const config: NextConfig = {
+const config: NextConfig = withPWA({
+	dest: "public",
+	register: true,
+	skipWaiting: true,
+})({
 	output: "standalone",
 	images: {
 		domains: ["tcqnsslsaizqwjuyvoyu.supabase.co"],
@@ -46,6 +51,6 @@ const config: NextConfig = {
 			},
 		];
 	},
-};
+});
 
 export default config;

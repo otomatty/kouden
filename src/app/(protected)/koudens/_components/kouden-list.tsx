@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -11,8 +12,9 @@ import {
 } from "@/components/ui/card";
 import { formatDistanceToNow } from "date-fns";
 import { ja } from "date-fns/locale";
-import Link from "next/link";
 import type { Database } from "@/types/supabase";
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
 
 type Kouden = Database["public"]["Tables"]["koudens"]["Row"];
 
@@ -21,6 +23,14 @@ interface KoudenListProps {
 }
 
 export function KoudenList({ koudens }: KoudenListProps) {
+	const router = useRouter();
+	const [loadingKoudenId, setLoadingKoudenId] = useState<string | null>(null);
+
+	const handleViewDetails = (koudenId: string) => {
+		setLoadingKoudenId(koudenId);
+		router.push(`/koudens/${koudenId}`);
+	};
+
 	if (koudens.length === 0) {
 		return (
 			<div className="text-center py-12">
@@ -50,11 +60,21 @@ export function KoudenList({ koudens }: KoudenListProps) {
 						)}
 					</div>
 					<CardFooter className="mt-auto pt-6">
-						<Link href={`/koudens/${kouden.id}`} className="w-full">
-							<Button variant="outline" className="w-full kouden-card-button">
-								詳細を見る
-							</Button>
-						</Link>
+						<Button
+							variant="outline"
+							className="w-full kouden-card-button"
+							onClick={() => handleViewDetails(kouden.id)}
+							disabled={loadingKoudenId === kouden.id}
+						>
+							{loadingKoudenId === kouden.id ? (
+								<>
+									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+									読み込み中...
+								</>
+							) : (
+								"詳細を見る"
+							)}
+						</Button>
 					</CardFooter>
 				</Card>
 			))}

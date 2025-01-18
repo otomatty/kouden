@@ -16,6 +16,21 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
 	title: "香典帳アプリ",
 	description: "香典帳アプリ",
+	manifest: "/manifest.json",
+	themeColor: "#000000",
+	appleWebApp: {
+		capable: true,
+		statusBarStyle: "default",
+		title: "香典帳アプリ",
+	},
+	formatDetection: {
+		telephone: false,
+	},
+	viewport: {
+		width: "device-width",
+		initialScale: 1,
+		maximumScale: 1,
+	},
 };
 
 export default function RootLayout({
@@ -25,6 +40,11 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="ja">
+			<head>
+				<link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+				<meta name="apple-mobile-web-app-capable" content="yes" />
+				<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+			</head>
 			<body
 				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
 			>

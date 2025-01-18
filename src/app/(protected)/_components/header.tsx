@@ -6,6 +6,15 @@ import type { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
+import { Menu } from "lucide-react";
+import {
+	Sheet,
+	SheetContent,
+	SheetHeader,
+	SheetTitle,
+	SheetTrigger,
+} from "@/components/ui/sheet";
+import { useState } from "react";
 
 interface HeaderProps {
 	user: User;
@@ -14,6 +23,7 @@ interface HeaderProps {
 export function Header({ user }: HeaderProps) {
 	const router = useRouter();
 	const supabase = createClient();
+	const [isOpen, setIsOpen] = useState(false);
 
 	const handleSignOut = async () => {
 		await supabase.auth.signOut();
@@ -27,7 +37,8 @@ export function Header({ user }: HeaderProps) {
 					<Link href="/koudens" className="hover:opacity-80 transition-opacity">
 						<h1 className="text-xl font-semibold">香典帳アプリ</h1>
 					</Link>
-					<div className="flex items-center gap-4">
+					{/* デスクトップ表示 */}
+					<div className="hidden md:flex items-center gap-4">
 						<div className="flex items-center gap-3">
 							<Avatar>
 								<AvatarImage src={user.user_metadata.avatar_url} />
@@ -40,6 +51,35 @@ export function Header({ user }: HeaderProps) {
 						<Button variant="outline" onClick={handleSignOut}>
 							ログアウト
 						</Button>
+					</div>
+					{/* モバイル表示 */}
+					<div className="md:hidden">
+						<Sheet open={isOpen} onOpenChange={setIsOpen}>
+							<SheetTrigger asChild>
+								<Button variant="ghost" size="icon">
+									<Menu className="h-6 w-6" />
+								</Button>
+							</SheetTrigger>
+							<SheetContent>
+								<SheetHeader>
+									<SheetTitle>メニュー</SheetTitle>
+								</SheetHeader>
+								<div className="flex flex-col gap-6 mt-6">
+									<div className="flex items-center gap-3">
+										<Avatar>
+											<AvatarImage src={user.user_metadata.avatar_url} />
+											<AvatarFallback>
+												{user.email?.charAt(0).toUpperCase()}
+											</AvatarFallback>
+										</Avatar>
+										<span className="text-sm text-gray-600">{user.email}</span>
+									</div>
+									<Button variant="outline" onClick={handleSignOut}>
+										ログアウト
+									</Button>
+								</div>
+							</SheetContent>
+						</Sheet>
 					</div>
 				</div>
 			</div>
