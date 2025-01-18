@@ -30,10 +30,15 @@ export const columns: ColumnDef<KoudenMember>[] = [
 		},
 	},
 	{
-		id: "role",
+		accessorKey: "role",
 		header: "ロール",
 		cell: ({ row }) => {
 			const member = row.original;
+
+			if (!member.role) {
+				return <Badge variant="outline">未設定</Badge>;
+			}
+
 			return <Badge variant="outline">{member.role.name}</Badge>;
 		},
 	},

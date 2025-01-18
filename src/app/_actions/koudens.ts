@@ -19,6 +19,55 @@ const koudenSchema = z.object({
 
 export type CreateKoudenInput = z.infer<typeof koudenSchema>;
 
+// 権限の型定義を追加
+export type KoudenPermission = "owner" | "editor" | "viewer" | null;
+
+// 権限チェック関数を追加
+export async function checkKoudenPermission(
+	koudenId: string,
+): Promise<KoudenPermission> {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	if (!user) {
+		return null;
+	}
+
+	// オーナーチェック
+	const { data: kouden } = await supabase
+		.from("koudens")
+		.select("owner_id, created_by")
+		.eq("id", koudenId)
+		.single();
+
+	if (!kouden) {
+		return null;
+	}
+
+	if (kouden.owner_id === user.id || kouden.created_by === user.id) {
+		return "owner";
+	}
+
+	// メンバーロールチェック
+	const { data: member } = await supabase
+		.from("kouden_members")
+		.select("role_id, kouden_roles!inner(name)")
+		.eq("kouden_id", koudenId)
+		.eq("user_id", user.id)
+		.single();
+
+	if (member?.kouden_roles.name === "編集者") {
+		return "editor";
+	}
+	if (member?.kouden_roles.name === "閲覧者") {
+		return "viewer";
+	}
+
+	return null;
+}
+
 export async function createKouden({
 	title,
 	description,
@@ -112,8 +161,28 @@ export async function getKoudens({
 	try {
 		const supabase = await createClient();
 
-		// 1. オーナーとして持っている香典帳を取得
-		const { data: ownedKoudens, error: ownedError } = await supabase
+		// セッション情報を確認
+		const {
+			data: { session },
+		} = await supabase.auth.getSession();
+
+		if (!session?.user?.id) {
+			return { error: "認証が必要です" };
+		}
+
+		// メンバーとして参加している香典帳のIDを取得
+		const { data: memberKoudens, error: memberError } = await supabase
+			.from("kouden_members")
+			.select("kouden_id")
+			.eq("user_id", session.user.id);
+
+		if (memberError) {
+			console.error("Member query error:", memberError);
+			throw memberError;
+		}
+
+		// 香典帳を取得（オーナー/作成者 OR メンバーシップ）
+		const { data: koudens, error } = await supabase
 			.from("koudens")
 			.select(`
 				id,
@@ -125,42 +194,20 @@ export async function getKoudens({
 				created_by,
 				status
 			`)
-			.eq("owner_id", userId)
+			.or(
+				`owner_id.eq.${session.user.id},created_by.eq.${
+					session.user.id
+				},id.in.(${memberKoudens?.map((m) => m.kouden_id).join(",") || ""})`,
+			)
 			.order("created_at", { ascending: false });
 
-		if (ownedError) throw ownedError;
+		if (error) {
+			console.error("Koudens query error:", error);
+			throw error;
+		}
 
-		// 2. メンバーとして参加している香典帳を取得
-		const { data: memberKoudens, error: memberError } = await supabase
-			.from("kouden_members")
-			.select(`
-				kouden:koudens!inner (
-					id,
-					title,
-					description,
-					created_at,
-					updated_at,
-					owner_id,
-					created_by,
-					status
-				)
-			`)
-			.eq("user_id", userId)
-			.order("created_at", { ascending: false, foreignTable: "koudens" });
-
-		if (memberError) throw memberError;
-
-		// 3. 結果をマージして重複を除去
-		const allKoudens = [
-			...(ownedKoudens || []),
-			...(memberKoudens?.map((m) => m.kouden) || []),
-		];
-		const uniqueKoudens = Array.from(
-			new Map(allKoudens.map((k) => [k.id, k])).values(),
-		);
-
-		// 4. オーナー情報を取得
-		const ownerIds = [...new Set(uniqueKoudens.map((k) => k.owner_id))];
+		// オーナー情報を取得
+		const ownerIds = [...new Set(koudens?.map((k) => k.owner_id) || [])];
 		const { data: profiles, error: profilesError } = await supabase
 			.from("profiles")
 			.select("id, display_name")
@@ -168,8 +215,7 @@ export async function getKoudens({
 
 		if (profilesError) throw profilesError;
 
-		// 5. データを結合
-		const koudensWithProfiles = uniqueKoudens.map((kouden) => ({
+		const koudensWithProfiles = koudens?.map((kouden) => ({
 			...kouden,
 			owner: profiles?.find((p) => p.id === kouden.owner_id),
 		}));
@@ -217,14 +263,10 @@ export async function getKouden(id: string) {
 
 export async function getKoudenWithEntries(id: string) {
 	const supabase = await createClient();
+	const role = await checkKoudenPermission(id);
 
-	const {
-		data: { user },
-		error: userError,
-	} = await supabase.auth.getUser();
-
-	if (userError || !user) {
-		throw new Error("認証が必要です");
+	if (!role) {
+		throw new Error("アクセス権限がありません");
 	}
 
 	// 1. 香典帳の基本情報を取得
@@ -294,12 +336,14 @@ export async function updateKouden(
 	input: { title: string; description?: string },
 ) {
 	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+	const role = await checkKoudenPermission(id);
 
-	if (!user) {
-		throw new Error("認証が必要です");
+	if (!role) {
+		throw new Error("アクセス権限がありません");
+	}
+
+	if (role !== "owner" && role !== "editor") {
+		throw new Error("編集権限がありません");
 	}
 
 	const { error } = await supabase.from("koudens").update(input).eq("id", id);
@@ -313,12 +357,10 @@ export async function updateKouden(
 
 export async function deleteKouden(id: string) {
 	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+	const role = await checkKoudenPermission(id);
 
-	if (!user) {
-		throw new Error("認証が必要です");
+	if (role !== "owner") {
+		throw new Error("削除権限がありません");
 	}
 
 	const { error } = await supabase.from("koudens").delete().eq("id", id);
@@ -333,6 +375,12 @@ export async function deleteKouden(id: string) {
 
 export async function shareKouden(id: string, userIds: string[]) {
 	const supabase = await createClient();
+	const role = await checkKoudenPermission(id);
+
+	if (role !== "owner") {
+		throw new Error("共有権限がありません");
+	}
+
 	const {
 		data: { user },
 	} = await supabase.auth.getUser();
@@ -377,12 +425,10 @@ export async function shareKouden(id: string, userIds: string[]) {
 
 export async function archiveKouden(id: string) {
 	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+	const role = await checkKoudenPermission(id);
 
-	if (!user) {
-		throw new Error("認証が必要です");
+	if (role !== "owner") {
+		throw new Error("アーカイブ権限がありません");
 	}
 
 	const { data, error } = await supabase

@@ -48,44 +48,49 @@ DROP POLICY IF EXISTS "authenticated_access" ON koudens;
 DROP POLICY IF EXISTS "invitation_access" ON koudens;
 DROP POLICY IF EXISTS "owner_management" ON koudens;
 
--- 1. オーナー用のポリシー（全ての操作を許可）
-CREATE POLICY "owner_all_access" ON koudens
-    FOR ALL
-    TO authenticated
-    USING (owner_id = auth.uid())
-    WITH CHECK (owner_id = auth.uid());
-
--- 2. メンバー用の閲覧ポリシー（SELECTのみ）
-CREATE POLICY "member_read_access" ON koudens
+-- 1. メンバーとオーナーのアクセスポリシー（SELECT）
+CREATE POLICY "authenticated_access" ON koudens
     FOR SELECT
     TO authenticated
     USING (
         EXISTS (
-            SELECT 1 FROM kouden_members
-            WHERE kouden_id = id
-            AND user_id = auth.uid()
+            SELECT 1
+            FROM kouden_members
+            WHERE kouden_members.kouden_id = koudens.id
+            AND kouden_members.user_id = auth.uid()
         )
+        OR owner_id = auth.uid()
+        OR created_by = auth.uid()
     );
 
--- 3. 招待された人用の閲覧ポリシー（SELECTのみ）
-CREATE POLICY "invitee_read_access" ON koudens
+-- 2. オーナー管理ポリシー（全ての操作）
+CREATE POLICY "owner_management" ON koudens
+    FOR ALL
+    TO authenticated
+    USING (
+        owner_id = auth.uid()
+        OR created_by = auth.uid()
+    )
+    WITH CHECK (
+        owner_id = auth.uid()
+        OR created_by = auth.uid()
+    );
+
+-- 3. 招待用の閲覧ポリシー（SELECT）
+CREATE POLICY "invitation_access" ON koudens
     FOR SELECT
     TO public
     USING (
         EXISTS (
-            SELECT 1 FROM kouden_invitations
-            WHERE kouden_id = id
-            AND status = 'pending'
-            AND expires_at > now()
+            SELECT 1
+            FROM kouden_invitations
+            WHERE kouden_invitations.kouden_id = koudens.id
+            AND kouden_invitations.status = 'pending'
+            AND kouden_invitations.expires_at > now()
+            AND kouden_invitations.invitation_type = 'share'
             AND (
-                -- メールタイプの招待
-                (invitation_type = 'email' AND email = (
-                    SELECT email FROM auth.users WHERE id = auth.uid()
-                ))
-                OR
-                -- 共有リンクタイプの招待
-                (invitation_type = 'share' 
-                AND (max_uses IS NULL OR used_count < max_uses))
+                kouden_invitations.max_uses IS NULL
+                OR kouden_invitations.used_count < kouden_invitations.max_uses
             )
         )
     ); 

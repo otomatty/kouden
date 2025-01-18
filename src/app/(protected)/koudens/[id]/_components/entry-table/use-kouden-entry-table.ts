@@ -48,11 +48,9 @@ export function useKoudenEntryTable({
 	// 編集を保存
 	const handleSaveRow = useCallback(
 		async (formData: EditKoudenEntryFormData) => {
-			console.log("handleSaveRow called with:", { formData, editingEntry });
 			if (editingEntry) {
 				try {
 					const response = await updateKoudenEntry(editingEntry.id, formData);
-					console.log("Update response:", response);
 					setData((prev) =>
 						prev.map((row) => (row.id === editingEntry.id ? response : row)),
 					);
@@ -68,7 +66,6 @@ export function useKoudenEntryTable({
 	// 新しい行を追加
 	const handleAddRow = useCallback(
 		async (formData: EditKoudenEntryFormData) => {
-			console.log("handleAddRow called with:", formData);
 			try {
 				const response = await createKoudenEntry({
 					...formData,
@@ -76,7 +73,6 @@ export function useKoudenEntryTable({
 					name: formData.name ?? null,
 					address: formData.address ?? null,
 				});
-				console.log("Create response:", response);
 				setData((prev) => [...prev, response]);
 				setIsDialogOpen(false);
 			} catch (error) {

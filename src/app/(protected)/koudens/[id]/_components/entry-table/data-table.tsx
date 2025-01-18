@@ -94,8 +94,8 @@ type EditableFields = keyof Pick<
 interface DataTableProps {
 	columns: ColumnDef<KoudenEntryTableData>[];
 	data: KoudenEntryTableData[];
-	onAddRow: (data: EditKoudenEntryFormData) => Promise<void>;
-	onDeleteRows: (ids: string[]) => void;
+	onAddRow?: (data: EditKoudenEntryFormData) => Promise<void>;
+	onDeleteRows?: (ids: string[]) => void;
 	koudenId: string;
 }
 

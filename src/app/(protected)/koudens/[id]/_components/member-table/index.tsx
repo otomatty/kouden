@@ -16,15 +16,23 @@ interface MemberTableProps {
 export function MemberTable({ koudenId }: MemberTableProps) {
 	const [members, setMembers] = useState<KoudenMember[]>([]);
 	const [roles, setRoles] = useState<KoudenRole[]>([]);
+	const [isLoading, setIsLoading] = useState(true);
 
 	useEffect(() => {
 		const loadData = async () => {
-			const [membersData, rolesData] = await Promise.all([
-				getKoudenMembers(koudenId),
-				getKoudenRoles(koudenId),
-			]);
-			setMembers(membersData);
-			setRoles(rolesData);
+			try {
+				setIsLoading(true);
+				const [membersData, rolesData] = await Promise.all([
+					getKoudenMembers(koudenId),
+					getKoudenRoles(koudenId),
+				]);
+				setMembers(membersData);
+				setRoles(rolesData);
+			} catch (error) {
+				console.error("[ERROR] Failed to load data:", error);
+			} finally {
+				setIsLoading(false);
+			}
 		};
 		loadData();
 	}, [koudenId]);
@@ -34,7 +42,7 @@ export function MemberTable({ koudenId }: MemberTableProps) {
 			<div className="flex justify-end">
 				<ShareLinkForm koudenId={koudenId} roles={roles} />
 			</div>
-			<DataTable columns={columns} data={members} />
+			<DataTable columns={columns} data={members} isLoading={isLoading} />
 		</div>
 	);
 }

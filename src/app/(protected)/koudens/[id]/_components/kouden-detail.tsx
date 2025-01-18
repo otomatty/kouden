@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { KoudenEntryTable } from "./kouden-entry-table";
+import { useState, useEffect } from "react";
+import { KoudenEntryTable } from "./entry-table";
 import { KoudenStatistics } from "./kouden-statistics";
 import { ExportExcelButton } from "./export-excel-button";
 import { DeleteKoudenDialog } from "./delete-kouden-dialog";
 import type { Database } from "@/types/supabase";
 import type { KoudenEntry } from "@/types/kouden";
-import type { AttendanceType } from "./data-table/types";
+import type { AttendanceType } from "./entry-table/types";
+import type { KoudenPermission } from "@/app/_actions/koudens";
+import { checkKoudenPermission } from "@/app/_actions/koudens";
 import type {
-	CreateKoudenEntryInput,
 	UpdateKoudenEntryInput,
 	KoudenEntryResponse,
 	CreateOfferingInput,
@@ -97,6 +98,15 @@ export function KoudenDetail({
 		| "return-items"
 		| "members"
 	>("table");
+	const [permission, setPermission] = useState<KoudenPermission>(null);
+
+	useEffect(() => {
+		const checkPermission = async () => {
+			const userPermission = await checkKoudenPermission(kouden.id);
+			setPermission(userPermission);
+		};
+		checkPermission();
+	}, [kouden.id]);
 
 	const handleSave = async () => {
 		try {
@@ -158,14 +168,16 @@ export function KoudenDetail({
 						<div>
 							<div className="flex items-center gap-2">
 								<h2 className="text-2xl font-bold">{kouden.title}</h2>
-								<Button
-									variant="ghost"
-									size="icon"
-									onClick={() => setIsEditing(true)}
-									className="h-8 w-8"
-								>
-									<Pencil className="h-4 w-4" />
-								</Button>
+								{permission === "owner" && (
+									<Button
+										variant="ghost"
+										size="icon"
+										onClick={() => setIsEditing(true)}
+										className="h-8 w-8"
+									>
+										<Pencil className="h-4 w-4" />
+									</Button>
+								)}
 							</div>
 							{kouden.description && (
 								<p className="text-gray-500 mt-2">{kouden.description}</p>
@@ -175,11 +187,13 @@ export function KoudenDetail({
 				</div>
 				<div className="flex items-center gap-2">
 					<ExportExcelButton koudenId={kouden.id} />
-					<DeleteKoudenDialog
-						koudenId={kouden.id}
-						koudenTitle={kouden.title}
-						onDelete={deleteKouden}
-					/>
+					{permission === "owner" && (
+						<DeleteKoudenDialog
+							koudenId={kouden.id}
+							koudenTitle={kouden.title}
+							onDelete={deleteKouden}
+						/>
+					)}
 				</div>
 			</div>
 

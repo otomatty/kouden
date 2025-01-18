@@ -14,12 +14,33 @@ export async function getKoudenMembers(
 			data: { user },
 			error: userError,
 		} = await supabase.auth.getUser();
-		if (userError) {
+		if (userError || !user) {
 			console.error("[ERROR] Failed to get user session:", userError);
 			throw new Error("認証情報の取得に失敗しました");
 		}
 
-		// メンバー情報を取得
+		// アクセス権限の確認
+		const { data: accessCheck } = await supabase
+			.from("koudens")
+			.select("id")
+			.eq("id", koudenId)
+			.eq("owner_id", user.id)
+			.single();
+
+		if (!accessCheck) {
+			const { data: memberCheck } = await supabase
+				.from("kouden_members")
+				.select("id")
+				.eq("kouden_id", koudenId)
+				.eq("user_id", user.id)
+				.single();
+
+			if (!memberCheck) {
+				throw new Error("この香典帳へのアクセス権限がありません");
+			}
+		}
+
+		// メンバー情報とプロフィール情報を一度に取得
 		const { data: members, error } = await supabase
 			.from("kouden_members")
 			.select(`
@@ -38,11 +59,7 @@ export async function getKoudenMembers(
 			throw new Error("メンバー一覧の取得に失敗しました");
 		}
 
-		if (!members.length) {
-			return [];
-		}
-
-		// プロファイル情報を取得
+		// プロフィール情報を別途取得
 		const { data: profiles, error: profileError } = await supabase
 			.from("profiles")
 			.select("id, display_name, avatar_url")
@@ -53,16 +70,21 @@ export async function getKoudenMembers(
 
 		if (profileError) {
 			console.error("[ERROR] Failed to fetch profiles:", profileError);
-			throw new Error("プロファイル情報の取得に失敗しました");
+			throw new Error("プロフィール情報の取得に失敗しました");
 		}
 
-		// メンバー情報とプロファイル情報を結合
-		const result = members.map((member) => ({
-			...member,
-			profile: profiles?.find((p) => p.id === member.user_id),
-		}));
-
-		return result;
+		return members.map((member) => {
+			const profile = profiles?.find((p) => p.id === member.user_id);
+			return {
+				...member,
+				profile: profile
+					? {
+							display_name: profile.display_name,
+							avatar_url: profile.avatar_url,
+						}
+					: undefined,
+			};
+		});
 	} catch (error) {
 		console.error("[ERROR] Error in getKoudenMembers:", error);
 		throw error;

@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import type { KoudenEntry } from "@/types/kouden";
-import { formatCurrency } from "./data-table/utils";
+import { formatCurrency } from "./entry-table/utils";
 import {
 	PieChart,
 	Pie,

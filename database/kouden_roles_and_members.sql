@@ -73,58 +73,97 @@ ALTER TABLE kouden_roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE kouden_members ENABLE ROW LEVEL SECURITY;
 
 -- kouden_rolesのポリシー
--- オーナー用のポリシー（全ての操作を許可）
 DROP POLICY IF EXISTS "owner_role_access" ON kouden_roles;
-CREATE POLICY "owner_role_access" ON kouden_roles
-FOR ALL
-TO public
-USING (
-    EXISTS (
-        SELECT 1 FROM koudens k
-        WHERE k.id = kouden_id
-        AND k.owner_id = auth.uid()
-    )
-);
-
--- メンバー用の閲覧ポリシー（SELECTのみ）
 DROP POLICY IF EXISTS "member_role_read" ON kouden_roles;
-CREATE POLICY "member_role_read" ON kouden_roles
-FOR SELECT
-TO public
-USING (
-    EXISTS (
-        SELECT 1 FROM koudens k
-        WHERE k.id = kouden_id
-        AND k.owner_id = auth.uid()
-    )
-);
+
+-- 1. メンバーとオーナーのアクセスポリシー（SELECT）
+CREATE POLICY "authenticated_role_access" ON kouden_roles
+    FOR SELECT
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1
+            FROM koudens
+            WHERE koudens.id = kouden_id
+            AND (
+                koudens.owner_id = auth.uid()
+                OR koudens.created_by = auth.uid()
+                OR EXISTS (
+                    SELECT 1
+                    FROM kouden_members
+                    WHERE kouden_members.kouden_id = koudens.id
+                    AND kouden_members.user_id = auth.uid()
+                )
+            )
+        )
+    );
+
+-- 2. オーナー管理ポリシー（全ての操作）
+CREATE POLICY "owner_role_management" ON kouden_roles
+    FOR ALL
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1
+            FROM koudens
+            WHERE koudens.id = kouden_id
+            AND (
+                koudens.owner_id = auth.uid()
+                OR koudens.created_by = auth.uid()
+            )
+        )
+    );
 
 -- kouden_membersのポリシー
--- オーナー用のポリシー（全ての操作を許可）
 DROP POLICY IF EXISTS "owner_member_access" ON kouden_members;
-CREATE POLICY "owner_member_access" ON kouden_members
-FOR ALL
-TO public
-USING (
-    EXISTS (
-        SELECT 1 FROM koudens k
-        WHERE k.id = kouden_id
-        AND k.owner_id = auth.uid()
-    )
-);
-
--- メンバー用の閲覧ポリシー（SELECTのみ）
 DROP POLICY IF EXISTS "member_read_access" ON kouden_members;
-CREATE POLICY "member_read_access" ON kouden_members
-FOR SELECT
-TO public
-USING (
-    EXISTS (
-        SELECT 1 FROM koudens k
-        WHERE k.id = kouden_id
-        AND k.owner_id = auth.uid()
-    )
-);
+
+-- 1. メンバーとオーナーのアクセスポリシー（SELECT）
+CREATE POLICY "members_basic_access" ON kouden_members
+    FOR SELECT
+    TO authenticated
+    USING (
+        user_id = auth.uid()
+        OR EXISTS (
+            SELECT 1
+            FROM koudens
+            WHERE koudens.id = kouden_id
+            AND (
+                koudens.owner_id = auth.uid()
+                OR koudens.created_by = auth.uid()
+            )
+        )
+    );
+
+-- 2. オーナー管理ポリシー（INSERT, UPDATE, DELETE）
+CREATE POLICY "members_owner_management" ON kouden_members
+    FOR ALL
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1
+            FROM koudens
+            WHERE koudens.id = kouden_id
+            AND (
+                koudens.owner_id = auth.uid()
+                OR koudens.created_by = auth.uid()
+            )
+        )
+    );
+
+-- 3. メンバー招待ポリシー（INSERT）
+CREATE POLICY "members_invitation_insert" ON kouden_members
+    FOR INSERT
+    TO authenticated
+    WITH CHECK (
+        EXISTS (
+            SELECT 1
+            FROM kouden_invitations
+            WHERE kouden_invitations.kouden_id = kouden_id
+            AND kouden_invitations.role_id = role_id
+            AND kouden_invitations.status = 'pending'
+        )
+    );
 
 -- メンバー管理用の関数
 CREATE OR REPLACE FUNCTION update_member_role(

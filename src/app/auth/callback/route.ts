@@ -1,6 +1,7 @@
+import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { acceptInvitation } from "@/app/_actions/invitations";
 
 export async function GET(request: Request) {
 	const requestUrl = new URL(request.url);
@@ -35,54 +36,22 @@ export async function GET(request: Request) {
 		}
 
 		if (invitationToken) {
-			const { data: invitation, error: invitationError } = await supabase
-				.from("kouden_invitations")
-				.select("*")
-				.eq("invitation_token", invitationToken)
-				.single();
-
-			if (invitationError || !invitation) {
-				return redirect("/invitation-error?error=invalid_invitation");
+			try {
+				await acceptInvitation(invitationToken);
+				cookieStore.delete("invitation_token");
+			} catch (error) {
+				console.error("[ERROR] Error accepting invitation:", error);
+				const errorMessage =
+					error instanceof Error ? error.message : "不明なエラー";
+				return redirect(
+					`/invitation-error?error=${encodeURIComponent(errorMessage)}`,
+				);
 			}
-
-			const { data: existingMember } = await supabase
-				.from("kouden_members")
-				.select("*")
-				.eq("kouden_id", invitation.kouden_id)
-				.eq("user_id", session.user.id)
-				.single();
-
-			if (existingMember) {
-				await supabase
-					.from("kouden_invitations")
-					.update({ status: "accepted" })
-					.eq("id", invitation.id);
-			} else {
-				const { error: insertError } = await supabase
-					.from("kouden_members")
-					.insert({
-						kouden_id: invitation.kouden_id,
-						user_id: session.user.id,
-						role_id: invitation.role_id,
-						added_by: invitation.created_by,
-					});
-
-				if (insertError) {
-					return redirect("/invitation-error?error=member_creation_failed");
-				}
-
-				await supabase
-					.from("kouden_invitations")
-					.update({ status: "accepted" })
-					.eq("id", invitation.id);
-			}
-
-			cookieStore.delete("invitation_token");
-			return redirect("/koudens");
 		}
 
 		return redirect("/koudens");
 	} catch (error) {
-		return redirect("/koudens");
+		console.error("[ERROR] Error in callback:", error);
+		return redirect("/login");
 	}
 }

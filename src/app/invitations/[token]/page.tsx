@@ -1,16 +1,9 @@
 import { notFound } from "next/navigation";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardFooter,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
 import { getInvitation } from "@/app/_actions/invitations";
-import { AcceptInvitationButton } from "./_components/accept-invitation-button";
 import { createClient } from "@/lib/supabase/server";
-import { LoginButton } from "@/components/custom/login-button";
+import { formatDistanceToNow } from "date-fns";
+import { ja } from "date-fns/locale";
+import { AnimatedInvitationCard } from "./_components/animated-invitation-card";
 
 interface InvitationPageProps {
 	params: Promise<{
@@ -32,58 +25,39 @@ export default async function InvitationPage({ params }: InvitationPageProps) {
 			notFound();
 		}
 
+		const expiresIn = formatDistanceToNow(new Date(invitation.expires_at), {
+			locale: ja,
+			addSuffix: true,
+		});
+
 		return (
-			<div className="container max-w-lg py-8">
-				<Card>
-					<CardHeader>
-						<CardTitle>香典帳への招待</CardTitle>
-						{session?.user && (
-							<CardDescription>
-								ログイン中のユーザー: {session.user.email}
-							</CardDescription>
-						)}
-					</CardHeader>
-					<CardContent className="space-y-4">
-						<div>
-							<h3 className="font-semibold">香典帳名</h3>
-							<p>{invitation.kouden.title}</p>
-							{invitation.kouden.description && (
-								<p className="text-sm text-muted-foreground mt-1">
-									{invitation.kouden.description}
-								</p>
-							)}
-						</div>
-						<div>
-							<h3 className="font-semibold">権限</h3>
-							<p>{invitation.role.name}</p>
-						</div>
-					</CardContent>
-					<CardFooter className="flex flex-col gap-4">
-						{session?.user ? (
-							<AcceptInvitationButton token={token} />
-						) : (
-							<>
-								<p className="text-sm text-muted-foreground text-center">
-									招待を受け入れるにはログインが必要です
-								</p>
-								<LoginButton invitationToken={token} />
-							</>
-						)}
-					</CardFooter>
-				</Card>
+			<div className="min-h-screen bg-gradient-to-b from-background to-muted/50 py-8 px-4 sm:px-6 lg:px-8">
+				<AnimatedInvitationCard
+					title={invitation.kouden_data?.title ?? "不明"}
+					description={invitation.kouden_data?.description}
+					creatorName={invitation.creator?.display_name ?? "不明"}
+					expiresIn={expiresIn}
+					maxUses={invitation.max_uses ?? undefined}
+					usedCount={invitation.used_count ?? undefined}
+					userEmail={session?.user?.email}
+					token={token}
+					isLoggedIn={!!session?.user}
+				/>
 			</div>
 		);
 	} catch (error) {
 		return (
-			<div className="container max-w-lg py-8">
-				<Card>
-					<CardHeader>
-						<CardTitle className="text-destructive">無効な招待リンク</CardTitle>
-						<CardDescription>
-							この招待リンクは無効であるか、有効期限が切れています
-						</CardDescription>
-					</CardHeader>
-				</Card>
+			<div className="min-h-screen bg-gradient-to-b from-background to-muted/50 py-8 px-4 sm:px-6 lg:px-8">
+				<AnimatedInvitationCard
+					title="不明"
+					creatorName="不明"
+					expiresIn=""
+					token={token}
+					isLoggedIn={false}
+					isError={true}
+					errorTitle="無効な招待リンク"
+					errorDescription="この招待リンクは無効であるか、有効期限が切れています"
+				/>
 			</div>
 		);
 	}

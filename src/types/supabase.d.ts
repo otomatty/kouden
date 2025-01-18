@@ -188,29 +188,27 @@ export type Database = {
           created_at: string
           created_by: string
           expires_at: string
-          gmail_message_id: string | null
           id: string
           invitation_token: string
-          invitation_type: Database["public"]["Enums"]["invitation_type"]
+          kouden_data: Json | null
           kouden_id: string
           max_uses: number | null
           role_id: string
-          status: string
+          status: Database["public"]["Enums"]["invitation_status"]
           updated_at: string
           used_count: number
         }
         Insert: {
           created_at?: string
           created_by: string
-          expires_at: string
-          gmail_message_id?: string | null
+          expires_at?: string
           id?: string
           invitation_token?: string
-          invitation_type?: Database["public"]["Enums"]["invitation_type"]
+          kouden_data?: Json | null
           kouden_id: string
           max_uses?: number | null
           role_id: string
-          status?: string
+          status?: Database["public"]["Enums"]["invitation_status"]
           updated_at?: string
           used_count?: number
         }
@@ -218,18 +216,24 @@ export type Database = {
           created_at?: string
           created_by?: string
           expires_at?: string
-          gmail_message_id?: string | null
           id?: string
           invitation_token?: string
-          invitation_type?: Database["public"]["Enums"]["invitation_type"]
+          kouden_data?: Json | null
           kouden_id?: string
           max_uses?: number | null
           role_id?: string
-          status?: string
+          status?: Database["public"]["Enums"]["invitation_status"]
           updated_at?: string
           used_count?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "kouden_invitations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "kouden_invitations_kouden_id_fkey"
             columns: ["kouden_id"]
@@ -278,13 +282,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "kouden_members_invitation_id_fkey"
-            columns: ["invitation_id"]
-            isOneToOne: false
-            referencedRelation: "kouden_invitations"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "kouden_members_kouden_id_fkey"
             columns: ["kouden_id"]
@@ -591,6 +588,12 @@ export type Database = {
         Args: {
           p_kouden_id: string
           p_user_id: string
+        }
+        Returns: undefined
+      }
+      set_invitation_token: {
+        Args: {
+          token: string
         }
         Returns: undefined
       }
