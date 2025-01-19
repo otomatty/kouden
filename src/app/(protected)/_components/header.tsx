@@ -6,7 +6,7 @@ import type { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
-import { Menu } from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
 import {
 	Sheet,
 	SheetContent,
@@ -43,12 +43,16 @@ export function Header({ user }: HeaderProps) {
 							<Avatar>
 								<AvatarImage src={user.user_metadata.avatar_url} />
 								<AvatarFallback>
-									{user.email?.charAt(0).toUpperCase()}
+									{user.user_metadata.full_name?.charAt(0).toUpperCase() ||
+										user.email?.charAt(0).toUpperCase()}
 								</AvatarFallback>
 							</Avatar>
-							<span className="text-sm text-gray-600">{user.email}</span>
+							<span className="text-sm text-gray-600">
+								{user.user_metadata.full_name || user.email}
+							</span>
 						</div>
 						<Button variant="outline" onClick={handleSignOut}>
+							<LogOut className="mr-2 h-4 w-4" />
 							ログアウト
 						</Button>
 					</div>
@@ -69,12 +73,17 @@ export function Header({ user }: HeaderProps) {
 										<Avatar>
 											<AvatarImage src={user.user_metadata.avatar_url} />
 											<AvatarFallback>
-												{user.email?.charAt(0).toUpperCase()}
+												{user.user_metadata.full_name
+													?.charAt(0)
+													.toUpperCase() || user.email?.charAt(0).toUpperCase()}
 											</AvatarFallback>
 										</Avatar>
-										<span className="text-sm text-gray-600">{user.email}</span>
+										<span className="text-sm text-gray-600">
+											{user.user_metadata.full_name || user.email}
+										</span>
 									</div>
 									<Button variant="outline" onClick={handleSignOut}>
+										<LogOut className="mr-2 h-4 w-4" />
 										ログアウト
 									</Button>
 								</div>

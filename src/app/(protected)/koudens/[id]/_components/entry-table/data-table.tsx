@@ -41,17 +41,25 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { useMediaQuery } from "@/hooks/use-media-query";
+
+import {
+	HoverCard,
+	HoverCardContent,
+	HoverCardTrigger,
+} from "@/components/ui/hover-card";
 
 const columnLabels: Record<string, string> = {
 	select: "選択",
 	name: "ご芳名",
 	organization: "団体名",
 	position: "役職",
+	created_at: "登録日時",
+	relationship_id: "ご関係",
 	amount: "金額",
 	postal_code: "郵便番号",
 	address: "住所",
 	phone_number: "電話番号",
-	relationship: "ご関係",
 	attendance_type: "参列",
 	has_offering: "供物",
 	is_return_completed: "返礼",
@@ -94,7 +102,7 @@ type EditableFields = keyof Pick<
 interface DataTableProps {
 	columns: ColumnDef<KoudenEntryTableData>[];
 	data: KoudenEntryTableData[];
-	onAddRow?: (data: EditKoudenEntryFormData) => Promise<void>;
+	onAddRow?: (data: EditKoudenEntryFormData) => Promise<KoudenEntryTableData>;
 	onDeleteRows?: (ids: string[]) => void;
 	koudenId: string;
 }
@@ -116,6 +124,23 @@ const searchOptions = [
 	{ value: "position", label: "役職" },
 ] as const;
 
+// 画面サイズに応じた列の表示設定
+const defaultColumnVisibility = {
+	position: false,
+	phone_number: false,
+	attendance_type: false,
+	is_return_completed: false,
+	created_at: false,
+};
+
+const tabletColumnVisibility = {
+	...defaultColumnVisibility,
+	organization: false,
+	postal_code: false,
+	address: false,
+	notes: false,
+};
+
 export function DataTable({
 	data,
 	columns,
@@ -123,6 +148,7 @@ export function DataTable({
 	onDeleteRows,
 	koudenId,
 }: DataTableProps) {
+	const isTablet = useMediaQuery("(max-width: 1024px)");
 	const [sorting, setSorting] = React.useState<SortingState>([
 		{
 			id: "created_at",
@@ -133,17 +159,20 @@ export function DataTable({
 		[],
 	);
 	const [columnVisibility, setColumnVisibility] =
-		React.useState<VisibilityState>({
-			position: false,
-			phone_number: false,
-			attendance_type: false,
-			is_return_completed: false,
-			created_at: false,
-		});
+		React.useState<VisibilityState>(
+			isTablet ? tabletColumnVisibility : defaultColumnVisibility,
+		);
 	const [rowSelection, setRowSelection] = React.useState({});
 	const [isDialogOpen, setIsDialogOpen] = React.useState(false);
 	// 検索方法の状態を追加
 	const [searchMethod, setSearchMethod] = React.useState<string>("name");
+
+	// 画面サイズが変更された時に列の表示状態を更新
+	React.useEffect(() => {
+		setColumnVisibility(
+			isTablet ? tabletColumnVisibility : defaultColumnVisibility,
+		);
+	}, [isTablet]);
 
 	// 検索値をリセットする関数
 	const resetSearchValue = React.useCallback(() => {
@@ -201,110 +230,277 @@ export function DataTable({
 
 	return (
 		<div className="space-y-4">
-			<div className="flex items-center justify-between">
-				<div className="flex flex-wrap items-center gap-2">
-					<div className="flex items-center gap-2">
-						<Select
-							value={searchMethod}
-							onValueChange={handleSearchMethodChange}
-						>
-							<SelectTrigger className="w-[120px]">
-								<SelectValue placeholder="検索方法" />
-							</SelectTrigger>
-							<SelectContent>
-								{searchOptions.map((option) => (
-									<SelectItem key={option.value} value={option.value}>
-										{option.label}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-						<Input
-							placeholder={`${searchOptions.find((opt) => opt.value === searchMethod)?.label}で検索...`}
-							value={
-								(table.getColumn(searchMethod)?.getFilterValue() as string) ??
-								""
-							}
-							onChange={(event) =>
-								table
-									.getColumn(searchMethod)
-									?.setFilterValue(event.target.value)
-							}
-							className="w-[200px]"
-						/>
-					</div>
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button variant="outline" className="ml-auto">
-								表示列
-							</Button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end">
-							{table
-								.getAllColumns()
-								.filter((column) => column.getCanHide())
-								.map((column) => {
-									return (
-										<DropdownMenuCheckboxItem
-											key={column.id}
-											className="capitalize"
-											checked={column.getIsVisible()}
-											onCheckedChange={(value) =>
-												column.toggleVisibility(!!value)
+			<div className="flex flex-col lg:flex-row gap-4">
+				{/* 検索セクション */}
+				<HoverCard openDelay={200}>
+					<HoverCardTrigger asChild>
+						<div className="border rounded-lg p-4 flex-1 hover:border-primary/50 transition-colors">
+							<div className="flex items-center gap-2">
+								<Select
+									value={searchMethod}
+									onValueChange={handleSearchMethodChange}
+								>
+									<SelectTrigger className="w-[120px]">
+										<SelectValue placeholder="検索方法" />
+									</SelectTrigger>
+									<SelectContent>
+										{searchOptions.map((option) => (
+											<SelectItem key={option.value} value={option.value}>
+												{option.label}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+								<Input
+									placeholder={`${searchOptions.find((opt) => opt.value === searchMethod)?.label}で検索...`}
+									value={
+										(table
+											.getColumn(searchMethod)
+											?.getFilterValue() as string) ?? ""
+									}
+									onChange={(event) =>
+										table
+											.getColumn(searchMethod)
+											?.setFilterValue(event.target.value)
+									}
+									className="flex-1 min-w-[300px]"
+								/>
+							</div>
+						</div>
+					</HoverCardTrigger>
+					<HoverCardContent className="w-96">
+						<div className="space-y-4">
+							<div>
+								<h4 className="text-lg font-semibold mb-2">検索機能</h4>
+								<p className="text-sm text-muted-foreground">
+									香典帳の記録を素早く見つけるための検索機能です。
+								</p>
+							</div>
+							<div className="space-y-2">
+								<h5 className="text-sm font-medium">検索方法</h5>
+								<div className="grid grid-cols-2 gap-2">
+									<div className="space-y-1 p-2 rounded-lg bg-muted/50">
+										<p className="font-medium text-sm">ご芳名検索</p>
+										<p className="text-xs text-muted-foreground">
+											参列者のお名前から記録を検索
+										</p>
+									</div>
+									<div className="space-y-1 p-2 rounded-lg bg-muted/50">
+										<p className="font-medium text-sm">住所検索</p>
+										<p className="text-xs text-muted-foreground">
+											住所情報から記録を検索
+										</p>
+									</div>
+									<div className="space-y-1 p-2 rounded-lg bg-muted/50">
+										<p className="font-medium text-sm">団体名検索</p>
+										<p className="text-xs text-muted-foreground">
+											所属団体から記録を検索
+										</p>
+									</div>
+									<div className="space-y-1 p-2 rounded-lg bg-muted/50">
+										<p className="font-medium text-sm">役職検索</p>
+										<p className="text-xs text-muted-foreground">
+											役職名から記録を検索
+										</p>
+									</div>
+								</div>
+							</div>
+						</div>
+					</HoverCardContent>
+				</HoverCard>
+
+				<div className="flex gap-4 justify-between">
+					{/* 表示列とソートのセクション */}
+					<div className="border rounded-lg p-4 min-w-[400px]">
+						<div className="flex items-center gap-4">
+							<HoverCard openDelay={200}>
+								<HoverCardTrigger asChild>
+									<div className="flex-1 hover:border-primary/50 transition-colors">
+										<DropdownMenu>
+											<DropdownMenuTrigger asChild>
+												<Button
+													variant="outline"
+													className="bg-transparent w-full"
+												>
+													表示列を選択
+												</Button>
+											</DropdownMenuTrigger>
+											<DropdownMenuContent align="end" className="w-[200px]">
+												{table
+													.getAllColumns()
+													.filter((column) => column.getCanHide())
+													.map((column) => {
+														return (
+															<DropdownMenuCheckboxItem
+																key={column.id}
+																className="capitalize"
+																checked={column.getIsVisible()}
+																onCheckedChange={(value) =>
+																	column.toggleVisibility(!!value)
+																}
+															>
+																{columnLabels[column.id] || column.id}
+															</DropdownMenuCheckboxItem>
+														);
+													})}
+											</DropdownMenuContent>
+										</DropdownMenu>
+									</div>
+								</HoverCardTrigger>
+								<HoverCardContent className="w-96">
+									<div className="space-y-4">
+										<div>
+											<h4 className="text-lg font-semibold mb-2">
+												表示列のカスタマイズ
+											</h4>
+											<p className="text-sm text-muted-foreground">
+												必要な情報だけを表示して、見やすい表を作成できます。
+											</p>
+										</div>
+										<div className="space-y-2">
+											<h5 className="text-sm font-medium">主な機能</h5>
+											<div className="grid gap-2">
+												<div className="p-2 rounded-lg bg-muted/50 space-y-1">
+													<p className="font-medium text-sm">基本情報の表示</p>
+													<p className="text-xs text-muted-foreground">
+														ご芳名、金額、ご関係など、必須の情報を表示
+													</p>
+												</div>
+												<div className="p-2 rounded-lg bg-muted/50 space-y-1">
+													<p className="font-medium text-sm">詳細情報の追加</p>
+													<p className="text-xs text-muted-foreground">
+														住所、電話番号などの追加情報を必要に応じて表示
+													</p>
+												</div>
+												<div className="p-2 rounded-lg bg-muted/50 space-y-1">
+													<p className="font-medium text-sm">状態管理の列</p>
+													<p className="text-xs text-muted-foreground">
+														参列、供物、返礼の状態を確認できる列を表示
+													</p>
+												</div>
+											</div>
+										</div>
+									</div>
+								</HoverCardContent>
+							</HoverCard>
+
+							<HoverCard openDelay={200}>
+								<HoverCardTrigger asChild>
+									<div className="flex-1 hover:border-primary/50 transition-colors">
+										<Select
+											value={
+												sorting[0]?.id && sorting[0]?.desc !== undefined
+													? `${sorting[0].id}_${sorting[0].desc ? "desc" : "asc"}`
+													: "created_at_desc"
 											}
+											onValueChange={handleSortChange}
 										>
-											{columnLabels[column.id] || column.id}
-										</DropdownMenuCheckboxItem>
-									);
-								})}
-						</DropdownMenuContent>
-					</DropdownMenu>
-					<Select
-						value={
-							sorting[0]?.id && sorting[0]?.desc !== undefined
-								? `${sorting[0].id}_${sorting[0].desc ? "desc" : "asc"}`
-								: "created_at_desc"
-						}
-						onValueChange={handleSortChange}
-					>
-						<SelectTrigger className="w-[180px]">
-							<SelectValue placeholder="並び順を選択" />
-						</SelectTrigger>
-						<SelectContent>
-							{sortOptions.map((option) => (
-								<SelectItem key={option.value} value={option.value}>
-									{option.label}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-					{selectedRows.length > 0 && onDeleteRows && (
-						<Button
-							variant="destructive"
-							size="sm"
-							onClick={() => onDeleteRows(selectedRows)}
-							className="flex items-center gap-2"
-						>
-							<Trash2 className="h-4 w-4" />
-							<span>{selectedRows.length}件を削除</span>
-						</Button>
-					)}
+											<SelectTrigger className="w-full">
+												<SelectValue placeholder="並び順を選択" />
+											</SelectTrigger>
+											<SelectContent>
+												{sortOptions.map((option) => (
+													<SelectItem key={option.value} value={option.value}>
+														{option.label}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</div>
+								</HoverCardTrigger>
+								<HoverCardContent className="w-96">
+									<div className="space-y-4">
+										<div>
+											<h4 className="text-lg font-semibold mb-2">
+												並び替え機能
+											</h4>
+											<p className="text-sm text-muted-foreground">
+												記録を様々な条件で整理して表示できます。
+											</p>
+										</div>
+										<div className="space-y-2">
+											<h5 className="text-sm font-medium">
+												並び替えオプション
+											</h5>
+											<div className="grid gap-2">
+												<div className="p-2 rounded-lg bg-muted/50 space-y-1">
+													<div className="flex items-center justify-between">
+														<p className="font-medium text-sm">登録日時順</p>
+														<p className="text-xs text-muted-foreground">
+															新しい順/古い順
+														</p>
+													</div>
+													<p className="text-xs text-muted-foreground">
+														最近の記録を確認したい時に便利です
+													</p>
+												</div>
+												<div className="p-2 rounded-lg bg-muted/50 space-y-1">
+													<div className="flex items-center justify-between">
+														<p className="font-medium text-sm">金額順</p>
+														<p className="text-xs text-muted-foreground">
+															高い順/低い順
+														</p>
+													</div>
+													<p className="text-xs text-muted-foreground">
+														金額の集計や確認をする時に使用します
+													</p>
+												</div>
+												<div className="p-2 rounded-lg bg-muted/50 space-y-1">
+													<div className="flex items-center justify-between">
+														<p className="font-medium text-sm">名前順</p>
+														<p className="text-xs text-muted-foreground">
+															五十音順
+														</p>
+													</div>
+													<p className="text-xs text-muted-foreground">
+														特定の方の記録を探す時に便利です
+													</p>
+												</div>
+											</div>
+										</div>
+									</div>
+								</HoverCardContent>
+							</HoverCard>
+						</div>
+					</div>
+					<div className="flex items-center justify-end">
+						{onAddRow && (
+							<EntryDialog
+								open={isDialogOpen}
+								onOpenChange={setIsDialogOpen}
+								onSave={onAddRow}
+								koudenId={koudenId}
+								trigger={
+									<Button
+										size="lg"
+										className="text-sm font-bold flex items-center gap-2"
+									>
+										<Plus className="h-6 w-6" />
+										<span>新規追加</span>
+									</Button>
+								}
+							/>
+						)}
+					</div>
 				</div>
-				{onAddRow && (
-					<EntryDialog
-						open={isDialogOpen}
-						onOpenChange={setIsDialogOpen}
-						onSave={onAddRow}
-						koudenId={koudenId}
-						trigger={
-							<Button className="flex items-center gap-2">
-								<Plus className="h-4 w-4" />
-								<span>新規追加</span>
-							</Button>
-						}
-					/>
+			</div>
+
+			{/* 削除ボタン */}
+			<div>
+				{selectedRows.length > 0 && onDeleteRows && (
+					<Button
+						variant="destructive"
+						size="sm"
+						onClick={() => onDeleteRows(selectedRows)}
+						className="flex items-center gap-2"
+					>
+						<Trash2 className="h-4 w-4" />
+						<span>{selectedRows.length}件を削除</span>
+					</Button>
 				)}
 			</div>
+
+			{/* 既存のテーブル部分 */}
 			<div className="rounded-md border">
 				<div className="relative">
 					<Table className="overflow-hidden w-full table-fixed">
@@ -317,7 +513,7 @@ export function DataTable({
 												key={header.id}
 												className={`bg-background border-r last:border-r-0 ${
 													columnWidths[header.id] || ""
-												} whitespace-nowrap`}
+												} whitespace-nowrap overflow-hidden text-ellipsis`}
 											>
 												{header.isPlaceholder
 													? null
@@ -346,7 +542,7 @@ export function DataTable({
 													key={cell.id}
 													className={`border-r last:border-r-0 ${
 														columnWidths[cell.column.id] || ""
-													}`}
+													} overflow-hidden text-ellipsis`}
 												>
 													{flexRender(
 														cell.column.columnDef.cell,

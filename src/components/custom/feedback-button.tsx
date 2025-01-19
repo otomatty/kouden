@@ -12,7 +12,7 @@ import {
 
 export function FeedbackButton() {
 	return (
-		<div className="fixed bottom-8 right-8">
+		<div className="fixed bottom-8 right-8 hidden md:block">
 			<TooltipProvider>
 				<Tooltip>
 					<TooltipTrigger asChild>

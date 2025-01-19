@@ -1,29 +1,28 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type {
 	KoudenEntryTableData,
 	KoudenEntryTableProps,
 	EditKoudenEntryFormData,
 } from "./types";
 
-export function useKoudenEntryTable({
-	entries: initialEntries,
-	koudenId,
-	updateKoudenEntry,
-	createKoudenEntry,
-	deleteKoudenEntries,
-}: KoudenEntryTableProps) {
-	const [data, setData] = useState<KoudenEntryTableData[]>(initialEntries);
-	const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
-	const [editingEntry, setEditingEntry] = useState<
-		KoudenEntryTableData | undefined
-	>();
+export function useKoudenEntryTable(props: KoudenEntryTableProps) {
+	const [data, setData] = useState<KoudenEntryTableData[]>(props.entries || []);
+	const [selectedRows, setSelectedRows] = useState<string[]>([]);
+	const [editingEntry, setEditingEntry] = useState<KoudenEntryTableData | null>(
+		null,
+	);
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+	// データの更新を監視
+	useEffect(() => {
+		setData(props.entries || []);
+	}, [props.entries]);
 
 	// ダイアログの開閉を制御
 	const handleDialogOpenChange = useCallback((open: boolean) => {
 		setIsDialogOpen(open);
 		if (!open) {
-			setEditingEntry(undefined);
+			setEditingEntry(null);
 		}
 	}, []);
 
@@ -41,65 +40,77 @@ export function useKoudenEntryTable({
 
 	// 編集をキャンセル
 	const handleCancelEdit = useCallback(() => {
-		setEditingEntry(undefined);
+		setEditingEntry(null);
 		setIsDialogOpen(false);
 	}, []);
 
 	// 編集を保存
 	const handleSaveRow = useCallback(
-		async (formData: EditKoudenEntryFormData) => {
-			if (editingEntry) {
-				try {
-					const response = await updateKoudenEntry(editingEntry.id, formData);
-					setData((prev) =>
-						prev.map((row) => (row.id === editingEntry.id ? response : row)),
+		async (formData: EditKoudenEntryFormData, entryId?: string) => {
+			const targetId = entryId || editingEntry?.id;
+			if (!targetId) {
+				throw new Error("No entry ID provided for update");
+			}
+
+			try {
+				console.log("handleSaveRow: Updating entry", {
+					id: targetId,
+					formData,
+				});
+				const response = await props.updateKoudenEntry(targetId, formData);
+				console.log("handleSaveRow: Update successful", response);
+				setData((prev) => {
+					const newData = prev.map((row) =>
+						row.id === targetId ? response : row,
 					);
-					handleCancelEdit();
-				} catch (error) {
-					console.error("Failed to save row:", error);
-				}
+					console.log("handleSaveRow: Updated data", newData);
+					return newData;
+				});
+				handleCancelEdit();
+				return response;
+			} catch (error) {
+				console.error("Failed to save row:", error);
+				throw error;
 			}
 		},
-		[editingEntry, updateKoudenEntry, handleCancelEdit],
+		[editingEntry, props.updateKoudenEntry, handleCancelEdit],
 	);
 
 	// 新しい行を追加
-	const handleAddRow = useCallback(
-		async (formData: EditKoudenEntryFormData) => {
-			try {
-				const response = await createKoudenEntry({
-					...formData,
-					kouden_id: koudenId,
-					name: formData.name ?? null,
-					address: formData.address ?? null,
-				});
-				setData((prev) => [...prev, response]);
-				setIsDialogOpen(false);
-			} catch (error) {
-				console.error("Failed to add row:", error);
-			}
-		},
-		[koudenId, createKoudenEntry],
-	);
+	const handleAddRow = async (formData: EditKoudenEntryFormData) => {
+		try {
+			const newEntry = await props.createKoudenEntry({
+				...formData,
+				kouden_id: props.koudenId,
+				name: formData.name ?? null,
+				address: formData.address ?? null,
+			});
+
+			// 新しいエントリーをデータの先頭に追加
+			setData((prevData) => [newEntry, ...prevData]);
+
+			return newEntry;
+		} catch (error) {
+			console.error("Failed to add entry:", error);
+			throw error;
+		}
+	};
 
 	// 選択された行を削除
 	const handleDeleteSelectedRows = useCallback(
 		async (ids: string[]) => {
 			try {
-				await deleteKoudenEntries(ids);
+				await props.deleteKoudenEntries(ids);
 				setData((prev) => prev.filter((row) => !ids.includes(row.id)));
 				setSelectedRows((prev) => {
-					const next = new Set(prev);
-					for (const id of ids) {
-						next.delete(id);
-					}
+					const next = prev.filter((id) => !ids.includes(id));
 					return next;
 				});
 			} catch (error) {
 				console.error("Failed to delete entries:", error);
 			}
 		},
-		[deleteKoudenEntries],
+		[props.deleteKoudenEntries],
 	);
 
 	return {
@@ -113,5 +124,6 @@ export function useKoudenEntryTable({
 		handleSaveRow,
 		handleAddRow,
 		handleDeleteSelectedRows,
+		setData,
 	};
 }

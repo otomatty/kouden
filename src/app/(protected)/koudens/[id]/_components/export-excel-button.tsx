@@ -1,11 +1,12 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { FileSpreadsheet } from "lucide-react";
-import { exportKoudenToExcel } from "@/app/_actions/export";
+import { Button } from "@/components/ui/button";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
+import { exportKoudenToExcel } from "@/app/_actions/export";
 
 interface ExportExcelButtonProps {
 	koudenId: string;
@@ -14,6 +15,7 @@ interface ExportExcelButtonProps {
 export function ExportExcelButton({ koudenId }: ExportExcelButtonProps) {
 	const [isExporting, setIsExporting] = useState(false);
 	const { toast } = useToast();
+	const isDesktop = useMediaQuery("(min-width: 768px)");
 
 	const handleExport = async () => {
 		try {
@@ -58,20 +60,40 @@ export function ExportExcelButton({ koudenId }: ExportExcelButtonProps) {
 		}
 	};
 
+	if (isDesktop) {
+		return (
+			<Button
+				variant="outline"
+				size="sm"
+				onClick={handleExport}
+				disabled={isExporting}
+				className={cn(
+					"bg-[#217346] text-white hover:bg-[#1e6b41] border-[#217346]",
+					"hover:text-white",
+					isExporting && "opacity-50 cursor-not-allowed",
+				)}
+			>
+				<FileSpreadsheet className="mr-2 h-4 w-4" />
+				{isExporting ? "出力中..." : "エクセル出力"}
+			</Button>
+		);
+	}
+
 	return (
-		<Button
-			variant="outline"
-			size="sm"
+		<button
+			type="button"
 			onClick={handleExport}
 			disabled={isExporting}
 			className={cn(
-				"bg-[#217346] text-white hover:bg-[#1e6b41] border-[#217346]",
-				"hover:text-white",
+				"flex flex-col items-center gap-1.5 min-w-[72px] py-2 px-3 rounded-md transition-colors",
+				"text-[#217346] hover:text-[#1e6b41] hover:bg-[#217346]/10",
 				isExporting && "opacity-50 cursor-not-allowed",
 			)}
 		>
-			<FileSpreadsheet className="mr-2 h-4 w-4" />
-			{isExporting ? "出力中..." : "エクセル出力"}
-		</Button>
+			<FileSpreadsheet className="h-5 w-5" />
+			<span className="text-xs font-medium">
+				{isExporting ? "出力中..." : "エクセル"}
+			</span>
+		</button>
 	);
 }

@@ -36,7 +36,7 @@ const attendanceTypePriority = {
 interface ColumnProps {
 	onEditRow: (id: string) => void;
 	onDeleteRows: (ids: string[]) => void;
-	selectedRows: Set<string>;
+	selectedRows: string[];
 	relationships: Array<{
 		id: string;
 		name: string;
@@ -59,7 +59,13 @@ export function createColumns({
 	selectedRows,
 	relationships,
 	permission,
-}: ColumnProps) {
+}: {
+	onEditRow: (id: string) => void;
+	onDeleteRows: (ids: string[]) => void;
+	selectedRows: string[];
+	relationships: { id: string; name: string; description?: string }[];
+	permission: "owner" | "editor" | "viewer" | null;
+}) {
 	const canEdit = permission === "owner" || permission === "editor";
 
 	return [
@@ -260,7 +266,7 @@ export function createColumns({
 		{
 			id: "actions",
 			cell: ({ row }: { row: Row<KoudenEntryTableData> }) => {
-				const isSelected = selectedRows.has(row.original.id);
+				const isSelected = selectedRows.includes(row.original.id);
 
 				return (
 					<DropdownMenu>

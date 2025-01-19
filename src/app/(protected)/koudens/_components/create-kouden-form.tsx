@@ -2,19 +2,14 @@
 
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
 import { createKouden } from "@/app/_actions/koudens";
 import { createClient } from "@/lib/supabase/client";
+import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
+import { Plus } from "lucide-react";
 
 export function CreateKoudenForm() {
 	const router = useRouter();
@@ -50,44 +45,46 @@ export function CreateKoudenForm() {
 	};
 
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger asChild>
-				<Button className="create-kouden-button">新規作成</Button>
-			</DialogTrigger>
-			<DialogContent className="create-kouden-form">
-				<DialogHeader>
-					<DialogTitle>新しい香典帳を作成</DialogTitle>
-				</DialogHeader>
-				<form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
-					<div className="space-y-2">
-						<Label htmlFor="title">タイトル</Label>
-						<Input
-							className="create-kouden-form-title"
-							id="title"
-							name="title"
-							placeholder="例：〇〇家 告別式"
-							required
-						/>
-					</div>
-					<div className="space-y-2">
-						<Label htmlFor="description">説明（任意）</Label>
-						<Textarea
-							id="description"
-							name="description"
-							placeholder="説明を入力してください"
-						/>
-					</div>
-					<div className="flex justify-end">
-						<Button
-							type="submit"
-							disabled={loading}
-							className="create-kouden-form-button"
-						>
-							{loading ? "作成中..." : "作成"}
-						</Button>
-					</div>
-				</form>
-			</DialogContent>
-		</Dialog>
+		<ResponsiveDialog
+			open={open}
+			onOpenChange={setOpen}
+			trigger={
+				<Button className="create-kouden-button flex items-center gap-2">
+					<Plus className="h-4 w-4" />
+					<span>香典帳を作成する</span>
+				</Button>
+			}
+			title="新しい香典帳を作成"
+		>
+			<form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+				<div className="space-y-2">
+					<Label htmlFor="title">タイトル</Label>
+					<Input
+						className="create-kouden-form-title"
+						id="title"
+						name="title"
+						placeholder="例：〇〇家 告別式"
+						required
+					/>
+				</div>
+				<div className="space-y-2">
+					<Label htmlFor="description">説明（任意）</Label>
+					<Textarea
+						id="description"
+						name="description"
+						placeholder="説明を入力してください"
+					/>
+				</div>
+				<div className="flex justify-end">
+					<Button
+						type="submit"
+						disabled={loading}
+						className="create-kouden-form-button"
+					>
+						{loading ? "作成中..." : "作成"}
+					</Button>
+				</div>
+			</form>
+		</ResponsiveDialog>
 	);
 }

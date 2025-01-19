@@ -22,14 +22,25 @@ import type {
 } from "@/types/actions";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Pencil } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import {
+	ArrowLeft,
+	Pencil,
+	Table2,
+	BarChart3,
+	Gift,
+	Mail,
+	Package,
+	Users,
+} from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OfferingTable } from "./offering-table";
 import { TelegramTable } from "./telegram-table";
 import { ReturnItemTable } from "./return-item-table";
 import { MemberTable } from "./member-table";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { MobileMenu } from "./mobile-menu";
+import { cn } from "@/lib/utils";
+import { KoudenTitle } from "./kouden-title";
 
 type Kouden = Database["public"]["Tables"]["koudens"]["Row"];
 
@@ -79,7 +90,7 @@ interface KoudenDetailProps {
 
 export function KoudenDetail({
 	kouden,
-	entries,
+	entries: initialEntries,
 	createKoudenEntry,
 	updateKoudenEntry,
 	deleteKoudenEntry,
@@ -87,9 +98,7 @@ export function KoudenDetail({
 	deleteKouden,
 }: KoudenDetailProps) {
 	const router = useRouter();
-	const [isEditing, setIsEditing] = useState(false);
-	const [title, setTitle] = useState(kouden.title);
-	const [description, setDescription] = useState(kouden.description || "");
+	const [entries, setEntries] = useState(initialEntries);
 	const [viewMode, setViewMode] = useState<
 		| "table"
 		| "statistics"
@@ -99,6 +108,7 @@ export function KoudenDetail({
 		| "members"
 	>("table");
 	const [permission, setPermission] = useState<KoudenPermission>(null);
+	const isDesktop = useMediaQuery("(min-width: 768px)");
 
 	useEffect(() => {
 		const checkPermission = async () => {
@@ -108,91 +118,38 @@ export function KoudenDetail({
 		checkPermission();
 	}, [kouden.id]);
 
-	const handleSave = async () => {
-		try {
-			await updateKouden(kouden.id, {
-				title,
-				description: description || undefined,
-			});
-			setIsEditing(false);
-		} catch (error) {
-			console.error("Failed to update kouden:", error);
-		}
-	};
-
 	return (
-		<div className="space-y-8">
-			<Button
-				variant="ghost"
-				onClick={() => router.push("/koudens")}
-				className="flex items-center gap-2"
-			>
-				<ArrowLeft className="h-4 w-4" />
-				<span>一覧に戻る</span>
-			</Button>
-
-			<div className="flex justify-between items-start">
-				<div className="space-y-2 flex-1 mr-4">
-					{isEditing ? (
-						<div className="space-y-4">
-							<Input
-								value={title}
-								onChange={(e) => setTitle(e.target.value)}
-								className="text-2xl font-bold"
-							/>
-							<Textarea
-								value={description}
-								onChange={(e) => setDescription(e.target.value)}
-								placeholder="説明を入力"
-								className="resize-none"
-								rows={3}
-							/>
-							<div className="flex gap-2">
-								<Button size="sm" onClick={handleSave}>
-									保存
-								</Button>
-								<Button
-									size="sm"
-									variant="outline"
-									onClick={() => {
-										setTitle(kouden.title);
-										setDescription(kouden.description || "");
-										setIsEditing(false);
-									}}
-								>
-									キャンセル
-								</Button>
-							</div>
-						</div>
-					) : (
-						<div>
-							<div className="flex items-center gap-2">
-								<h2 className="text-2xl font-bold">{kouden.title}</h2>
-								{permission === "owner" && (
-									<Button
-										variant="ghost"
-										size="icon"
-										onClick={() => setIsEditing(true)}
-										className="h-8 w-8"
-									>
-										<Pencil className="h-4 w-4" />
-									</Button>
-								)}
-							</div>
-							{kouden.description && (
-								<p className="text-gray-500 mt-2">{kouden.description}</p>
+		<>
+			<div className="space-y-4 py-4">
+				<Button
+					variant="ghost"
+					onClick={() => router.push("/koudens")}
+					className="flex items-center gap-2"
+				>
+					<ArrowLeft className="h-4 w-4" />
+					<span>一覧に戻る</span>
+				</Button>
+				<div className="flex items-center justify-between">
+					<KoudenTitle
+						title={kouden.title}
+						description={kouden.description}
+						permission={permission}
+						onUpdate={async (data) => {
+							await updateKouden(kouden.id, data);
+						}}
+					/>
+					{/* デスクトップでのみ表示 */}
+					{isDesktop && (
+						<div className="flex items-center gap-2">
+							<ExportExcelButton koudenId={kouden.id} />
+							{permission === "owner" && (
+								<DeleteKoudenDialog
+									koudenId={kouden.id}
+									koudenTitle={kouden.title}
+									onDelete={deleteKouden}
+								/>
 							)}
 						</div>
-					)}
-				</div>
-				<div className="flex items-center gap-2">
-					<ExportExcelButton koudenId={kouden.id} />
-					{permission === "owner" && (
-						<DeleteKoudenDialog
-							koudenId={kouden.id}
-							koudenTitle={kouden.title}
-							onDelete={deleteKouden}
-						/>
 					)}
 				</div>
 			</div>
@@ -201,13 +158,109 @@ export function KoudenDetail({
 				value={viewMode}
 				onValueChange={(value) => setViewMode(value as typeof viewMode)}
 			>
-				<TabsList>
-					<TabsTrigger value="table">香典帳</TabsTrigger>
-					<TabsTrigger value="offerings">お供物</TabsTrigger>
-					<TabsTrigger value="telegrams">弔電</TabsTrigger>
-					<TabsTrigger value="return-items">返礼品</TabsTrigger>
-					<TabsTrigger value="statistics">統計</TabsTrigger>
-					<TabsTrigger value="members">メンバー</TabsTrigger>
+				<TabsList className="max-w-screen-sm">
+					<TabsTrigger
+						value="table"
+						className={cn(
+							"flex items-center gap-2",
+							!isDesktop && viewMode !== "table" && "sm:px-3",
+						)}
+					>
+						<Table2 className="h-4 w-4" />
+						<span
+							className={cn(
+								isDesktop ? "inline" : "hidden",
+								viewMode === "table" && "inline",
+							)}
+						>
+							香典帳
+						</span>
+					</TabsTrigger>
+					<TabsTrigger
+						value="offerings"
+						className={cn(
+							"flex items-center gap-2",
+							!isDesktop && viewMode !== "offerings" && "sm:px-3",
+						)}
+					>
+						<Gift className="h-4 w-4" />
+						<span
+							className={cn(
+								isDesktop ? "inline" : "hidden",
+								viewMode === "offerings" && "inline",
+							)}
+						>
+							お供物
+						</span>
+					</TabsTrigger>
+					<TabsTrigger
+						value="telegrams"
+						className={cn(
+							"flex items-center gap-2",
+							!isDesktop && viewMode !== "telegrams" && "sm:px-3",
+						)}
+					>
+						<Mail className="h-4 w-4" />
+						<span
+							className={cn(
+								isDesktop ? "inline" : "hidden",
+								viewMode === "telegrams" && "inline",
+							)}
+						>
+							弔電
+						</span>
+					</TabsTrigger>
+					<TabsTrigger
+						value="return-items"
+						className={cn(
+							"flex items-center gap-2",
+							!isDesktop && viewMode !== "return-items" && "sm:px-3",
+						)}
+					>
+						<Package className="h-4 w-4" />
+						<span
+							className={cn(
+								isDesktop ? "inline" : "hidden",
+								viewMode === "return-items" && "inline",
+							)}
+						>
+							返礼品
+						</span>
+					</TabsTrigger>
+					<TabsTrigger
+						value="statistics"
+						className={cn(
+							"flex items-center gap-2",
+							!isDesktop && viewMode !== "statistics" && "sm:px-3",
+						)}
+					>
+						<BarChart3 className="h-4 w-4" />
+						<span
+							className={cn(
+								isDesktop ? "inline" : "hidden",
+								viewMode === "statistics" && "inline",
+							)}
+						>
+							統計
+						</span>
+					</TabsTrigger>
+					<TabsTrigger
+						value="members"
+						className={cn(
+							"flex items-center gap-2",
+							!isDesktop && viewMode !== "members" && "sm:px-3",
+						)}
+					>
+						<Users className="h-4 w-4" />
+						<span
+							className={cn(
+								isDesktop ? "inline" : "hidden",
+								viewMode === "members" && "inline",
+							)}
+						>
+							メンバー
+						</span>
+					</TabsTrigger>
 				</TabsList>
 
 				<TabsContent value="table">
@@ -251,7 +304,8 @@ export function KoudenDetail({
 								const response = await createKoudenEntry(input);
 								return {
 									...response,
-									attendance_type: response.attendance_type as AttendanceType,
+									attendance_type: (response.attendance_type ||
+										"ABSENT") as AttendanceType,
 								};
 							} catch (error) {
 								console.error("作成エラー:", error);
@@ -281,6 +335,40 @@ export function KoudenDetail({
 					<MemberTable koudenId={kouden.id} />
 				</TabsContent>
 			</Tabs>
-		</div>
+
+			{/* モバイルメニュー */}
+			{!isDesktop && (
+				<MobileMenu
+					koudenId={kouden.id}
+					koudenTitle={kouden.title}
+					permission={permission}
+					onDelete={deleteKouden}
+					onAddEntry={async (data) => {
+						console.log("KoudenDetail: Creating new entry", data);
+						const response = await createKoudenEntry({
+							...data,
+							kouden_id: kouden.id,
+						});
+						console.log("KoudenDetail: Entry created", response);
+
+						// 新しいエントリーをステートに追加
+						setEntries((prev) => [
+							{
+								...response,
+								attendance_type: (response.attendance_type ||
+									"ABSENT") as AttendanceType,
+							} as KoudenEntry,
+							...prev,
+						]);
+
+						return {
+							...response,
+							attendance_type: (response.attendance_type ||
+								"ABSENT") as AttendanceType,
+						};
+					}}
+				/>
+			)}
+		</>
 	);
 }

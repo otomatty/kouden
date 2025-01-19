@@ -2,14 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-	DialogFooter,
-	DialogTrigger,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -19,6 +11,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import type { EditKoudenEntryFormData, KoudenEntryTableData } from "./types";
 import type { CreateKoudenEntryInput } from "@/types/actions";
@@ -26,6 +19,8 @@ import { formatCurrency, formatInputCurrency } from "./utils";
 import { toast } from "@/hooks/use-toast";
 import { getRelationships } from "@/app/_actions/relationships";
 import { useQuery } from "@tanstack/react-query";
+import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 const attendanceTypeMap = {
 	FUNERAL: "葬儀",
@@ -39,13 +34,13 @@ interface Relationship {
 	description?: string;
 }
 
-interface EntryDialogProps {
+export interface EntryDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	entry?: KoudenEntryTableData;
-	onSave: (data: EditKoudenEntryFormData) => Promise<void>;
-	trigger?: React.ReactNode;
+	onSave: (data: EditKoudenEntryFormData) => Promise<KoudenEntryTableData>;
 	koudenId: string;
+	trigger?: React.ReactNode;
+	defaultValues?: KoudenEntryTableData;
 }
 
 // 郵便番号のフォーマット関数
@@ -80,11 +75,14 @@ async function searchAddress(postalCode: string): Promise<string | null> {
 export function EntryDialog({
 	open,
 	onOpenChange,
-	entry,
 	onSave,
 	trigger,
 	koudenId,
+	defaultValues,
 }: EntryDialogProps) {
+	const [activeTab, setActiveTab] = useState("basic");
+	const isMobile = useMediaQuery("(max-width: 768px)");
+
 	const {
 		register,
 		handleSubmit,
@@ -93,7 +91,7 @@ export function EntryDialog({
 		watch,
 		formState: { errors },
 	} = useForm<EditKoudenEntryFormData>({
-		defaultValues: {
+		defaultValues: defaultValues || {
 			name: undefined,
 			organization: undefined,
 			position: undefined,
@@ -154,22 +152,22 @@ export function EntryDialog({
 
 	// エントリーが変更されたら、フォームの値を更新
 	useEffect(() => {
-		if (entry) {
+		if (defaultValues) {
 			reset({
-				name: entry.name || undefined,
-				organization: entry.organization || undefined,
-				position: entry.position || undefined,
-				amount: entry.amount,
-				postal_code: entry.postal_code
-					? formatPostalCode(entry.postal_code)
+				name: defaultValues.name || undefined,
+				organization: defaultValues.organization || undefined,
+				position: defaultValues.position || undefined,
+				amount: defaultValues.amount,
+				postal_code: defaultValues.postal_code
+					? formatPostalCode(defaultValues.postal_code)
 					: "",
-				address: entry.address,
-				phone_number: entry.phone_number || undefined,
-				relationship_id: entry.relationship_id || undefined,
-				attendance_type: entry.attendance_type,
-				has_offering: entry.has_offering,
-				is_return_completed: entry.is_return_completed,
-				notes: entry.notes || undefined,
+				address: defaultValues.address,
+				phone_number: defaultValues.phone_number || undefined,
+				relationship_id: defaultValues.relationship_id || undefined,
+				attendance_type: defaultValues.attendance_type,
+				has_offering: defaultValues.has_offering,
+				is_return_completed: defaultValues.is_return_completed,
+				notes: defaultValues.notes || undefined,
 			});
 		} else {
 			reset({
@@ -187,7 +185,7 @@ export function EntryDialog({
 				notes: "",
 			});
 		}
-	}, [entry, reset]);
+	}, [defaultValues, reset]);
 
 	const amount = watch("amount");
 
@@ -236,170 +234,172 @@ export function EntryDialog({
 		}
 	});
 
-	const dialogContent = (
-		<DialogContent className="max-w-2xl">
-			<DialogHeader>
-				<DialogTitle>{entry ? "香典記録の編集" : "新規香典記録"}</DialogTitle>
-			</DialogHeader>
-			<form onSubmit={onSubmit} className="grid gap-4 py-4">
-				<div className="grid gap-2">
-					<Label htmlFor="name">ご芳名</Label>
-					<Input id="name" {...register("name")} />
-				</div>
-				<div className="grid grid-cols-2 gap-4">
-					<div className="grid gap-2">
-						<Label htmlFor="organization">団体名</Label>
-						<Input id="organization" {...register("organization")} />
-					</div>
-					<div className="grid gap-2">
-						<Label htmlFor="position">役職</Label>
-						<Input id="position" {...register("position")} />
-					</div>
-				</div>
-				<div className="grid gap-2">
-					<Label htmlFor="postal_code">郵便番号</Label>
-					<Input
-						id="postal_code"
-						value={postal_code || ""}
-						onChange={(e) =>
-							setValue(
-								"postal_code",
-								formatPostalCode(e.target.value) || undefined,
-							)
-						}
-						placeholder="000-0000"
-						maxLength={8}
-					/>
-				</div>
-				<div className="grid gap-2">
-					<Label htmlFor="address">住所</Label>
-					<Input id="address" {...register("address")} />
-				</div>
-				<div className="grid gap-2">
-					<Label htmlFor="amount">金額</Label>
-					<Input
-						id="amount"
-						type="text"
-						inputMode="numeric"
-						value={formatInputCurrency(amount)}
-						onChange={(e) => {
-							const value = Number(e.target.value.replace(/[^\d]/g, ""));
-							setValue("amount", value);
-						}}
-						className="text-right"
-					/>
-					{amount > 0 && (
-						<div className="text-sm text-muted-foreground text-right">
-							{formatCurrency(amount)}
-						</div>
-					)}
-				</div>
-				<div className="grid gap-2">
-					<Label htmlFor="phone_number">電話番号</Label>
-					<Input
-						id="phone_number"
-						{...register("phone_number")}
-						placeholder="000-0000-0000"
-					/>
-				</div>
-				<div className="grid gap-2">
-					<Label htmlFor="relationship_id">ご関係</Label>
-					<Select
-						value={watch("relationship_id") || ""}
-						onValueChange={(value) =>
-							setValue("relationship_id", value || undefined)
-						}
-					>
-						<SelectTrigger>
-							<SelectValue placeholder="関係性を選択" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="none">未選択</SelectItem>
-							{relationships?.map((relationship) => (
-								<SelectItem key={relationship.id} value={relationship.id}>
-									{relationship.name}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
-				<div className="grid gap-2">
-					<Label htmlFor="attendance_type">参列</Label>
-					<Select
-						value={watch("attendance_type") || "FUNERAL"}
-						onValueChange={(value: "FUNERAL" | "CONDOLENCE_VISIT" | "ABSENT") =>
-							setValue("attendance_type", value)
-						}
-					>
-						<SelectTrigger>
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							{Object.entries(attendanceTypeMap).map(([value, label]) => (
-								<SelectItem key={value} value={value}>
-									{label}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
-				<div className="grid gap-2">
-					<Label htmlFor="has_offering">供物</Label>
-					<Select
-						value={String(watch("has_offering"))}
-						onValueChange={(value) =>
-							setValue("has_offering", value === "true")
-						}
-					>
-						<SelectTrigger>
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="true">あり</SelectItem>
-							<SelectItem value="false">なし</SelectItem>
-						</SelectContent>
-					</Select>
-				</div>
-				<div className="grid gap-2">
-					<Label htmlFor="is_return_completed">返礼</Label>
-					<Select
-						value={String(watch("is_return_completed"))}
-						onValueChange={(value) =>
-							setValue("is_return_completed", value === "true")
-						}
-					>
-						<SelectTrigger>
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="true">完了</SelectItem>
-							<SelectItem value="false">未完了</SelectItem>
-						</SelectContent>
-					</Select>
-				</div>
-				<div className="grid gap-2">
-					<Label htmlFor="notes">備考</Label>
-					<Input id="notes" {...register("notes")} />
-				</div>
-				<DialogFooter>
-					<Button type="submit">{entry ? "保存" : "追加"}</Button>
-				</DialogFooter>
-			</form>
-		</DialogContent>
-	);
-
-	if (trigger) {
-		return (
-			<Dialog open={open} onOpenChange={onOpenChange}>
-				<DialogTrigger asChild>{trigger}</DialogTrigger>
-				{dialogContent}
-			</Dialog>
-		);
-	}
-
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			{dialogContent}
-		</Dialog>
+		<ResponsiveDialog
+			open={open}
+			onOpenChange={onOpenChange}
+			trigger={trigger}
+			title={defaultValues ? "香典記録の編集" : "新規香典記録"}
+			contentClassName="max-w-2xl"
+		>
+			<form onSubmit={onSubmit} className="grid gap-4 py-4">
+				<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+					<TabsList className="grid w-full grid-cols-2">
+						<TabsTrigger value="basic">基本情報</TabsTrigger>
+						<TabsTrigger value="additional">追加情報</TabsTrigger>
+					</TabsList>
+					<TabsContent value="basic" className="mt-4">
+						<div className="grid gap-4">
+							<div className="grid gap-2">
+								<Label htmlFor="name">ご芳名</Label>
+								<Input id="name" {...register("name")} />
+							</div>
+							<div className="grid grid-cols-2 gap-4">
+								<div className="grid gap-2">
+									<Label htmlFor="organization">団体名</Label>
+									<Input id="organization" {...register("organization")} />
+								</div>
+								<div className="grid gap-2">
+									<Label htmlFor="position">役職</Label>
+									<Input id="position" {...register("position")} />
+								</div>
+							</div>
+							<div className="grid gap-2">
+								<Label htmlFor="postal_code">郵便番号</Label>
+								<Input
+									id="postal_code"
+									value={postal_code || ""}
+									onChange={(e) =>
+										setValue(
+											"postal_code",
+											formatPostalCode(e.target.value) || undefined,
+										)
+									}
+									placeholder="000-0000"
+									maxLength={8}
+								/>
+							</div>
+							<div className="grid gap-2">
+								<Label htmlFor="address">住所</Label>
+								<Input id="address" {...register("address")} />
+							</div>
+							<div className="grid gap-2">
+								<Label htmlFor="amount">金額</Label>
+								<Input
+									id="amount"
+									type="text"
+									inputMode="numeric"
+									value={formatInputCurrency(amount)}
+									onChange={(e) => {
+										const value = Number(e.target.value.replace(/[^\d]/g, ""));
+										setValue("amount", value);
+									}}
+									className="text-right"
+								/>
+								{amount > 0 && (
+									<div className="text-sm text-muted-foreground text-right">
+										{formatCurrency(amount)}
+									</div>
+								)}
+							</div>
+							<div className="grid gap-2">
+								<Label htmlFor="attendance_type">参列</Label>
+								<Select
+									value={watch("attendance_type") || "FUNERAL"}
+									onValueChange={(
+										value: "FUNERAL" | "CONDOLENCE_VISIT" | "ABSENT",
+									) => setValue("attendance_type", value)}
+								>
+									<SelectTrigger>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										{Object.entries(attendanceTypeMap).map(([value, label]) => (
+											<SelectItem key={value} value={value}>
+												{label}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+						</div>
+					</TabsContent>
+					<TabsContent value="additional" className="mt-4">
+						<div className="grid gap-4">
+							<div className="grid gap-2">
+								<Label htmlFor="phone_number">電話番号</Label>
+								<Input
+									id="phone_number"
+									{...register("phone_number")}
+									placeholder="000-0000-0000"
+								/>
+							</div>
+							<div className="grid gap-2">
+								<Label htmlFor="relationship_id">ご関係</Label>
+								<Select
+									value={watch("relationship_id") || ""}
+									onValueChange={(value) =>
+										setValue("relationship_id", value || undefined)
+									}
+								>
+									<SelectTrigger>
+										<SelectValue placeholder="関係性を選択" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="none">未選択</SelectItem>
+										{relationships?.map((relationship) => (
+											<SelectItem key={relationship.id} value={relationship.id}>
+												{relationship.name}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+							<div className="grid gap-2">
+								<Label htmlFor="has_offering">供物</Label>
+								<Select
+									value={String(watch("has_offering"))}
+									onValueChange={(value) =>
+										setValue("has_offering", value === "true")
+									}
+								>
+									<SelectTrigger>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="true">あり</SelectItem>
+										<SelectItem value="false">なし</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+							<div className="grid gap-2">
+								<Label htmlFor="is_return_completed">返礼</Label>
+								<Select
+									value={String(watch("is_return_completed"))}
+									onValueChange={(value) =>
+										setValue("is_return_completed", value === "true")
+									}
+								>
+									<SelectTrigger>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="true">完了</SelectItem>
+										<SelectItem value="false">未完了</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+							<div className="grid gap-2">
+								<Label htmlFor="notes">備考</Label>
+								<Input id="notes" {...register("notes")} />
+							</div>
+						</div>
+					</TabsContent>
+				</Tabs>
+				<div className="flex justify-end gap-2">
+					<Button type="submit">{defaultValues ? "保存" : "追加"}</Button>
+				</div>
+			</form>
+		</ResponsiveDialog>
 	);
 }
