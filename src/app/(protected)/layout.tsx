@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { ensureProfile } from "@/app/_actions/auth";
+import { isAdmin } from "@/app/_actions/admin/admin-users";
 import { Header } from "./_components/header";
 import { TourGuide } from "@/components/custom/TourGuide/TourGuide";
 import { FeedbackButton } from "@/components/custom/feedback-button";
@@ -27,10 +28,13 @@ export default async function ProtectedLayout({
 		console.error("[ERROR] Failed to ensure profile:", result.error);
 	}
 
+	// 管理者権限の確認
+	const isAdminUser = await isAdmin();
+
 	return (
 		<TourGuide>
 			<div className="min-h-screen bg-gray-50">
-				<Header user={user} />
+				<Header user={user} isAdmin={isAdminUser} />
 				<div className="app-body container mx-auto px-4 py-8">
 					<main>{children}</main>
 				</div>

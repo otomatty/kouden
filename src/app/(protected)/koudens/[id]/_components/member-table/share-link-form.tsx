@@ -14,7 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { createShareInvitation } from "@/app/_actions/invitations";
-import { Share2 } from "lucide-react";
+import { Share2, Copy, QrCode, ChevronDown, ChevronUp } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 
 interface ShareLinkFormProps {
 	koudenId: string;
@@ -29,6 +30,7 @@ export function ShareLinkForm({ koudenId, roles }: ShareLinkFormProps) {
 	const [loading, setLoading] = useState(false);
 	const [invitationLink, setInvitationLink] = useState<string>("");
 	const [copied, setCopied] = useState(false);
+	const [showQR, setShowQR] = useState(false);
 	const { toast } = useToast();
 
 	const handleCreateLink = async (formData: FormData) => {
@@ -145,7 +147,7 @@ export function ShareLinkForm({ koudenId, roles }: ShareLinkFormProps) {
 			</form>
 
 			{invitationLink && (
-				<div className="mt-4 space-y-2">
+				<div className="mt-4 space-y-4">
 					<Label>招待リンク</Label>
 					<div className="flex gap-2">
 						<Input
@@ -158,9 +160,32 @@ export function ShareLinkForm({ koudenId, roles }: ShareLinkFormProps) {
 							variant="outline"
 							disabled={copied}
 						>
+							<Copy className="h-4 w-4" />
 							{copied ? "コピー完了" : "コピー"}
 						</Button>
+						<Button
+							onClick={() => setShowQR(!showQR)}
+							variant="outline"
+							className="gap-2"
+						>
+							<QrCode className="h-4 w-4" />
+							{showQR ? (
+								<ChevronUp className="h-4 w-4" />
+							) : (
+								<ChevronDown className="h-4 w-4" />
+							)}
+						</Button>
 					</div>
+					{showQR && (
+						<div className="rounded-lg border p-4 space-y-2">
+							<p className="text-sm text-muted-foreground">
+								このQRコードを読み取ることで、招待リンクにアクセスできます。
+							</p>
+							<div className="flex justify-center py-4">
+								<QRCodeSVG value={invitationLink} size={256} />
+							</div>
+						</div>
+					)}
 				</div>
 			)}
 		</ResponsiveDialog>

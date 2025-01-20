@@ -6,7 +6,7 @@ import type { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
-import { LogOut, Menu } from "lucide-react";
+import { LogOut, Menu, Settings } from "lucide-react";
 import {
 	Sheet,
 	SheetContent,
@@ -18,9 +18,10 @@ import { useState } from "react";
 
 interface HeaderProps {
 	user: User;
+	isAdmin: boolean;
 }
 
-export function Header({ user }: HeaderProps) {
+export function Header({ user, isAdmin }: HeaderProps) {
 	const router = useRouter();
 	const supabase = createClient();
 	const [isOpen, setIsOpen] = useState(false);
@@ -39,6 +40,14 @@ export function Header({ user }: HeaderProps) {
 					</Link>
 					{/* デスクトップ表示 */}
 					<div className="hidden md:flex items-center gap-4">
+						{isAdmin && (
+							<Link
+								href="/admin"
+								className="text-gray-600 hover:text-gray-900 transition-colors"
+							>
+								<Settings className="h-5 w-5" />
+							</Link>
+						)}
 						<div className="flex items-center gap-3">
 							<Avatar>
 								<AvatarImage src={user.user_metadata.avatar_url} />
@@ -82,6 +91,19 @@ export function Header({ user }: HeaderProps) {
 											{user.user_metadata.full_name || user.email}
 										</span>
 									</div>
+									{isAdmin && (
+										<Button
+											variant="outline"
+											className="justify-start"
+											onClick={() => {
+												router.push("/admin");
+												setIsOpen(false);
+											}}
+										>
+											<Settings className="mr-2 h-4 w-4" />
+											管理者ページ
+										</Button>
+									)}
 									<Button variant="outline" onClick={handleSignOut}>
 										<LogOut className="mr-2 h-4 w-4" />
 										ログアウト

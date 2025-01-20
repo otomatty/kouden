@@ -21,6 +21,7 @@ import {
 	DrawerTrigger,
 } from "@/components/ui/drawer";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 interface ResponsiveDialogProps {
 	children: React.ReactNode;
@@ -48,10 +49,34 @@ export function ResponsiveDialog({
 	const [_open, _setOpen] = React.useState(false);
 	const isControlled = open !== undefined;
 	const isDesktop = useMediaQuery("(min-width: 768px)");
+	const router = useRouter();
+
+	React.useEffect(() => {
+		if (!isControlled && _open) {
+			window.history.pushState({ dialog: true }, "");
+		}
+	}, [isControlled, _open]);
+
+	React.useEffect(() => {
+		if (!isControlled) {
+			const handlePopState = (event: PopStateEvent) => {
+				if (!event.state?.dialog) {
+					_setOpen(false);
+				}
+			};
+
+			window.addEventListener("popstate", handlePopState);
+			return () => window.removeEventListener("popstate", handlePopState);
+		}
+	}, [isControlled]);
 
 	const handleOpenChange = (value: boolean) => {
 		if (!isControlled) {
 			_setOpen(value);
+			if (!value) {
+				// ダイアログを閉じるときに履歴を1つ戻る
+				window.history.back();
+			}
 		}
 		onOpenChange?.(value);
 	};

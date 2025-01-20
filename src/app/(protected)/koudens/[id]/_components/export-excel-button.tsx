@@ -43,7 +43,7 @@ export function ExportExcelButton({ koudenId }: ExportExcelButtonProps) {
 			window.URL.revokeObjectURL(url);
 
 			toast({
-				title: "エクセルファイルを出力しました",
+				title: "Excelファイルを出力しました",
 				description: `ファイル名: ${result.fileName}`,
 			});
 		} catch (error) {
@@ -52,7 +52,7 @@ export function ExportExcelButton({ koudenId }: ExportExcelButtonProps) {
 				description:
 					error instanceof Error
 						? error.message
-						: "エクセルファイルの出力に失敗しました",
+						: "Excelファイルの出力に失敗しました",
 				variant: "destructive",
 			});
 		} finally {
@@ -74,7 +74,7 @@ export function ExportExcelButton({ koudenId }: ExportExcelButtonProps) {
 				)}
 			>
 				<FileSpreadsheet className="mr-2 h-4 w-4" />
-				{isExporting ? "出力中..." : "エクセル出力"}
+				{isExporting ? "出力中..." : "Excelをダウンロード"}
 			</Button>
 		);
 	}
@@ -92,7 +92,7 @@ export function ExportExcelButton({ koudenId }: ExportExcelButtonProps) {
 		>
 			<FileSpreadsheet className="h-5 w-5" />
 			<span className="text-xs font-medium">
-				{isExporting ? "出力中..." : "エクセル"}
+				{isExporting ? "出力中..." : "Excelをダウンロード"}
 			</span>
 		</button>
 	);
