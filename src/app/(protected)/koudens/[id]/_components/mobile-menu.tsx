@@ -4,6 +4,7 @@ import { ExportExcelButton } from "./export-excel-button";
 import { DeleteKoudenDialog } from "./delete-kouden-dialog";
 import { FeedbackButton } from "./feedback-button";
 import { AddEntryButton } from "./add-entry-button";
+import { DuplicateKoudenButton } from "./duplicate-kouden-button";
 import type {
 	EditKoudenEntryFormData,
 	KoudenEntryTableData,
@@ -47,11 +48,20 @@ export function MobileMenu({
 				}}
 			/>
 			<Separator orientation="vertical" className="h-8" />
-			<DeleteKoudenDialog
-				koudenId={koudenId}
-				koudenTitle={koudenTitle}
-				onDelete={onDelete}
-			/>
+			{permission === "owner" && (
+				<DeleteKoudenDialog
+					koudenId={koudenId}
+					koudenTitle={koudenTitle}
+					onDelete={onDelete}
+				/>
+			)}
+			<Separator orientation="vertical" className="h-8" />
+			{(permission === "owner" || permission === "editor") && (
+				<>
+					<DuplicateKoudenButton koudenId={koudenId} />
+					<Separator orientation="vertical" className="h-8" />
+				</>
+			)}
 			<Separator orientation="vertical" className="h-8" />
 			<FeedbackButton />
 		</div>

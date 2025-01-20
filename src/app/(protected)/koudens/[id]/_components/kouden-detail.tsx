@@ -5,6 +5,7 @@ import { KoudenEntryTable } from "./entry-table";
 import { KoudenStatistics } from "./kouden-statistics";
 import { ExportExcelButton } from "./export-excel-button";
 import { DeleteKoudenDialog } from "./delete-kouden-dialog";
+import { DuplicateKoudenButton } from "./duplicate-kouden-button";
 import type { Database } from "@/types/supabase";
 import type { KoudenEntry } from "@/types/kouden";
 import type { AttendanceType } from "./entry-table/types";
@@ -142,12 +143,17 @@ export function KoudenDetail({
 					{isDesktop && (
 						<div className="flex items-center gap-2">
 							<ExportExcelButton koudenId={kouden.id} />
-							{permission === "owner" && (
-								<DeleteKoudenDialog
-									koudenId={kouden.id}
-									koudenTitle={kouden.title}
-									onDelete={deleteKouden}
-								/>
+							{(permission === "owner" || permission === "editor") && (
+								<>
+									<DuplicateKoudenButton koudenId={kouden.id} />
+									{permission === "owner" && (
+										<DeleteKoudenDialog
+											koudenId={kouden.id}
+											koudenTitle={kouden.title}
+											onDelete={deleteKouden}
+										/>
+									)}
+								</>
 							)}
 						</div>
 					)}

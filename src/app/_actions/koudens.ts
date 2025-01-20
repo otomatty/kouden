@@ -447,3 +447,127 @@ export async function archiveKouden(id: string) {
 	revalidatePath(`/koudens/${id}`);
 	return data;
 }
+
+export async function duplicateKouden(
+	id: string,
+): Promise<{ kouden?: Kouden; error?: string }> {
+	try {
+		const supabase = await createClient();
+		const role = await checkKoudenPermission(id);
+
+		if (!role || (role !== "owner" && role !== "editor")) {
+			return { error: "複製権限がありません" };
+		}
+
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
+
+		if (!user) {
+			return { error: "認証が必要です" };
+		}
+
+		// 1. 元の香典帳の情報を取得
+		const { data: originalKouden, error: koudenError } = await supabase
+			.from("koudens")
+			.select("title, description")
+			.eq("id", id)
+			.single();
+
+		if (koudenError) {
+			throw koudenError;
+		}
+
+		// 2. 新しい香典帳を作成
+		const { data: newKouden, error: createError } = await supabase
+			.from("koudens")
+			.insert({
+				title: `${originalKouden.title}（コピー）`,
+				description: originalKouden.description,
+				owner_id: user.id,
+				created_by: user.id,
+			})
+			.select("*")
+			.single();
+
+		if (createError) {
+			throw createError;
+		}
+
+		// 3. オーナー情報を取得
+		const { data: owner, error: ownerError } = await supabase
+			.from("profiles")
+			.select("id, display_name")
+			.eq("id", user.id)
+			.single();
+
+		if (ownerError) {
+			throw ownerError;
+		}
+
+		// 4. 編集者ロールを取得
+		const { data: ownerRole, error: roleError } = await supabase
+			.from("kouden_roles")
+			.select("id")
+			.eq("kouden_id", newKouden.id)
+			.eq("name", "編集者")
+			.single();
+
+		if (!ownerRole || roleError) {
+			throw new Error("編集者ロールの取得に失敗しました");
+		}
+
+		// 5. メンバーとして登録
+		const { error: memberError } = await supabase
+			.from("kouden_members")
+			.insert({
+				kouden_id: newKouden.id,
+				user_id: user.id,
+				role_id: ownerRole.id,
+				added_by: user.id,
+			});
+
+		if (memberError) {
+			throw memberError;
+		}
+
+		// 6. 元の香典帳の関係性を取得
+		const { data: relationships, error: relationshipsError } = await supabase
+			.from("relationships")
+			.select("name, description")
+			.eq("kouden_id", id);
+
+		if (relationshipsError) {
+			throw relationshipsError;
+		}
+
+		// 7. 関係性を新しい香典帳にコピー
+		if (relationships.length > 0) {
+			const { error: copyRelationshipsError } = await supabase
+				.from("relationships")
+				.insert(
+					relationships.map((rel) => ({
+						kouden_id: newKouden.id,
+						name: rel.name,
+						description: rel.description,
+						is_default: false,
+						created_by: user.id,
+					})),
+				);
+
+			if (copyRelationshipsError) {
+				throw copyRelationshipsError;
+			}
+		}
+
+		return {
+			kouden: {
+				...newKouden,
+				owner,
+			} as unknown as Kouden,
+		};
+	} catch (error) {
+		console.error("[ERROR] Error duplicating kouden:", error);
+		return { error: "香典帳の複製に失敗しました" };
+	}
+}
