@@ -534,7 +534,7 @@ export async function duplicateKouden(
 		// 6. 元の香典帳の関係性を取得
 		const { data: relationships, error: relationshipsError } = await supabase
 			.from("relationships")
-			.select("name, description")
+			.select("id, name, description")
 			.eq("kouden_id", id);
 
 		if (relationshipsError) {
@@ -557,6 +557,165 @@ export async function duplicateKouden(
 
 			if (copyRelationshipsError) {
 				throw copyRelationshipsError;
+			}
+		}
+
+		// 8. 元の香典帳のエントリー情報を取得
+		const { data: entries, error: entriesError } = await supabase
+			.from("kouden_entries")
+			.select(`
+				id,
+				name,
+				organization,
+				position,
+				amount,
+				postal_code,
+				address,
+				phone_number,
+				attendance_type,
+				has_offering,
+				is_return_completed,
+				notes,
+				relationship_id
+			`)
+			.eq("kouden_id", id);
+
+		if (entriesError) {
+			throw entriesError;
+		}
+
+		// 9. エントリー情報を新しい香典帳にコピー
+		const entryIdMap = new Map<string, string>();
+		if (entries.length > 0) {
+			const { data: newEntries, error: copyEntriesError } = await supabase
+				.from("kouden_entries")
+				.insert(
+					entries.map((entry) => ({
+						...entry,
+						id: undefined, // 新しいUUIDを生成させる
+						kouden_id: newKouden.id,
+						created_by: user.id,
+						relationship_id: null, // 関係性IDは一旦nullにする（後で更新）
+					})),
+				)
+				.select("id");
+
+			if (copyEntriesError || !newEntries) {
+				throw copyEntriesError || new Error("Failed to copy entries");
+			}
+
+			// エントリーIDのマッピングを作成
+			entries.forEach((oldEntry, index) => {
+				entryIdMap.set(oldEntry.id, newEntries[index].id);
+			});
+
+			// 10. 関係性IDのマッピングを作成
+			const { data: newRelationships } = await supabase
+				.from("relationships")
+				.select("id, name")
+				.eq("kouden_id", newKouden.id);
+
+			const relationshipMap = new Map(
+				relationships
+					.filter((rel) => rel.name !== null)
+					.map((oldRel, index) => {
+						const newId = newRelationships?.[index]?.id;
+						return newId ? [oldRel.name, newId] : null;
+					})
+					.filter((item): item is [string, string] => item !== null),
+			);
+
+			// 11. 関係性IDを更新
+			for (let i = 0; i < entries.length; i++) {
+				const oldEntry = entries[i];
+				const newEntryId = entryIdMap.get(oldEntry.id);
+				const oldRelationship = oldEntry.relationship_id
+					? relationships.find((rel) => rel.id === oldEntry.relationship_id)
+					: null;
+				if (oldRelationship && newEntryId) {
+					const newRelationshipId = relationshipMap.get(oldRelationship.name);
+					if (newRelationshipId) {
+						await supabase
+							.from("kouden_entries")
+							.update({ relationship_id: newRelationshipId })
+							.eq("id", newEntryId);
+					}
+				}
+			}
+
+			// 12. 供物情報を取得してコピー
+			const { data: offerings, error: offeringsError } = await supabase
+				.from("offerings")
+				.select("*")
+				.in(
+					"kouden_entry_id",
+					entries.map((e) => e.id),
+				);
+
+			if (offeringsError) {
+				throw offeringsError;
+			}
+
+			if (offerings && offerings.length > 0) {
+				const { error: copyOfferingsError } = await supabase
+					.from("offerings")
+					.insert(
+						offerings.map((offering) => {
+							if (!offering.kouden_entry_id) {
+								throw new Error("Invalid kouden_entry_id");
+							}
+							const newEntryId = entryIdMap.get(offering.kouden_entry_id);
+							if (!newEntryId) {
+								throw new Error("Failed to map entry ID for offering");
+							}
+							return {
+								...offering,
+								id: undefined,
+								kouden_entry_id: newEntryId,
+								created_by: user.id,
+							};
+						}),
+					);
+
+				if (copyOfferingsError) {
+					throw copyOfferingsError;
+				}
+			}
+
+			// 13. 返礼品情報を取得してコピー
+			const { data: returnItems, error: returnItemsError } = await supabase
+				.from("return_items")
+				.select("*")
+				.in(
+					"kouden_entry_id",
+					entries.map((e) => e.id),
+				);
+
+			if (returnItemsError) {
+				throw returnItemsError;
+			}
+
+			if (returnItems && returnItems.length > 0) {
+				const { error: copyReturnItemsError } = await supabase
+					.from("return_items")
+					.insert(
+						returnItems.map((item) => {
+							const newEntryId = entryIdMap.get(item.kouden_entry_id);
+							if (!newEntryId) {
+								throw new Error("Failed to map entry ID for return item");
+							}
+							return {
+								...item,
+								id: undefined,
+								kouden_entry_id: newEntryId,
+								created_by: user.id,
+							};
+						}),
+					);
+
+				if (copyReturnItemsError) {
+					throw copyReturnItemsError;
+				}
 			}
 		}
 
