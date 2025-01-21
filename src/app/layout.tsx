@@ -5,6 +5,8 @@ import { Providers } from "./providers";
 import { createClient } from "@/lib/supabase/server";
 import { getUserSettings } from "./_actions/settings";
 import { InitializeGuideMode } from "@/components/providers/initialize-guide-mode";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -76,6 +78,8 @@ export default async function RootLayout({
 				<InitializeGuideMode initialValue={guideMode}>
 					<Providers>{children}</Providers>
 				</InitializeGuideMode>
+				<Analytics />
+				<SpeedInsights />
 			</body>
 		</html>
 	);
