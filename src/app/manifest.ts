@@ -6,7 +6,8 @@ export default function manifest(): MetadataRoute.Manifest {
 		short_name: "香典帳",
 		description:
 			"香典帳の管理をデジタル化し、効率的に記録・管理できるアプリケーション",
-		start_url: "/",
+		start_url: "/koudens",
+		scope: "/",
 		display: "standalone",
 		background_color: "#ffffff",
 		theme_color: "#000000",
