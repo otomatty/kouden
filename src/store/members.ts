@@ -4,7 +4,7 @@ import type { KoudenMember } from "@/types/member";
 import type { KoudenRole } from "@/types/role";
 import type { KoudenPermission } from "@/app/_actions/koudens";
 
-interface MembersState {
+export interface MembersState {
 	members: KoudenMember[];
 	roles: KoudenRole[];
 	permission: KoudenPermission;

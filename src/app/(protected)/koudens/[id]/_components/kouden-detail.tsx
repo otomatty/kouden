@@ -172,7 +172,7 @@ export function KoudenDetail({
 							!isDesktop && viewMode !== "table" && "sm:px-3",
 						)}
 					>
-						<Table2 className="h-4 w-4" />
+						<Table2 className="h-5 w-5" />
 						<span
 							className={cn(
 								isDesktop ? "inline" : "hidden",
@@ -189,7 +189,7 @@ export function KoudenDetail({
 							!isDesktop && viewMode !== "offerings" && "sm:px-3",
 						)}
 					>
-						<Gift className="h-4 w-4" />
+						<Gift className="h-5 w-5" />
 						<span
 							className={cn(
 								isDesktop ? "inline" : "hidden",

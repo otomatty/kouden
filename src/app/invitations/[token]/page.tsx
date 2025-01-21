@@ -42,6 +42,7 @@ export default async function InvitationPage({ params }: InvitationPageProps) {
 					userEmail={session?.user?.email}
 					token={token}
 					isLoggedIn={!!session?.user}
+					isExistingMember={invitation.isExistingMember}
 				/>
 			</div>
 		);

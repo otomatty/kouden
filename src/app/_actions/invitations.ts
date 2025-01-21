@@ -78,6 +78,9 @@ interface KoudenData {
 export async function getInvitation(token: string) {
 	try {
 		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 
 		// 招待情報を取得
 		const query = supabase
@@ -115,11 +118,25 @@ export async function getInvitation(token: string) {
 		// kouden_dataの型を保証
 		const kouden_data = invitation.kouden_data as KoudenData | null;
 
+		// 作成者の情報を取得
 		const { data: creatorProfile, error: creatorError } = await supabase
 			.from("profiles")
 			.select("display_name")
 			.eq("id", invitation.created_by)
 			.single();
+
+		// ユーザーが既にメンバーかどうかをチェック
+		let isExistingMember = false;
+		if (user) {
+			const { data: existingMember } = await supabase
+				.from("kouden_members")
+				.select()
+				.eq("kouden_id", invitation.kouden_id)
+				.eq("user_id", user.id)
+				.single();
+
+			isExistingMember = !!existingMember;
+		}
 
 		if (creatorError) {
 			console.error("[DEBUG] Creator profile error details:", {
@@ -134,6 +151,7 @@ export async function getInvitation(token: string) {
 				...invitation,
 				creator: null,
 				kouden_data,
+				isExistingMember,
 			};
 		}
 
@@ -142,6 +160,7 @@ export async function getInvitation(token: string) {
 			...invitation,
 			creator: creatorProfile,
 			kouden_data,
+			isExistingMember,
 		};
 
 		return result;
@@ -154,16 +173,21 @@ export async function getInvitation(token: string) {
 
 export async function acceptInvitation(token: string) {
 	try {
+		console.log("[DEBUG] Starting acceptInvitation with token:", token);
 		const supabase = await createClient();
 		const {
 			data: { user },
 		} = await supabase.auth.getUser();
 
+		console.log("[DEBUG] Current user:", user?.id);
+
 		if (!user) {
+			console.log("[DEBUG] No authenticated user found");
 			throw new Error("認証が必要です");
 		}
 
 		// 1. 招待情報を取得
+		console.log("[DEBUG] Fetching invitation info");
 		const { data: invitation, error: invitationError } = await supabase
 			.from("kouden_invitations")
 			.select("*")
@@ -171,24 +195,33 @@ export async function acceptInvitation(token: string) {
 			.single();
 
 		if (invitationError || !invitation) {
-			console.error("[ERROR] Error fetching invitation:", invitationError);
+			console.error("[DEBUG] Error fetching invitation:", invitationError);
 			throw new Error("招待が見つかりません");
 		}
 
+		console.log("[DEBUG] Found invitation:", invitation);
+
 		// 2. 招待の有効性チェック
 		if (invitation.status !== "pending") {
+			console.log("[DEBUG] Invalid invitation status:", invitation.status);
 			throw new Error("この招待は既に使用されています");
 		}
 
 		if (new Date(invitation.expires_at) < new Date()) {
+			console.log("[DEBUG] Invitation expired at:", invitation.expires_at);
 			throw new Error("招待の有効期限が切れています");
 		}
 
 		if (invitation.max_uses && invitation.used_count >= invitation.max_uses) {
+			console.log("[DEBUG] Max uses exceeded:", {
+				max: invitation.max_uses,
+				current: invitation.used_count,
+			});
 			throw new Error("招待の使用回数が上限に達しました");
 		}
 
 		// 3. 既存メンバーチェック
+		console.log("[DEBUG] Checking existing membership");
 		const { data: existingMember } = await supabase
 			.from("kouden_members")
 			.select()
@@ -197,13 +230,12 @@ export async function acceptInvitation(token: string) {
 			.single();
 
 		if (existingMember) {
+			console.log("[DEBUG] User is already a member");
 			throw new Error("すでにメンバーとして参加しています");
 		}
 
-		// 4. 招待トークンをセッション設定に追加
-		await supabase.rpc("set_invitation_token", { token });
-
-		// 5. メンバー追加
+		// 4. メンバー追加
+		console.log("[DEBUG] Adding new member");
 		const { error: memberError } = await supabase
 			.from("kouden_members")
 			.insert({
@@ -211,15 +243,16 @@ export async function acceptInvitation(token: string) {
 				user_id: user.id,
 				role_id: invitation.role_id,
 				invitation_id: invitation.id,
-				added_by: user.id, // 自分自身をadded_byとして設定
+				added_by: user.id,
 			});
 
 		if (memberError) {
-			console.error("[ERROR] Error adding member:", memberError);
+			console.error("[DEBUG] Error adding member:", memberError);
 			throw new Error("メンバーの追加に失敗しました");
 		}
 
-		// 6. 招待のステータスと使用回数を更新
+		// 5. 招待のステータスと使用回数を更新
+		console.log("[DEBUG] Updating invitation status");
 		const { error: updateError } = await supabase
 			.from("kouden_invitations")
 			.update({
@@ -229,14 +262,14 @@ export async function acceptInvitation(token: string) {
 			.eq("id", invitation.id);
 
 		if (updateError) {
-			console.error("[ERROR] Error updating invitation:", updateError);
+			console.error("[DEBUG] Error updating invitation:", updateError);
 			throw new Error("招待の更新に失敗しました");
 		}
 
-		revalidatePath(`/koudens/${invitation.kouden_id}`);
+		console.log("[DEBUG] Successfully completed invitation process");
 		return { success: true };
 	} catch (error) {
-		console.error("[ERROR] Error in acceptInvitation:", error);
+		console.error("[DEBUG] Error in acceptInvitation:", error);
 		throw error;
 	}
 }

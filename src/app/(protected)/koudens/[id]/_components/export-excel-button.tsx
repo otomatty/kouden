@@ -85,14 +85,14 @@ export function ExportExcelButton({ koudenId }: ExportExcelButtonProps) {
 			onClick={handleExport}
 			disabled={isExporting}
 			className={cn(
-				"flex flex-col items-center gap-1.5 min-w-[72px] py-2 px-3 rounded-md transition-colors",
+				"flex flex-col items-center gap-1.5 min-w-[60px] py-2 px-2 rounded-md transition-colors",
 				"text-[#217346] hover:text-[#1e6b41] hover:bg-[#217346]/10",
 				isExporting && "opacity-50 cursor-not-allowed",
 			)}
 		>
 			<FileSpreadsheet className="h-5 w-5" />
 			<span className="text-xs font-medium">
-				{isExporting ? "出力中..." : "Excelをダウンロード"}
+				{isExporting ? "出力中..." : "Excel"}
 			</span>
 		</button>
 	);

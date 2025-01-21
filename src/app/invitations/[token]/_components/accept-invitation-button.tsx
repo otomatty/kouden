@@ -30,7 +30,7 @@ export function AcceptInvitationButton({ token }: AcceptInvitationButtonProps) {
 
 			router.push("/koudens");
 		} catch (error) {
-			console.error("Error accepting invitation:", error);
+			console.error("[DEBUG] Error accepting invitation:", error);
 
 			if (error instanceof Error) {
 				switch (error.message) {

@@ -53,7 +53,11 @@ export function MemberTable({ koudenId }: MemberTableProps) {
 	}, [koudenId, lastUpdated, setMembersState]);
 
 	const canManageMembers = permission === "owner" || permission === "editor";
-	const columns = createColumns({ permission, currentUserId: user?.id });
+	const columns = createColumns({
+		permission,
+		currentUserId: user?.id,
+		membersAtom,
+	});
 
 	return (
 		<div className="space-y-4">

@@ -66,10 +66,10 @@ export function AddEntryButton({
 			trigger={
 				<button
 					type="button"
-					className="flex flex-col items-center gap-1.5 min-w-[72px] py-2 px-3 text-primary hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
+					className="flex flex-col items-center gap-1.5 min-w-[60px] py-2 px-2 text-primary hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
 				>
 					<Plus className="h-5 w-5" />
-					<span className="text-xs font-medium">新規追加</span>
+					<span className="text-xs font-medium">追加</span>
 				</button>
 			}
 		/>

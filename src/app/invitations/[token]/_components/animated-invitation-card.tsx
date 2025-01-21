@@ -14,6 +14,8 @@ import { Separator } from "@/components/ui/separator";
 import { CalendarDays, Users, Info } from "lucide-react";
 import { AcceptInvitationButton } from "./accept-invitation-button";
 import { LoginButton } from "@/components/custom/login-button";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 interface AnimatedInvitationCardProps {
 	title: string;
@@ -28,6 +30,7 @@ interface AnimatedInvitationCardProps {
 	isError?: boolean;
 	errorTitle?: string;
 	errorDescription?: string;
+	isExistingMember?: boolean;
 }
 
 export function AnimatedInvitationCard({
@@ -43,6 +46,7 @@ export function AnimatedInvitationCard({
 	isError,
 	errorTitle,
 	errorDescription,
+	isExistingMember,
 }: AnimatedInvitationCardProps) {
 	const containerVariants = {
 		hidden: { opacity: 0, y: 20 },
@@ -95,12 +99,12 @@ export function AnimatedInvitationCard({
 
 	return (
 		<motion.div
-			className="container max-w-lg mx-auto"
-			initial="hidden"
-			animate="visible"
-			variants={containerVariants}
+			initial={{ opacity: 0, y: 20 }}
+			animate={{ opacity: 1, y: 0 }}
+			transition={{ duration: 0.5 }}
+			className="container max-w-2xl mx-auto px-4 sm:px-6 lg:px-8"
 		>
-			<Card className="backdrop-blur-sm bg-card/95 shadow-lg border-muted">
+			<Card className="w-full">
 				<CardHeader className="space-y-2">
 					<motion.div variants={itemVariants}>
 						<Badge variant="secondary" className="mb-2">
@@ -170,7 +174,20 @@ export function AnimatedInvitationCard({
 						whileHover={{ scale: 1.02 }}
 						whileTap={{ scale: 0.98 }}
 					>
-						{isLoggedIn ? (
+						{isError ? (
+							<Button asChild variant="outline" className="w-full">
+								<Link href="/">トップページに戻る</Link>
+							</Button>
+						) : isExistingMember ? (
+							<>
+								<p className="text-sm text-center text-muted-foreground mb-3">
+									あなたはすでにこの香典帳のメンバーです
+								</p>
+								<Button asChild className="w-full">
+									<Link href="/koudens">香典帳一覧を表示する</Link>
+								</Button>
+							</>
+						) : isLoggedIn ? (
 							<AcceptInvitationButton token={token} />
 						) : (
 							<>

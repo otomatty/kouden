@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { duplicateKouden } from "@/app/_actions/koudens";
 import { toast } from "@/hooks/use-toast";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { cn } from "@/lib/utils";
 
 interface DuplicateKoudenButtonProps {
 	koudenId: string;
@@ -16,6 +18,7 @@ export function DuplicateKoudenButton({
 }: DuplicateKoudenButtonProps) {
 	const router = useRouter();
 	const [loading, setLoading] = useState(false);
+	const isDesktop = useMediaQuery("(min-width: 768px)");
 
 	const handleDuplicate = async () => {
 		try {
@@ -49,15 +52,35 @@ export function DuplicateKoudenButton({
 		}
 	};
 
+	if (isDesktop) {
+		return (
+			<Button
+				variant="outline"
+				onClick={handleDuplicate}
+				disabled={loading}
+				className="flex items-center gap-2"
+			>
+				<Copy className="h-4 w-4" />
+				{loading ? "複製中..." : "コピーを作成"}
+			</Button>
+		);
+	}
+
 	return (
-		<Button
-			variant="outline"
+		<button
+			type="button"
 			onClick={handleDuplicate}
 			disabled={loading}
-			className="flex items-center gap-2"
+			className={cn(
+				"flex flex-col items-center gap-1.5 min-w-[60px] py-2 px-3 rounded-md transition-colors",
+				"text-gray-600 hover:text-gray-900 hover:bg-gray-100",
+				loading && "opacity-50 cursor-not-allowed",
+			)}
 		>
-			<Copy className="h-4 w-4" />
-			{loading ? "複製中..." : "コピーを作成"}
-		</Button>
+			<Copy className="h-5 w-5" />
+			<span className="text-xs font-medium">
+				{loading ? "複製中..." : "コピー"}
+			</span>
+		</button>
 	);
 }

@@ -33,18 +33,13 @@ export function MobileMenu({
 			<AddEntryButton
 				koudenId={koudenId}
 				onSave={async (data) => {
-					console.log("MobileMenu: Attempting to add entry", data);
 					try {
 						const response = await onAddEntry(data);
-						console.log("MobileMenu: Entry added successfully", response);
 						return response;
 					} catch (error) {
 						console.error("MobileMenu: Failed to add entry", error);
 						throw error;
 					}
-				}}
-				onSuccess={(entry) => {
-					console.log("MobileMenu: Entry added and UI updated", entry);
 				}}
 			/>
 			<Separator orientation="vertical" className="h-8" />
@@ -62,7 +57,6 @@ export function MobileMenu({
 					<Separator orientation="vertical" className="h-8" />
 				</>
 			)}
-			<Separator orientation="vertical" className="h-8" />
 			<FeedbackButton />
 		</div>
 	);
