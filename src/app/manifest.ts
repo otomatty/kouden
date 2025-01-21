@@ -10,8 +10,14 @@ export default function manifest(): MetadataRoute.Manifest {
 		display: "standalone",
 		background_color: "#ffffff",
 		theme_color: "#000000",
-		orientation: "portrait",
+		orientation: "any",
 		icons: [
+			{
+				src: "/icons/icon-192x192.png",
+				sizes: "192x192",
+				type: "image/png",
+				purpose: "any",
+			},
 			{
 				src: "/icons/icon-192x192.png",
 				sizes: "192x192",
@@ -22,8 +28,30 @@ export default function manifest(): MetadataRoute.Manifest {
 				src: "/icons/icon-512x512.png",
 				sizes: "512x512",
 				type: "image/png",
+				purpose: "any",
+			},
+			{
+				src: "/icons/icon-512x512.png",
+				sizes: "512x512",
+				type: "image/png",
 				purpose: "maskable",
 			},
 		],
+		screenshots: [
+			{
+				src: "/screenshots/desktop.png",
+				sizes: "1920x1080",
+				type: "image/png",
+				form_factor: "wide",
+			},
+			{
+				src: "/screenshots/mobile.png",
+				sizes: "1080x1920",
+				type: "image/png",
+				form_factor: "narrow",
+			},
+		],
+		categories: ["productivity", "utilities"],
+		prefer_related_applications: false,
 	};
 }
