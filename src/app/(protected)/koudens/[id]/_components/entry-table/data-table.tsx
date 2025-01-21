@@ -42,12 +42,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { useMediaQuery } from "@/hooks/use-media-query";
-
-import {
-	HoverCard,
-	HoverCardContent,
-	HoverCardTrigger,
-} from "@/components/ui/hover-card";
+import { GuideCard } from "@/components/custom/guide-card";
 
 const columnLabels: Record<string, string> = {
 	select: "選択",
@@ -232,43 +227,8 @@ export function DataTable({
 		<div className="space-y-4">
 			<div className="flex flex-col lg:flex-row gap-4">
 				{/* 検索セクション */}
-				<HoverCard openDelay={200}>
-					<HoverCardTrigger asChild>
-						<div className="border rounded-lg p-4 flex-1 hover:border-primary/50 transition-colors">
-							<div className="flex items-center gap-2">
-								<Select
-									value={searchMethod}
-									onValueChange={handleSearchMethodChange}
-								>
-									<SelectTrigger className="w-[120px]">
-										<SelectValue placeholder="検索方法" />
-									</SelectTrigger>
-									<SelectContent>
-										{searchOptions.map((option) => (
-											<SelectItem key={option.value} value={option.value}>
-												{option.label}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-								<Input
-									placeholder={`${searchOptions.find((opt) => opt.value === searchMethod)?.label}で検索...`}
-									value={
-										(table
-											.getColumn(searchMethod)
-											?.getFilterValue() as string) ?? ""
-									}
-									onChange={(event) =>
-										table
-											.getColumn(searchMethod)
-											?.setFilterValue(event.target.value)
-									}
-									className="flex-1 min-w-[300px]"
-								/>
-							</div>
-						</div>
-					</HoverCardTrigger>
-					<HoverCardContent className="w-96">
+				<GuideCard
+					content={
 						<div className="space-y-4">
 							<div>
 								<h4 className="text-lg font-semibold mb-2">検索機能</h4>
@@ -306,48 +266,48 @@ export function DataTable({
 								</div>
 							</div>
 						</div>
-					</HoverCardContent>
-				</HoverCard>
+					}
+				>
+					<div className="border rounded-lg p-4 flex-1 hover:border-primary/50 transition-colors">
+						<div className="flex items-center gap-2">
+							<Select
+								value={searchMethod}
+								onValueChange={handleSearchMethodChange}
+							>
+								<SelectTrigger className="w-[120px]">
+									<SelectValue placeholder="検索方法" />
+								</SelectTrigger>
+								<SelectContent>
+									{searchOptions.map((option) => (
+										<SelectItem key={option.value} value={option.value}>
+											{option.label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							<Input
+								placeholder={`${searchOptions.find((opt) => opt.value === searchMethod)?.label}で検索...`}
+								value={
+									(table.getColumn(searchMethod)?.getFilterValue() as string) ??
+									""
+								}
+								onChange={(event) =>
+									table
+										.getColumn(searchMethod)
+										?.setFilterValue(event.target.value)
+								}
+								className="flex-1 min-w-[300px]"
+							/>
+						</div>
+					</div>
+				</GuideCard>
 
 				<div className="flex gap-4 justify-between">
 					{/* 表示列とソートのセクション */}
 					<div className="border rounded-lg p-4 min-w-[400px]">
 						<div className="flex items-center gap-4">
-							<HoverCard openDelay={200}>
-								<HoverCardTrigger asChild>
-									<div className="flex-1 hover:border-primary/50 transition-colors">
-										<DropdownMenu>
-											<DropdownMenuTrigger asChild>
-												<Button
-													variant="outline"
-													className="bg-transparent w-full"
-												>
-													表示列を選択
-												</Button>
-											</DropdownMenuTrigger>
-											<DropdownMenuContent align="end" className="w-[200px]">
-												{table
-													.getAllColumns()
-													.filter((column) => column.getCanHide())
-													.map((column) => {
-														return (
-															<DropdownMenuCheckboxItem
-																key={column.id}
-																className="capitalize"
-																checked={column.getIsVisible()}
-																onCheckedChange={(value) =>
-																	column.toggleVisibility(!!value)
-																}
-															>
-																{columnLabels[column.id] || column.id}
-															</DropdownMenuCheckboxItem>
-														);
-													})}
-											</DropdownMenuContent>
-										</DropdownMenu>
-									</div>
-								</HoverCardTrigger>
-								<HoverCardContent className="w-96">
+							<GuideCard
+								content={
 									<div className="space-y-4">
 										<div>
 											<h4 className="text-lg font-semibold mb-2">
@@ -381,34 +341,43 @@ export function DataTable({
 											</div>
 										</div>
 									</div>
-								</HoverCardContent>
-							</HoverCard>
+								}
+							>
+								<div className="flex-1 hover:border-primary/50 transition-colors">
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<Button
+												variant="outline"
+												className="bg-transparent w-full"
+											>
+												表示列を選択
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent align="end" className="w-[200px]">
+											{table
+												.getAllColumns()
+												.filter((column) => column.getCanHide())
+												.map((column) => {
+													return (
+														<DropdownMenuCheckboxItem
+															key={column.id}
+															className="capitalize"
+															checked={column.getIsVisible()}
+															onCheckedChange={(value) =>
+																column.toggleVisibility(!!value)
+															}
+														>
+															{columnLabels[column.id] || column.id}
+														</DropdownMenuCheckboxItem>
+													);
+												})}
+										</DropdownMenuContent>
+									</DropdownMenu>
+								</div>
+							</GuideCard>
 
-							<HoverCard openDelay={200}>
-								<HoverCardTrigger asChild>
-									<div className="flex-1 hover:border-primary/50 transition-colors">
-										<Select
-											value={
-												sorting[0]?.id && sorting[0]?.desc !== undefined
-													? `${sorting[0].id}_${sorting[0].desc ? "desc" : "asc"}`
-													: "created_at_desc"
-											}
-											onValueChange={handleSortChange}
-										>
-											<SelectTrigger className="w-full">
-												<SelectValue placeholder="並び順を選択" />
-											</SelectTrigger>
-											<SelectContent>
-												{sortOptions.map((option) => (
-													<SelectItem key={option.value} value={option.value}>
-														{option.label}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-									</div>
-								</HoverCardTrigger>
-								<HoverCardContent className="w-96">
+							<GuideCard
+								content={
 									<div className="space-y-4">
 										<div>
 											<h4 className="text-lg font-semibold mb-2">
@@ -459,8 +428,30 @@ export function DataTable({
 											</div>
 										</div>
 									</div>
-								</HoverCardContent>
-							</HoverCard>
+								}
+							>
+								<div className="flex-1 hover:border-primary/50 transition-colors">
+									<Select
+										value={
+											sorting[0]?.id && sorting[0]?.desc !== undefined
+												? `${sorting[0].id}_${sorting[0].desc ? "desc" : "asc"}`
+												: "created_at_desc"
+										}
+										onValueChange={handleSortChange}
+									>
+										<SelectTrigger className="w-full">
+											<SelectValue placeholder="並び順を選択" />
+										</SelectTrigger>
+										<SelectContent>
+											{sortOptions.map((option) => (
+												<SelectItem key={option.value} value={option.value}>
+													{option.label}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</div>
+							</GuideCard>
 						</div>
 					</div>
 					<div className="flex items-center justify-end">

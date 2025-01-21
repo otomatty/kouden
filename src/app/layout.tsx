@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import { createClient } from "@/lib/supabase/server";
+import { getUserSettings } from "./_actions/settings";
+import { InitializeGuideMode } from "@/components/providers/initialize-guide-mode";
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -14,14 +17,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-	title: "香典帳アプリ",
-	description: "香典帳アプリ",
-	manifest: "/manifest.json",
+	title: "香典帳",
+	description: "香典帳の管理を行えるアプリです。",
 	themeColor: "#000000",
 	appleWebApp: {
 		capable: true,
 		statusBarStyle: "default",
-		title: "香典帳アプリ",
+		title: "香典帳",
 	},
 	formatDetection: {
 		telephone: false,
@@ -33,22 +35,47 @@ export const metadata: Metadata = {
 	},
 };
 
-export default function RootLayout({
+export default async function RootLayout({
 	children,
-}: Readonly<{
+}: {
 	children: React.ReactNode;
-}>) {
+}) {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	let guideMode = true; // デフォルト値
+
+	if (user) {
+		const { settings } = await getUserSettings(user.id);
+		if (settings) {
+			guideMode = settings.guide_mode ?? true;
+		}
+	}
+
 	return (
-		<html lang="ja">
+		<html lang="ja" suppressHydrationWarning>
 			<head>
-				<link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+				<meta name="application-name" content="香典帳アプリ" />
 				<meta name="apple-mobile-web-app-capable" content="yes" />
 				<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+				<meta name="apple-mobile-web-app-title" content="香典帳" />
+				<meta
+					name="description"
+					content="香典帳の管理をデジタル化し、効率的に記録・管理できるアプリケーション"
+				/>
+				<meta name="format-detection" content="telephone=no" />
+				<meta name="mobile-web-app-capable" content="yes" />
+				<meta name="theme-color" content="#000000" />
+				<link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
 			</head>
 			<body
 				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
 			>
-				<Providers>{children}</Providers>
+				<InitializeGuideMode initialValue={guideMode}>
+					<Providers>{children}</Providers>
+				</InitializeGuideMode>
 			</body>
 		</html>
 	);

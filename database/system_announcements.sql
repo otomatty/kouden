@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS system_announcements (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title TEXT NOT NULL,
     content TEXT NOT NULL,
+    category VARCHAR(50) NOT NULL DEFAULT 'other',
     priority VARCHAR(20) NOT NULL DEFAULT 'normal',
     status VARCHAR(20) NOT NULL DEFAULT 'draft',
     published_at TIMESTAMP WITH TIME ZONE,
@@ -11,7 +12,8 @@ CREATE TABLE IF NOT EXISTS system_announcements (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     CONSTRAINT valid_priority CHECK (priority IN ('low', 'normal', 'high', 'urgent')),
-    CONSTRAINT valid_status CHECK (status IN ('draft', 'published', 'archived'))
+    CONSTRAINT valid_status CHECK (status IN ('draft', 'published', 'archived')),
+    CONSTRAINT valid_category CHECK (category IN ('system', 'feature', 'important', 'event', 'other'))
 );
 
 -- Enable RLS
@@ -25,7 +27,7 @@ CREATE POLICY "Users can view published announcements"
     TO authenticated
     USING (
         status = 'published' 
-        AND (published_at IS NULL OR published_at <= NOW())
+        AND published_at <= NOW()
         AND (expires_at IS NULL OR expires_at > NOW())
     );
 

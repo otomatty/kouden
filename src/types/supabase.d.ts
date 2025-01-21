@@ -641,6 +641,7 @@ export type Database = {
       }
       system_announcements: {
         Row: {
+          category: string
           content: string
           created_at: string | null
           created_by: string
@@ -653,6 +654,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          category?: string
           content: string
           created_at?: string | null
           created_by: string
@@ -665,6 +667,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          category?: string
           content?: string
           created_at?: string | null
           created_by?: string
@@ -712,6 +715,59 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_announcement_reads: {
+        Row: {
+          announcement_id: string
+          id: string
+          is_read: boolean | null
+          user_id: string
+        }
+        Insert: {
+          announcement_id: string
+          id?: string
+          is_read?: boolean | null
+          user_id: string
+        }
+        Update: {
+          announcement_id?: string
+          id?: string
+          is_read?: boolean | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_announcement_reads_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "system_announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_settings: {
+        Row: {
+          created_at: string
+          guide_mode: boolean | null
+          id: string
+          theme: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          guide_mode?: boolean | null
+          id: string
+          theme?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          guide_mode?: boolean | null
+          id?: string
+          theme?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {

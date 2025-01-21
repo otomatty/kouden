@@ -9,18 +9,21 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal } from "lucide-react";
 import { formatDate } from "@/lib/utils";
-import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import type { Announcement } from "@/types/admin";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { EditAnnouncementButton } from "./edit-announcement-button";
 
 interface AnnouncementsTableProps {
 	announcements: Announcement[];
@@ -40,41 +43,75 @@ const statusColors = {
 	archived: "bg-gray-700",
 };
 
+const categoryColors = {
+	system: "bg-purple-500",
+	feature: "bg-blue-500",
+	important: "bg-red-500",
+	event: "bg-green-500",
+	other: "bg-gray-500",
+};
+
+const categoryLabels = {
+	system: "システム関連",
+	feature: "機能追加・変更",
+	important: "重要なお知らせ",
+	event: "イベント",
+	other: "その他",
+};
+
 export function AnnouncementsTable({
 	announcements,
 	deleteAnnouncement,
 }: AnnouncementsTableProps) {
-	const router = useRouter();
-	const [loading, setLoading] = useState<string | null>(null);
+	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+	const [selectedAnnouncementId, setSelectedAnnouncementId] = useState<
+		string | null
+	>(null);
 
 	const handleDelete = async (id: string) => {
-		if (!confirm("本当にこのお知らせを削除しますか？")) return;
+		setSelectedAnnouncementId(id);
+		setIsDeleteDialogOpen(true);
+	};
+
+	const confirmDelete = async () => {
+		if (!selectedAnnouncementId) return;
 		try {
-			setLoading(id);
-			await deleteAnnouncement(id);
-			router.refresh();
-		} finally {
-			setLoading(null);
+			await deleteAnnouncement(selectedAnnouncementId);
+		} catch (error) {
+			console.error("Failed to delete announcement:", error);
 		}
+		setIsDeleteDialogOpen(false);
+		setSelectedAnnouncementId(null);
 	};
 
 	return (
-		<div className="rounded-md border">
+		<>
 			<Table>
 				<TableHeader>
 					<TableRow>
 						<TableHead>タイトル</TableHead>
+						<TableHead>カテゴリー</TableHead>
 						<TableHead>ステータス</TableHead>
 						<TableHead>優先度</TableHead>
 						<TableHead>公開日時</TableHead>
 						<TableHead>期限</TableHead>
-						<TableHead className="w-[50px]" />
+						<TableHead>作成日時</TableHead>
+						<TableHead>更新日時</TableHead>
+						<TableHead className="text-right">アクション</TableHead>
 					</TableRow>
 				</TableHeader>
 				<TableBody>
 					{announcements.map((announcement) => (
 						<TableRow key={announcement.id}>
 							<TableCell>{announcement.title}</TableCell>
+							<TableCell>
+								<Badge
+									variant="secondary"
+									className={categoryColors[announcement.category]}
+								>
+									{categoryLabels[announcement.category]}
+								</Badge>
+							</TableCell>
 							<TableCell>
 								<Badge
 									variant="secondary"
@@ -97,49 +134,49 @@ export function AnnouncementsTable({
 								</Badge>
 							</TableCell>
 							<TableCell>
-								{announcement.published_at
-									? formatDate(announcement.published_at)
+								{announcement.publishedAt
+									? formatDate(announcement.publishedAt)
 									: "-"}
 							</TableCell>
 							<TableCell>
-								{announcement.expires_at
-									? formatDate(announcement.expires_at)
+								{announcement.expiresAt
+									? formatDate(announcement.expiresAt)
 									: "-"}
 							</TableCell>
-							<TableCell>
-								<DropdownMenu>
-									<DropdownMenuTrigger asChild>
-										<Button
-											variant="ghost"
-											size="sm"
-											disabled={loading === announcement.id}
-										>
-											<MoreHorizontal className="h-4 w-4" />
-										</Button>
-									</DropdownMenuTrigger>
-									<DropdownMenuContent align="end">
-										<DropdownMenuItem
-											onClick={() =>
-												router.push(
-													`/admin/announcements/${announcement.id}/edit`,
-												)
-											}
-										>
-											編集
-										</DropdownMenuItem>
-										<DropdownMenuItem
-											className="text-red-600"
-											onClick={() => handleDelete(announcement.id)}
-										>
-											削除
-										</DropdownMenuItem>
-									</DropdownMenuContent>
-								</DropdownMenu>
+							<TableCell>{formatDate(announcement.createdAt)}</TableCell>
+							<TableCell>{formatDate(announcement.updatedAt)}</TableCell>
+							<TableCell className="text-right space-x-2">
+								<EditAnnouncementButton announcement={announcement} />
+								<Button
+									variant="destructive"
+									size="sm"
+									onClick={() => handleDelete(announcement.id)}
+								>
+									削除
+								</Button>
 							</TableCell>
 						</TableRow>
 					))}
 				</TableBody>
 			</Table>
-		</div>
+
+			<AlertDialog
+				open={isDeleteDialogOpen}
+				onOpenChange={setIsDeleteDialogOpen}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>お知らせを削除</AlertDialogTitle>
+						<AlertDialogDescription>
+							このお知らせを削除してもよろしいですか？この操作は取り消せません。
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>キャンセル</AlertDialogCancel>
+						<AlertDialogAction onClick={confirmDelete}>削除</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+		</>
 	);
 }

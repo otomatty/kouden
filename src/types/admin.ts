@@ -17,13 +17,14 @@ export interface Announcement {
 	id: string;
 	title: string;
 	content: string;
-	status: "draft" | "published" | "archived";
+	category: "system" | "feature" | "important" | "event" | "other";
 	priority: "low" | "normal" | "high" | "urgent";
-	created_by: string;
-	created_at: string | null;
-	updated_at: string | null;
-	published_at: string | null;
-	expires_at: string | null;
+	status: "draft" | "published" | "archived";
+	publishedAt: string | null;
+	expiresAt: string | null;
+	createdBy: string;
+	createdAt: string;
+	updatedAt: string;
 }
 
 export interface Ticket {

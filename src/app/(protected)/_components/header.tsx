@@ -6,7 +6,7 @@ import type { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
-import { LogOut, Menu, Settings } from "lucide-react";
+import { LogOut, Menu, Settings, User as UserIcon } from "lucide-react";
 import {
 	Sheet,
 	SheetContent,
@@ -15,6 +15,8 @@ import {
 	SheetTrigger,
 } from "@/components/ui/sheet";
 import { useState } from "react";
+import { UserMenu } from "./user-menu";
+import { NotificationsPopover } from "./notifications-popover";
 
 interface HeaderProps {
 	user: User;
@@ -36,37 +38,16 @@ export function Header({ user, isAdmin }: HeaderProps) {
 			<div className="container mx-auto px-4 py-4">
 				<div className="flex items-center justify-between">
 					<Link href="/koudens" className="hover:opacity-80 transition-opacity">
-						<h1 className="text-xl font-semibold">香典帳アプリ</h1>
+						<h1 className="text-xl font-semibold">香典帳</h1>
 					</Link>
 					{/* デスクトップ表示 */}
-					<div className="hidden md:flex items-center gap-4">
-						{isAdmin && (
-							<Link
-								href="/admin"
-								className="text-gray-600 hover:text-gray-900 transition-colors"
-							>
-								<Settings className="h-5 w-5" />
-							</Link>
-						)}
-						<div className="flex items-center gap-3">
-							<Avatar>
-								<AvatarImage src={user.user_metadata.avatar_url} />
-								<AvatarFallback>
-									{user.user_metadata.full_name?.charAt(0).toUpperCase() ||
-										user.email?.charAt(0).toUpperCase()}
-								</AvatarFallback>
-							</Avatar>
-							<span className="text-sm text-gray-600">
-								{user.user_metadata.full_name || user.email}
-							</span>
-						</div>
-						<Button variant="outline" onClick={handleSignOut}>
-							<LogOut className="mr-2 h-4 w-4" />
-							ログアウト
-						</Button>
+					<div className="hidden md:flex items-center gap-2">
+						<NotificationsPopover />
+						<UserMenu user={user} isAdmin={isAdmin} />
 					</div>
 					{/* モバイル表示 */}
-					<div className="md:hidden">
+					<div className="md:hidden flex items-center gap-2">
+						<NotificationsPopover />
 						<Sheet open={isOpen} onOpenChange={setIsOpen}>
 							<SheetTrigger asChild>
 								<Button variant="ghost" size="icon">
@@ -91,6 +72,17 @@ export function Header({ user, isAdmin }: HeaderProps) {
 											{user.user_metadata.full_name || user.email}
 										</span>
 									</div>
+									<Button
+										variant="outline"
+										className="justify-start"
+										onClick={() => {
+											router.push("/profile");
+											setIsOpen(false);
+										}}
+									>
+										<UserIcon className="mr-2 h-4 w-4" />
+										プロフィール
+									</Button>
 									{isAdmin && (
 										<Button
 											variant="outline"
@@ -104,7 +96,11 @@ export function Header({ user, isAdmin }: HeaderProps) {
 											管理者ページ
 										</Button>
 									)}
-									<Button variant="outline" onClick={handleSignOut}>
+									<Button
+										variant="outline"
+										className="justify-start text-red-600"
+										onClick={handleSignOut}
+									>
 										<LogOut className="mr-2 h-4 w-4" />
 										ログアウト
 									</Button>

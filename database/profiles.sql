@@ -4,12 +4,8 @@ DROP TABLE IF EXISTS profiles CASCADE;
 -- Create profiles table (プロフィールテーブル)
 CREATE TABLE IF NOT EXISTS profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    -- 姓
-    last_name TEXT NOT NULL,
-    -- 名
-    first_name TEXT NOT NULL,
-    -- メールアドレス
-    email TEXT NOT NULL,
+    -- 表示名
+    display_name TEXT NOT NULL,
     -- アバターURL
     avatar_url TEXT,
     -- 作成日時
@@ -32,6 +28,7 @@ ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies
 DROP POLICY IF EXISTS "Users can view all profiles" ON profiles;
+DROP POLICY IF EXISTS "Users can insert their own profile" ON profiles;
 DROP POLICY IF EXISTS "Users can update their own profile" ON profiles;
 
 -- Create RLS policies
@@ -39,10 +36,13 @@ CREATE POLICY "Users can view all profiles"
     ON profiles FOR SELECT
     USING (true);
 
+CREATE POLICY "Users can insert their own profile"
+    ON profiles FOR INSERT
+    WITH CHECK (auth.uid() = id);
+
 CREATE POLICY "Users can update their own profile"
     ON profiles FOR UPDATE
-    USING (auth.uid()::uuid = id)
-    WITH CHECK (auth.uid()::uuid = id);
+    USING (auth.uid() = id);
 
 -- Function to handle new user creation
 CREATE OR REPLACE FUNCTION handle_new_user()
@@ -52,12 +52,10 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-    INSERT INTO public.profiles (id, last_name, first_name, email, avatar_url)
+    INSERT INTO public.profiles (id, display_name, avatar_url)
     VALUES (
         NEW.id,
-        '',
-        '',
-        NEW.email,
+        COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
         NEW.raw_user_meta_data->>'avatar_url'
     );
     RETURN NEW;

@@ -10,12 +10,14 @@ import { createKouden } from "@/app/_actions/koudens";
 import { createClient } from "@/lib/supabase/client";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 import { Plus } from "lucide-react";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 export function CreateKoudenForm() {
 	const router = useRouter();
 	const [open, setOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const formRef = useRef<HTMLFormElement>(null);
+	const isMobile = useMediaQuery("(max-width: 640px)");
 
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -51,7 +53,7 @@ export function CreateKoudenForm() {
 			trigger={
 				<Button className="create-kouden-button flex items-center gap-2">
 					<Plus className="h-4 w-4" />
-					<span>香典帳を作成する</span>
+					<span>{isMobile ? "新規作成" : "香典帳を作成する"}</span>
 				</Button>
 			}
 			title="新しい香典帳を作成"

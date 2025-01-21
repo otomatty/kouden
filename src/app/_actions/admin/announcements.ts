@@ -1,77 +1,138 @@
-import { createClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
-import { withAdmin } from "./middleware";
-import type { Announcement } from "@/types/admin";
+"use server";
 
-export interface AnnouncementData {
+import { createClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
+import { revalidatePath } from "next/cache";
+
+export type Announcement = {
+	id: string;
 	title: string;
 	content: string;
+	category: "system" | "feature" | "important" | "event" | "other";
 	priority: "low" | "normal" | "high" | "urgent";
 	status: "draft" | "published" | "archived";
-	published_at?: string;
-	expires_at?: string;
-}
+	publishedAt: string | null;
+	expiresAt: string | null;
+	createdBy: string;
+	createdAt: string;
+	updatedAt: string;
+};
 
-export async function getAnnouncements(includeUnpublished = false) {
-	return withAdmin(async () => {
-		const supabase = await createClient();
-		let query = supabase
-			.from("system_announcements")
-			.select("*")
-			.order("created_at", { ascending: false });
-
-		if (!includeUnpublished) {
-			query = query
-				.eq("status", "published")
-				.lte("published_at", new Date().toISOString())
-				.or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
-		}
-
-		const { data: announcements, error } = await query;
-
-		if (error) throw error;
-		return announcements as Announcement[];
-	});
-}
-
-export async function getAnnouncementById(id: string) {
+export async function getAnnouncements() {
 	const supabase = await createClient();
-	const { data: announcement, error } = await supabase
+	const { data, error } = await supabase
 		.from("system_announcements")
 		.select("*")
-		.eq("id", id)
-		.single();
+		.order("created_at", { ascending: false });
 
 	if (error) throw error;
-	return announcement;
+
+	return data?.map((item) => ({
+		id: item.id,
+		title: item.title,
+		content: item.content,
+		category: item.category,
+		priority: item.priority,
+		status: item.status,
+		publishedAt: item.published_at,
+		expiresAt: item.expires_at,
+		createdBy: item.created_by,
+		createdAt: item.created_at,
+		updatedAt: item.updated_at,
+	})) as Announcement[];
 }
 
-export async function createAnnouncement(data: AnnouncementData) {
-	return withAdmin(async () => {
-		const supabase = await createClient();
-		const {
-			data: { user },
-		} = await supabase.auth.getUser();
-		if (!user?.id) throw new Error("User not found");
+export async function createAnnouncement({
+	title,
+	content,
+	category,
+	priority,
+	status,
+	publishedAt,
+	expiresAt,
+}: {
+	title: string;
+	content: string;
+	category: Announcement["category"];
+	priority: Announcement["priority"];
+	status: Announcement["status"];
+	publishedAt?: string;
+	expiresAt?: string;
+}) {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+	if (!user) throw new Error("Unauthorized");
 
-		const { error } = await supabase.from("system_announcements").insert({
-			...data,
-			created_by: user.id,
+	// デバッグ: リクエストデータをログ出力
+	const requestData = {
+		title,
+		content,
+		category,
+		priority,
+		status,
+		published_at: publishedAt,
+		expires_at: expiresAt,
+		created_by: user.id,
+	};
+	console.log("Creating announcement with data:", requestData);
+
+	const { data, error } = await supabase
+		.from("system_announcements")
+		.insert(requestData)
+		.select()
+		.single();
+
+	if (error) {
+		// デバッグ: エラーの詳細をログ出力
+		console.error("Failed to create announcement:", {
+			error,
+			requestData,
+			user: {
+				id: user.id,
+				email: user.email,
+			},
 		});
+		throw error;
+	}
 
-		if (error) throw error;
-		revalidatePath("/admin/announcements");
-	});
+	console.log("Successfully created announcement:", data);
+	revalidatePath("/admin/announcements");
 }
 
 export async function updateAnnouncement(
 	id: string,
-	data: Partial<AnnouncementData>,
+	{
+		title,
+		content,
+		category,
+		priority,
+		status,
+		publishedAt,
+		expiresAt,
+	}: {
+		title: string;
+		content: string;
+		category: Announcement["category"];
+		priority: Announcement["priority"];
+		status: Announcement["status"];
+		publishedAt?: string;
+		expiresAt?: string;
+	},
 ) {
 	const supabase = await createClient();
 	const { error } = await supabase
 		.from("system_announcements")
-		.update(data)
+		.update({
+			title,
+			content,
+			category,
+			priority,
+			status,
+			published_at: publishedAt,
+			expires_at: expiresAt,
+		})
 		.eq("id", id);
 
 	if (error) throw error;

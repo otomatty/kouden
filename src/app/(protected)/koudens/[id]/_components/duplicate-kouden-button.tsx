@@ -58,10 +58,10 @@ export function DuplicateKoudenButton({
 				variant="outline"
 				onClick={handleDuplicate}
 				disabled={loading}
-				className="flex items-center gap-2"
+				className="flex items-center gap-2 text-sm"
 			>
 				<Copy className="h-4 w-4" />
-				{loading ? "複製中..." : "コピーを作成"}
+				{loading ? "複製中..." : "香典帳を複製する"}
 			</Button>
 		);
 	}
@@ -79,7 +79,7 @@ export function DuplicateKoudenButton({
 		>
 			<Copy className="h-5 w-5" />
 			<span className="text-xs font-medium">
-				{loading ? "複製中..." : "コピー"}
+				{loading ? "複製中..." : "複製"}
 			</span>
 		</button>
 	);
