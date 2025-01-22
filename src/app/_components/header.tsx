@@ -14,6 +14,7 @@ export function Header() {
 				<div className="flex items-center space-x-8">
 					<Link href="/" className="flex items-center space-x-2">
 						<span className="text-xl font-bold">香典帳</span>
+						<span className="text-sm text-gray-500 ml-1">β版</span>
 					</Link>
 					<nav className="hidden md:flex items-center space-x-6">
 						{navigation.map((item) => (

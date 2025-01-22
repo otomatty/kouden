@@ -46,7 +46,9 @@ export function Header({ user, isAdmin }: HeaderProps) {
 			<div className="container mx-auto px-4 py-4">
 				<div className="flex items-center justify-between">
 					<Link href="/koudens" className="hover:opacity-80 transition-opacity">
-						<h1 className="text-xl font-semibold">香典帳</h1>
+						<h1 className="text-xl font-semibold">
+							香典帳<span className="text-sm text-gray-500 ml-1">β版</span>
+						</h1>
 					</Link>
 					{/* デスクトップ表示 */}
 					<div className="hidden md:flex items-center gap-2">

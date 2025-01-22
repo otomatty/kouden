@@ -25,7 +25,10 @@ const koudenEntrySchema = z.object({
 });
 
 export type CreateKoudenEntryInput = z.infer<typeof koudenEntrySchema>;
-export type UpdateKoudenEntryInput = Partial<CreateKoudenEntryInput>;
+export type UpdateKoudenEntryInput = Partial<CreateKoudenEntryInput> & {
+	id?: string;
+	offering_entries?: Array<Record<string, unknown>>;
+};
 
 export async function createKoudenEntry(
 	input: CreateKoudenEntryInput,
@@ -120,25 +123,27 @@ export async function updateKoudenEntry(
 	}
 
 	try {
-		console.log("Received update data:", { id, input });
+		// データベースに送信するデータから不要なフィールドを除外
+		const { id: _id, offering_entries, ...updateData } = input;
 
 		const { error, data: updatedData } = await supabase
 			.from("kouden_entries")
 			.update({
-				...input,
+				...updateData,
 				attendance_type:
-					input.attendance_type === null ? undefined : input.attendance_type,
+					updateData.attendance_type === null
+						? undefined
+						: updateData.attendance_type,
 				relationship_id:
-					input.relationship_id === "" ? undefined : input.relationship_id,
+					updateData.relationship_id === ""
+						? undefined
+						: updateData.relationship_id,
 			})
 			.eq("id", id)
 			.select()
 			.single();
 
-		console.log("Supabase response:", { error, updatedData });
-
 		if (error) {
-			console.error("Supabase error:", error);
 			throw new Error("香典情報の更新に失敗しました");
 		}
 
@@ -148,8 +153,7 @@ export async function updateKoudenEntry(
 
 		return updatedData;
 	} catch (error) {
-		console.error("Update function error:", error);
-		throw error;
+		throw new Error("香典情報の更新に失敗しました");
 	}
 }
 

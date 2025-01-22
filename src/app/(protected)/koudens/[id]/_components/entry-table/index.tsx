@@ -141,22 +141,10 @@ export function KoudenEntryTable(props: KoudenEntryTableProps) {
 				...updateData
 			} = currentEntry;
 
-			console.log("Updating entry:", {
-				id,
-				field,
-				value,
-				updateData: {
-					...updateData,
-					[field]: value,
-				},
-			});
-
 			const response = await props.updateKoudenEntry(id, {
 				...updateData,
 				[field]: value,
 			});
-
-			console.log("Update response:", response);
 
 			setData((prevData) =>
 				prevData.map((entry) =>
@@ -169,7 +157,6 @@ export function KoudenEntryTable(props: KoudenEntryTableProps) {
 				),
 			);
 		} catch (error) {
-			console.error("Update failed:", error);
 			toast({
 				title: "エラーが発生しました",
 				description: "データの更新に失敗しました",
