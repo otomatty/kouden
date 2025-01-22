@@ -311,7 +311,12 @@ export async function getKoudenWithEntries(id: string) {
 		.from("kouden_entries")
 		.select(`
 			*,
-			offerings (*),
+			offering_entries (
+				offering:offerings (
+					*,
+					offering_photos (*)
+				)
+			),
 			return_items (*)
 		`)
 		.eq("kouden_id", id)
@@ -646,9 +651,14 @@ export async function duplicateKouden(
 			// 12. 供物情報を取得してコピー
 			const { data: offerings, error: offeringsError } = await supabase
 				.from("offerings")
-				.select("*")
+				.select(`
+					*,
+					offering_entries!inner (
+						kouden_entry_id
+					)
+				`)
 				.in(
-					"kouden_entry_id",
+					"id",
 					entries.map((e) => e.id),
 				);
 
@@ -657,28 +667,47 @@ export async function duplicateKouden(
 			}
 
 			if (offerings && offerings.length > 0) {
-				const { error: copyOfferingsError } = await supabase
+				// まず供物を複製
+				const { data: newOfferings, error: copyOfferingsError } = await supabase
 					.from("offerings")
 					.insert(
-						offerings.map((offering) => {
-							if (!offering.kouden_entry_id) {
-								throw new Error("Invalid kouden_entry_id");
-							}
-							const newEntryId = entryIdMap.get(offering.kouden_entry_id);
+						offerings.map((offering) => ({
+							type: offering.type,
+							description: offering.description,
+							quantity: offering.quantity,
+							price: offering.price,
+							provider_name: offering.provider_name,
+							notes: offering.notes,
+							created_by: user.id,
+						})),
+					)
+					.select();
+
+				if (copyOfferingsError || !newOfferings) {
+					throw copyOfferingsError || new Error("Failed to copy offerings");
+				}
+
+				// 次に offering_entries を作成
+				const { error: copyOfferingEntriesError } = await supabase
+					.from("offering_entries")
+					.insert(
+						offerings.map((offering, index) => {
+							const newEntryId = entryIdMap.get(
+								offering.offering_entries[0].kouden_entry_id,
+							);
 							if (!newEntryId) {
 								throw new Error("Failed to map entry ID for offering");
 							}
 							return {
-								...offering,
-								id: undefined,
+								offering_id: newOfferings[index].id,
 								kouden_entry_id: newEntryId,
 								created_by: user.id,
 							};
 						}),
 					);
 
-				if (copyOfferingsError) {
-					throw copyOfferingsError;
+				if (copyOfferingEntriesError) {
+					throw copyOfferingEntriesError;
 				}
 			}
 

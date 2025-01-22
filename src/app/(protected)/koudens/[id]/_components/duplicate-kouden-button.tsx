@@ -61,7 +61,9 @@ export function DuplicateKoudenButton({
 				className="flex items-center gap-2 text-sm"
 			>
 				<Copy className="h-4 w-4" />
-				{loading ? "複製中..." : "香典帳を複製する"}
+				<span className="text-sm">
+					{loading ? "複製中..." : "香典帳を複製する"}
+				</span>
 			</Button>
 		);
 	}
@@ -78,8 +80,8 @@ export function DuplicateKoudenButton({
 			)}
 		>
 			<Copy className="h-5 w-5" />
-			<span className="text-xs font-medium">
-				{loading ? "複製中..." : "複製"}
+			<span className="text-sm font-medium">
+				{loading ? "複製中..." : "香典帳を複製する"}
 			</span>
 		</button>
 	);

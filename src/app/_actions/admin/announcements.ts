@@ -76,7 +76,6 @@ export async function createAnnouncement({
 		expires_at: expiresAt,
 		created_by: user.id,
 	};
-	console.log("Creating announcement with data:", requestData);
 
 	const { data, error } = await supabase
 		.from("system_announcements")
@@ -97,7 +96,6 @@ export async function createAnnouncement({
 		throw error;
 	}
 
-	console.log("Successfully created announcement:", data);
 	revalidatePath("/admin/announcements");
 }
 

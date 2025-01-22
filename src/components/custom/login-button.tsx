@@ -20,16 +20,7 @@ export function LoginButton({ invitationToken }: LoginButtonProps) {
 
 			// 認証前にinvitation_tokenをクッキーに保存
 			if (invitationToken) {
-				console.log(
-					"[DEBUG] Setting invitation token cookie:",
-					invitationToken,
-				);
 				document.cookie = `invitation_token=${invitationToken}; path=/; max-age=3600; SameSite=Lax`;
-
-				// クッキーが正しく設定されたか確認
-				console.log("[DEBUG] Cookies after setting:", document.cookie);
-			} else {
-				console.log("[DEBUG] No invitation token provided");
 			}
 
 			const { error } = await supabase.auth.signInWithOAuth({

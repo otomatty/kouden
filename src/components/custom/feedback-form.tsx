@@ -58,7 +58,7 @@ export function FeedbackForm() {
 	return (
 		<Card className="w-full max-w-2xl mx-auto">
 			<CardHeader>
-				<CardTitle>フィードバック</CardTitle>
+				<CardTitle>不具合・ご要望はこちら</CardTitle>
 				<CardDescription>
 					アプリについてのご意見・ご要望をお聞かせください
 				</CardDescription>

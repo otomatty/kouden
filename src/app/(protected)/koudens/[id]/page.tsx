@@ -11,9 +11,8 @@ import {
 	createOffering,
 	updateOffering,
 	deleteOffering,
-	type CreateOfferingInput,
-	type UpdateOfferingInput,
 } from "@/app/_actions/offerings";
+import type { CreateOfferingInput, UpdateOfferingInput } from "@/types/actions";
 import {
 	createReturnItem,
 	updateReturnItem,
@@ -68,9 +67,9 @@ const wrappedUpdateOffering = async (
 	return updateOffering(id, input);
 };
 
-const wrappedDeleteOffering = async (id: string, koudenEntryId: string) => {
+const wrappedDeleteOffering = async (id: string) => {
 	"use server";
-	return deleteOffering(id, koudenEntryId);
+	return deleteOffering(id);
 };
 
 const wrappedCreateReturnItem = async (input: CreateReturnItemInput) => {

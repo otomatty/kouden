@@ -444,15 +444,93 @@ export type Database = {
           },
         ]
       }
+      offering_entries: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          kouden_entry_id: string
+          offering_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          kouden_entry_id: string
+          offering_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          kouden_entry_id?: string
+          offering_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offering_entries_kouden_entry_id_fkey"
+            columns: ["kouden_entry_id"]
+            isOneToOne: false
+            referencedRelation: "kouden_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offering_entries_offering_id_fkey"
+            columns: ["offering_id"]
+            isOneToOne: false
+            referencedRelation: "offerings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offering_photos: {
+        Row: {
+          caption: string | null
+          created_at: string
+          created_by: string
+          id: string
+          offering_id: string
+          storage_key: string
+          updated_at: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          offering_id: string
+          storage_key: string
+          updated_at?: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          offering_id?: string
+          storage_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offering_photos_offering_id_fkey"
+            columns: ["offering_id"]
+            isOneToOne: false
+            referencedRelation: "offerings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       offerings: {
         Row: {
           created_at: string
           created_by: string
           description: string
           id: string
-          kouden_entry_id: string | null
           notes: string | null
           price: number | null
+          provider_name: string
+          quantity: number
           type: string
           updated_at: string
         }
@@ -461,9 +539,10 @@ export type Database = {
           created_by: string
           description: string
           id?: string
-          kouden_entry_id?: string | null
           notes?: string | null
           price?: number | null
+          provider_name: string
+          quantity?: number
           type: string
           updated_at?: string
         }
@@ -472,21 +551,14 @@ export type Database = {
           created_by?: string
           description?: string
           id?: string
-          kouden_entry_id?: string | null
           notes?: string | null
           price?: number | null
+          provider_name?: string
+          quantity?: number
           type?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "offerings_kouden_entry_id_fkey"
-            columns: ["kouden_entry_id"]
-            isOneToOne: false
-            referencedRelation: "kouden_entries"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       profiles: {
         Row: {

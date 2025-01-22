@@ -1,35 +1,19 @@
 "use client";
 
-import { ExportExcelButton } from "./export-excel-button";
-import { DeleteKoudenDialog } from "./delete-kouden-dialog";
-import { FeedbackButton } from "./feedback-button";
 import { AddEntryButton } from "./add-entry-button";
-import { DuplicateKoudenButton } from "./duplicate-kouden-button";
 import type {
 	EditKoudenEntryFormData,
 	KoudenEntryTableData,
 } from "./entry-table/types";
-import { Separator } from "@/components/ui/separator";
 
 interface MobileMenuProps {
 	koudenId: string;
-	koudenTitle: string;
-	permission: "owner" | "editor" | "viewer" | null;
-	onDelete: (id: string) => Promise<void>;
 	onAddEntry: (data: EditKoudenEntryFormData) => Promise<KoudenEntryTableData>;
 }
 
-export function MobileMenu({
-	koudenId,
-	koudenTitle,
-	permission,
-	onDelete,
-	onAddEntry,
-}: MobileMenuProps) {
+export function MobileMenu({ koudenId, onAddEntry }: MobileMenuProps) {
 	return (
-		<div className="fixed bottom-0 left-0 right-0 bg-background border-t py-2 flex justify-center items-center gap-2 md:hidden shadow-lg">
-			<ExportExcelButton koudenId={koudenId} />
-			<Separator orientation="vertical" className="h-8" />
+		<div className="fixed bottom-0 left-0 right-0 bg-background border-t py-2 flex justify-center items-center md:hidden shadow-lg">
 			<AddEntryButton
 				koudenId={koudenId}
 				onSave={async (data) => {
@@ -42,22 +26,6 @@ export function MobileMenu({
 					}
 				}}
 			/>
-			<Separator orientation="vertical" className="h-8" />
-			{permission === "owner" && (
-				<DeleteKoudenDialog
-					koudenId={koudenId}
-					koudenTitle={koudenTitle}
-					onDelete={onDelete}
-				/>
-			)}
-			<Separator orientation="vertical" className="h-8" />
-			{(permission === "owner" || permission === "editor") && (
-				<>
-					<DuplicateKoudenButton koudenId={koudenId} />
-					<Separator orientation="vertical" className="h-8" />
-				</>
-			)}
-			<FeedbackButton />
 		</div>
 	);
 }

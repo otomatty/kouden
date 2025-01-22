@@ -49,20 +49,9 @@ export function EntryCard({
 }: EntryCardProps) {
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-	// データの変更を監視
-	useEffect(() => {
-		console.log("EntryCard: Entry data changed", entry);
-	}, [entry]);
-
 	const handleEdit = async (data: EditKoudenEntryFormData) => {
-		console.log("EntryCard: Attempting to edit entry", {
-			entryId: entry.id,
-			currentData: entry,
-			newData: data,
-		});
 		try {
 			const updatedEntry = await onEdit(data, entry.id);
-			console.log("EntryCard: Edit successful");
 			toast({
 				title: "更新成功",
 				description: "データが正常に更新されました",
@@ -80,10 +69,8 @@ export function EntryCard({
 	};
 
 	const handleDelete = async () => {
-		console.log("EntryCard: Attempting to delete entry", entry.id);
 		try {
 			await onDelete(entry.id);
-			console.log("EntryCard: Delete successful");
 			toast({
 				title: "削除成功",
 				description: "データが正常に削除されました",
@@ -289,7 +276,6 @@ export function EntryCard({
 								className="w-full"
 								variant="default"
 								onClick={() => {
-									console.log("EntryCard: Opening edit dialog");
 									setIsEditDialogOpen(true);
 								}}
 							>
@@ -312,7 +298,6 @@ export function EntryCard({
 			<EntryDialog
 				open={isEditDialogOpen}
 				onOpenChange={(open) => {
-					console.log("EntryCard: Dialog state changed", { open });
 					setIsEditDialogOpen(open);
 				}}
 				defaultValues={entry}

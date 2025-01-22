@@ -5,8 +5,13 @@ import { DataTable } from "./data-table";
 import { createColumns } from "./columns";
 import { useKoudenEntryTable } from "./use-kouden-entry-table";
 import { EntryDialog } from "./entry-dialog";
-import type { KoudenEntryTableProps, EditKoudenEntryFormData } from "./types";
+import type {
+	KoudenEntryTableProps,
+	EditKoudenEntryFormData,
+	KoudenEntryTableData,
+} from "./types";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "@/hooks/use-toast";
 import { getRelationships } from "@/app/_actions/relationships";
 import type { KoudenPermission } from "@/app/_actions/koudens";
 import { checkKoudenPermission } from "@/app/_actions/koudens";
@@ -32,15 +37,6 @@ export function KoudenEntryTable(props: KoudenEntryTableProps) {
 		setData,
 	} = useKoudenEntryTable(props);
 
-	// データの変更を監視
-	useEffect(() => {
-		console.log("KoudenEntryTable: Data state updated", {
-			dataLength: data.length,
-			firstItem: data[0],
-			lastItem: data[data.length - 1],
-		});
-	}, [data]);
-
 	// モバイルビューかどうかを判定（768px未満をモバイルとする）
 	const isMobile = useMediaQuery("(max-width: 767px)");
 	// タブレットビューかどうかを判定（768px以上1024px未満をタブレットとする）
@@ -48,12 +44,6 @@ export function KoudenEntryTable(props: KoudenEntryTableProps) {
 
 	// フィルタリングとソートを適用したデータ
 	const filteredAndSortedData = useMemo(() => {
-		console.log("KoudenEntryTable: Recalculating filtered and sorted data", {
-			dataLength: data.length,
-			searchQuery,
-			searchField,
-			sortOrder,
-		});
 		let result = [...data];
 
 		// 検索を適用
@@ -84,24 +74,8 @@ export function KoudenEntryTable(props: KoudenEntryTableProps) {
 			return 0;
 		});
 
-		console.log("KoudenEntryTable: Filtered and sorted result", {
-			resultLength: result.length,
-			firstItem: result[0],
-			lastItem: result[result.length - 1],
-		});
-
 		return result;
 	}, [data, searchQuery, searchField, sortOrder]);
-
-	// フィルタリングとソートの変更を監視
-	useEffect(() => {
-		console.log("KoudenEntryTable: Filtered and sorted data updated", {
-			searchQuery,
-			searchField,
-			sortOrder,
-			dataLength: filteredAndSortedData.length,
-		});
-	}, [filteredAndSortedData, searchQuery, searchField, sortOrder]);
 
 	// 権限チェック
 	useEffect(() => {
@@ -111,16 +85,6 @@ export function KoudenEntryTable(props: KoudenEntryTableProps) {
 		};
 		checkPermission();
 	}, [props.koudenId]);
-
-	// 権限の変更を監視
-	useEffect(() => {
-		console.log("KoudenEntryTable: Permission changed", permission);
-	}, [permission]);
-
-	// 編集中のエントリーの変更を監視
-	useEffect(() => {
-		console.log("KoudenEntryTable: Editing entry changed", editingEntry);
-	}, [editingEntry]);
 
 	// 関係性データの取得
 	const { data: relationships = [] } = useQuery({
@@ -152,10 +116,66 @@ export function KoudenEntryTable(props: KoudenEntryTableProps) {
 		return () => document.removeEventListener("keydown", handleKeyDown);
 	}, [setIsDialogOpen, permission]);
 
-	// ダイアログの状態変更を監視
-	useEffect(() => {
-		console.log("KoudenEntryTable: Dialog state changed", isDialogOpen);
-	}, [isDialogOpen]);
+	const handleCellUpdate = async (
+		id: string,
+		field: keyof KoudenEntryTableData,
+		value: KoudenEntryTableData[keyof KoudenEntryTableData],
+	) => {
+		try {
+			const currentEntry = data.find((entry) => entry.id === id);
+			if (!currentEntry) {
+				console.error("Entry not found:", id);
+				return;
+			}
+
+			// データベースに存在するフィールドのみを抽出
+			const {
+				offerings,
+				return_items,
+				created_at,
+				updated_at,
+				created_by,
+				version,
+				last_modified_at,
+				last_modified_by,
+				...updateData
+			} = currentEntry;
+
+			console.log("Updating entry:", {
+				id,
+				field,
+				value,
+				updateData: {
+					...updateData,
+					[field]: value,
+				},
+			});
+
+			const response = await props.updateKoudenEntry(id, {
+				...updateData,
+				[field]: value,
+			});
+
+			console.log("Update response:", response);
+
+			setData((prevData) =>
+				prevData.map((entry) =>
+					entry.id === id
+						? {
+								...entry,
+								...response,
+							}
+						: entry,
+				),
+			);
+		} catch (error) {
+			console.error("Update failed:", error);
+			toast({
+				title: "エラーが発生しました",
+				description: "データの更新に失敗しました",
+			});
+		}
+	};
 
 	const columns = createColumns({
 		onEditRow: handleEditRow,
@@ -163,6 +183,7 @@ export function KoudenEntryTable(props: KoudenEntryTableProps) {
 		selectedRows,
 		relationships,
 		permission,
+		onUpdateCell: handleCellUpdate,
 	});
 
 	const canEdit = permission === "owner" || permission === "editor";
@@ -187,17 +208,14 @@ export function KoudenEntryTable(props: KoudenEntryTableProps) {
 					<MobileFilters
 						searchQuery={searchQuery}
 						onSearchChange={(value) => {
-							console.log("KoudenEntryTable: Search query changed", value);
 							setSearchQuery(value);
 						}}
 						searchField={searchField}
 						onSearchFieldChange={(value) => {
-							console.log("KoudenEntryTable: Search field changed", value);
 							setSearchField(value);
 						}}
 						sortOrder={sortOrder}
 						onSortOrderChange={(value) => {
-							console.log("KoudenEntryTable: Sort order changed", value);
 							setSortOrder(value);
 						}}
 					/>

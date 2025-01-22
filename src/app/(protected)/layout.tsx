@@ -38,7 +38,11 @@ export default async function ProtectedLayout({
 				<div className="app-body container mx-auto px-4 py-8">
 					<main>{children}</main>
 				</div>
-				<FeedbackButton />
+				{/* デスクトップのみ表示 */}
+				{/* モバイルは/(protected)/_components/header.tsxに配置 */}
+				<div className="fixed bottom-8 right-8 z-50 hidden md:block">
+					<FeedbackButton />
+				</div>
 			</div>
 		</TourGuide>
 	);

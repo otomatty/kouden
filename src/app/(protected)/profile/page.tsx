@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { ProfileForm } from "./_components/profile-form";
@@ -5,6 +6,11 @@ import { AvatarUpload } from "./_components/avatar-upload";
 import { ActivityStats } from "./_components/activity-stats";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getProfile, getActivityStats } from "@/app/_actions/profiles";
+
+export const metadata: Metadata = {
+	title: "プロフィール | 香典帳",
+	description: "プロフィールページです",
+};
 
 export default async function ProfilePage() {
 	const supabase = await createClient();

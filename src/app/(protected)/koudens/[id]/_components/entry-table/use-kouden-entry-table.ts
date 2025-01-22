@@ -53,17 +53,11 @@ export function useKoudenEntryTable(props: KoudenEntryTableProps) {
 			}
 
 			try {
-				console.log("handleSaveRow: Updating entry", {
-					id: targetId,
-					formData,
-				});
 				const response = await props.updateKoudenEntry(targetId, formData);
-				console.log("handleSaveRow: Update successful", response);
 				setData((prev) => {
 					const newData = prev.map((row) =>
 						row.id === targetId ? response : row,
 					);
-					console.log("handleSaveRow: Updated data", newData);
 					return newData;
 				});
 				handleCancelEdit();
@@ -113,6 +107,22 @@ export function useKoudenEntryTable(props: KoudenEntryTableProps) {
 		[props.deleteKoudenEntries],
 	);
 
+	const initialValues: EditKoudenEntryFormData = {
+		kouden_id: props.koudenId,
+		name: null,
+		organization: null,
+		position: null,
+		amount: 0,
+		postal_code: null,
+		address: null,
+		phone_number: null,
+		relationship_id: null,
+		attendance_type: "FUNERAL",
+		has_offering: false,
+		is_return_completed: false,
+		notes: null,
+	};
+
 	return {
 		data,
 		selectedRows,
@@ -125,5 +135,6 @@ export function useKoudenEntryTable(props: KoudenEntryTableProps) {
 		handleAddRow,
 		handleDeleteSelectedRows,
 		setData,
+		initialValues,
 	};
 }

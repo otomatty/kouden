@@ -16,7 +16,6 @@ const config: NextConfig = withPWA({
 	compress: true,
 	poweredByHeader: false,
 	reactStrictMode: true,
-	swcMinify: true,
 
 	// セキュリティヘッダーの設定
 	async headers() {

@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import type { EditKoudenEntryFormData, KoudenEntryTableData } from "./types";
 import type { CreateKoudenEntryInput } from "@/types/actions";
-import { formatCurrency, formatInputCurrency } from "./utils";
+import { formatCurrency, formatInputCurrency } from "@/utils/currency";
 import { toast } from "@/hooks/use-toast";
 import { getRelationships } from "@/app/_actions/relationships";
 import { useQuery } from "@tanstack/react-query";
@@ -296,7 +296,7 @@ export function EntryDialog({
 									}}
 									className="text-right"
 								/>
-								{amount > 0 && (
+								{typeof amount === "number" && amount > 0 && (
 									<div className="text-sm text-muted-foreground text-right">
 										{formatCurrency(amount)}
 									</div>

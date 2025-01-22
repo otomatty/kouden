@@ -53,7 +53,10 @@ export async function createKoudenEntry(
 		throw new Error("香典情報の作成に失敗しました");
 	}
 
-	revalidatePath(`/koudens/${input.kouden_id}`);
+	Promise.resolve().then(() => {
+		revalidatePath(`/koudens/${input.kouden_id}`);
+	});
+
 	return data;
 }
 
@@ -116,25 +119,38 @@ export async function updateKoudenEntry(
 		throw new Error("認証が必要です");
 	}
 
-	const { data, error } = await supabase
-		.from("kouden_entries")
-		.update({
-			...input,
-			attendance_type:
-				input.attendance_type === null ? undefined : input.attendance_type,
-			relationship_id:
-				input.relationship_id === "" ? undefined : input.relationship_id,
-		})
-		.eq("id", id)
-		.select()
-		.single();
+	try {
+		console.log("Received update data:", { id, input });
 
-	if (error) {
-		throw new Error("香典情報の更新に失敗しました");
+		const { error, data: updatedData } = await supabase
+			.from("kouden_entries")
+			.update({
+				...input,
+				attendance_type:
+					input.attendance_type === null ? undefined : input.attendance_type,
+				relationship_id:
+					input.relationship_id === "" ? undefined : input.relationship_id,
+			})
+			.eq("id", id)
+			.select()
+			.single();
+
+		console.log("Supabase response:", { error, updatedData });
+
+		if (error) {
+			console.error("Supabase error:", error);
+			throw new Error("香典情報の更新に失敗しました");
+		}
+
+		Promise.resolve().then(() => {
+			revalidatePath(`/koudens/${updatedData.kouden_id}`);
+		});
+
+		return updatedData;
+	} catch (error) {
+		console.error("Update function error:", error);
+		throw error;
 	}
-
-	revalidatePath(`/koudens/${data.kouden_id}`);
-	return data;
 }
 
 export async function deleteKoudenEntry(
@@ -156,5 +172,7 @@ export async function deleteKoudenEntry(
 		throw new Error("香典情報の削除に失敗しました");
 	}
 
-	revalidatePath(`/koudens/${koudenId}`);
+	Promise.resolve().then(() => {
+		revalidatePath(`/koudens/${koudenId}`);
+	});
 }

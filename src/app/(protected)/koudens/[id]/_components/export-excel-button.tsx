@@ -1,12 +1,12 @@
 "use client";
 
-import { FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useMediaQuery } from "@/hooks/use-media-query";
-import { cn } from "@/lib/utils";
+import { FileSpreadsheet } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { exportKoudenToExcel } from "@/app/_actions/export";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { cn } from "@/lib/utils";
 
 interface ExportExcelButtonProps {
 	koudenId: string;
@@ -92,7 +92,7 @@ export function ExportExcelButton({ koudenId }: ExportExcelButtonProps) {
 		>
 			<FileSpreadsheet className="h-5 w-5" />
 			<span className="text-xs font-medium">
-				{isExporting ? "出力中..." : "Excel"}
+				{isExporting ? "出力中..." : "Excelをダウンロード"}
 			</span>
 		</button>
 	);

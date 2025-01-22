@@ -6,8 +6,8 @@ import { CreateKoudenForm } from "./_components/create-kouden-form";
 import { getKoudens } from "@/app/_actions/koudens";
 
 export const metadata: Metadata = {
-	title: "香典帳一覧",
-	description: "香典帳一覧",
+	title: "一覧 | 香典帳",
+	description: "香典帳の一覧ページです",
 };
 
 export default async function KoudensPage() {

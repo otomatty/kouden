@@ -1,7 +1,14 @@
+import type { Metadata } from "next";
+
 import { Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/supabase/server";
+
+export const metadata: Metadata = {
+	title: "管理画面 | 香典帳",
+	description: "香典帳の管理画面です",
+};
 
 async function DashboardMetrics() {
 	const supabase = await createClient();

@@ -34,8 +34,8 @@ export function UserMenu({ user, isAdmin }: UserMenuProps) {
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
 				<Button
-					variant="ghost"
-					className="relative flex items-center gap-3 h-auto p-2"
+					variant="outline"
+					className="relative flex items-center gap-3 h-auto px-4 py-2"
 				>
 					<Avatar>
 						<AvatarImage src={user.user_metadata.avatar_url} />

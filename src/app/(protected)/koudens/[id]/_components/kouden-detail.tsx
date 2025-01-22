@@ -3,9 +3,6 @@
 import { useState, useEffect } from "react";
 import { KoudenEntryTable } from "./entry-table";
 import { KoudenStatistics } from "./kouden-statistics";
-import { ExportExcelButton } from "./export-excel-button";
-import { DeleteKoudenDialog } from "./delete-kouden-dialog";
-import { DuplicateKoudenButton } from "./duplicate-kouden-button";
 import type { Database } from "@/types/supabase";
 import type { KoudenEntry } from "@/types/kouden";
 import type { AttendanceType } from "./entry-table/types";
@@ -25,7 +22,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
 	ArrowLeft,
-	Pencil,
 	Table2,
 	BarChart3,
 	Gift,
@@ -34,7 +30,7 @@ import {
 	Users,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { OfferingTable } from "./offering-table";
+import { OfferingView } from "./offering-view";
 import { TelegramTable } from "./telegram-table";
 import { ReturnItemTable } from "./return-item-table";
 import { MemberTable } from "./member-table";
@@ -42,6 +38,8 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { MobileMenu } from "./mobile-menu";
 import { cn } from "@/lib/utils";
 import { KoudenTitle } from "./kouden-title";
+import { KoudenActionsMenu } from "./kouden-actions-menu";
+import type { OfferingType } from "@/types/offering";
 
 type Kouden = Database["public"]["Tables"]["koudens"]["Row"];
 
@@ -111,6 +109,11 @@ export function KoudenDetail({
 	const [permission, setPermission] = useState<KoudenPermission>(null);
 	const isDesktop = useMediaQuery("(min-width: 768px)");
 
+	// entriesの更新を監視
+	useEffect(() => {
+		setEntries(initialEntries);
+	}, [initialEntries]);
+
 	useEffect(() => {
 		const checkPermission = async () => {
 			const userPermission = await checkKoudenPermission(kouden.id);
@@ -139,24 +142,12 @@ export function KoudenDetail({
 							await updateKouden(kouden.id, data);
 						}}
 					/>
-					{/* デスクトップでのみ表示 */}
-					{isDesktop && (
-						<div className="flex items-center gap-2">
-							<ExportExcelButton koudenId={kouden.id} />
-							{(permission === "owner" || permission === "editor") && (
-								<>
-									<DuplicateKoudenButton koudenId={kouden.id} />
-									{permission === "owner" && (
-										<DeleteKoudenDialog
-											koudenId={kouden.id}
-											koudenTitle={kouden.title}
-											onDelete={deleteKouden}
-										/>
-									)}
-								</>
-							)}
-						</div>
-					)}
+					<KoudenActionsMenu
+						koudenId={kouden.id}
+						koudenTitle={kouden.title}
+						permission={permission}
+						onDelete={deleteKouden}
+					/>
 				</div>
 			</div>
 
@@ -274,6 +265,12 @@ export function KoudenDetail({
 						entries={entries.map((entry) => ({
 							...entry,
 							attendance_type: entry.attendance_type as AttendanceType,
+							offerings: entry.offerings?.map((offering) => ({
+								...offering,
+								type: offering.type as OfferingType,
+								offering_photos: [],
+								kouden_entry_id: entry.id,
+							})),
 						}))}
 						koudenId={kouden.id}
 						updateKoudenEntry={async (id, data) => {
@@ -287,9 +284,22 @@ export function KoudenDetail({
 							};
 							try {
 								const response = await updateKoudenEntry(id, input);
+								setEntries((prevEntries) =>
+									prevEntries.map((entry) =>
+										entry.id === id
+											? ({
+													...entry,
+													...response,
+													attendance_type: (response.attendance_type ||
+														"ABSENT") as AttendanceType,
+												} as KoudenEntry)
+											: entry,
+									),
+								);
 								return {
 									...response,
-									attendance_type: response.attendance_type as AttendanceType,
+									attendance_type: (response.attendance_type ||
+										"ABSENT") as AttendanceType,
 								};
 							} catch (error) {
 								console.error("更新エラー:", error);
@@ -298,16 +308,30 @@ export function KoudenDetail({
 						}}
 						createKoudenEntry={async (data) => {
 							const input = {
-								...data,
-								name: data.name ?? null,
-								address: data.address ?? null,
-								attendance_type:
-									data.attendance_type === "ABSENT"
-										? null
-										: data.attendance_type,
+								kouden_id: kouden.id,
+								name: data.name || null,
+								organization: data.organization || null,
+								position: data.position || null,
+								address: data.address || null,
+								phone_number: data.phone_number || null,
+								relationship_id: data.relationship_id || null,
+								attendance_type: data.attendance_type || "FUNERAL",
+								has_offering: data.has_offering || false,
+								is_return_completed: data.is_return_completed || false,
+								notes: data.notes || null,
+								amount: data.amount !== undefined ? Number(data.amount) : 0,
 							};
 							try {
 								const response = await createKoudenEntry(input);
+								// 新しいエントリーを追加
+								setEntries((prevEntries) => [
+									{
+										...response,
+										attendance_type: (response.attendance_type ||
+											"ABSENT") as AttendanceType,
+									} as KoudenEntry,
+									...prevEntries,
+								]);
 								return {
 									...response,
 									attendance_type: (response.attendance_type ||
@@ -319,14 +343,22 @@ export function KoudenDetail({
 							}
 						}}
 						deleteKoudenEntries={async (ids) => {
-							await Promise.all(
-								ids.map((id) => deleteKoudenEntry(id, kouden.id)),
-							);
+							try {
+								await Promise.all(
+									ids.map((id) => deleteKoudenEntry(id, kouden.id)),
+								);
+								setEntries((prevEntries) =>
+									prevEntries.filter((entry) => !ids.includes(entry.id)),
+								);
+							} catch (error) {
+								console.error("削除エラー:", error);
+								throw error;
+							}
 						}}
 					/>
 				</TabsContent>
 				<TabsContent value="offerings">
-					<OfferingTable koudenId={kouden.id} />
+					<OfferingView koudenId={kouden.id} />
 				</TabsContent>
 				<TabsContent value="telegrams">
 					<TelegramTable koudenId={kouden.id} />
@@ -346,18 +378,17 @@ export function KoudenDetail({
 			{!isDesktop && (
 				<MobileMenu
 					koudenId={kouden.id}
-					koudenTitle={kouden.title}
-					permission={permission}
-					onDelete={deleteKouden}
 					onAddEntry={async (data) => {
-						console.log("KoudenDetail: Creating new entry", data);
 						const response = await createKoudenEntry({
 							...data,
 							kouden_id: kouden.id,
+							amount: data.amount !== undefined ? Number(data.amount) : 0,
+							address: data.address || null,
+							attendance_type: data.attendance_type || "FUNERAL",
+							has_offering: data.has_offering || false,
+							is_return_completed: data.is_return_completed || false,
 						});
-						console.log("KoudenDetail: Entry created", response);
 
-						// 新しいエントリーをステートに追加
 						setEntries((prev) => [
 							{
 								...response,

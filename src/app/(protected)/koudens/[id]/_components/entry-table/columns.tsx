@@ -19,6 +19,8 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { EditableCell } from "./editable-cell";
+import { SelectCell } from "./select-cell";
 
 const attendanceTypeMap = {
 	FUNERAL: "葬儀",
@@ -33,6 +35,17 @@ const attendanceTypePriority = {
 	ABSENT: 1,
 } as const;
 
+const attendanceTypeOptions = [
+	{ value: "FUNERAL", label: "葬儀" },
+	{ value: "CONDOLENCE_VISIT", label: "弔問" },
+	{ value: "ABSENT", label: "欠席" },
+];
+
+const offeringOptions = [
+	{ value: "true", label: "あり" },
+	{ value: "false", label: "なし" },
+];
+
 interface ColumnProps {
 	onEditRow: (id: string) => void;
 	onDeleteRows: (ids: string[]) => void;
@@ -43,6 +56,11 @@ interface ColumnProps {
 		description?: string;
 	}>;
 	permission?: KoudenPermission;
+	onUpdateCell?: (
+		id: string,
+		field: keyof KoudenEntryTableData,
+		value: KoudenEntryTableData[keyof KoudenEntryTableData],
+	) => Promise<void>;
 }
 
 // 郵便番号のフォーマット関数
@@ -59,14 +77,51 @@ export function createColumns({
 	selectedRows,
 	relationships,
 	permission,
-}: {
-	onEditRow: (id: string) => void;
-	onDeleteRows: (ids: string[]) => void;
-	selectedRows: string[];
-	relationships: { id: string; name: string; description?: string }[];
-	permission: "owner" | "editor" | "viewer" | null;
-}) {
+	onUpdateCell,
+}: ColumnProps) {
 	const canEdit = permission === "owner" || permission === "editor";
+
+	const editableCell =
+		(
+			key: string,
+			type: "text" | "number" = "text",
+			format?: "currency" | "postal_code",
+		) =>
+		({
+			row,
+		}: {
+			row: Row<KoudenEntryTableData>;
+		}) => {
+			if (!canEdit) {
+				const value = row.getValue(key);
+				if (format === "currency") {
+					return Number(value).toLocaleString("ja-JP");
+				}
+				if (format === "postal_code") {
+					const postal = value as string;
+					if (!postal) return "";
+					const numbers = postal.replace(/[^\d]/g, "");
+					if (numbers.length <= 3) return numbers;
+					return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+				}
+				return value;
+			}
+
+			return (
+				<EditableCell
+					value={row.getValue(key)}
+					type={type}
+					format={format}
+					onSave={(value) =>
+						onUpdateCell?.(
+							row.original.id,
+							key as keyof KoudenEntryTableData,
+							value,
+						)
+					}
+				/>
+			);
+		};
 
 	return [
 		{
@@ -115,26 +170,31 @@ export function createColumns({
 			header: ({ column }: { column: Column<KoudenEntryTableData> }) => (
 				<Button
 					variant="ghost"
+					className="hover:bg-transparent"
 					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
 				>
 					ご芳名
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			),
+			cell: editableCell("name"),
 		},
 		{
 			accessorKey: "organization",
 			header: "団体名",
+			cell: editableCell("organization"),
 		},
 		{
 			accessorKey: "position",
 			header: "役職",
+			cell: editableCell("position"),
 		},
 		{
 			accessorKey: "relationship_id",
 			header: ({ column }: { column: Column<KoudenEntryTableData> }) => (
 				<Button
 					variant="ghost"
+					className="hover:bg-transparent"
 					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
 				>
 					ご関係
@@ -156,60 +216,67 @@ export function createColumns({
 			header: ({ column }: { column: Column<KoudenEntryTableData> }) => (
 				<Button
 					variant="ghost"
+					className="hover:bg-transparent"
 					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
 				>
 					金額
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			),
-			cell: ({ row }: { row: Row<KoudenEntryTableData> }) => {
-				const amount = row.getValue("amount") as number;
-				return (
-					<div className="text-right">
-						{new Intl.NumberFormat("ja-JP", {
-							style: "currency",
-							currency: "JPY",
-						}).format(amount)}
-					</div>
-				);
-			},
+			cell: editableCell("amount", "number", "currency"),
 		},
 		{
 			accessorKey: "postal_code",
 			header: "郵便番号",
-			cell: ({ row }: { row: Row<KoudenEntryTableData> }) => {
-				const postalCode = row.getValue("postal_code") as string | null;
-				return formatPostalCode(postalCode);
-			},
+			cell: editableCell("postal_code", "number", "postal_code"),
 		},
 		{
 			accessorKey: "address",
 			header: "住所",
+			cell: editableCell("address"),
 		},
 		{
 			accessorKey: "phone_number",
 			header: "電話番号",
+			cell: editableCell("phone_number"),
 		},
 		{
 			accessorKey: "attendance_type",
 			header: ({ column }: { column: Column<KoudenEntryTableData> }) => (
 				<Button
 					variant="ghost"
+					className="hover:bg-transparent"
 					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
 				>
 					参列
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			),
-			cell: ({ row }: { row: Row<KoudenEntryTableData> }) => (
-				<Badge variant="outline">
-					{
-						attendanceTypeMap[
-							row.getValue("attendance_type") as keyof typeof attendanceTypeMap
-						]
-					}
-				</Badge>
-			),
+			cell: ({ row }: { row: Row<KoudenEntryTableData> }) => {
+				if (!canEdit) {
+					return (
+						<Badge variant="outline">
+							{
+								attendanceTypeMap[
+									row.getValue(
+										"attendance_type",
+									) as keyof typeof attendanceTypeMap
+								]
+							}
+						</Badge>
+					);
+				}
+
+				return (
+					<SelectCell
+						value={row.getValue("attendance_type")}
+						options={attendanceTypeOptions}
+						onSave={(value) =>
+							onUpdateCell?.(row.original.id, "attendance_type", value)
+						}
+					/>
+				);
+			},
 			sortingFn: (
 				rowA: Row<KoudenEntryTableData>,
 				rowB: Row<KoudenEntryTableData>,
@@ -228,15 +295,28 @@ export function createColumns({
 			header: ({ column }: { column: Column<KoudenEntryTableData> }) => (
 				<Button
 					variant="ghost"
+					className="hover:bg-transparent"
 					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
 				>
-					供物
+					お供物
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			),
 			cell: ({ row }: { row: Row<KoudenEntryTableData> }) => {
-				const value = row.getValue("has_offering") as boolean;
-				return value ? "あり" : "なし";
+				if (!canEdit) {
+					const value = row.getValue("has_offering") as boolean;
+					return value ? "あり" : "なし";
+				}
+
+				return (
+					<SelectCell
+						value={String(row.getValue("has_offering"))}
+						options={offeringOptions}
+						onSave={(value) =>
+							onUpdateCell?.(row.original.id, "has_offering", value === "true")
+						}
+					/>
+				);
 			},
 		},
 		{
@@ -244,6 +324,7 @@ export function createColumns({
 			header: ({ column }: { column: Column<KoudenEntryTableData> }) => (
 				<Button
 					variant="ghost"
+					className="hover:bg-transparent"
 					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
 				>
 					返礼
@@ -262,6 +343,7 @@ export function createColumns({
 		{
 			accessorKey: "notes",
 			header: "備考",
+			cell: editableCell("notes"),
 		},
 		{
 			id: "actions",

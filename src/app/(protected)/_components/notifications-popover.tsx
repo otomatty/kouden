@@ -44,8 +44,6 @@ export function NotificationsPopover() {
 	const supabase = createClient();
 
 	const fetchAnnouncementsAndReads = useCallback(async () => {
-		console.log("Fetching announcements and reads...");
-
 		const { data: announcementsData, error: announcementsError } =
 			await supabase
 				.from("system_announcements")
@@ -58,11 +56,6 @@ export function NotificationsPopover() {
 				.order("created_at", { ascending: false })
 				.limit(10);
 
-		console.log("Announcements query result:", {
-			data: announcementsData,
-			error: announcementsError,
-		});
-
 		if (announcementsError) {
 			console.error("Failed to fetch announcements:", announcementsError);
 			return;
@@ -72,11 +65,6 @@ export function NotificationsPopover() {
 			.from("user_announcement_reads")
 			.select("announcement_id, is_read")
 			.eq("is_read", true);
-
-		console.log("Reads query result:", {
-			data: readsData,
-			error: readsError,
-		});
 
 		const readIds = new Set(
 			readsData?.map((read) => read.announcement_id) || [],
@@ -96,8 +84,6 @@ export function NotificationsPopover() {
 			createdAt: item.created_at,
 			updatedAt: item.updated_at,
 		})) as Announcement[];
-
-		console.log("Formatted announcements:", formattedAnnouncements);
 
 		setAnnouncements(formattedAnnouncements);
 		setUnreadCount(
@@ -130,18 +116,10 @@ export function NotificationsPopover() {
 
 	const markAsRead = useCallback(
 		async (announcementId: string) => {
-			console.log("Marking announcement as read:", announcementId);
-			if (readAnnouncementIds.has(announcementId)) {
-				console.log("Announcement already read");
-				return;
-			}
-
 			const { error } = await supabase
 				.from("user_announcement_reads")
 				.update({ is_read: true })
 				.eq("announcement_id", announcementId);
-
-			console.log("Mark as read result:", { error });
 
 			if (error) {
 				console.error("Failed to mark as read:", error);
@@ -189,16 +167,9 @@ export function NotificationsPopover() {
 	}, [hoverTimer]);
 
 	const markAllAsRead = useCallback(async () => {
-		console.log("Marking all announcements as read");
 		const unreadAnnouncements = announcements.filter(
 			(a) => !readAnnouncementIds.has(a.id),
 		);
-
-		if (unreadAnnouncements.length === 0) {
-			console.log("No unread announcements");
-			return;
-		}
-
 		const {
 			data: { user },
 		} = await supabase.auth.getUser();
@@ -211,8 +182,6 @@ export function NotificationsPopover() {
 				is_read: true,
 			})),
 		);
-
-		console.log("Mark all as read result:", { error });
 
 		if (error) {
 			console.error("Failed to mark all as read:", error);

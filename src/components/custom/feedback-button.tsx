@@ -1,36 +1,36 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { MessageSquarePlus } from "lucide-react";
-import Link from "next/link";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { FeedbackForm } from "@/components/custom/feedback-form";
+import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 
 export function FeedbackButton() {
+	const isDesktop = useMediaQuery("(min-width: 768px)");
+
+	const trigger = isDesktop ? (
+		<Button
+			size="lg"
+			className="rounded-full shadow-lg hover:shadow-xl transition-all duration-200 bg-primary text-primary-foreground"
+		>
+			<MessageSquarePlus className="h-5 w-5" />
+			<span className="ml-2">不具合・ご要望はこちら</span>
+		</Button>
+	) : (
+		<Button className="justify-start">
+			<MessageSquarePlus className="h-5 w-5" />
+			<span className="text-sm font-medium">不具合・ご要望はこちら</span>
+		</Button>
+	);
+
 	return (
-		<div className="fixed bottom-8 right-8 hidden md:block">
-			<TooltipProvider>
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<Link href="/feedback">
-							<Button
-								size="lg"
-								className="rounded-full shadow-lg hover:shadow-xl transition-all duration-200 bg-primary text-primary-foreground"
-							>
-								<MessageSquarePlus className="h-5 w-5" />
-								<span className="ml-2">フィードバック</span>
-							</Button>
-						</Link>
-					</TooltipTrigger>
-					<TooltipContent>
-						<p>ご意見・ご要望をお聞かせください</p>
-					</TooltipContent>
-				</Tooltip>
-			</TooltipProvider>
-		</div>
+		<ResponsiveDialog
+			trigger={trigger}
+			title="不具合・ご要望はこちら"
+			className="p-4"
+		>
+			<FeedbackForm />
+		</ResponsiveDialog>
 	);
 }

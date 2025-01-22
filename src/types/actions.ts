@@ -3,8 +3,8 @@ import type { Database } from "./supabase";
 // Kouden Entry types
 export interface CreateKoudenEntryInput {
 	kouden_id: string;
-	name?: string | null;
-	organization?: string | null;
+	name: string | null;
+	organization: string | null;
 	position?: string | null;
 	amount: number;
 	postal_code?: string | null;
@@ -24,8 +24,11 @@ export type CreateOfferingInput = {
 	kouden_entry_id: string;
 	type: "FLOWER" | "FOOD" | "OTHER";
 	description: string;
+	quantity: number;
 	price?: number;
+	provider_name: string;
 	notes?: string;
+	photos?: File[];
 };
 
 export type UpdateOfferingInput = Partial<CreateOfferingInput>;

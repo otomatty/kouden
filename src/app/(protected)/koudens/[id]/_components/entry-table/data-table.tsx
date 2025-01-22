@@ -73,7 +73,7 @@ const columnWidths: Record<string, string> = {
 	phone_number: "w-[150px]",
 	relationship: "w-[120px]",
 	attendance_type: "w-[100px]",
-	has_offering: "w-[100px]",
+	has_offering: "w-[120px]",
 	is_return_completed: "w-[100px]",
 	notes: "w-[200px]",
 	actions: "w-[100px]",
@@ -467,7 +467,7 @@ export function DataTable({
 										className="text-sm font-bold flex items-center gap-2"
 									>
 										<Plus className="h-6 w-6" />
-										<span>新規追加</span>
+										<span>香典を登録する</span>
 									</Button>
 								}
 							/>
@@ -523,10 +523,11 @@ export function DataTable({
 						<Table className="w-full table-fixed">
 							<TableBody>
 								{table.getRowModel().rows?.length ? (
-									table.getRowModel().rows.map((row) => (
+									table.getRowModel().rows.map((row, i) => (
 										<TableRow
 											key={row.id}
 											data-state={row.getIsSelected() && "selected"}
+											className={i % 2 === 0 ? "bg-background" : undefined}
 										>
 											{row.getVisibleCells().map((cell) => (
 												<TableCell

@@ -20,8 +20,12 @@ export async function createClient() {
 				}));
 			},
 			setAll(cookies) {
-				for (const { name, value, ...options } of cookies) {
-					cookieStore.set({ name, value, ...options });
+				try {
+					for (const { name, value, ...options } of cookies) {
+						cookieStore.set({ name, value, ...options });
+					}
+				} catch (error) {
+					// Handle or log error if needed
 				}
 			},
 		},

@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 import { notFound } from "next/navigation";
 import { getInvitation } from "@/app/_actions/invitations";
 import { createClient } from "@/lib/supabase/server";
@@ -11,6 +13,11 @@ interface InvitationPageProps {
 	}>;
 	searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
+
+export const metadata: Metadata = {
+	title: "招待 | 香典帳",
+	description: "香典帳の招待ページです",
+};
 
 export default async function InvitationPage({ params }: InvitationPageProps) {
 	const { token } = await params;

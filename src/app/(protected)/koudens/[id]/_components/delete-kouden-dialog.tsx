@@ -55,7 +55,7 @@ export function DeleteKoudenDialog({
 			className="flex flex-col items-center gap-1.5 min-w-[60px] py-2 px-3 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
 		>
 			<Trash2 className="h-5 w-5" />
-			<span className="text-xs font-medium">削除</span>
+			<span className="text-sm font-medium">香典帳を削除する</span>
 		</button>
 	);
 

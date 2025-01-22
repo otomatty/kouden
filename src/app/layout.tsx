@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -18,10 +18,16 @@ const geistMono = Geist_Mono({
 	subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+	width: "device-width",
+	initialScale: 1,
+	maximumScale: 1,
+	themeColor: "#000000",
+};
+
 export const metadata: Metadata = {
 	title: "香典帳",
 	description: "香典帳の管理を行えるアプリです。",
-	themeColor: "#000000",
 	appleWebApp: {
 		capable: true,
 		statusBarStyle: "default",
@@ -29,11 +35,6 @@ export const metadata: Metadata = {
 	},
 	formatDetection: {
 		telephone: false,
-	},
-	viewport: {
-		width: "device-width",
-		initialScale: 1,
-		maximumScale: 1,
 	},
 };
 
