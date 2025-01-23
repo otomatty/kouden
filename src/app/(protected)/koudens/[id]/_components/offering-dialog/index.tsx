@@ -1,41 +1,49 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
 import { OfferingForm } from "./offering-form";
 import { useState } from "react";
+import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
+import type { KoudenEntry } from "@/types/kouden";
+import { useAtom } from "jotai";
+import { offeringFormAtom } from "./atoms";
 
 interface OfferingDialogProps {
-	koudenEntryId: string;
+	koudenId: string;
+	koudenEntries: KoudenEntry[];
+	onSuccess?: () => void;
 }
 
-export function OfferingDialog({ koudenEntryId }: OfferingDialogProps) {
+export function OfferingDialog({
+	koudenId,
+	koudenEntries,
+	onSuccess,
+}: OfferingDialogProps) {
 	const [open, setOpen] = useState(false);
+	const [savedFormState] = useAtom(offeringFormAtom);
 
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger asChild>
-				<Button>
-					<Plus className="mr-2 h-4 w-4" />
-					お供え物を追加
+		<ResponsiveDialog
+			open={open}
+			onOpenChange={setOpen}
+			trigger={
+				<Button className="flex items-center gap-2">
+					<Plus className="h-4 w-4" />
+					<span>お供え物を追加</span>
 				</Button>
-			</DialogTrigger>
-			<DialogContent className="sm:max-w-[425px]">
-				<DialogHeader>
-					<DialogTitle>お供え物を追加</DialogTitle>
-				</DialogHeader>
-				<OfferingForm
-					koudenEntryId={koudenEntryId}
-					onSuccess={() => setOpen(false)}
-				/>
-			</DialogContent>
-		</Dialog>
+			}
+			title="お供え物を追加"
+			contentClassName="max-w-2xl"
+		>
+			<OfferingForm
+				koudenId={koudenId}
+				koudenEntries={koudenEntries}
+				onSuccess={() => {
+					setOpen(false);
+					onSuccess?.();
+				}}
+			/>
+		</ResponsiveDialog>
 	);
 }

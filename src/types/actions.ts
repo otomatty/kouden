@@ -21,9 +21,10 @@ export type UpdateKoudenEntryInput = Partial<CreateKoudenEntryInput>;
 
 // Offering types
 export type CreateOfferingInput = {
-	kouden_entry_id: string;
+	kouden_id: string;
+	kouden_entry_ids: string[];
 	type: "FLOWER" | "FOOD" | "OTHER";
-	description: string;
+	description?: string;
 	quantity: number;
 	price?: number;
 	provider_name: string;

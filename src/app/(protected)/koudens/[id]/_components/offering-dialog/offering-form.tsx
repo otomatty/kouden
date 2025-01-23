@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import * as z from "zod";
+import type * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
 	Form,
@@ -23,61 +23,76 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { createOffering } from "@/app/_actions/offerings";
 import { toast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { OfferingPhotoUploader } from "./offering-photo-uploader";
 import { Label } from "@/components/ui/label";
-
-const formSchema = z.object({
-	type: z.enum(["FLOWER", "FOOD", "OTHER"], {
-		required_error: "種類を選択してください",
-	}),
-	description: z.string().min(1, "内容を入力してください"),
-	quantity: z.coerce
-		.number()
-		.min(1, "数量は1以上を入力してください")
-		.max(999, "数量は999以下を入力してください"),
-	price: z.coerce
-		.number()
-		.min(0, "金額は0以上を入力してください")
-		.max(9999999, "金額は9,999,999以下を入力してください")
-		.optional(),
-	provider_name: z.string().min(1, "提供者名を入力してください"),
-	notes: z.string().optional(),
-});
+import type { KoudenEntry } from "@/types/kouden";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formSchema, offeringFormAtom } from "./atoms";
+import { useAtom } from "jotai";
+import { SearchableCheckboxList } from "@/components/ui/searchable-checkbox-list";
 
 interface OfferingFormProps {
-	koudenEntryId: string;
+	koudenId: string;
+	koudenEntries: KoudenEntry[];
 	onSuccess?: () => void;
 }
 
-export function OfferingForm({ koudenEntryId, onSuccess }: OfferingFormProps) {
+export function OfferingForm({
+	koudenId,
+	koudenEntries,
+	onSuccess,
+}: OfferingFormProps) {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [photos, setPhotos] = useState<File[]>([]);
+	const [currentTab, setCurrentTab] = useState("basic");
+	const [savedFormState, setSavedFormState] = useAtom(offeringFormAtom);
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
-		defaultValues: {
+		defaultValues: savedFormState || {
 			type: undefined,
 			description: "",
 			quantity: 1,
 			price: undefined,
 			provider_name: "",
 			notes: undefined,
+			kouden_entry_ids: [],
 		},
 	});
+
+	// フォームの値が変更されたときに状態を保存
+	useEffect(() => {
+		const subscription = form.watch((value) => {
+			setSavedFormState({
+				...value,
+				photos,
+			} as z.infer<typeof formSchema> & { photos: File[] });
+		});
+		return () => subscription.unsubscribe();
+	}, [form, photos, setSavedFormState]);
+
+	// 保存された写真の復元
+	useEffect(() => {
+		if (savedFormState?.photos) {
+			setPhotos(savedFormState.photos);
+		}
+	}, [savedFormState?.photos]);
 
 	async function onSubmit(values: z.infer<typeof formSchema>) {
 		try {
 			setIsSubmitting(true);
 			await createOffering({
 				...values,
-				kouden_entry_id: koudenEntryId,
+				kouden_id: koudenId,
+				kouden_entry_ids: values.kouden_entry_ids,
 				photos,
 			});
 			toast({
 				title: "お供え物を追加しました",
 			});
+			setSavedFormState(null);
 			onSuccess?.();
 		} catch (error) {
 			toast({
@@ -92,116 +107,165 @@ export function OfferingForm({ koudenEntryId, onSuccess }: OfferingFormProps) {
 	return (
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-				<FormField
-					control={form.control}
-					name="type"
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>種類</FormLabel>
-							<Select onValueChange={field.onChange} defaultValue={field.value}>
-								<FormControl>
-									<SelectTrigger>
-										<SelectValue placeholder="種類を選択" />
-									</SelectTrigger>
-								</FormControl>
-								<SelectContent>
-									<SelectItem value="FLOWER">供花</SelectItem>
-									<SelectItem value="FOOD">供物</SelectItem>
-									<SelectItem value="OTHER">その他</SelectItem>
-								</SelectContent>
-							</Select>
-							<FormMessage />
-						</FormItem>
-					)}
-				/>
-				<FormField
-					control={form.control}
-					name="description"
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>内容</FormLabel>
-							<FormControl>
-								<Input placeholder="例：胡蝶蘭" {...field} />
-							</FormControl>
-							<FormMessage />
-						</FormItem>
-					)}
-				/>
-				<FormField
-					control={form.control}
-					name="quantity"
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>数量</FormLabel>
-							<FormControl>
-								<Input type="number" min={1} max={999} {...field} />
-							</FormControl>
-							<FormMessage />
-						</FormItem>
-					)}
-				/>
-				<FormField
-					control={form.control}
-					name="price"
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>金額（任意）</FormLabel>
-							<FormControl>
-								<Input
-									type="number"
-									min={0}
-									max={9999999}
-									placeholder="例：10000"
-									{...field}
-									value={field.value ?? ""}
-									onChange={(e) => {
-										const value = e.target.value;
-										field.onChange(value === "" ? undefined : Number(value));
-									}}
-								/>
-							</FormControl>
-							<FormMessage />
-						</FormItem>
-					)}
-				/>
-				<FormField
-					control={form.control}
-					name="provider_name"
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>提供者名</FormLabel>
-							<FormControl>
-								<Input placeholder="例：山田太郎" {...field} />
-							</FormControl>
-							<FormMessage />
-						</FormItem>
-					)}
-				/>
-				<FormField
-					control={form.control}
-					name="notes"
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>備考（任意）</FormLabel>
-							<FormControl>
-								<Textarea
-									placeholder="備考を入力"
-									{...field}
-									value={field.value ?? ""}
-									onChange={(e) => {
-										const value = e.target.value;
-										field.onChange(value === "" ? undefined : value);
-									}}
-								/>
-							</FormControl>
-							<FormMessage />
-						</FormItem>
-					)}
-				/>
-				<div>
-					<Label>写真（任意）</Label>
-					<OfferingPhotoUploader onPhotosChange={setPhotos} />
-				</div>
+				<Tabs
+					value={currentTab}
+					onValueChange={setCurrentTab}
+					className="w-full"
+				>
+					<TabsList className="grid w-full grid-cols-2">
+						<TabsTrigger value="basic">基本情報</TabsTrigger>
+						<TabsTrigger value="additional">追加情報</TabsTrigger>
+					</TabsList>
+					<TabsContent value="basic" className="space-y-4">
+						<FormField
+							control={form.control}
+							name="provider_name"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>提供者名</FormLabel>
+									<FormControl>
+										<Input placeholder="例：山田太郎" {...field} />
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+						<FormField
+							control={form.control}
+							name="type"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>種類</FormLabel>
+									<Select
+										onValueChange={field.onChange}
+										defaultValue={field.value}
+									>
+										<FormControl>
+											<SelectTrigger>
+												<SelectValue placeholder="種類を選択" />
+											</SelectTrigger>
+										</FormControl>
+										<SelectContent>
+											<SelectItem value="FLOWER">供花</SelectItem>
+											<SelectItem value="FOOD">供物</SelectItem>
+											<SelectItem value="OTHER">その他</SelectItem>
+										</SelectContent>
+									</Select>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+						<FormField
+							control={form.control}
+							name="kouden_entry_ids"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>香典情報</FormLabel>
+									<FormControl>
+										<SearchableCheckboxList
+											items={koudenEntries.map((entry) => ({
+												value: entry.id,
+												label: entry.name || entry.organization || "名前なし",
+											}))}
+											selectedItems={field.value}
+											onSelectionChange={field.onChange}
+											searchPlaceholder="香典情報を検索..."
+											className="w-full"
+										/>
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+						<FormField
+							control={form.control}
+							name="description"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>内容（任意）</FormLabel>
+									<FormControl>
+										<Input
+											placeholder="例：胡蝶蘭"
+											{...field}
+											value={field.value ?? ""}
+											onChange={(e) => {
+												const value = e.target.value;
+												field.onChange(value === "" ? undefined : value);
+											}}
+										/>
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+						<FormField
+							control={form.control}
+							name="price"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>金額（任意）</FormLabel>
+									<FormControl>
+										<Input
+											type="number"
+											min={0}
+											max={9999999}
+											placeholder="例：10000"
+											{...field}
+											value={field.value ?? ""}
+											onChange={(e) => {
+												const value = e.target.value;
+												field.onChange(
+													value === "" ? undefined : Number(value),
+												);
+											}}
+										/>
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+					</TabsContent>
+					<TabsContent value="additional" className="space-y-4">
+						<FormField
+							control={form.control}
+							name="quantity"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>数量</FormLabel>
+									<FormControl>
+										<Input type="number" min={1} max={999} {...field} />
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+						<FormField
+							control={form.control}
+							name="notes"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>備考（任意）</FormLabel>
+									<FormControl>
+										<Textarea
+											placeholder="備考を入力"
+											{...field}
+											value={field.value ?? ""}
+											onChange={(e) => {
+												const value = e.target.value;
+												field.onChange(value === "" ? undefined : value);
+											}}
+										/>
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+						<div>
+							<Label>写真（任意）</Label>
+							<OfferingPhotoUploader onPhotosChange={setPhotos} />
+						</div>
+					</TabsContent>
+				</Tabs>
 				<Button type="submit" className="w-full" disabled={isSubmitting}>
 					{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 					追加

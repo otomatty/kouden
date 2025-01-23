@@ -5,6 +5,7 @@ import { isAdmin } from "@/app/_actions/admin/admin-users";
 import { Header } from "./_components/header";
 import { TourGuide } from "@/components/custom/TourGuide/TourGuide";
 import { FeedbackButton } from "@/components/custom/feedback-button";
+import { LoadingProvider } from "@/components/custom/loading-provider";
 
 interface ProtectedLayoutProps {
 	children: React.ReactNode;
@@ -32,18 +33,20 @@ export default async function ProtectedLayout({
 	const isAdminUser = await isAdmin();
 
 	return (
-		<TourGuide>
-			<div className="min-h-screen bg-gray-50">
-				<Header user={user} isAdmin={isAdminUser} />
-				<div className="app-body container mx-auto px-4 py-8">
-					<main>{children}</main>
+		<LoadingProvider>
+			<TourGuide>
+				<div className="min-h-screen bg-gray-50">
+					<Header user={user} isAdmin={isAdminUser} />
+					<div className="app-body container mx-auto px-4 py-8">
+						<main>{children}</main>
+					</div>
+					{/* デスクトップのみ表示 */}
+					{/* モバイルは/(protected)/_components/header.tsxに配置 */}
+					<div className="fixed bottom-8 right-8 z-50 hidden md:block">
+						<FeedbackButton />
+					</div>
 				</div>
-				{/* デスクトップのみ表示 */}
-				{/* モバイルは/(protected)/_components/header.tsxに配置 */}
-				<div className="fixed bottom-8 right-8 z-50 hidden md:block">
-					<FeedbackButton />
-				</div>
-			</div>
-		</TourGuide>
+			</TourGuide>
+		</LoadingProvider>
 	);
 }

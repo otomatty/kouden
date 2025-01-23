@@ -1,17 +1,11 @@
 import { atom } from "jotai";
-import type { TourState } from "@/types/tour";
 
-const initialState: TourState = {
-	isActive: false,
-	isCompleted: false,
-};
-
-// ローカルストレージから初期状態を読み込む
-if (typeof window !== "undefined") {
-	const completed = localStorage.getItem("tourCompleted");
-	if (completed === "true") {
-		initialState.isCompleted = true;
-	}
+interface TourState {
+	isActive: boolean;
+	currentPage: string;
 }
 
-export const tourStateAtom = atom<TourState>(initialState);
+export const tourStateAtom = atom<TourState>({
+	isActive: false,
+	currentPage: "",
+});

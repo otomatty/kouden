@@ -20,24 +20,7 @@ import { toast } from "@/hooks/use-toast";
 import { OfferingPhotoGallery } from "../offering-photo-gallery";
 import Image from "next/image";
 import { useState } from "react";
-
-type Offering = {
-	id: string;
-	type: "FLOWER" | "FOOD" | "OTHER";
-	description: string;
-	quantity: number;
-	price: number | null;
-	provider_name: string;
-	notes: string | null;
-	created_at: string;
-	offering_photos: Array<{
-		id: string;
-		storage_key: string;
-		caption: string | null;
-		created_at: string;
-		updated_at: string;
-	}>;
-};
+import type { Offering } from "@/types/offering";
 
 const typeIcons = {
 	FLOWER: <Flower2 className="h-4 w-4" />,
@@ -74,9 +57,10 @@ export const columns: ColumnDef<Offering>[] = [
 		header: "内容",
 		cell: ({ row }) => {
 			const quantity = row.original.quantity;
+			const description = row.getValue("description") as string | null;
 			return (
 				<div className="flex items-center gap-2">
-					<span>{row.getValue("description")}</span>
+					<span>{description || "-"}</span>
 					<Badge variant="secondary">{quantity}点</Badge>
 				</div>
 			);

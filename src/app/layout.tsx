@@ -7,6 +7,7 @@ import { getUserSettings } from "./_actions/settings";
 import { InitializeGuideMode } from "@/components/providers/initialize-guide-mode";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -76,9 +77,11 @@ export default async function RootLayout({
 			<body
 				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
 			>
-				<InitializeGuideMode initialValue={guideMode}>
-					<Providers>{children}</Providers>
-				</InitializeGuideMode>
+				<TooltipProvider>
+					<InitializeGuideMode initialValue={guideMode}>
+						<Providers>{children}</Providers>
+					</InitializeGuideMode>
+				</TooltipProvider>
 				<Analytics />
 				<SpeedInsights />
 			</body>

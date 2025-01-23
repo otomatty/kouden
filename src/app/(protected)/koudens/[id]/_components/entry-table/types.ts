@@ -4,6 +4,7 @@ export type AttendanceType = "FUNERAL" | "CONDOLENCE_VISIT" | "ABSENT";
 
 export interface Offering extends BaseOffering {
 	kouden_entry_id: string | null;
+	offering_photos: never[];
 }
 
 export interface ReturnItem {

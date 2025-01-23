@@ -64,7 +64,7 @@ const columnLabels: Record<string, string> = {
 
 const columnWidths: Record<string, string> = {
 	select: "w-[50px]",
-	name: "w-[180px]",
+	name: "w-[120px]",
 	organization: "w-[180px]",
 	position: "w-[120px]",
 	amount: "w-[120px]",

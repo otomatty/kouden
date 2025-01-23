@@ -14,7 +14,7 @@ export type OfferingPhotoResponse =
 
 const offeringSchema = z.object({
 	type: z.enum(["FLOWER", "FOOD", "OTHER"]),
-	description: z.string().min(1, "内容を入力してください"),
+	description: z.string().nullish(),
 	quantity: z.number().min(1, "数量を入力してください").default(1),
 	price: z.number().optional(),
 	provider_name: z.string().min(1, "提供者名を入力してください"),
@@ -31,22 +31,18 @@ export async function createOffering(input: CreateOfferingInput) {
 		throw new Error("認証が必要です");
 	}
 
-	const { data: entry } = await supabase
-		.from("kouden_entries")
-		.select("kouden_id")
-		.eq("id", input.kouden_entry_id)
-		.single();
+	console.log("Creating offering with input:", input);
 
-	if (!entry) {
-		throw new Error("香典情報が見つかりません");
-	}
+	// 空文字列をnullに変換
+	const description = input.description === "" ? null : input.description;
 
 	// トランザクション的な処理を実現するため、エラー時は全ての処理を巻き戻す
 	const { data: offering, error: offeringError } = await supabase
 		.from("offerings")
 		.insert({
+			kouden_id: input.kouden_id,
 			type: input.type,
-			description: input.description,
+			description: description,
 			quantity: input.quantity,
 			price: input.price,
 			provider_name: input.provider_name,
@@ -56,159 +52,59 @@ export async function createOffering(input: CreateOfferingInput) {
 		.select()
 		.single();
 
-	if (offeringError || !offering) {
+	if (offeringError) {
+		console.error("Error creating offering:", offeringError);
 		throw new Error("お供え物の登録に失敗しました");
 	}
+
+	if (!offering) {
+		console.error("No offering data returned");
+		throw new Error("お供え物の登録に失敗しました");
+	}
+
+	console.log("Created offering:", offering);
 
 	// 中間テーブルにエントリーを作成
-	const { error: entryError } = await supabase.from("offering_entries").insert({
+	const offeringEntries = input.kouden_entry_ids.map((entryId) => ({
 		offering_id: offering.id,
-		kouden_entry_id: input.kouden_entry_id,
+		kouden_entry_id: entryId,
 		created_by: user.id,
-	});
+	}));
+
+	console.log("Creating offering entries:", offeringEntries);
+
+	const { error: entryError } = await supabase
+		.from("offering_entries")
+		.insert(offeringEntries);
 
 	if (entryError) {
+		console.error("Error creating offering entries:", entryError);
 		// エラーが発生した場合は作成したofferingを削除
-		await supabase.from("offerings").delete().eq("id", offering.id);
+		const { error: deleteError } = await supabase
+			.from("offerings")
+			.delete()
+			.eq("id", offering.id);
+
+		if (deleteError) {
+			console.error("Error deleting offering after entry error:", deleteError);
+		}
 		throw new Error("お供え物の登録に失敗しました");
 	}
 
+	console.log("Updating kouden entries has_offering flag");
+
 	// お供え物フラグを更新
-	await supabase
+	const { error: updateError } = await supabase
 		.from("kouden_entries")
 		.update({ has_offering: true })
-		.eq("id", input.kouden_entry_id);
+		.in("id", input.kouden_entry_ids);
 
-	revalidatePath(`/koudens/${entry.kouden_id}`);
+	if (updateError) {
+		console.error("Error updating kouden entries:", updateError);
+	}
+
+	revalidatePath(`/koudens/${input.kouden_id}`);
 	return offering;
-}
-
-export async function getOfferings(koudenEntryId: string) {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-
-	if (!user) {
-		throw new Error("認証が必要です");
-	}
-
-	const { data, error } = await supabase
-		.from("offering_entries")
-		.select(`
-			offering:offerings (
-				*,
-				offering_photos (*)
-			)
-		`)
-		.eq("kouden_entry_id", koudenEntryId)
-		.order("created_at", { ascending: false });
-
-	if (error) {
-		throw new Error("お供え物の取得に失敗しました");
-	}
-
-	return data?.map((entry) => entry.offering) ?? [];
-}
-
-export async function updateOffering(id: string, input: UpdateOfferingInput) {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-
-	if (!user) {
-		throw new Error("認証が必要です");
-	}
-
-	// 関連する香典情報IDを取得
-	const { data: entry } = await supabase
-		.from("offering_entries")
-		.select("kouden_entry_id")
-		.eq("offering_id", id)
-		.single();
-
-	if (!entry) {
-		throw new Error("お供え物が見つかりません");
-	}
-
-	const { data: koudenEntry } = await supabase
-		.from("kouden_entries")
-		.select("kouden_id")
-		.eq("id", entry.kouden_entry_id)
-		.single();
-
-	if (!koudenEntry) {
-		throw new Error("香典情報が見つかりません");
-	}
-
-	const { data, error } = await supabase
-		.from("offerings")
-		.update(input)
-		.eq("id", id)
-		.select()
-		.single();
-
-	if (error) {
-		throw new Error("お供え物の更新に失敗しました");
-	}
-
-	revalidatePath(`/koudens/${koudenEntry.kouden_id}`);
-	return data;
-}
-
-export async function deleteOffering(id: string) {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-
-	if (!user) {
-		throw new Error("認証が必要です");
-	}
-
-	// 関連する香典情報IDを取得
-	const { data: entry } = await supabase
-		.from("offering_entries")
-		.select("kouden_entry_id")
-		.eq("offering_id", id)
-		.single();
-
-	if (!entry) {
-		throw new Error("お供え物が見つかりません");
-	}
-
-	const { data: koudenEntry } = await supabase
-		.from("kouden_entries")
-		.select("kouden_id")
-		.eq("id", entry.kouden_entry_id)
-		.single();
-
-	if (!koudenEntry) {
-		throw new Error("香典情報が見つかりません");
-	}
-
-	// お供え物を削除（中間テーブルのエントリーは CASCADE で自動的に削除される）
-	const { error } = await supabase.from("offerings").delete().eq("id", id);
-
-	if (error) {
-		throw new Error("お供え物の削除に失敗しました");
-	}
-
-	// 他にお供え物がない場合はフラグを更新
-	const { data: remainingOfferings } = await supabase
-		.from("offering_entries")
-		.select("id")
-		.eq("kouden_entry_id", entry.kouden_entry_id);
-
-	if (!remainingOfferings?.length) {
-		await supabase
-			.from("kouden_entries")
-			.update({ has_offering: false })
-			.eq("id", entry.kouden_entry_id);
-	}
-
-	revalidatePath(`/koudens/${koudenEntry.kouden_id}`);
 }
 
 // 写真関連の機能を追加
@@ -228,7 +124,7 @@ export async function addOfferingPhoto(
 
 	const { data: offering } = await supabase
 		.from("offerings")
-		.select("offering_entries!inner(kouden_entry_id)")
+		.select("kouden_id")
 		.eq("id", offeringId)
 		.single();
 
@@ -299,4 +195,129 @@ export async function updateOfferingPhoto(
 	}
 
 	return data;
+}
+
+export async function getOfferings(koudenEntryId: string) {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	if (!user) {
+		throw new Error("認証が必要です");
+	}
+
+	const { data, error } = await supabase
+		.from("offering_entries")
+		.select(`
+			offering:offerings (
+				*,
+				offering_photos (*)
+			)
+		`)
+		.eq("kouden_entry_id", koudenEntryId)
+		.order("created_at", { ascending: false });
+
+	// データが存在しない場合は空配列を返す
+	if (!data || data.length === 0) {
+		return [];
+	}
+
+	if (error) {
+		console.error("Failed to fetch offerings:", error);
+		return [];
+	}
+
+	return data?.map((entry) => entry.offering) ?? [];
+}
+
+export async function updateOffering(id: string, input: UpdateOfferingInput) {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	if (!user) {
+		throw new Error("認証が必要です");
+	}
+
+	// お供物情報を取得
+	const { data: offering } = await supabase
+		.from("offerings")
+		.select("kouden_id")
+		.eq("id", id)
+		.single();
+
+	if (!offering) {
+		throw new Error("お供え物が見つかりません");
+	}
+
+	const { data, error } = await supabase
+		.from("offerings")
+		.update(input)
+		.eq("id", id)
+		.select()
+		.single();
+
+	if (error) {
+		throw new Error("お供え物の更新に失敗しました");
+	}
+
+	revalidatePath(`/koudens/${offering.kouden_id}`);
+	return data;
+}
+
+export async function deleteOffering(id: string) {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	if (!user) {
+		throw new Error("認証が必要です");
+	}
+
+	// お供物情報を取得
+	const { data: offering } = await supabase
+		.from("offerings")
+		.select("kouden_id")
+		.eq("id", id)
+		.single();
+
+	if (!offering) {
+		throw new Error("お供え物が見つかりません");
+	}
+
+	// 関連する香典情報IDを取得
+	const { data: entry } = await supabase
+		.from("offering_entries")
+		.select("kouden_entry_id")
+		.eq("offering_id", id)
+		.single();
+
+	if (!entry) {
+		throw new Error("お供え物が見つかりません");
+	}
+
+	// お供え物を削除（中間テーブルのエントリーは CASCADE で自動的に削除される）
+	const { error } = await supabase.from("offerings").delete().eq("id", id);
+
+	if (error) {
+		throw new Error("お供え物の削除に失敗しました");
+	}
+
+	// 他にお供え物がない場合はフラグを更新
+	const { data: remainingOfferings } = await supabase
+		.from("offering_entries")
+		.select("id")
+		.eq("kouden_entry_id", entry.kouden_entry_id);
+
+	if (!remainingOfferings?.length) {
+		await supabase
+			.from("kouden_entries")
+			.update({ has_offering: false })
+			.eq("id", entry.kouden_entry_id);
+	}
+
+	revalidatePath(`/koudens/${offering.kouden_id}`);
 }

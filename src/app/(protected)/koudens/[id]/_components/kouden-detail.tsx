@@ -358,7 +358,7 @@ export function KoudenDetail({
 					/>
 				</TabsContent>
 				<TabsContent value="offerings">
-					<OfferingView koudenId={kouden.id} />
+					<OfferingView koudenId={kouden.id} koudenEntries={entries} />
 				</TabsContent>
 				<TabsContent value="telegrams">
 					<TelegramTable koudenId={kouden.id} />

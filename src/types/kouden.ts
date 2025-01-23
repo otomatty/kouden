@@ -15,6 +15,11 @@ export interface Kouden {
 export type KoudenEntry =
 	Database["public"]["Tables"]["kouden_entries"]["Row"] & {
 		offerings?: Database["public"]["Tables"]["offerings"]["Row"][];
+		offering_entries?: {
+			offering: Database["public"]["Tables"]["offerings"]["Row"] & {
+				offering_photos: Database["public"]["Tables"]["offering_photos"]["Row"][];
+			};
+		}[];
 		return_items?: Database["public"]["Tables"]["return_items"]["Row"][];
 		relationship_id?: string | null;
 	};
@@ -23,7 +28,7 @@ export interface Offering {
 	id: string;
 	kouden_entry_id: string;
 	type: "FLOWER" | "FOOD" | "OTHER";
-	description: string;
+	description: string | null;
 	price?: number | null;
 	notes?: string | null;
 	created_at: string;

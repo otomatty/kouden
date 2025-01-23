@@ -525,8 +525,9 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string
-          description: string
+          description: string | null
           id: string
+          kouden_id: string
           notes: string | null
           price: number | null
           provider_name: string
@@ -537,8 +538,9 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by: string
-          description: string
+          description?: string | null
           id?: string
+          kouden_id: string
           notes?: string | null
           price?: number | null
           provider_name: string
@@ -549,8 +551,9 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string
-          description?: string
+          description?: string | null
           id?: string
+          kouden_id?: string
           notes?: string | null
           price?: number | null
           provider_name?: string
@@ -558,7 +561,15 @@ export type Database = {
           type?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "offerings_kouden_id_fkey"
+            columns: ["kouden_id"]
+            isOneToOne: false
+            referencedRelation: "koudens"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {

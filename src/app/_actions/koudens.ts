@@ -678,7 +678,8 @@ export async function duplicateKouden(
 							price: offering.price,
 							provider_name: offering.provider_name,
 							notes: offering.notes,
-							created_by: user.id,
+							created_by: offering.created_by,
+							kouden_id: newKouden.id,
 						})),
 					)
 					.select();

@@ -15,6 +15,8 @@ import { ja } from "date-fns/locale";
 import type { Database } from "@/types/supabase";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
+import { useSetAtom } from "jotai";
+import { loadingStateAtom } from "@/store/loading-hints";
 
 type Kouden = Database["public"]["Tables"]["koudens"]["Row"];
 
@@ -23,10 +25,12 @@ interface KoudenListProps {
 }
 
 export function KoudenList({ koudens }: KoudenListProps) {
+	const setLoadingState = useSetAtom(loadingStateAtom);
 	const router = useRouter();
 	const [loadingKoudenId, setLoadingKoudenId] = useState<string | null>(null);
 
 	const handleViewDetails = (koudenId: string) => {
+		setLoadingState({ isLoading: true, title: "詳細を読み込み中..." });
 		setLoadingKoudenId(koudenId);
 		router.push(`/koudens/${koudenId}`);
 	};

@@ -1,51 +1,55 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { LayoutGrid, Table2 } from "lucide-react";
 import { OfferingTable } from "../offering-table";
 import { OfferingCardList } from "../offering-card/offering-card-list";
+import { OfferingDialog } from "../offering-dialog";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { getOfferings } from "@/app/_actions/offerings";
 import type { Offering } from "@/types/offering";
 import type { OfferingType } from "@/types/offering";
+import type { KoudenEntry } from "@/types/kouden";
 
 interface OfferingViewProps {
 	koudenId: string;
+	koudenEntries: KoudenEntry[];
 }
 
-export function OfferingView({ koudenId }: OfferingViewProps) {
+export function OfferingView({
+	koudenId,
+	koudenEntries = [],
+}: OfferingViewProps) {
 	const [viewMode, setViewMode] = useLocalStorage<"table" | "grid">(
 		"offering-view-mode",
 		"table",
 	);
-	const [offerings, setOfferings] = useState<Offering[]>([]);
-	const [isLoading, setIsLoading] = useState(true);
 
-	const fetchOfferings = useCallback(async () => {
-		try {
-			setIsLoading(true);
-			const data = await getOfferings(koudenId);
-			setOfferings(
-				data.map((offering) => ({
-					...offering,
-					type: offering.type as OfferingType,
-				})),
+	// 全てのお供物情報を結合して重複を除去
+	const offerings = useMemo(() => {
+		const allOfferings = koudenEntries
+			.flatMap(
+				(entry) => entry.offering_entries?.map((oe) => oe.offering) ?? [],
+			)
+			.filter(
+				(offering): offering is NonNullable<typeof offering> =>
+					offering !== null,
 			);
-		} catch (error) {
-			console.error("Failed to fetch offerings:", error);
-		} finally {
-			setIsLoading(false);
-		}
-	}, [koudenId]);
 
-	useEffect(() => {
-		fetchOfferings();
-	}, [fetchOfferings]);
+		// 重複を除去して一つの配列にまとめる
+		return Array.from(
+			new Map(allOfferings.map((offering) => [offering.id, offering])).values(),
+		).map((offering) => ({
+			...offering,
+			type: offering.type as OfferingType,
+		}));
+	}, [koudenEntries]);
 
 	return (
 		<div className="space-y-4">
-			<div className="flex justify-end">
+			<div className="flex justify-between items-center">
+				<OfferingDialog koudenId={koudenId} koudenEntries={koudenEntries} />
 				<div className="inline-flex rounded-md border bg-background">
 					<Button
 						variant="ghost"
@@ -71,7 +75,7 @@ export function OfferingView({ koudenId }: OfferingViewProps) {
 			{viewMode === "table" ? (
 				<OfferingTable offerings={offerings} />
 			) : (
-				<OfferingCardList offerings={offerings} onDelete={fetchOfferings} />
+				<OfferingCardList offerings={offerings} onDelete={() => {}} />
 			)}
 		</div>
 	);

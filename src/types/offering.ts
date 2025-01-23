@@ -8,10 +8,23 @@ export interface OfferingPhoto {
 	updated_at: string;
 }
 
+export interface BaseOffering {
+	id: string;
+	type: OfferingType;
+	description: string | null;
+	quantity: number;
+	price: number | null;
+	provider_name: string;
+	notes: string | null;
+	created_at: string;
+	updated_at: string;
+	created_by: string;
+}
+
 export interface Offering {
 	id: string;
 	type: OfferingType;
-	description: string;
+	description: string | null;
 	quantity: number;
 	price: number | null;
 	provider_name: string;
@@ -24,7 +37,7 @@ export interface Offering {
 
 export interface CreateOfferingInput {
 	type: OfferingType;
-	description: string;
+	description: string | null;
 	quantity: number;
 	price?: number | null;
 	provider_name: string;

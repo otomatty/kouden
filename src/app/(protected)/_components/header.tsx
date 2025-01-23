@@ -10,9 +10,11 @@ import Link from "next/link";
 import {
 	LogOut,
 	Menu,
-	MessageSquarePlus,
-	Settings,
+	ShieldCheck,
 	User as UserIcon,
+	HelpCircle,
+	BookOpen,
+	PlayCircle,
 } from "lucide-react";
 import {
 	Sheet,
@@ -25,6 +27,7 @@ import { useState } from "react";
 import { UserMenu } from "./user-menu";
 import { NotificationsPopover } from "./notifications-popover";
 import { FeedbackButton } from "@/components/custom/feedback-button";
+import { GuideMenu } from "./guide-menu";
 
 interface HeaderProps {
 	user: User;
@@ -53,11 +56,13 @@ export function Header({ user, isAdmin }: HeaderProps) {
 					{/* デスクトップ表示 */}
 					<div className="hidden md:flex items-center gap-2">
 						<NotificationsPopover />
+						<GuideMenu />
 						<UserMenu user={user} isAdmin={isAdmin} />
 					</div>
 					{/* モバイル表示 */}
 					<div className="md:hidden flex items-center gap-2">
 						<NotificationsPopover />
+						<GuideMenu />
 						<Sheet open={isOpen} onOpenChange={setIsOpen}>
 							<SheetTrigger asChild>
 								<Button variant="ghost" size="icon">
@@ -104,10 +109,32 @@ export function Header({ user, isAdmin }: HeaderProps) {
 													setIsOpen(false);
 												}}
 											>
-												<Settings className="mr-2 h-4 w-4" />
+												<ShieldCheck className="mr-2 h-4 w-4" />
 												管理者ページ
 											</Button>
 										)}
+										<Button
+											variant="ghost"
+											className="justify-start"
+											onClick={() => {
+												router.push("/guide/tour");
+												setIsOpen(false);
+											}}
+										>
+											<PlayCircle className="mr-2 h-4 w-4" />
+											ツアーを開始
+										</Button>
+										<Button
+											variant="ghost"
+											className="justify-start"
+											onClick={() => {
+												router.push("/guide/docs");
+												setIsOpen(false);
+											}}
+										>
+											<BookOpen className="mr-2 h-4 w-4" />
+											使い方ガイド
+										</Button>
 									</div>
 									<div className="mt-auto flex flex-col gap-2">
 										<FeedbackButton />
