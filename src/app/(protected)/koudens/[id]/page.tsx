@@ -26,6 +26,12 @@ import {
 	deleteKouden,
 } from "@/app/_actions/koudens";
 import { KoudenDetail } from "./_components/kouden-detail";
+import {
+	getTelegrams,
+	createTelegram,
+	updateTelegram,
+	deleteTelegram,
+} from "@/app/_actions/telegrams";
 
 export const metadata: Metadata = {
 	title: "香典帳詳細",
@@ -103,9 +109,49 @@ const wrappedDeleteKouden = async (id: string) => {
 	return deleteKouden(id);
 };
 
+const handleCreateTelegram = async (input: {
+	koudenId: string;
+	koudenEntryId?: string;
+	senderName: string;
+	senderOrganization?: string;
+	senderPosition?: string;
+	message?: string;
+	notes?: string;
+}) => {
+	"use server";
+	const { koudenId, koudenEntryId, ...rest } = input;
+	return createTelegram({
+		...rest,
+		koudenId: koudenId,
+		koudenEntryId: koudenEntryId,
+	});
+};
+
+const wrappedUpdateTelegram = async (
+	id: string,
+	input: {
+		koudenId: string;
+		koudenEntryId?: string;
+		senderName: string;
+		senderOrganization?: string;
+		senderPosition?: string;
+		message?: string;
+		notes?: string;
+	},
+) => {
+	"use server";
+	return updateTelegram(id, input);
+};
+
+const wrappedDeleteTelegram = async (id: string) => {
+	"use server";
+	return deleteTelegram(id);
+};
+
 export default async function KoudenDetailPage({ params }: Props) {
 	const { id } = await params;
 	const data = await getKoudenWithEntries(id);
+	const telegrams = await getTelegrams(id);
 
 	if (!data) {
 		notFound();
@@ -115,6 +161,7 @@ export default async function KoudenDetailPage({ params }: Props) {
 		<KoudenDetail
 			kouden={data.kouden}
 			entries={data.entries}
+			telegrams={telegrams}
 			createKoudenEntry={wrappedCreateKoudenEntry}
 			updateKoudenEntry={wrappedUpdateKoudenEntry}
 			deleteKoudenEntry={wrappedDeleteKoudenEntry}
@@ -126,6 +173,9 @@ export default async function KoudenDetailPage({ params }: Props) {
 			deleteReturnItem={wrappedDeleteReturnItem}
 			updateKouden={wrappedUpdateKouden}
 			deleteKouden={wrappedDeleteKouden}
+			createTelegram={handleCreateTelegram}
+			updateTelegram={wrappedUpdateTelegram}
+			deleteTelegram={wrappedDeleteTelegram}
 		/>
 	);
 }

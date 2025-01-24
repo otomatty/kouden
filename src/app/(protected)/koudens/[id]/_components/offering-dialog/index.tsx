@@ -8,6 +8,7 @@ import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 import type { KoudenEntry } from "@/types/kouden";
 import { useAtom } from "jotai";
 import { offeringFormAtom } from "./atoms";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 interface OfferingDialogProps {
 	koudenId: string;
@@ -22,14 +23,22 @@ export function OfferingDialog({
 }: OfferingDialogProps) {
 	const [open, setOpen] = useState(false);
 	const [savedFormState] = useAtom(offeringFormAtom);
+	const isMobile = useMediaQuery("(max-width: 768px)");
 
 	return (
 		<ResponsiveDialog
 			open={open}
 			onOpenChange={setOpen}
 			trigger={
-				<Button className="flex items-center gap-2">
-					<Plus className="h-4 w-4" />
+				<Button
+					size={isMobile ? "lg" : "default"}
+					className={
+						isMobile
+							? "w-full mx-4 flex items-center gap-2"
+							: "flex items-center gap-2"
+					}
+				>
+					<Plus className={isMobile ? "h-6 w-6" : "h-4 w-4"} />
 					<span>お供え物を追加</span>
 				</Button>
 			}

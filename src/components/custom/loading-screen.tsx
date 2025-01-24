@@ -32,7 +32,6 @@ export function LoadingScreen({
 			setProgress((prevProgress) => {
 				if (prevProgress >= 100) {
 					clearInterval(timer);
-					onLoadingComplete?.();
 					return 100;
 				}
 				return prevProgress + 1;
@@ -40,7 +39,13 @@ export function LoadingScreen({
 		}, 50);
 
 		return () => clearInterval(timer);
-	}, [onLoadingComplete]);
+	}, []);
+
+	useEffect(() => {
+		if (progress === 100) {
+			onLoadingComplete?.();
+		}
+	}, [progress, onLoadingComplete]);
 
 	return (
 		<div

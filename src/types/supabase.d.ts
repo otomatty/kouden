@@ -764,6 +764,63 @@ export type Database = {
         }
         Relationships: []
       }
+      telegrams: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          kouden_entry_id: string | null
+          kouden_id: string
+          message: string | null
+          notes: string | null
+          sender_name: string
+          sender_organization: string | null
+          sender_position: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          kouden_entry_id?: string | null
+          kouden_id: string
+          message?: string | null
+          notes?: string | null
+          sender_name: string
+          sender_organization?: string | null
+          sender_position?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          kouden_entry_id?: string | null
+          kouden_id?: string
+          message?: string | null
+          notes?: string | null
+          sender_name?: string
+          sender_organization?: string | null
+          sender_position?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegrams_kouden_entry_id_fkey"
+            columns: ["kouden_entry_id"]
+            isOneToOne: false
+            referencedRelation: "kouden_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegrams_kouden_id_fkey"
+            columns: ["kouden_id"]
+            isOneToOne: false
+            referencedRelation: "koudens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ticket_messages: {
         Row: {
           content: string

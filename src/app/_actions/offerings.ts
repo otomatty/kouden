@@ -31,8 +31,6 @@ export async function createOffering(input: CreateOfferingInput) {
 		throw new Error("認証が必要です");
 	}
 
-	console.log("Creating offering with input:", input);
-
 	// 空文字列をnullに変換
 	const description = input.description === "" ? null : input.description;
 
@@ -53,16 +51,12 @@ export async function createOffering(input: CreateOfferingInput) {
 		.single();
 
 	if (offeringError) {
-		console.error("Error creating offering:", offeringError);
 		throw new Error("お供え物の登録に失敗しました");
 	}
 
 	if (!offering) {
-		console.error("No offering data returned");
 		throw new Error("お供え物の登録に失敗しました");
 	}
-
-	console.log("Created offering:", offering);
 
 	// 中間テーブルにエントリーを作成
 	const offeringEntries = input.kouden_entry_ids.map((entryId) => ({
@@ -71,14 +65,11 @@ export async function createOffering(input: CreateOfferingInput) {
 		created_by: user.id,
 	}));
 
-	console.log("Creating offering entries:", offeringEntries);
-
 	const { error: entryError } = await supabase
 		.from("offering_entries")
 		.insert(offeringEntries);
 
 	if (entryError) {
-		console.error("Error creating offering entries:", entryError);
 		// エラーが発生した場合は作成したofferingを削除
 		const { error: deleteError } = await supabase
 			.from("offerings")
@@ -86,12 +77,9 @@ export async function createOffering(input: CreateOfferingInput) {
 			.eq("id", offering.id);
 
 		if (deleteError) {
-			console.error("Error deleting offering after entry error:", deleteError);
 		}
 		throw new Error("お供え物の登録に失敗しました");
 	}
-
-	console.log("Updating kouden entries has_offering flag");
 
 	// お供え物フラグを更新
 	const { error: updateError } = await supabase
@@ -100,7 +88,7 @@ export async function createOffering(input: CreateOfferingInput) {
 		.in("id", input.kouden_entry_ids);
 
 	if (updateError) {
-		console.error("Error updating kouden entries:", updateError);
+		throw new Error("香典の更新に失敗しました");
 	}
 
 	revalidatePath(`/koudens/${input.kouden_id}`);
@@ -224,8 +212,7 @@ export async function getOfferings(koudenEntryId: string) {
 	}
 
 	if (error) {
-		console.error("Failed to fetch offerings:", error);
-		return [];
+		throw new Error("お供え物の取得に失敗しました");
 	}
 
 	return data?.map((entry) => entry.offering) ?? [];

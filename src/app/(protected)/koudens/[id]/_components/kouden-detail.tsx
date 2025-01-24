@@ -31,7 +31,6 @@ import {
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OfferingView } from "./offering-view";
-import { TelegramTable } from "./telegram-table";
 import { ReturnItemTable } from "./return-item-table";
 import { MemberTable } from "./member-table";
 import { useMediaQuery } from "@/hooks/use-media-query";
@@ -40,12 +39,15 @@ import { cn } from "@/lib/utils";
 import { KoudenTitle } from "./kouden-title";
 import { KoudenActionsMenu } from "./kouden-actions-menu";
 import type { OfferingType } from "@/types/offering";
+import { TelegramsView } from "./telegrams-view";
+import type { Telegram } from "@/types/telegram";
 
 type Kouden = Database["public"]["Tables"]["koudens"]["Row"];
 
 interface KoudenDetailProps {
 	kouden: Kouden;
 	entries: KoudenEntry[];
+	telegrams: Telegram[];
 	createKoudenEntry: (input: {
 		kouden_id: string;
 		name?: string | null;
@@ -85,16 +87,42 @@ interface KoudenDetailProps {
 		input: { title: string; description?: string },
 	) => Promise<void>;
 	deleteKouden: (id: string) => Promise<void>;
+	createTelegram: (input: {
+		koudenId: string;
+		koudenEntryId?: string;
+		senderName: string;
+		senderOrganization?: string;
+		senderPosition?: string;
+		message?: string;
+		notes?: string;
+	}) => Promise<Telegram>;
+	updateTelegram: (
+		id: string,
+		input: {
+			koudenId: string;
+			senderName: string;
+			koudenEntryId?: string;
+			senderOrganization?: string;
+			senderPosition?: string;
+			message?: string;
+			notes?: string;
+		},
+	) => Promise<Telegram>;
+	deleteTelegram: (id: string) => Promise<void>;
 }
 
 export function KoudenDetail({
 	kouden,
 	entries: initialEntries,
+	telegrams,
 	createKoudenEntry,
 	updateKoudenEntry,
 	deleteKoudenEntry,
 	updateKouden,
 	deleteKouden,
+	createTelegram,
+	updateTelegram,
+	deleteTelegram,
 }: KoudenDetailProps) {
 	const router = useRouter();
 	const [entries, setEntries] = useState(initialEntries);
@@ -108,6 +136,11 @@ export function KoudenDetail({
 	>("table");
 	const [permission, setPermission] = useState<KoudenPermission>(null);
 	const isDesktop = useMediaQuery("(min-width: 768px)");
+
+	// デバッグ用: telegramsの値を監視
+	useEffect(() => {
+		console.log("KoudenDetail - telegrams:", telegrams);
+	}, [telegrams]);
 
 	// entriesの更新を監視
 	useEffect(() => {
@@ -154,6 +187,7 @@ export function KoudenDetail({
 			<Tabs
 				value={viewMode}
 				onValueChange={(value) => setViewMode(value as typeof viewMode)}
+				className="w-full"
 			>
 				<TabsList className="max-w-screen-sm">
 					<TabsTrigger
@@ -260,124 +294,135 @@ export function KoudenDetail({
 					</TabsTrigger>
 				</TabsList>
 
-				<TabsContent value="table">
-					<KoudenEntryTable
-						entries={entries.map((entry) => ({
-							...entry,
-							attendance_type: entry.attendance_type as AttendanceType,
-							offerings: entry.offerings?.map((offering) => ({
-								...offering,
-								type: offering.type as OfferingType,
-								offering_photos: [],
-								kouden_entry_id: entry.id,
-							})),
-						}))}
-						koudenId={kouden.id}
-						updateKoudenEntry={async (id, data) => {
-							const input = {
-								...data,
-								address: data.address ?? null,
-								attendance_type:
-									data.attendance_type === "ABSENT"
-										? null
-										: data.attendance_type,
-							};
-							try {
-								const response = await updateKoudenEntry(id, input);
-								setEntries((prevEntries) =>
-									prevEntries.map((entry) =>
-										entry.id === id
-											? ({
-													...entry,
-													...response,
-													attendance_type: (response.attendance_type ||
-														"ABSENT") as AttendanceType,
-												} as KoudenEntry)
-											: entry,
-									),
-								);
-								return {
-									...response,
-									attendance_type: (response.attendance_type ||
-										"ABSENT") as AttendanceType,
+				<div className="mt-4">
+					<TabsContent value="table" className="m-0">
+						<KoudenEntryTable
+							entries={entries.map((entry) => ({
+								...entry,
+								attendance_type: entry.attendance_type as AttendanceType,
+								offerings: entry.offerings?.map((offering) => ({
+									...offering,
+									type: offering.type as OfferingType,
+									offering_photos: [],
+									kouden_entry_id: entry.id,
+								})),
+							}))}
+							koudenId={kouden.id}
+							updateKoudenEntry={async (id, data) => {
+								const input = {
+									...data,
+									address: data.address ?? null,
+									attendance_type:
+										data.attendance_type === "ABSENT"
+											? null
+											: data.attendance_type,
 								};
-							} catch (error) {
-								console.error("更新エラー:", error);
-								throw error;
-							}
-						}}
-						createKoudenEntry={async (data) => {
-							const input = {
-								kouden_id: kouden.id,
-								name: data.name || null,
-								organization: data.organization || null,
-								position: data.position || null,
-								address: data.address || null,
-								phone_number: data.phone_number || null,
-								relationship_id: data.relationship_id || null,
-								attendance_type: data.attendance_type || "FUNERAL",
-								has_offering: data.has_offering || false,
-								is_return_completed: data.is_return_completed || false,
-								notes: data.notes || null,
-								amount: data.amount !== undefined ? Number(data.amount) : 0,
-							};
-							try {
-								const response = await createKoudenEntry(input);
-								// 新しいエントリーを追加
-								setEntries((prevEntries) => [
-									{
+								try {
+									const response = await updateKoudenEntry(id, input);
+									setEntries((prevEntries) =>
+										prevEntries.map((entry) =>
+											entry.id === id
+												? ({
+														...entry,
+														...response,
+														attendance_type: (response.attendance_type ||
+															"ABSENT") as AttendanceType,
+													} as KoudenEntry)
+												: entry,
+										),
+									);
+									return {
 										...response,
 										attendance_type: (response.attendance_type ||
 											"ABSENT") as AttendanceType,
-									} as KoudenEntry,
-									...prevEntries,
-								]);
-								return {
-									...response,
-									attendance_type: (response.attendance_type ||
-										"ABSENT") as AttendanceType,
+									};
+								} catch (error) {
+									console.error("更新エラー:", error);
+									throw error;
+								}
+							}}
+							createKoudenEntry={async (data) => {
+								const input = {
+									kouden_id: kouden.id,
+									name: data.name || null,
+									organization: data.organization || null,
+									position: data.position || null,
+									address: data.address || null,
+									phone_number: data.phone_number || null,
+									relationship_id: data.relationship_id || null,
+									attendance_type: data.attendance_type || "FUNERAL",
+									has_offering: data.has_offering || false,
+									is_return_completed: data.is_return_completed || false,
+									notes: data.notes || null,
+									amount: data.amount !== undefined ? Number(data.amount) : 0,
 								};
-							} catch (error) {
-								console.error("作成エラー:", error);
-								throw error;
-							}
-						}}
-						deleteKoudenEntries={async (ids) => {
-							try {
-								await Promise.all(
-									ids.map((id) => deleteKoudenEntry(id, kouden.id)),
-								);
-								setEntries((prevEntries) =>
-									prevEntries.filter((entry) => !ids.includes(entry.id)),
-								);
-							} catch (error) {
-								console.error("削除エラー:", error);
-								throw error;
-							}
-						}}
-					/>
-				</TabsContent>
-				<TabsContent value="offerings">
-					<OfferingView koudenId={kouden.id} koudenEntries={entries} />
-				</TabsContent>
-				<TabsContent value="telegrams">
-					<TelegramTable koudenId={kouden.id} />
-				</TabsContent>
-				<TabsContent value="return-items">
-					<ReturnItemTable koudenId={kouden.id} />
-				</TabsContent>
-				<TabsContent value="statistics">
-					<KoudenStatistics entries={entries} />
-				</TabsContent>
-				<TabsContent value="members">
-					<MemberTable koudenId={kouden.id} />
-				</TabsContent>
+								try {
+									const response = await createKoudenEntry(input);
+									// 新しいエントリーを追加
+									setEntries((prevEntries) => [
+										{
+											...response,
+											attendance_type: (response.attendance_type ||
+												"ABSENT") as AttendanceType,
+										} as KoudenEntry,
+										...prevEntries,
+									]);
+									return {
+										...response,
+										attendance_type: (response.attendance_type ||
+											"ABSENT") as AttendanceType,
+									};
+								} catch (error) {
+									console.error("作成エラー:", error);
+									throw error;
+								}
+							}}
+							deleteKoudenEntries={async (ids) => {
+								try {
+									await Promise.all(
+										ids.map((id) => deleteKoudenEntry(id, kouden.id)),
+									);
+									setEntries((prevEntries) =>
+										prevEntries.filter((entry) => !ids.includes(entry.id)),
+									);
+								} catch (error) {
+									console.error("削除エラー:", error);
+									throw error;
+								}
+							}}
+						/>
+					</TabsContent>
+					<TabsContent value="offerings" className="m-0">
+						<OfferingView koudenId={kouden.id} koudenEntries={entries} />
+					</TabsContent>
+					<TabsContent value="telegrams" className="m-0">
+						<TelegramsView
+							koudenId={kouden.id}
+							koudenEntries={entries}
+							telegrams={telegrams}
+							createTelegram={createTelegram}
+							updateTelegram={updateTelegram}
+							deleteTelegram={deleteTelegram}
+						/>
+					</TabsContent>
+					<TabsContent value="return-items" className="m-0">
+						<ReturnItemTable koudenId={kouden.id} />
+					</TabsContent>
+					<TabsContent value="statistics" className="m-0">
+						<KoudenStatistics entries={entries} />
+					</TabsContent>
+					<TabsContent value="members" className="m-0">
+						<MemberTable koudenId={kouden.id} />
+					</TabsContent>
+				</div>
 			</Tabs>
 
 			{/* モバイルメニュー */}
 			{!isDesktop && (
 				<MobileMenu
 					koudenId={kouden.id}
+					viewMode={viewMode}
+					koudenEntries={entries}
 					onAddEntry={async (data) => {
 						const response = await createKoudenEntry({
 							...data,

@@ -7,10 +7,9 @@ import { OfferingTable } from "../offering-table";
 import { OfferingCardList } from "../offering-card/offering-card-list";
 import { OfferingDialog } from "../offering-dialog";
 import { useLocalStorage } from "@/hooks/use-local-storage";
-import { getOfferings } from "@/app/_actions/offerings";
-import type { Offering } from "@/types/offering";
 import type { OfferingType } from "@/types/offering";
 import type { KoudenEntry } from "@/types/kouden";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 interface OfferingViewProps {
 	koudenId: string;
@@ -21,9 +20,10 @@ export function OfferingView({
 	koudenId,
 	koudenEntries = [],
 }: OfferingViewProps) {
+	const isMobile = useMediaQuery("(max-width: 768px)");
 	const [viewMode, setViewMode] = useLocalStorage<"table" | "grid">(
 		"offering-view-mode",
-		"table",
+		isMobile ? "grid" : "table",
 	);
 
 	// 全てのお供物情報を結合して重複を除去
@@ -46,33 +46,42 @@ export function OfferingView({
 		}));
 	}, [koudenEntries]);
 
+	// モバイルの場合は強制的にグリッド表示
+	useEffect(() => {
+		if (isMobile && viewMode !== "grid") {
+			setViewMode("grid");
+		}
+	}, [isMobile, viewMode, setViewMode]);
+
 	return (
 		<div className="space-y-4">
-			<div className="flex justify-between items-center">
-				<OfferingDialog koudenId={koudenId} koudenEntries={koudenEntries} />
-				<div className="inline-flex rounded-md border bg-background">
-					<Button
-						variant="ghost"
-						size="sm"
-						className={`${viewMode === "table" ? "bg-muted" : ""} rounded-l-md`}
-						onClick={() => setViewMode("table")}
-					>
-						<Table2 className="mr-2 h-4 w-4" />
-						テーブル
-					</Button>
-					<Button
-						variant="ghost"
-						size="sm"
-						className={`${viewMode === "grid" ? "bg-muted" : ""} rounded-r-md`}
-						onClick={() => setViewMode("grid")}
-					>
-						<LayoutGrid className="mr-2 h-4 w-4" />
-						グリッド
-					</Button>
+			{!isMobile && (
+				<div className="flex justify-between items-center">
+					<OfferingDialog koudenId={koudenId} koudenEntries={koudenEntries} />
+					<div className="inline-flex rounded-md border bg-background">
+						<Button
+							variant="ghost"
+							size="sm"
+							className={`${viewMode === "table" ? "bg-muted" : ""} rounded-l-md`}
+							onClick={() => setViewMode("table")}
+						>
+							<Table2 className="mr-2 h-4 w-4" />
+							テーブル
+						</Button>
+						<Button
+							variant="ghost"
+							size="sm"
+							className={`${viewMode === "grid" ? "bg-muted" : ""} rounded-r-md`}
+							onClick={() => setViewMode("grid")}
+						>
+							<LayoutGrid className="mr-2 h-4 w-4" />
+							グリッド
+						</Button>
+					</div>
 				</div>
-			</div>
+			)}
 
-			{viewMode === "table" ? (
+			{viewMode === "table" && !isMobile ? (
 				<OfferingTable offerings={offerings} />
 			) : (
 				<OfferingCardList offerings={offerings} onDelete={() => {}} />
