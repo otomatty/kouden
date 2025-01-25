@@ -13,6 +13,7 @@ import {
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
 	DropdownMenuTrigger,
+	DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { GuideCard } from "@/components/custom/guide-card";
@@ -26,6 +27,8 @@ import {
 	MapPin,
 	User,
 	UserRound,
+	LayoutGrid,
+	Table2,
 } from "lucide-react";
 
 interface SearchOption {
@@ -54,6 +57,9 @@ export interface DataTableToolbarProps<TData> {
 	showSearch?: boolean;
 	showFilter?: boolean;
 	showSort?: boolean;
+	showViewToggle?: boolean;
+	viewMode?: "table" | "grid";
+	onViewModeChange?: (mode: "table" | "grid") => void;
 	children?: React.ReactNode;
 }
 
@@ -68,6 +74,9 @@ export function DataTableToolbar<TData>({
 	showSearch = true,
 	showFilter = true,
 	showSort = true,
+	showViewToggle = false,
+	viewMode = "table",
+	onViewModeChange,
 	children,
 }: DataTableToolbarProps<TData>) {
 	const [globalFilter, setGlobalFilter] = React.useState("");
@@ -145,8 +154,8 @@ export function DataTableToolbar<TData>({
 			)}
 
 			<div className="flex gap-4 justify-between">
-				<div className="border rounded-lg p-4 min-w-[400px]">
-					<div className="flex items-center gap-4">
+				<div className="border rounded-lg p-4 min-w-[300px]">
+					<div className="flex items-center gap-2">
 						{/* フィルター機能 */}
 						{showFilter && filterColumn && filterOptions.length > 0 && (
 							<GuideCard
@@ -175,7 +184,7 @@ export function DataTableToolbar<TData>({
 												?.setFilterValue(value === "all" ? "" : value)
 										}
 									>
-										<SelectTrigger className="w-[180px] bg-background">
+										<SelectTrigger className="w-[160px] bg-background">
 											<SelectValue placeholder="絞り込み" />
 										</SelectTrigger>
 										<SelectContent>
@@ -259,7 +268,7 @@ export function DataTableToolbar<TData>({
 											]);
 										}}
 									>
-										<SelectTrigger className="w-[180px] bg-background">
+										<SelectTrigger className="w-[160px] bg-background">
 											<SelectValue placeholder="並び替え" />
 										</SelectTrigger>
 										<SelectContent>
@@ -305,7 +314,7 @@ export function DataTableToolbar<TData>({
 										<DropdownMenuTrigger asChild>
 											<Button
 												variant="outline"
-												className="w-[200px] bg-background"
+												className="w-[160px] bg-background"
 											>
 												<Columns className="h-4 w-4" />
 												<span>表示列を選択</span>
@@ -329,6 +338,57 @@ export function DataTableToolbar<TData>({
 														</DropdownMenuCheckboxItem>
 													);
 												})}
+										</DropdownMenuContent>
+									</DropdownMenu>
+								</div>
+							</GuideCard>
+						)}
+						{/* 表示モードの切り替え */}
+						{showViewToggle && onViewModeChange && (
+							<GuideCard
+								content={
+									<div className="space-y-4">
+										<div className="flex items-center gap-2">
+											<LayoutGrid className="h-5 w-5" />
+											<h4 className="text-lg font-semibold">表示切替</h4>
+										</div>
+										<p className="text-sm text-muted-foreground">
+											テーブル表示とグリッド表示を切り替えることができます。
+										</p>
+									</div>
+								}
+							>
+								<div className="flex-1 hover:border-primary/50 transition-colors">
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<Button
+												variant="outline"
+												size="icon"
+												className="h-8 w-8 bg-background"
+											>
+												{viewMode === "table" ? (
+													<Table2 className="h-4 w-4" />
+												) : (
+													<LayoutGrid className="h-4 w-4" />
+												)}
+												<span className="sr-only">表示切替</span>
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent align="end">
+											<DropdownMenuItem
+												onClick={() => onViewModeChange("table")}
+												className="flex items-center gap-2"
+											>
+												<Table2 className="h-4 w-4" />
+												テーブル
+											</DropdownMenuItem>
+											<DropdownMenuItem
+												onClick={() => onViewModeChange("grid")}
+												className="flex items-center gap-2"
+											>
+												<LayoutGrid className="h-4 w-4" />
+												グリッド
+											</DropdownMenuItem>
 										</DropdownMenuContent>
 									</DropdownMenu>
 								</div>

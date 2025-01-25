@@ -1,16 +1,15 @@
 import { MobileDataTableToolbar } from "@/components/custom/data-table/mobile-toolbar";
 import type { Table } from "@tanstack/react-table";
-import type { KoudenEntryTableData } from "../types";
+import type { Offering } from "@/types/offering";
 import {
-	User,
-	Building2,
-	MapPin,
-	BadgeIcon,
+	Search,
 	CalendarClock,
 	CalendarCheck,
 	BanknoteIcon,
 	Coins,
-	ArrowDownAZ,
+	Flower2,
+	UtensilsCrossed,
+	Package,
 } from "lucide-react";
 
 interface MobileFiltersProps {
@@ -20,33 +19,21 @@ interface MobileFiltersProps {
 	onSearchFieldChange: (value: string) => void;
 	sortOrder: string;
 	onSortOrderChange: (value: string) => void;
-	table: Table<KoudenEntryTableData>;
+	table: Table<Offering>;
 }
 
 const searchOptions = [
 	{
-		value: "name",
-		label: "ご芳名",
-		icon: <User className="h-4 w-4" />,
-		description: "参列者のお名前で検索",
+		value: "description",
+		label: "品名",
+		icon: <Package className="h-4 w-4" />,
+		description: "供物の品名で検索",
 	},
 	{
-		value: "address",
-		label: "住所",
-		icon: <MapPin className="h-4 w-4" />,
-		description: "住所情報で検索",
-	},
-	{
-		value: "organization",
-		label: "団体名",
-		icon: <Building2 className="h-4 w-4" />,
-		description: "所属団体で検索",
-	},
-	{
-		value: "position",
-		label: "役職",
-		icon: <BadgeIcon className="h-4 w-4" />,
-		description: "役職名で検索",
+		value: "provider_name",
+		label: "提供者",
+		icon: <Search className="h-4 w-4" />,
+		description: "提供者名で検索",
 	},
 ];
 
@@ -64,22 +51,37 @@ const sortOptions = [
 		description: "登録日時が古い順",
 	},
 	{
-		value: "amount_desc",
+		value: "price_desc",
 		label: "金額が高い順",
 		icon: <BanknoteIcon className="h-4 w-4" />,
-		description: "香典金額が高い順",
+		description: "金額が高い順",
 	},
 	{
-		value: "amount_asc",
+		value: "price_asc",
 		label: "金額が低い順",
 		icon: <Coins className="h-4 w-4" />,
-		description: "香典金額が低い順",
+		description: "金額が低い順",
+	},
+];
+
+const filterOptions = [
+	{
+		value: "FLOWER",
+		label: "生花",
+		icon: <Flower2 className="h-4 w-4" />,
+		description: "生花のみ表示",
 	},
 	{
-		value: "name_asc",
-		label: "名前順",
-		icon: <ArrowDownAZ className="h-4 w-4" />,
-		description: "ご芳名の五十音順",
+		value: "FOOD",
+		label: "供物",
+		icon: <UtensilsCrossed className="h-4 w-4" />,
+		description: "供物のみ表示",
+	},
+	{
+		value: "OTHER",
+		label: "その他",
+		icon: <Package className="h-4 w-4" />,
+		description: "その他の供物",
 	},
 ];
 
@@ -97,7 +99,8 @@ export function MobileFilters({
 			table={table}
 			searchOptions={searchOptions}
 			sortOptions={sortOptions}
-			showFilter={false}
+			filterOptions={filterOptions}
+			filterColumn="type"
 			showColumnVisibility={false}
 		/>
 	);

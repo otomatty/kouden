@@ -46,6 +46,9 @@ type TelegramFormValues = z.infer<typeof telegramFormSchema>;
 interface TelegramFormProps {
 	koudenId: string;
 	koudenEntries: KoudenEntry[];
+	defaultValues?: Telegram;
+	isOpen: boolean;
+	onOpenChange: (open: boolean) => void;
 }
 
 export function TelegramForm({ koudenId, koudenEntries }: TelegramFormProps) {

@@ -1,5 +1,6 @@
-import { atomWithStorage } from "jotai/utils";
-import * as z from "zod";
+import { z } from "zod";
+import { atom } from "jotai";
+import type { OfferingType } from "@/types/offering";
 
 export const formSchema = z.object({
 	type: z.enum(["FLOWER", "FOOD", "OTHER"], {
@@ -17,14 +18,9 @@ export const formSchema = z.object({
 		.optional(),
 	provider_name: z.string().min(1, "提供者名を入力してください"),
 	notes: z.string().optional(),
-	kouden_entry_ids: z.array(z.string()).min(1, "香典情報を選択してください"),
+	kouden_entry_ids: z.array(z.string()),
 });
 
-export type OfferingFormState = z.infer<typeof formSchema> & {
-	photos?: File[];
-};
-
-export const offeringFormAtom = atomWithStorage<OfferingFormState | null>(
-	"offering-form-state",
-	null,
-);
+export const offeringFormAtom = atom<
+	(z.infer<typeof formSchema> & { photos: File[] }) | null
+>(null);

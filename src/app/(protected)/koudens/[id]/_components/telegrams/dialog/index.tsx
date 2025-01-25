@@ -8,20 +8,23 @@ import type { KoudenEntry } from "@/types/kouden";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { TelegramForm } from "./telegram-form";
 import { Plus } from "lucide-react";
-
+import type { Telegram } from "@/atoms/telegrams";
 interface TelegramDialogProps {
 	koudenId: string;
 	koudenEntries: KoudenEntry[];
+	defaultValues?: Telegram;
+	isOpen: boolean;
 }
 
 export function TelegramDialog({
 	koudenId,
 	koudenEntries,
+	defaultValues,
+	isOpen,
 }: TelegramDialogProps) {
 	const isMobile = useMediaQuery("(max-width: 768px)");
 
-	const [{ isOpen, selectedTelegram }, setDialogState] =
-		useAtom(telegramDialogAtom);
+	const [{ selectedTelegram }, setDialogState] = useAtom(telegramDialogAtom);
 
 	const handleOpenChange = (open: boolean) => {
 		setDialogState((prev) => ({ ...prev, isOpen: open }));
@@ -49,7 +52,13 @@ export function TelegramDialog({
 				</Button>
 			}
 		>
-			<TelegramForm koudenId={koudenId} koudenEntries={koudenEntries} />
+			<TelegramForm
+				koudenId={koudenId}
+				koudenEntries={koudenEntries}
+				isOpen={isOpen}
+				onOpenChange={handleOpenChange}
+				defaultValues={defaultValues}
+			/>
 		</ResponsiveDialog>
 	);
 }

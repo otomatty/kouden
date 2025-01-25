@@ -4,14 +4,12 @@ import { useState, useEffect } from "react";
 
 import type { Database } from "@/types/supabase";
 import type { KoudenEntry } from "@/types/kouden";
+import type { Offering } from "@/types/offering";
 import type { AttendanceType } from "./entries/types";
 import type { KoudenPermission } from "@/app/_actions/koudens";
 import type { Telegram } from "@/atoms/telegrams";
 import { checkKoudenPermission } from "@/app/_actions/koudens";
 import type {
-	CreateOfferingInput,
-	UpdateOfferingInput,
-	OfferingResponse,
 	CreateReturnItemInput,
 	UpdateReturnItemInput,
 	ReturnItemResponse,
@@ -52,12 +50,8 @@ interface KoudenDetailProps {
 	kouden: Kouden;
 	entries: KoudenEntry[];
 	telegrams: Telegram[];
-	createOffering: (input: CreateOfferingInput) => Promise<OfferingResponse>;
-	updateOffering: (
-		id: string,
-		input: UpdateOfferingInput,
-	) => Promise<OfferingResponse>;
-	deleteOffering: (id: string, koudenEntryId: string) => Promise<void>;
+	offerings: Offering[];
+
 	createReturnItem: (
 		input: CreateReturnItemInput,
 	) => Promise<ReturnItemResponse>;
@@ -77,6 +71,7 @@ export function KoudenDetail({
 	kouden,
 	entries: initialEntries,
 	telegrams,
+	offerings,
 	updateKouden,
 	deleteKouden,
 }: KoudenDetailProps) {
@@ -92,11 +87,6 @@ export function KoudenDetail({
 	>("table");
 	const [permission, setPermission] = useState<KoudenPermission>(null);
 	const isDesktop = useMediaQuery("(min-width: 768px)");
-
-	// デバッグ用: telegramsの値を監視
-	useEffect(() => {
-		console.log("KoudenDetail - telegrams:", telegrams);
-	}, [telegrams]);
 
 	// entriesの更新を監視
 	useEffect(() => {
@@ -261,14 +251,14 @@ export function KoudenDetail({
 						/>
 					</TabsContent>
 					<TabsContent value="offerings" className="m-0">
-						<OfferingView koudenId={kouden.id} koudenEntries={entries} />
-					</TabsContent>
-					<TabsContent value="telegrams" className="m-0">
-						<TelegramsView
+						<OfferingView
+							offerings={offerings}
 							koudenId={kouden.id}
 							koudenEntries={entries}
-							telegrams={telegrams}
 						/>
+					</TabsContent>
+					<TabsContent value="telegrams" className="m-0">
+						<TelegramsView koudenId={kouden.id} telegrams={telegrams} />
 					</TabsContent>
 					<TabsContent value="return-items" className="m-0">
 						<ReturnItemTable koudenId={kouden.id} />

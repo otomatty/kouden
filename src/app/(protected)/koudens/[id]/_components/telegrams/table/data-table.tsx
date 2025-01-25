@@ -11,36 +11,33 @@ import {
 	type ColumnFiltersState,
 	type VisibilityState,
 } from "@tanstack/react-table";
-import type { Offering } from "@/types/offering";
+import type { Telegram } from "@/types/telegram";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { DataTable as BaseDataTable } from "@/components/custom/data-table";
 import { DataTableToolbar } from "@/components/custom/data-table/toolbar";
 import { Button } from "@/components/ui/button";
-import { Trash2, LayoutGrid, Table2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import type { CellValue } from "@/components/custom/data-table/types";
 import {
 	columnLabels,
 	searchOptions,
 	sortOptions,
-	filterOptions,
 	defaultColumnVisibility,
 	tabletColumnVisibility,
 	editableColumns,
 } from "./columns";
 import type { KoudenPermission } from "@/app/_actions/koudens";
-import { OfferingDialog } from "../dialog";
+import { TelegramDialog } from "../dialog";
 import type { KoudenEntry } from "@/types/kouden";
-import { useLocalStorage } from "@/hooks/use-local-storage";
-import { OfferingCardList } from "../card-list/offering-card-list";
 
 interface DataTableProps {
-	columns: ColumnDef<Offering, string | number | boolean | null>[];
-	data: Offering[];
+	columns: ColumnDef<Telegram, string | number | boolean | null>[];
+	data: Telegram[];
 	permission?: KoudenPermission;
 	koudenId: string;
 	koudenEntries: KoudenEntry[];
-	onUpdate?: (id: string, data: Partial<Offering>) => Promise<void>;
+	onUpdate?: (id: string, data: Partial<Telegram>) => Promise<void>;
 	onDelete?: (ids: string[]) => Promise<void>;
 }
 
@@ -54,10 +51,6 @@ export function DataTable({
 	onDelete,
 }: DataTableProps) {
 	const isTablet = useMediaQuery("(max-width: 1024px)");
-	const [viewMode, setViewMode] = useLocalStorage<"table" | "grid">(
-		"offering-view-mode",
-		isTablet ? "grid" : "table",
-	);
 	const [sorting, setSorting] = React.useState<SortingState>([]);
 	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
 		[],
@@ -68,6 +61,9 @@ export function DataTable({
 		);
 	const [rowSelection, setRowSelection] = React.useState({});
 	const [globalFilter, setGlobalFilter] = React.useState("");
+	const [editingTelegram, setEditingTelegram] = React.useState<Telegram | null>(
+		null,
+	);
 
 	// 画面サイズが変更された時に列の表示状態を更新
 	React.useEffect(() => {
@@ -75,13 +71,6 @@ export function DataTable({
 			isTablet ? tabletColumnVisibility : defaultColumnVisibility,
 		);
 	}, [isTablet]);
-
-	// モバイルの場合は強制的にグリッド表示
-	React.useEffect(() => {
-		if (isTablet && viewMode !== "grid") {
-			setViewMode("grid");
-		}
-	}, [isTablet, viewMode, setViewMode]);
 
 	// 選択された行のIDを取得
 	const selectedRows = React.useMemo(() => {
@@ -99,7 +88,7 @@ export function DataTable({
 				});
 				setRowSelection({});
 			} catch (error) {
-				console.error("Failed to delete offerings:", error);
+				console.error("Failed to delete telegrams:", error);
 				toast({
 					title: "エラーが発生しました",
 					description: "データの削除に失敗しました",
@@ -121,38 +110,6 @@ export function DataTable({
 		onColumnVisibilityChange: setColumnVisibility,
 		onRowSelectionChange: setRowSelection,
 		onGlobalFilterChange: setGlobalFilter,
-		enableGlobalFilter: true,
-		globalFilterFn: (row, _columnId, filterValue) => {
-			if (!filterValue) return true;
-
-			const searchValue = String(filterValue).toLowerCase();
-			const searchableColumns = ["provider_name", "description"];
-
-			// 各カラムのマッチング結果を収集
-			const matchResults = searchableColumns.map((columnId) => {
-				const value = row.getValue(columnId);
-				const matches =
-					value != null && String(value).toLowerCase().includes(searchValue);
-				return { columnId, value: value ?? "null", matches };
-			});
-
-			// いずれかのカラムがマッチした場合、その行の情報を表示
-			const hasMatch = matchResults.some((result) => result.matches);
-			if (hasMatch) {
-				console.log("Matched Row:", {
-					searchValue,
-					rowData: Object.fromEntries(
-						searchableColumns.map((columnId) => [
-							columnId,
-							row.getValue(columnId) ?? "null",
-						]),
-					),
-					matches: matchResults,
-				});
-			}
-
-			return hasMatch;
-		},
 		state: {
 			sorting,
 			columnFilters,
@@ -168,7 +125,7 @@ export function DataTable({
 		value: CellValue,
 	) => {
 		try {
-			let targetRow: Offering | undefined;
+			let targetRow: Telegram | undefined;
 			if (/^\d+$/.test(rowId)) {
 				const index = Number.parseInt(rowId, 10);
 				targetRow = data[index];
@@ -183,9 +140,7 @@ export function DataTable({
 			// 値の型変換
 			let convertedValue: string | number | undefined;
 
-			if (columnId === "type") {
-				convertedValue = value as string;
-			} else if (columnId === "price" || columnId === "quantity") {
+			if (columnId === "price") {
 				convertedValue =
 					value === "" || value === null ? undefined : Number(value);
 			} else {
@@ -211,17 +166,16 @@ export function DataTable({
 			<DataTableToolbar
 				table={table}
 				searchOptions={searchOptions}
-				filterColumn="type"
-				filterOptions={filterOptions}
 				sortOptions={sortOptions}
 				columnLabels={columnLabels}
-				showViewToggle={!isTablet}
-				viewMode={viewMode}
-				onViewModeChange={setViewMode}
 			>
 				<div className="flex items-center gap-4">
 					{!isTablet && (
-						<OfferingDialog koudenId={koudenId} koudenEntries={koudenEntries} />
+						<TelegramDialog
+							koudenId={koudenId}
+							koudenEntries={koudenEntries}
+							isOpen={!!editingTelegram}
+						/>
 					)}
 				</div>
 			</DataTableToolbar>
@@ -239,28 +193,21 @@ export function DataTable({
 				</Button>
 			)}
 
-			{viewMode === "table" && !isTablet ? (
-				<BaseDataTable
-					columns={columns}
-					data={table.getFilteredRowModel().rows.map((row) => row.original)}
-					editableColumns={editableColumns}
-					onCellEdit={handleCellEdit}
-					sorting={sorting}
-					onSortingChange={setSorting}
-					columnFilters={columnFilters}
-					onColumnFiltersChange={setColumnFilters}
-					columnVisibility={columnVisibility}
-					onColumnVisibilityChange={setColumnVisibility}
-					rowSelection={rowSelection}
-					onRowSelectionChange={setRowSelection}
-					emptyMessage="お供え物が登録されていません"
-				/>
-			) : (
-				<OfferingCardList
-					offerings={data}
-					onDelete={() => setRowSelection({})}
-				/>
-			)}
+			<BaseDataTable
+				columns={columns}
+				data={table.getFilteredRowModel().rows.map((row) => row.original)}
+				editableColumns={editableColumns}
+				onCellEdit={handleCellEdit}
+				sorting={sorting}
+				onSortingChange={setSorting}
+				columnFilters={columnFilters}
+				onColumnFiltersChange={setColumnFilters}
+				columnVisibility={columnVisibility}
+				onColumnVisibilityChange={setColumnVisibility}
+				rowSelection={rowSelection}
+				onRowSelectionChange={setRowSelection}
+				emptyMessage="弔電が登録されていません"
+			/>
 
 			<div className="flex items-center justify-end space-x-2">
 				<div className="flex-1 text-sm text-muted-foreground">

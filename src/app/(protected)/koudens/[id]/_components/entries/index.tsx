@@ -13,6 +13,7 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { EntryCard } from "./card-list/entry-card";
 import { MobileFilters } from "./card-list/mobile-filters";
 import { EntryDialog } from "./dialog/entry-dialog";
+import { useReactTable, getCoreRowModel } from "@tanstack/react-table";
 
 interface KoudenEntryTableProps {
 	entries: KoudenEntryTableData[];
@@ -145,6 +146,12 @@ export function KoudenEntryTable({ entries, koudenId }: KoudenEntryTableProps) {
 		koudenId,
 	});
 
+	const table = useReactTable({
+		data: filteredAndSortedData,
+		columns,
+		getCoreRowModel: getCoreRowModel(),
+	});
+
 	return (
 		<>
 			{isMobile ? (
@@ -156,6 +163,7 @@ export function KoudenEntryTable({ entries, koudenId }: KoudenEntryTableProps) {
 						onSearchFieldChange={(value) => setSearchField(value)}
 						sortOrder={sortOrder}
 						onSortOrderChange={(value) => setSortOrder(value)}
+						table={table}
 					/>
 					<div className="flex-1 overflow-auto">
 						<div className="space-y-2 py-4">

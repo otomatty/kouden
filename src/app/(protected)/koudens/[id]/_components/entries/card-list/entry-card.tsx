@@ -13,6 +13,7 @@ import {
 import type { KoudenEntryTableData, EditKoudenEntryFormData } from "../types";
 import { EntryDialog } from "../dialog/entry-dialog";
 import { toast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 const attendanceTypeMap = {
 	FUNERAL: "葬儀",
@@ -46,6 +47,9 @@ export function EntryCard({
 	onEdit,
 	onDelete,
 }: EntryCardProps) {
+	const [isEditing, setIsEditing] = useState(false);
+	const [isOpen, setIsOpen] = useState(false);
+
 	const handleDelete = async () => {
 		try {
 			await onDelete(entry.id);
@@ -64,7 +68,7 @@ export function EntryCard({
 	};
 
 	return (
-		<Drawer>
+		<Drawer open={isOpen} onOpenChange={setIsOpen}>
 			<DrawerTrigger asChild>
 				<Card className="w-full hover:bg-accent/50 transition-colors cursor-pointer">
 					<CardContent className="p-4">
@@ -252,15 +256,20 @@ export function EntryCard({
 						<div className="flex flex-col gap-2 w-full">
 							<EntryDialog
 								koudenId={koudenId}
-								defaultValues={entry}
+								defaultValues={isEditing ? entry : undefined}
 								onSuccess={async (updatedEntry) => {
 									await onEdit(
 										{ ...updatedEntry, kouden_id: koudenId },
 										entry.id,
 									);
+									setIsEditing(false);
 								}}
 								trigger={
-									<Button className="w-full" variant="default">
+									<Button
+										className="w-full"
+										variant="default"
+										onClick={() => setIsEditing(true)}
+									>
 										<Pencil className="h-4 w-4 mr-2" />
 										編集
 									</Button>

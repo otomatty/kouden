@@ -21,7 +21,6 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { createOffering } from "@/app/_actions/offerings";
 import { toast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
@@ -32,6 +31,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formSchema, offeringFormAtom } from "./atoms";
 import { useAtom } from "jotai";
 import { SearchableCheckboxList } from "@/components/ui/searchable-checkbox-list";
+import { useKoudenOfferings } from "@/hooks/useKoudenOfferings";
 
 interface OfferingFormProps {
 	koudenId: string;
@@ -44,6 +44,7 @@ export function OfferingForm({
 	koudenEntries,
 	onSuccess,
 }: OfferingFormProps) {
+	const { createOffering } = useKoudenOfferings(koudenId);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [photos, setPhotos] = useState<File[]>([]);
 	const [currentTab, setCurrentTab] = useState("basic");

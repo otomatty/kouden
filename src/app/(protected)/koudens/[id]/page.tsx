@@ -1,19 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import type { Telegram } from "@/atoms/telegrams";
-import {
-	createKoudenEntry,
-	updateKoudenEntry,
-	deleteKoudenEntry,
-	type CreateKoudenEntryInput,
-	type UpdateKoudenEntryInput,
-} from "@/app/_actions/kouden-entries";
-import {
-	createOffering,
-	updateOffering,
-	deleteOffering,
-} from "@/app/_actions/offerings";
-import type { CreateOfferingInput, UpdateOfferingInput } from "@/types/actions";
+import { getOfferings } from "@/app/_actions/offerings";
 import {
 	createReturnItem,
 	updateReturnItem,
@@ -28,6 +16,7 @@ import {
 } from "@/app/_actions/koudens";
 import { KoudenDetail } from "./_components/kouden-detail";
 import { getTelegrams } from "@/app/_actions/telegrams";
+import type { OfferingType } from "@/types/offering";
 
 export const metadata: Metadata = {
 	title: "香典帳詳細",
@@ -36,24 +25,6 @@ export const metadata: Metadata = {
 
 type Props = {
 	params: Promise<{ id: string }>;
-};
-
-const wrappedCreateOffering = async (input: CreateOfferingInput) => {
-	"use server";
-	return createOffering(input);
-};
-
-const wrappedUpdateOffering = async (
-	id: string,
-	input: UpdateOfferingInput,
-) => {
-	"use server";
-	return updateOffering(id, input);
-};
-
-const wrappedDeleteOffering = async (id: string) => {
-	"use server";
-	return deleteOffering(id);
 };
 
 const wrappedCreateReturnItem = async (input: CreateReturnItemInput) => {
@@ -91,7 +62,11 @@ export default async function KoudenDetailPage({ params }: Props) {
 	const { id } = await params;
 	const data = await getKoudenWithEntries(id);
 	const telegrams = (await getTelegrams(id)) as unknown as Telegram[];
-
+	const rawOfferings = await getOfferings(id);
+	const offerings = rawOfferings.map((offering) => ({
+		...offering,
+		type: offering.type as OfferingType,
+	}));
 	if (!data) {
 		notFound();
 	}
@@ -101,9 +76,7 @@ export default async function KoudenDetailPage({ params }: Props) {
 			kouden={data.kouden}
 			entries={data.entries}
 			telegrams={telegrams}
-			createOffering={wrappedCreateOffering}
-			updateOffering={wrappedUpdateOffering}
-			deleteOffering={wrappedDeleteOffering}
+			offerings={offerings}
 			createReturnItem={wrappedCreateReturnItem}
 			updateReturnItem={wrappedUpdateReturnItem}
 			deleteReturnItem={wrappedDeleteReturnItem}
