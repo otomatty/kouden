@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import type { Telegram } from "@/atoms/telegrams";
 import {
 	createKoudenEntry,
 	updateKoudenEntry,
@@ -26,12 +27,7 @@ import {
 	deleteKouden,
 } from "@/app/_actions/koudens";
 import { KoudenDetail } from "./_components/kouden-detail";
-import {
-	getTelegrams,
-	createTelegram,
-	updateTelegram,
-	deleteTelegram,
-} from "@/app/_actions/telegrams";
+import { getTelegrams } from "@/app/_actions/telegrams";
 
 export const metadata: Metadata = {
 	title: "香典帳詳細",
@@ -40,24 +36,6 @@ export const metadata: Metadata = {
 
 type Props = {
 	params: Promise<{ id: string }>;
-};
-
-const wrappedCreateKoudenEntry = async (input: CreateKoudenEntryInput) => {
-	"use server";
-	return createKoudenEntry(input);
-};
-
-const wrappedUpdateKoudenEntry = async (
-	id: string,
-	input: UpdateKoudenEntryInput,
-) => {
-	"use server";
-	return updateKoudenEntry(id, input);
-};
-
-const wrappedDeleteKoudenEntry = async (id: string, koudenId: string) => {
-	"use server";
-	return deleteKoudenEntry(id, koudenId);
 };
 
 const wrappedCreateOffering = async (input: CreateOfferingInput) => {
@@ -109,49 +87,10 @@ const wrappedDeleteKouden = async (id: string) => {
 	return deleteKouden(id);
 };
 
-const handleCreateTelegram = async (input: {
-	koudenId: string;
-	koudenEntryId?: string;
-	senderName: string;
-	senderOrganization?: string;
-	senderPosition?: string;
-	message?: string;
-	notes?: string;
-}) => {
-	"use server";
-	const { koudenId, koudenEntryId, ...rest } = input;
-	return createTelegram({
-		...rest,
-		koudenId: koudenId,
-		koudenEntryId: koudenEntryId,
-	});
-};
-
-const wrappedUpdateTelegram = async (
-	id: string,
-	input: {
-		koudenId: string;
-		koudenEntryId?: string;
-		senderName: string;
-		senderOrganization?: string;
-		senderPosition?: string;
-		message?: string;
-		notes?: string;
-	},
-) => {
-	"use server";
-	return updateTelegram(id, input);
-};
-
-const wrappedDeleteTelegram = async (id: string) => {
-	"use server";
-	return deleteTelegram(id);
-};
-
 export default async function KoudenDetailPage({ params }: Props) {
 	const { id } = await params;
 	const data = await getKoudenWithEntries(id);
-	const telegrams = await getTelegrams(id);
+	const telegrams = (await getTelegrams(id)) as unknown as Telegram[];
 
 	if (!data) {
 		notFound();
@@ -162,9 +101,6 @@ export default async function KoudenDetailPage({ params }: Props) {
 			kouden={data.kouden}
 			entries={data.entries}
 			telegrams={telegrams}
-			createKoudenEntry={wrappedCreateKoudenEntry}
-			updateKoudenEntry={wrappedUpdateKoudenEntry}
-			deleteKoudenEntry={wrappedDeleteKoudenEntry}
 			createOffering={wrappedCreateOffering}
 			updateOffering={wrappedUpdateOffering}
 			deleteOffering={wrappedDeleteOffering}
@@ -173,9 +109,6 @@ export default async function KoudenDetailPage({ params }: Props) {
 			deleteReturnItem={wrappedDeleteReturnItem}
 			updateKouden={wrappedUpdateKouden}
 			deleteKouden={wrappedDeleteKouden}
-			createTelegram={handleCreateTelegram}
-			updateTelegram={wrappedUpdateTelegram}
-			deleteTelegram={wrappedDeleteTelegram}
 		/>
 	);
 }

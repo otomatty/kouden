@@ -1,16 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { KoudenEntryTable } from "./entry-table";
-import { KoudenStatistics } from "./kouden-statistics";
+
 import type { Database } from "@/types/supabase";
 import type { KoudenEntry } from "@/types/kouden";
-import type { AttendanceType } from "./entry-table/types";
+import type { AttendanceType } from "./entries/types";
 import type { KoudenPermission } from "@/app/_actions/koudens";
+import type { Telegram } from "@/atoms/telegrams";
 import { checkKoudenPermission } from "@/app/_actions/koudens";
 import type {
-	UpdateKoudenEntryInput,
-	KoudenEntryResponse,
 	CreateOfferingInput,
 	UpdateOfferingInput,
 	OfferingResponse,
@@ -19,6 +17,7 @@ import type {
 	ReturnItemResponse,
 } from "@/types/actions";
 import { useRouter } from "next/navigation";
+
 import { Button } from "@/components/ui/button";
 import {
 	ArrowLeft,
@@ -30,17 +29,22 @@ import {
 	Users,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { OfferingView } from "./offering-view";
-import { ReturnItemTable } from "./return-item-table";
-import { MemberTable } from "./member-table";
+// 各タブのコンポーネント
+// _componentsディレクトリにディレクトリを分けて配置している
+import { KoudenEntryTable } from "./entries";
+import { KoudenStatistics } from "./statistics";
+import { OfferingView } from "./offerings";
+import { ReturnItemTable } from "./return-items";
+import { MemberTable } from "./members";
+import { TelegramsView } from "./telegrams";
+// カスタムフック
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { MobileMenu } from "./mobile-menu";
+// 共通UI(common)
+import { MobileMenu } from "./_common/mobile-menu";
+import { KoudenTitle } from "./_common/kouden-title";
+import { KoudenActionsMenu } from "./actions/kouden-actions-menu";
+
 import { cn } from "@/lib/utils";
-import { KoudenTitle } from "./kouden-title";
-import { KoudenActionsMenu } from "./kouden-actions-menu";
-import type { OfferingType } from "@/types/offering";
-import { TelegramsView } from "./telegrams-view";
-import type { Telegram } from "@/types/telegram";
 
 type Kouden = Database["public"]["Tables"]["koudens"]["Row"];
 
@@ -48,26 +52,6 @@ interface KoudenDetailProps {
 	kouden: Kouden;
 	entries: KoudenEntry[];
 	telegrams: Telegram[];
-	createKoudenEntry: (input: {
-		kouden_id: string;
-		name?: string | null;
-		organization?: string | null;
-		position?: string | null;
-		amount: number;
-		postal_code?: string | null;
-		address: string | null;
-		phone_number?: string | null;
-		attendance_type: "FUNERAL" | "CONDOLENCE_VISIT" | "ABSENT" | null;
-		has_offering: boolean;
-		is_return_completed: boolean;
-		notes?: string | null;
-		relationship_id?: string | null;
-	}) => Promise<KoudenEntryResponse>;
-	updateKoudenEntry: (
-		id: string,
-		input: UpdateKoudenEntryInput,
-	) => Promise<KoudenEntryResponse>;
-	deleteKoudenEntry: (id: string, koudenId: string) => Promise<void>;
 	createOffering: (input: CreateOfferingInput) => Promise<OfferingResponse>;
 	updateOffering: (
 		id: string,
@@ -87,42 +71,14 @@ interface KoudenDetailProps {
 		input: { title: string; description?: string },
 	) => Promise<void>;
 	deleteKouden: (id: string) => Promise<void>;
-	createTelegram: (input: {
-		koudenId: string;
-		koudenEntryId?: string;
-		senderName: string;
-		senderOrganization?: string;
-		senderPosition?: string;
-		message?: string;
-		notes?: string;
-	}) => Promise<Telegram>;
-	updateTelegram: (
-		id: string,
-		input: {
-			koudenId: string;
-			senderName: string;
-			koudenEntryId?: string;
-			senderOrganization?: string;
-			senderPosition?: string;
-			message?: string;
-			notes?: string;
-		},
-	) => Promise<Telegram>;
-	deleteTelegram: (id: string) => Promise<void>;
 }
 
 export function KoudenDetail({
 	kouden,
 	entries: initialEntries,
 	telegrams,
-	createKoudenEntry,
-	updateKoudenEntry,
-	deleteKoudenEntry,
 	updateKouden,
 	deleteKouden,
-	createTelegram,
-	updateTelegram,
-	deleteTelegram,
 }: KoudenDetailProps) {
 	const router = useRouter();
 	const [entries, setEntries] = useState(initialEntries);
@@ -297,99 +253,11 @@ export function KoudenDetail({
 				<div className="mt-4">
 					<TabsContent value="table" className="m-0">
 						<KoudenEntryTable
+							koudenId={kouden.id}
 							entries={entries.map((entry) => ({
 								...entry,
 								attendance_type: entry.attendance_type as AttendanceType,
-								offerings: entry.offerings?.map((offering) => ({
-									...offering,
-									type: offering.type as OfferingType,
-									offering_photos: [],
-									kouden_entry_id: entry.id,
-								})),
 							}))}
-							koudenId={kouden.id}
-							updateKoudenEntry={async (id, data) => {
-								const input = {
-									...data,
-									address: data.address ?? null,
-									attendance_type:
-										data.attendance_type === "ABSENT"
-											? null
-											: data.attendance_type,
-								};
-								try {
-									const response = await updateKoudenEntry(id, input);
-									setEntries((prevEntries) =>
-										prevEntries.map((entry) =>
-											entry.id === id
-												? ({
-														...entry,
-														...response,
-														attendance_type: (response.attendance_type ||
-															"ABSENT") as AttendanceType,
-													} as KoudenEntry)
-												: entry,
-										),
-									);
-									return {
-										...response,
-										attendance_type: (response.attendance_type ||
-											"ABSENT") as AttendanceType,
-									};
-								} catch (error) {
-									console.error("更新エラー:", error);
-									throw error;
-								}
-							}}
-							createKoudenEntry={async (data) => {
-								const input = {
-									kouden_id: kouden.id,
-									name: data.name || null,
-									organization: data.organization || null,
-									position: data.position || null,
-									address: data.address || null,
-									phone_number: data.phone_number || null,
-									relationship_id: data.relationship_id || null,
-									attendance_type: data.attendance_type || "FUNERAL",
-									has_offering: data.has_offering || false,
-									is_return_completed: data.is_return_completed || false,
-									notes: data.notes || null,
-									amount: data.amount !== undefined ? Number(data.amount) : 0,
-								};
-								try {
-									const response = await createKoudenEntry(input);
-									// 新しいエントリーを追加
-									setEntries((prevEntries) => [
-										{
-											...response,
-											attendance_type: (response.attendance_type ||
-												"ABSENT") as AttendanceType,
-										} as KoudenEntry,
-										...prevEntries,
-									]);
-									return {
-										...response,
-										attendance_type: (response.attendance_type ||
-											"ABSENT") as AttendanceType,
-									};
-								} catch (error) {
-									console.error("作成エラー:", error);
-									throw error;
-								}
-							}}
-							deleteKoudenEntries={async (ids) => {
-								try {
-									await Promise.all(
-										ids.map((id) => deleteKoudenEntry(id, kouden.id)),
-									);
-									setEntries((prevEntries) =>
-										prevEntries.filter((entry) => !ids.includes(entry.id)),
-									);
-								} catch (error) {
-									console.error("削除エラー:", error);
-									throw error;
-								}
-							}}
 						/>
 					</TabsContent>
 					<TabsContent value="offerings" className="m-0">
@@ -400,9 +268,6 @@ export function KoudenDetail({
 							koudenId={kouden.id}
 							koudenEntries={entries}
 							telegrams={telegrams}
-							createTelegram={createTelegram}
-							updateTelegram={updateTelegram}
-							deleteTelegram={deleteTelegram}
 						/>
 					</TabsContent>
 					<TabsContent value="return-items" className="m-0">
@@ -423,32 +288,6 @@ export function KoudenDetail({
 					koudenId={kouden.id}
 					viewMode={viewMode}
 					koudenEntries={entries}
-					onAddEntry={async (data) => {
-						const response = await createKoudenEntry({
-							...data,
-							kouden_id: kouden.id,
-							amount: data.amount !== undefined ? Number(data.amount) : 0,
-							address: data.address || null,
-							attendance_type: data.attendance_type || "FUNERAL",
-							has_offering: data.has_offering || false,
-							is_return_completed: data.is_return_completed || false,
-						});
-
-						setEntries((prev) => [
-							{
-								...response,
-								attendance_type: (response.attendance_type ||
-									"ABSENT") as AttendanceType,
-							} as KoudenEntry,
-							...prev,
-						]);
-
-						return {
-							...response,
-							attendance_type: (response.attendance_type ||
-								"ABSENT") as AttendanceType,
-						};
-					}}
 				/>
 			)}
 		</>
