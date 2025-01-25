@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { EditableColumnConfig } from "@/components/custom/data-table/types";
 import { formatCurrency, formatPostalCode } from "@/lib/utils";
+import { RelationshipSkeleton } from "./relationship-skeleton";
 
 const attendanceTypeMap = {
 	FUNERAL: "葬儀",
@@ -57,6 +58,7 @@ interface ColumnProps {
 	}>;
 	permission?: KoudenPermission;
 	koudenId: string;
+	isLoadingRelationships: boolean;
 }
 
 // カラムラベルの定義
@@ -160,6 +162,8 @@ export function createColumns({
 	selectedRows,
 	relationships,
 	permission,
+	koudenId,
+	isLoadingRelationships,
 }: ColumnProps) {
 	const canEdit = permission === "owner" || permission === "editor";
 
@@ -169,10 +173,10 @@ export function createColumns({
 	) => {
 		if (value == null) return "";
 		if (format === "currency") {
-			return formatCurrency(value as number);
+			return `¥${formatCurrency(value as number)}`;
 		}
 		if (format === "postal_code") {
-			return formatPostalCode(value as string);
+			return `〒${formatPostalCode(value as string)}`;
 		}
 		return String(value);
 	};
@@ -259,13 +263,17 @@ export function createColumns({
 				</Button>
 			),
 			cell: ({ row }: { row: Row<KoudenEntryTableData> }) => {
-				const relationshipId = row.getValue("relationship_id") as string;
-				if (!relationshipId) return "-";
-
-				const relationship = relationships.find((r) => r.id === relationshipId);
-				if (!relationship) return "-";
-
-				return relationship.name;
+				if (isLoadingRelationships) {
+					return <RelationshipSkeleton />;
+				}
+				const relationship = relationships.find(
+					(rel) => rel.id === row.getValue("relationship_id"),
+				);
+				return relationship ? (
+					<Badge variant="outline" className="font-normal">
+						{relationship.name}
+					</Badge>
+				) : null;
 			},
 		},
 		{

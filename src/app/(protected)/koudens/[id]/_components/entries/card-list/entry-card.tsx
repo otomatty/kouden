@@ -14,6 +14,7 @@ import type { KoudenEntryTableData, EditKoudenEntryFormData } from "../types";
 import { EntryDialog } from "../dialog/entry-dialog";
 import { toast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { RelationshipSkeleton } from "../table/relationship-skeleton";
 
 const attendanceTypeMap = {
 	FUNERAL: "葬儀",
@@ -29,6 +30,7 @@ interface EntryCardProps {
 		entryId: string,
 	) => Promise<KoudenEntryTableData>;
 	onDelete: (id: string) => Promise<void>;
+	isLoadingRelationships?: boolean;
 }
 
 function formatPostalCode(code: string) {
@@ -41,11 +43,19 @@ function formatPostalCode(code: string) {
 	return `${paddedNumbers.slice(0, 3)}-${paddedNumbers.slice(3)}`;
 }
 
+function formatAmount(amount: number) {
+	return new Intl.NumberFormat("ja-JP", {
+		style: "currency",
+		currency: "JPY",
+	}).format(amount);
+}
+
 export function EntryCard({
 	entry,
 	koudenId,
 	onEdit,
 	onDelete,
+	isLoadingRelationships,
 }: EntryCardProps) {
 	const [isEditing, setIsEditing] = useState(false);
 	const [isOpen, setIsOpen] = useState(false);
@@ -78,10 +88,14 @@ export function EntryCard({
 									<h3 className="font-medium text-lg truncate">
 										{entry.name || "名前未設定"}
 									</h3>
-									{entry.relationship?.name && (
-										<Badge variant="outline" className="font-normal">
-											{entry.relationship.name}
-										</Badge>
+									{isLoadingRelationships ? (
+										<RelationshipSkeleton />
+									) : (
+										entry.relationship?.name && (
+											<Badge variant="outline" className="font-normal">
+												{entry.relationship.name}
+											</Badge>
+										)
 									)}
 								</div>
 								{entry.organization && (
@@ -90,10 +104,7 @@ export function EntryCard({
 									</p>
 								)}
 								<p className="text-2xl font-bold">
-									{new Intl.NumberFormat("ja-JP", {
-										style: "currency",
-										currency: "JPY",
-									}).format(entry.amount)}
+									{formatAmount(entry.amount)}
 								</p>
 							</div>
 							<div className="flex flex-col items-end gap-2 ml-4">
@@ -129,10 +140,7 @@ export function EntryCard({
 									{entry.name || "名前未設定"}
 								</DrawerTitle>
 								<p className="text-2xl font-bold">
-									{new Intl.NumberFormat("ja-JP", {
-										style: "currency",
-										currency: "JPY",
-									}).format(entry.amount)}
+									{formatAmount(entry.amount)}
 								</p>
 							</div>
 							<div className="space-y-1">
@@ -149,10 +157,14 @@ export function EntryCard({
 								</Badge>
 							</div>
 						</div>
-						{entry.relationship?.name && (
-							<Badge variant="outline" className="font-normal mt-2">
-								{entry.relationship.name}
-							</Badge>
+						{isLoadingRelationships ? (
+							<RelationshipSkeleton />
+						) : (
+							entry.relationship?.name && (
+								<Badge variant="outline" className="font-normal mt-2">
+									{entry.relationship.name}
+								</Badge>
+							)
 						)}
 					</DrawerHeader>
 

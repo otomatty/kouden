@@ -88,17 +88,18 @@ export function KoudenEntryTable({ entries, koudenId }: KoudenEntryTableProps) {
 	}, [koudenId]);
 
 	// 関係性データの取得
-	const { data: relationships = [] } = useQuery({
-		queryKey: ["relationships", koudenId],
-		queryFn: async () => {
-			const data = await getRelationships(koudenId);
-			return data.map((rel) => ({
-				id: rel.id,
-				name: rel.name,
-				description: rel.description || undefined,
-			}));
-		},
-	});
+	const { data: relationships = [], isLoading: isLoadingRelationships } =
+		useQuery({
+			queryKey: ["relationships", koudenId],
+			queryFn: async () => {
+				const data = await getRelationships(koudenId);
+				return data.map((rel) => ({
+					id: rel.id,
+					name: rel.name,
+					description: rel.description || undefined,
+				}));
+			},
+		});
 
 	// キーボードショートカットの設定
 	useEffect(() => {
@@ -144,6 +145,7 @@ export function KoudenEntryTable({ entries, koudenId }: KoudenEntryTableProps) {
 		relationships,
 		permission,
 		koudenId,
+		isLoadingRelationships,
 	});
 
 	const table = useReactTable({
@@ -176,6 +178,7 @@ export function KoudenEntryTable({ entries, koudenId }: KoudenEntryTableProps) {
 									onDelete={async (id) => {
 										await handleDeleteSelectedRows([id]);
 									}}
+									isLoadingRelationships={isLoadingRelationships}
 								/>
 							))}
 							{filteredAndSortedData.length === 0 && (
