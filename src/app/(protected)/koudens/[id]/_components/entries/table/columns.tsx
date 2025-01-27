@@ -1,22 +1,14 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import {
-	ArrowUpDown,
-	Pencil,
-	Trash2,
-	MoreHorizontal,
-	Copy,
-} from "lucide-react";
+import { ArrowUpDown, Pencil, Trash2, MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import type { KoudenPermission } from "@/app/_actions/koudens";
+import type { KoudenPermission } from "@/types/role";
 import type { Table, Row, Column } from "@tanstack/react-table";
-import type { KoudenEntryTableData } from "../types";
+import type { KoudenEntry, Relationship } from "@/types/kouden";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { EditableColumnConfig } from "@/components/custom/data-table/types";
@@ -48,14 +40,15 @@ const offeringOptions = [
 ];
 
 interface ColumnProps {
-	onEditRow: (entry: KoudenEntryTableData) => void;
+	onEditRow: (entry: KoudenEntry) => void;
 	onDeleteRows: (ids: string[]) => void;
+	onCellUpdate: (
+		id: string,
+		field: keyof Omit<KoudenEntry, "relationship">,
+		value: string | number | boolean | null,
+	) => void;
 	selectedRows: string[];
-	relationships: Array<{
-		id: string;
-		name: string;
-		description?: string;
-	}>;
+	relationships: Relationship[];
 	permission?: KoudenPermission;
 	koudenId: string;
 	isLoadingRelationships: boolean;
@@ -159,6 +152,7 @@ export const editableColumns: Record<string, EditableColumnConfig> = {
 export function createColumns({
 	onEditRow,
 	onDeleteRows,
+	onCellUpdate,
 	selectedRows,
 	relationships,
 	permission,
@@ -184,14 +178,14 @@ export function createColumns({
 	return [
 		{
 			id: "select",
-			header: ({ table }: { table: Table<KoudenEntryTableData> }) => (
+			header: ({ table }: { table: Table<KoudenEntry> }) => (
 				<Checkbox
 					checked={table.getIsAllPageRowsSelected()}
 					onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
 					aria-label="全選択"
 				/>
 			),
-			cell: ({ row }: { row: Row<KoudenEntryTableData> }) => (
+			cell: ({ row }: { row: Row<KoudenEntry> }) => (
 				<Checkbox
 					checked={row.getIsSelected()}
 					onCheckedChange={(value) => row.toggleSelected(!!value)}
@@ -203,7 +197,7 @@ export function createColumns({
 		},
 		{
 			accessorKey: "created_at",
-			header: ({ column }: { column: Column<KoudenEntryTableData> }) => (
+			header: ({ column }: { column: Column<KoudenEntry> }) => (
 				<Button
 					variant="ghost"
 					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
@@ -212,7 +206,7 @@ export function createColumns({
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			),
-			cell: ({ row }: { row: Row<KoudenEntryTableData> }) => {
+			cell: ({ row }: { row: Row<KoudenEntry> }) => {
 				const date = new Date(row.getValue("created_at") as string);
 				return date.toLocaleString("ja-JP", {
 					year: "numeric",
@@ -225,7 +219,7 @@ export function createColumns({
 		},
 		{
 			accessorKey: "name",
-			header: ({ column }: { column: Column<KoudenEntryTableData> }) => (
+			header: ({ column }: { column: Column<KoudenEntry> }) => (
 				<Button
 					variant="ghost"
 					className="hover:bg-transparent"
@@ -235,24 +229,24 @@ export function createColumns({
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			),
-			cell: ({ row }: { row: Row<KoudenEntryTableData> }) =>
+			cell: ({ row }: { row: Row<KoudenEntry> }) =>
 				formatCell(row.getValue("name")),
 		},
 		{
 			accessorKey: "organization",
 			header: "団体名",
-			cell: ({ row }: { row: Row<KoudenEntryTableData> }) =>
+			cell: ({ row }: { row: Row<KoudenEntry> }) =>
 				formatCell(row.getValue("organization")),
 		},
 		{
 			accessorKey: "position",
 			header: "役職",
-			cell: ({ row }: { row: Row<KoudenEntryTableData> }) =>
+			cell: ({ row }: { row: Row<KoudenEntry> }) =>
 				formatCell(row.getValue("position")),
 		},
 		{
 			accessorKey: "relationship_id",
-			header: ({ column }: { column: Column<KoudenEntryTableData> }) => (
+			header: ({ column }: { column: Column<KoudenEntry> }) => (
 				<Button
 					variant="ghost"
 					className="hover:bg-transparent"
@@ -262,7 +256,7 @@ export function createColumns({
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			),
-			cell: ({ row }: { row: Row<KoudenEntryTableData> }) => {
+			cell: ({ row }: { row: Row<KoudenEntry> }) => {
 				if (isLoadingRelationships) {
 					return <RelationshipSkeleton />;
 				}
@@ -278,7 +272,7 @@ export function createColumns({
 		},
 		{
 			accessorKey: "amount",
-			header: ({ column }: { column: Column<KoudenEntryTableData> }) => (
+			header: ({ column }: { column: Column<KoudenEntry> }) => (
 				<Button
 					variant="ghost"
 					className="hover:bg-transparent"
@@ -288,30 +282,30 @@ export function createColumns({
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			),
-			cell: ({ row }: { row: Row<KoudenEntryTableData> }) =>
+			cell: ({ row }: { row: Row<KoudenEntry> }) =>
 				formatCell(row.getValue("amount"), "currency"),
 		},
 		{
 			accessorKey: "postal_code",
 			header: "郵便番号",
-			cell: ({ row }: { row: Row<KoudenEntryTableData> }) =>
+			cell: ({ row }: { row: Row<KoudenEntry> }) =>
 				formatCell(row.getValue("postal_code"), "postal_code"),
 		},
 		{
 			accessorKey: "address",
 			header: "住所",
-			cell: ({ row }: { row: Row<KoudenEntryTableData> }) =>
+			cell: ({ row }: { row: Row<KoudenEntry> }) =>
 				formatCell(row.getValue("address")),
 		},
 		{
 			accessorKey: "phone_number",
 			header: "電話番号",
-			cell: ({ row }: { row: Row<KoudenEntryTableData> }) =>
+			cell: ({ row }: { row: Row<KoudenEntry> }) =>
 				formatCell(row.getValue("phone_number")),
 		},
 		{
 			accessorKey: "attendance_type",
-			header: ({ column }: { column: Column<KoudenEntryTableData> }) => (
+			header: ({ column }: { column: Column<KoudenEntry> }) => (
 				<Button
 					variant="ghost"
 					className="hover:bg-transparent"
@@ -321,16 +315,13 @@ export function createColumns({
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			),
-			cell: ({ row }: { row: Row<KoudenEntryTableData> }) => {
+			cell: ({ row }: { row: Row<KoudenEntry> }) => {
 				const value = row.getValue(
 					"attendance_type",
 				) as keyof typeof attendanceTypeMap;
 				return <Badge variant="outline">{attendanceTypeMap[value]}</Badge>;
 			},
-			sortingFn: (
-				rowA: Row<KoudenEntryTableData>,
-				rowB: Row<KoudenEntryTableData>,
-			) => {
+			sortingFn: (rowA: Row<KoudenEntry>, rowB: Row<KoudenEntry>) => {
 				const a = rowA.getValue(
 					"attendance_type",
 				) as keyof typeof attendanceTypePriority;
@@ -342,7 +333,7 @@ export function createColumns({
 		},
 		{
 			accessorKey: "has_offering",
-			header: ({ column }: { column: Column<KoudenEntryTableData> }) => (
+			header: ({ column }: { column: Column<KoudenEntry> }) => (
 				<Button
 					variant="ghost"
 					className="hover:bg-transparent"
@@ -352,14 +343,14 @@ export function createColumns({
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			),
-			cell: ({ row }: { row: Row<KoudenEntryTableData> }) => {
+			cell: ({ row }: { row: Row<KoudenEntry> }) => {
 				const value = row.getValue("has_offering") as boolean;
 				return value ? "あり" : "なし";
 			},
 		},
 		{
 			accessorKey: "is_return_completed",
-			header: ({ column }: { column: Column<KoudenEntryTableData> }) => (
+			header: ({ column }: { column: Column<KoudenEntry> }) => (
 				<Button
 					variant="ghost"
 					className="hover:bg-transparent"
@@ -369,7 +360,7 @@ export function createColumns({
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			),
-			cell: ({ row }: { row: Row<KoudenEntryTableData> }) => {
+			cell: ({ row }: { row: Row<KoudenEntry> }) => {
 				const value = row.getValue("is_return_completed") as boolean;
 				return (
 					<Badge variant={value ? "default" : "secondary"}>
@@ -381,55 +372,47 @@ export function createColumns({
 		{
 			accessorKey: "notes",
 			header: "備考",
-			cell: ({ row }: { row: Row<KoudenEntryTableData> }) =>
+			cell: ({ row }: { row: Row<KoudenEntry> }) =>
 				formatCell(row.getValue("notes")),
 		},
 		{
 			id: "actions",
-			cell: ({ row }: { row: Row<KoudenEntryTableData> }) => {
-				const isSelected = selectedRows.includes(row.original.id);
+			header: "操作",
+			cell: ({ row }: { row: Row<KoudenEntry> }) => {
+				const entry = row.original;
+				const canEdit = permission === "owner" || permission === "editor";
+				const canDelete = permission === "owner" || permission === "editor";
+
+				if (!canEdit && !canDelete) {
+					return null;
+				}
 
 				return (
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
 							<Button variant="ghost" className="h-8 w-8 p-0">
-								<span className="sr-only">メニューを開く</span>
 								<MoreHorizontal className="h-4 w-4" />
 							</Button>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="end">
-							<DropdownMenuLabel>アクション</DropdownMenuLabel>
 							{canEdit && (
-								<>
-									<DropdownMenuItem onClick={() => onEditRow(row.original)}>
-										<Pencil className="h-4 w-4 mr-2" />
-										編集
-									</DropdownMenuItem>
-									<DropdownMenuItem
-										onClick={() =>
-											navigator.clipboard.writeText(row.original.id)
-										}
-									>
-										<Copy className="h-4 w-4 mr-2" />
-										IDをコピー
-									</DropdownMenuItem>
-									<DropdownMenuSeparator />
-									<DropdownMenuItem
-										onClick={() => onDeleteRows([row.original.id])}
-										disabled={isSelected}
-										className="text-destructive"
-									>
-										<Trash2 className="h-4 w-4 mr-2" />
-										削除
-									</DropdownMenuItem>
-								</>
-							)}
-							{!canEdit && (
 								<DropdownMenuItem
-									onClick={() => navigator.clipboard.writeText(row.original.id)}
+									onClick={() => {
+										console.log("Edit button clicked for entry:", entry);
+										onEditRow(entry);
+									}}
 								>
-									<Copy className="h-4 w-4 mr-2" />
-									IDをコピー
+									<Pencil className="mr-2 h-4 w-4" />
+									編集
+								</DropdownMenuItem>
+							)}
+							{canDelete && (
+								<DropdownMenuItem
+									onClick={() => onDeleteRows([entry.id])}
+									className="text-destructive"
+								>
+									<Trash2 className="mr-2 h-4 w-4" />
+									削除
 								</DropdownMenuItem>
 							)}
 						</DropdownMenuContent>

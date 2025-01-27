@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useEffect } from "react";
 import type { Table } from "@tanstack/react-table";
 import { Input } from "@/components/ui/input";
 import {
@@ -61,6 +62,10 @@ export interface DataTableToolbarProps<TData> {
 	viewMode?: "table" | "grid";
 	onViewModeChange?: (mode: "table" | "grid") => void;
 	children?: React.ReactNode;
+	searchValue?: string;
+	onSearchChange?: (value: string) => void;
+	sortValue?: string;
+	onSortChange?: (value: string) => void;
 }
 
 export function DataTableToolbar<TData>({
@@ -78,26 +83,40 @@ export function DataTableToolbar<TData>({
 	viewMode = "table",
 	onViewModeChange,
 	children,
+	searchValue,
+	onSearchChange,
+	sortValue,
+	onSortChange,
 }: DataTableToolbarProps<TData>) {
-	const [globalFilter, setGlobalFilter] = React.useState("");
+	const [globalFilter, setGlobalFilter] = React.useState(searchValue || "");
+
+	// デスクトップサイズでテーブル表示にリセットする
+	useEffect(() => {
+		const handleResize = () => {
+			if (
+				window.innerWidth >= 1024 &&
+				viewMode === "grid" &&
+				onViewModeChange
+			) {
+				onViewModeChange("table");
+			}
+		};
+
+		window.addEventListener("resize", handleResize);
+		return () => window.removeEventListener("resize", handleResize);
+	}, [viewMode, onViewModeChange]);
 
 	// グローバル検索の処理
 	const handleSearch = React.useCallback(
 		(value: string) => {
-			console.log("Search Input:", value);
-			console.log("Current Table State:", table.getState());
 			setGlobalFilter(value);
-			table.setGlobalFilter(value);
-
-			// 検索実行後のテーブルの状態を確認
-			setTimeout(() => {
-				console.log("Updated Table State:", {
-					globalFilter: table.getState().globalFilter,
-					rowsCount: table.getFilteredRowModel().rows.length,
-				});
-			}, 0);
+			if (onSearchChange) {
+				onSearchChange(value);
+			} else {
+				table.setGlobalFilter(value);
+			}
 		},
-		[table],
+		[table, onSearchChange],
 	);
 
 	// 検索オプションのアイコンマッピング
@@ -144,7 +163,7 @@ export function DataTableToolbar<TData>({
 							<Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
 							<Input
 								placeholder={`${searchOptions.map((opt) => opt.label).join("・")}から検索...`}
-								value={globalFilter ?? ""}
+								value={searchValue ?? globalFilter ?? ""}
 								onChange={(event) => handleSearch(event.target.value)}
 								className="pl-8 bg-background"
 							/>
@@ -247,25 +266,23 @@ export function DataTableToolbar<TData>({
 							>
 								<div className="flex-1 hover:border-primary/50 transition-colors">
 									<Select
-										value={
-											table.getState().sorting[0]
-												? `${table.getState().sorting[0].id}_${
-														table.getState().sorting[0].desc ? "desc" : "asc"
-													}`
-												: "default"
-										}
+										value={sortValue ?? "default"}
 										onValueChange={(value) => {
-											if (value === "default") {
-												table.resetSorting();
-												return;
+											if (onSortChange) {
+												onSortChange(value);
+											} else {
+												if (value === "default") {
+													table.resetSorting();
+													return;
+												}
+												const [field, direction] = value.split("_");
+												table.setSorting([
+													{
+														id: field,
+														desc: direction === "desc",
+													},
+												]);
 											}
-											const [field, direction] = value.split("_");
-											table.setSorting([
-												{
-													id: field,
-													desc: direction === "desc",
-												},
-											]);
 										}}
 									>
 										<SelectTrigger className="w-[160px] bg-background">

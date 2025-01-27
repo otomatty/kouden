@@ -1,25 +1,19 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import {
-	ArrowUpDown,
-	Pencil,
-	Trash2,
-	MoreHorizontal,
-	Copy,
-} from "lucide-react";
-import type { KoudenPermission } from "@/app/_actions/koudens";
-import type { Table, Row, Column } from "@tanstack/react-table";
+import { ArrowUpDown, Pencil, MoreHorizontal, Trash } from "lucide-react";
+import type { KoudenPermission } from "@/types/role";
+import type { Table, Row, Column, ColumnDef } from "@tanstack/react-table";
 import type { Telegram } from "@/types/telegram";
 import type { KoudenEntry } from "@/types/kouden";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { EditableColumnConfig } from "@/components/custom/data-table/types";
+import { useAtom } from "jotai";
+import { telegramActionsAtom, deleteDialogAtom } from "@/store/telegrams";
 
 // カラムラベルの定義
 export const columnLabels: Record<string, string> = {
@@ -30,6 +24,7 @@ export const columnLabels: Record<string, string> = {
 	koudenEntry: "関連する香典",
 	message: "メッセージ",
 	notes: "備考",
+	createdAt: "作成日時",
 	actions: "操作",
 };
 
@@ -51,12 +46,14 @@ export const sortOptions = [
 export const defaultColumnVisibility = {
 	senderPosition: false,
 	notes: false,
+	createdAt: false,
 };
 
 export const tabletColumnVisibility = {
 	...defaultColumnVisibility,
 	senderOrganization: false,
 	message: false,
+	createdAt: false,
 };
 
 // 編集可能なカラムの設定
@@ -72,23 +69,21 @@ export const editableColumns: Record<string, EditableColumnConfig> = {
 	actions: { type: "readonly" },
 };
 
-interface ColumnProps {
-	onEditRow: (telegram: Telegram) => void;
-	onDeleteRows: (ids: string[]) => void;
+interface CreateColumnsProps {
+	koudenEntries: KoudenEntry[];
+	onEditRow: (telegram: Telegram) => Promise<void>;
+	onDeleteRows: (ids: string[]) => Promise<void>;
 	selectedRows: string[];
 	permission?: KoudenPermission;
-	koudenEntries: KoudenEntry[];
 }
 
 export function createColumns({
+	koudenEntries,
 	onEditRow,
 	onDeleteRows,
 	selectedRows,
 	permission,
-	koudenEntries,
-}: ColumnProps) {
-	const canEdit = permission === "owner" || permission === "editor";
-
+}: CreateColumnsProps): ColumnDef<Telegram>[] {
 	const getEntryName = (entryId: string | null | undefined) => {
 		if (!entryId) return "-";
 		const entry = koudenEntries.find((entry) => entry.id === entryId);
@@ -159,51 +154,66 @@ export function createColumns({
 			cell: ({ row }: { row: Row<Telegram> }) => row.getValue("notes") || "-",
 		},
 		{
+			accessorKey: "createdAt",
+			header: "作成日時",
+			cell: ({ row }: { row: Row<Telegram> }) => {
+				const date = row.getValue("createdAt");
+				if (!date) return "-";
+				return new Date(date as string).toLocaleString("ja-JP");
+			},
+		},
+		{
 			id: "actions",
 			header: "操作",
 			cell: ({ row }: { row: Row<Telegram> }) => {
 				const telegram = row.original;
-				const isSelected = selectedRows.includes(telegram.id);
+				const [, dispatch] = useAtom(telegramActionsAtom);
+				const [, setDeleteDialog] = useAtom(deleteDialogAtom);
+
+				const canEdit = permission === "owner" || permission === "editor";
+				const canDelete = permission === "owner" || permission === "editor";
+
+				if (!canEdit && !canDelete) {
+					return null;
+				}
 
 				return (
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
 							<Button variant="ghost" className="h-8 w-8 p-0">
-								<span className="sr-only">メニューを開く</span>
 								<MoreHorizontal className="h-4 w-4" />
 							</Button>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="end">
-							<DropdownMenuLabel>アクション</DropdownMenuLabel>
 							{canEdit && (
-								<>
-									<DropdownMenuItem onClick={() => onEditRow(telegram)}>
-										<Pencil className="h-4 w-4 mr-2" />
-										編集
-									</DropdownMenuItem>
-									<DropdownMenuItem
-										onClick={() => navigator.clipboard.writeText(telegram.id)}
-									>
-										<Copy className="h-4 w-4 mr-2" />
-										IDをコピー
-									</DropdownMenuItem>
-									<DropdownMenuSeparator />
-									<DropdownMenuItem
-										onClick={() => onDeleteRows([telegram.id])}
-										disabled={isSelected}
-										className="text-destructive"
-									>
-										<Trash2 className="h-4 w-4 mr-2" />
-										削除
-									</DropdownMenuItem>
-								</>
-							)}
-							{!canEdit && (
 								<DropdownMenuItem
-									onClick={() => navigator.clipboard.writeText(telegram.id)}
+									onClick={() => {
+										console.log("Edit button clicked for telegram:", telegram);
+										dispatch({
+											type: "setDialog",
+											payload: {
+												dialog: "edit",
+												props: { isOpen: true, selectedTelegram: telegram },
+											},
+										});
+									}}
 								>
-									<Copy className="h-4 w-4 mr-2" />
-									IDをコピー
+									<Pencil className="mr-2 h-4 w-4" />
+									編集
+								</DropdownMenuItem>
+							)}
+							{canDelete && (
+								<DropdownMenuItem
+									onClick={() => {
+										setDeleteDialog({
+											isOpen: true,
+											telegramId: telegram.id,
+										});
+									}}
+									className="text-destructive"
+								>
+									<Trash className="mr-2 h-4 w-4" />
+									削除
 								</DropdownMenuItem>
 							)}
 						</DropdownMenuContent>

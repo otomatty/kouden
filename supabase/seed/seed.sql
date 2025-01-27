@@ -285,7 +285,7 @@ BEGIN
     INSERT INTO kouden_roles (kouden_id, name, description, permissions, created_by)
     VALUES (
         NEW.id,
-        '編集者',
+        'editor',
         '香典帳の内容を編集できます',
         ARRAY['view', 'edit']::TEXT[],
         NEW.created_by
@@ -295,7 +295,7 @@ BEGIN
     INSERT INTO kouden_roles (kouden_id, name, description, permissions, created_by)
     VALUES (
         NEW.id,
-        '閲覧者',
+        'viewer',
         '香典帳の内容を閲覧できます',
         ARRAY['view']::TEXT[],
         NEW.created_by

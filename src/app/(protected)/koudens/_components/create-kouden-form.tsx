@@ -24,23 +24,35 @@ export function CreateKoudenForm() {
 		setLoading(true);
 
 		try {
+			console.log("[DEBUG] フォーム送信開始");
 			const supabase = createClient();
 			const {
 				data: { user },
 			} = await supabase.auth.getUser();
+			console.log("[DEBUG] ユーザー情報:", user);
 			if (!user) throw new Error("認証が必要です");
 
 			if (!formRef.current) return;
 			const formData = new FormData(formRef.current);
-			await createKouden({
-				title: formData.get("title") as string,
-				description: formData.get("description") as string,
+			const title = formData.get("title") as string;
+			const description = formData.get("description") as string;
+			console.log("[DEBUG] フォームデータ:", { title, description });
+
+			const result = await createKouden({
+				title,
+				description,
 				userId: user.id,
 			});
+			console.log("[DEBUG] 香典帳作成結果:", result);
+
+			if (result.error) {
+				throw new Error(result.error);
+			}
+
 			setOpen(false);
 			router.refresh();
 		} catch (error) {
-			console.error("Error:", error);
+			console.error("[ERROR] 香典帳作成エラー:", error);
 		} finally {
 			setLoading(false);
 		}

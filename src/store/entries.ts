@@ -1,7 +1,12 @@
 import { atom } from "jotai";
-import type { KoudenEntry } from "@/types/kouden";
+import type {
+	KoudenEntry,
+	KoudenEntryForm,
+	AttendanceType,
+} from "@/types/kouden";
+import type { KoudenPermission } from "@/types/role";
 
-// 基本的なエントリーデータを管理するatom
+// エントリーデータを管理するatom
 export const entriesAtom = atom<KoudenEntry[]>([]);
 
 // 楽観的更新用のデータ型
@@ -108,10 +113,78 @@ export const isLoadingAtom = atom<boolean>(false);
 export const errorAtom = atom<Error | null>(null);
 
 // フォームの状態を管理するatom
-export const formStateAtom = atom<{
-	isSubmitting: boolean;
-	error: string | null;
-}>({
+export const entryFormAtom = atom<KoudenEntryForm>({
+	name: null,
+	organization: null,
+	position: null,
+	amount: 0,
+	postal_code: null,
+	address: null,
+	phone_number: null,
+	relationship_id: null,
+	attendance_type: "FUNERAL",
+	has_offering: false,
+	is_return_completed: false,
+	notes: null,
+});
+
+// フォームの初期値をセットするatom
+export const setEntryFormAtom = atom(
+	null,
+	(get, set, entry: Partial<KoudenEntryForm>) => {
+		const currentForm = get(entryFormAtom);
+		set(entryFormAtom, {
+			...currentForm,
+			...entry,
+		});
+	},
+);
+
+// フォームの値を更新するatom
+export const updateEntryFormAtom = atom(
+	null,
+	(
+		get,
+		set,
+		update: {
+			field: keyof KoudenEntryForm;
+			value: KoudenEntryForm[keyof KoudenEntryForm];
+		},
+	) => {
+		const currentForm = get(entryFormAtom);
+		set(entryFormAtom, {
+			...currentForm,
+			[update.field]: update.value,
+		});
+	},
+);
+
+// フォームをリセットするatom
+export const resetEntryFormAtom = atom(null, (get, set) => {
+	set(entryFormAtom, {
+		name: null,
+		organization: null,
+		position: null,
+		amount: 0,
+		postal_code: null,
+		address: null,
+		phone_number: null,
+		relationship_id: null,
+		attendance_type: "FUNERAL",
+		has_offering: false,
+		is_return_completed: false,
+		notes: null,
+	});
+});
+
+// フォームの送信状態を管理するatom
+export const formSubmissionStateAtom = atom({
 	isSubmitting: false,
-	error: null,
+	error: null as string | null,
+});
+
+// 郵便番号による住所検索の状態を管理するatom
+export const addressSearchStateAtom = atom({
+	isSearching: false,
+	error: null as string | null,
 });

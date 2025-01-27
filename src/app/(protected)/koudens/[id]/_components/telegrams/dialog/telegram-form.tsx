@@ -4,12 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useAtom } from "jotai";
-import {
-	telegramDialogAtom,
-	telegramLoadingAtom,
-	telegramErrorAtom,
-	telegramsActionsAtom,
-} from "@/atoms/telegrams";
+import { telegramStateAtom, telegramActionsAtom } from "@/store/telegrams";
 import {
 	Form,
 	FormControl,
@@ -29,7 +24,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import type { KoudenEntry } from "@/types/kouden";
-import type { Telegram } from "@/atoms/telegrams";
+import type { Telegram } from "@/types/telegram";
 import { useTelegrams } from "@/hooks/useTelegrams";
 
 const telegramFormSchema = z.object({
@@ -43,66 +38,83 @@ const telegramFormSchema = z.object({
 
 type TelegramFormValues = z.infer<typeof telegramFormSchema>;
 
-interface TelegramFormProps {
+export interface TelegramFormProps {
 	koudenId: string;
 	koudenEntries: KoudenEntry[];
-	defaultValues?: Telegram;
-	isOpen: boolean;
-	onOpenChange: (open: boolean) => void;
+	defaultValues?: Partial<Telegram> | null;
 }
 
-export function TelegramForm({ koudenId, koudenEntries }: TelegramFormProps) {
-	const [{ isOpen, selectedTelegram }, setDialogState] =
-		useAtom(telegramDialogAtom);
-	const [loading, setLoading] = useAtom(telegramLoadingAtom);
-	const [, setError] = useAtom(telegramErrorAtom);
-	const [, dispatch] = useAtom(telegramsActionsAtom);
+export function TelegramForm({
+	koudenId,
+	koudenEntries,
+	defaultValues,
+}: TelegramFormProps) {
+	const [state] = useAtom(telegramStateAtom);
+	const [, dispatch] = useAtom(telegramActionsAtom);
 	const { createTelegram, updateTelegram } = useTelegrams(koudenId);
 
 	const form = useForm<TelegramFormValues>({
 		resolver: zodResolver(telegramFormSchema),
 		defaultValues: {
-			senderName: selectedTelegram?.senderName || "",
-			senderOrganization: selectedTelegram?.senderOrganization || "",
-			senderPosition: selectedTelegram?.senderPosition || "",
-			koudenEntryId: selectedTelegram?.koudenEntryId || "",
-			message: selectedTelegram?.message || "",
-			notes: selectedTelegram?.notes || "",
+			senderName: defaultValues?.senderName || "",
+			senderOrganization: defaultValues?.senderOrganization || "",
+			senderPosition: defaultValues?.senderPosition || "",
+			koudenEntryId: defaultValues?.koudenEntryId || "",
+			message: defaultValues?.message || "",
+			notes: defaultValues?.notes || "",
 		},
 	});
 
 	const handleSubmit = async (values: TelegramFormValues) => {
 		try {
-			setLoading(true);
-			setError(null);
+			dispatch({ type: "setLoading", payload: true });
+			dispatch({ type: "setError", payload: null });
 
-			if (selectedTelegram) {
-				const updated = await updateTelegram(selectedTelegram.id, values);
-				dispatch({ type: "update", payload: updated });
+			if (defaultValues?.id) {
+				await updateTelegram(defaultValues.id, values);
 			} else {
-				const created = await createTelegram(values);
-				dispatch({ type: "add", payload: created });
+				await createTelegram(values);
 			}
 
 			form.reset();
-			setDialogState((prev) => ({
-				...prev,
-				isOpen: false,
-				selectedTelegram: null,
-			}));
+			// ダイアログを閉じる
+			dispatch({
+				type: "setDialog",
+				payload: {
+					dialog: "create",
+					props: { isOpen: false, defaultValues: null },
+				},
+			});
+			dispatch({
+				type: "setDialog",
+				payload: {
+					dialog: "edit",
+					props: { isOpen: false, selectedTelegram: null },
+				},
+			});
 		} catch (error) {
 			console.error("弔電の保存に失敗しました:", error);
 		} finally {
-			setLoading(false);
+			dispatch({ type: "setLoading", payload: false });
 		}
 	};
 
 	const handleCancel = () => {
-		setDialogState((prev) => ({
-			...prev,
-			isOpen: false,
-			selectedTelegram: null,
-		}));
+		// ダイアログを閉じる
+		dispatch({
+			type: "setDialog",
+			payload: {
+				dialog: "create",
+				props: { isOpen: false, defaultValues: null },
+			},
+		});
+		dispatch({
+			type: "setDialog",
+			payload: {
+				dialog: "edit",
+				props: { isOpen: false, selectedTelegram: null },
+			},
+		});
 	};
 
 	return (
@@ -207,8 +219,8 @@ export function TelegramForm({ koudenId, koudenEntries }: TelegramFormProps) {
 					<Button type="button" variant="outline" onClick={handleCancel}>
 						キャンセル
 					</Button>
-					<Button type="submit" disabled={loading}>
-						{selectedTelegram ? "更新" : "追加"}
+					<Button type="submit" disabled={state.isLoading}>
+						{defaultValues ? "更新" : "追加"}
 					</Button>
 				</div>
 			</form>

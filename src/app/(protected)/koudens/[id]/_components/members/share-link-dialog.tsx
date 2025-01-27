@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import {
 	Select,
 	SelectContent,
@@ -25,7 +26,17 @@ interface ShareLinkFormProps {
 	}[];
 }
 
+const getRoleDisplayName = (roleName: string) => {
+	const roleMap: Record<string, string> = {
+		owner: "管理者",
+		editor: "編集者",
+		viewer: "閲覧者",
+	};
+	return roleMap[roleName] || "未設定";
+};
+
 export function ShareLinkForm({ koudenId, roles }: ShareLinkFormProps) {
+	const isMobile = useMediaQuery("(max-width: 768px)");
 	const [open, setOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [invitationLink, setInvitationLink] = useState<string>("");
@@ -96,7 +107,14 @@ export function ShareLinkForm({ koudenId, roles }: ShareLinkFormProps) {
 			open={open}
 			onOpenChange={setOpen}
 			trigger={
-				<Button variant="outline" className="gap-2">
+				<Button
+					size={isMobile ? "lg" : "default"}
+					className={
+						isMobile
+							? "w-full mx-4 flex items-center gap-2"
+							: "flex items-center gap-2"
+					}
+				>
 					<Share2 className="h-4 w-4" />
 					共有リンクを作成
 				</Button>
@@ -114,7 +132,7 @@ export function ShareLinkForm({ koudenId, roles }: ShareLinkFormProps) {
 						<SelectContent>
 							{roles.map((role) => (
 								<SelectItem key={role.id} value={role.id}>
-									{role.name}
+									{getRoleDisplayName(role.name)}
 								</SelectItem>
 							))}
 						</SelectContent>

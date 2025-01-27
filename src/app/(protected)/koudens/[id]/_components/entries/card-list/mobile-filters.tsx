@@ -1,6 +1,6 @@
 import { MobileDataTableToolbar } from "@/components/custom/data-table/mobile-toolbar";
 import type { Table } from "@tanstack/react-table";
-import type { KoudenEntryTableData } from "../types";
+import type { KoudenEntry } from "@/types/kouden";
 import {
 	User,
 	Building2,
@@ -20,7 +20,6 @@ interface MobileFiltersProps {
 	onSearchFieldChange: (value: string) => void;
 	sortOrder: string;
 	onSortOrderChange: (value: string) => void;
-	table: Table<KoudenEntryTableData>;
 }
 
 const searchOptions = [
@@ -86,19 +85,20 @@ const sortOptions = [
 export function MobileFilters({
 	searchQuery,
 	onSearchChange,
-	searchField,
-	onSearchFieldChange,
 	sortOrder,
 	onSortOrderChange,
-	table,
 }: MobileFiltersProps) {
 	return (
 		<MobileDataTableToolbar
-			table={table}
 			searchOptions={searchOptions}
 			sortOptions={sortOptions}
 			showFilter={false}
-			showColumnVisibility={false}
+			showSort={true}
+			searchValue={searchQuery}
+			onSearchChange={onSearchChange}
+			searchPlaceholder={`${searchOptions.map((opt) => opt.label).join("・")}から検索...`}
+			sortOrder={sortOrder}
+			onSortOrderChange={onSortOrderChange}
 		/>
 	);
 }

@@ -6,33 +6,35 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { MoreHorizontal, Copy, Trash2, FileSpreadsheet } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { cn } from "@/lib/utils";
 import { DeleteKoudenDialog } from "./delete-kouden-dialog";
 import { DuplicateKoudenButton } from "./duplicate-kouden-button";
 import { ExportExcelButton } from "./export-excel-button";
+import { useAtomValue } from "jotai";
+import {
+	permissionAtom,
+	canUpdateKouden,
+	canDeleteKouden,
+} from "@/store/permission";
 
 interface KoudenActionsMenuProps {
 	koudenId: string;
 	koudenTitle: string;
-	permission: "owner" | "editor" | "viewer" | null;
-	onDelete: (koudenId: string) => Promise<void>;
 }
 
 export function KoudenActionsMenu({
 	koudenId,
 	koudenTitle,
-	permission,
-	onDelete,
 }: KoudenActionsMenuProps) {
 	const isDesktop = useMediaQuery("(min-width: 768px)");
+	const permission = useAtomValue(permissionAtom);
 
 	if (isDesktop) {
 		return (
 			<div className="flex items-center gap-2">
 				<ExportExcelButton koudenId={koudenId} />
-				{(permission === "owner" || permission === "editor") && (
+				{canUpdateKouden(permission) && (
 					<Popover>
 						<PopoverTrigger asChild>
 							<Button variant="outline" size="sm">
@@ -42,11 +44,10 @@ export function KoudenActionsMenu({
 						<PopoverContent align="end" className="w-[200px]">
 							<div className="flex flex-col gap-1">
 								<DuplicateKoudenButton koudenId={koudenId} />
-								{permission === "owner" && (
+								{canDeleteKouden(permission) && (
 									<DeleteKoudenDialog
 										koudenId={koudenId}
 										koudenTitle={koudenTitle}
-										onDelete={onDelete}
 									/>
 								)}
 							</div>
@@ -67,14 +68,13 @@ export function KoudenActionsMenu({
 			<PopoverContent align="end" className="w-[200px]">
 				<div className="flex flex-col gap-1">
 					<ExportExcelButton koudenId={koudenId} />
-					{(permission === "owner" || permission === "editor") && (
+					{canUpdateKouden(permission) && (
 						<>
 							<DuplicateKoudenButton koudenId={koudenId} />
-							{permission === "owner" && (
+							{canDeleteKouden(permission) && (
 								<DeleteKoudenDialog
 									koudenId={koudenId}
 									koudenTitle={koudenTitle}
-									onDelete={onDelete}
 								/>
 							)}
 						</>

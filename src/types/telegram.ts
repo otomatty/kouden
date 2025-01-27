@@ -11,3 +11,12 @@ export interface Telegram {
 	updatedAt: string;
 	createdBy: string;
 }
+
+export interface TelegramInput {
+	senderName: string;
+	senderOrganization?: string;
+	senderPosition?: string;
+	message?: string;
+	notes?: string;
+	koudenEntryId?: string;
+}

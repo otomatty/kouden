@@ -11,12 +11,20 @@ import { Loader2 } from "lucide-react";
 import { removeMember } from "@/app/_actions/roles";
 import type { KoudenMember } from "@/types/member";
 import { type PrimitiveAtom, useSetAtom } from "jotai";
-import type { MembersState } from "@/store/members";
+
+const getRoleDisplayName = (roleName: string) => {
+	const roleMap: Record<string, string> = {
+		owner: "管理者",
+		editor: "編集者",
+		viewer: "閲覧者",
+	};
+	return roleMap[roleName] || "未設定";
+};
 
 interface RemoveMemberButtonProps {
 	member: KoudenMember;
 	isSelf: boolean;
-	membersAtom: PrimitiveAtom<MembersState>;
+	membersAtom: PrimitiveAtom<KoudenMember[]>;
 }
 
 export function RemoveMemberButton({
@@ -29,6 +37,7 @@ export function RemoveMemberButton({
 	const [isLoading, setIsLoading] = useState(false);
 	const [isOpen, setIsOpen] = useState(false);
 	const setMembersState = useSetAtom(membersAtom);
+	const isOwner = member.role?.name === "owner";
 
 	const handleRemove = async () => {
 		try {
@@ -36,10 +45,7 @@ export function RemoveMemberButton({
 			await removeMember(member.kouden_id, member.user_id);
 
 			// クライアントサイドで状態を更新
-			setMembersState((prev) => ({
-				...prev,
-				members: prev.members.filter((m) => m.id !== member.id),
-			}));
+			setMembersState((prev) => prev.filter((m) => m.id !== member.id));
 
 			toast({
 				title: isSelf ? "香典帳から退出しました" : "メンバーを削除しました",
@@ -65,6 +71,11 @@ export function RemoveMemberButton({
 			setIsOpen(false);
 		}
 	};
+
+	// 管理者は削除できない
+	if (isOwner) {
+		return null;
+	}
 
 	return (
 		<ResponsiveDialog
@@ -96,7 +107,9 @@ export function RemoveMemberButton({
 					</Avatar>
 					<div>
 						<p className="font-medium">{member.profile?.display_name}</p>
-						<p className="text-sm text-muted-foreground">{member.role?.name}</p>
+						<p className="text-sm text-muted-foreground">
+							{getRoleDisplayName(member.role?.name || "")}
+						</p>
 					</div>
 				</div>
 				<div className="flex justify-end gap-2">

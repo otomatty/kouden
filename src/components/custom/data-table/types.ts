@@ -49,4 +49,5 @@ export interface DataTableProps<TData, TValue> {
 		rowId: string,
 		newValue: CellValue,
 	) => Promise<void>;
+	permission: "owner" | "editor" | "viewer";
 }

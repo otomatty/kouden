@@ -28,7 +28,7 @@ import {
 	tabletColumnVisibility,
 	editableColumns,
 } from "./columns";
-import type { KoudenPermission } from "@/app/_actions/koudens";
+import type { KoudenPermission } from "@/types/role";
 import { OfferingDialog } from "../dialog";
 import type { KoudenEntry } from "@/types/kouden";
 import { useLocalStorage } from "@/hooks/use-local-storage";
@@ -138,18 +138,6 @@ export function DataTable({
 
 			// いずれかのカラムがマッチした場合、その行の情報を表示
 			const hasMatch = matchResults.some((result) => result.matches);
-			if (hasMatch) {
-				console.log("Matched Row:", {
-					searchValue,
-					rowData: Object.fromEntries(
-						searchableColumns.map((columnId) => [
-							columnId,
-							row.getValue(columnId) ?? "null",
-						]),
-					),
-					matches: matchResults,
-				});
-			}
 
 			return hasMatch;
 		},

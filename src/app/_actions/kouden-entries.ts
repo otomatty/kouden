@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { Database } from "@/types/supabase";
+import type { CellValue } from "@/components/custom/data-table/types";
 
 export type KoudenEntryResponse =
 	Database["public"]["Tables"]["kouden_entries"]["Row"];
@@ -179,4 +180,71 @@ export async function deleteKoudenEntry(
 	Promise.resolve().then(() => {
 		revalidatePath(`/koudens/${koudenId}`);
 	});
+}
+
+// 複数エントリーの一括削除機能
+export async function deleteKoudenEntries(
+	ids: string[],
+	koudenId: string,
+): Promise<void> {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	if (!user) {
+		throw new Error("認証が必要です");
+	}
+
+	const { error } = await supabase
+		.from("kouden_entries")
+		.delete()
+		.in("id", ids);
+
+	if (error) {
+		throw new Error("香典情報の一括削除に失敗しました");
+	}
+
+	Promise.resolve().then(() => {
+		revalidatePath(`/koudens/${koudenId}`);
+	});
+}
+
+// セル単位の更新用に最適化した関数
+export async function updateKoudenEntryField(
+	id: string,
+	field: keyof KoudenEntryResponse,
+	value: CellValue,
+): Promise<KoudenEntryResponse> {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	if (!user) {
+		throw new Error("認証が必要です");
+	}
+
+	try {
+		const { error, data: updatedData } = await supabase
+			.from("kouden_entries")
+			.update({
+				[field]: value === "" ? null : value,
+			})
+			.eq("id", id)
+			.select()
+			.single();
+
+		if (error) {
+			throw new Error(`${field}の更新に失敗しました`);
+		}
+
+		Promise.resolve().then(() => {
+			revalidatePath(`/koudens/${updatedData.kouden_id}`);
+		});
+
+		return updatedData;
+	} catch (error) {
+		throw new Error(`${field}の更新に失敗しました`);
+	}
 }

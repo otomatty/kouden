@@ -10,11 +10,11 @@ import {
 	DrawerTrigger,
 	DrawerFooter,
 } from "@/components/ui/drawer";
-import type { KoudenEntryTableData, EditKoudenEntryFormData } from "../types";
+import type { KoudenEntry } from "@/types/kouden";
 import { EntryDialog } from "../dialog/entry-dialog";
-import { toast } from "@/hooks/use-toast";
+import { DeleteEntryDialog } from "../dialog/delete-entry-dialog";
 import { useState } from "react";
-import { RelationshipSkeleton } from "../table/relationship-skeleton";
+import { formatCurrency, formatPostalCode } from "@/lib/utils";
 
 const attendanceTypeMap = {
 	FUNERAL: "葬儀",
@@ -23,59 +23,13 @@ const attendanceTypeMap = {
 } as const;
 
 interface EntryCardProps {
-	entry: KoudenEntryTableData;
+	entry: KoudenEntry;
 	koudenId: string;
-	onEdit: (
-		data: EditKoudenEntryFormData,
-		entryId: string,
-	) => Promise<KoudenEntryTableData>;
-	onDelete: (id: string) => Promise<void>;
-	isLoadingRelationships?: boolean;
 }
 
-function formatPostalCode(code: string) {
-	if (!code) return "";
-	// 数字以外を削除
-	const numbers = code.replace(/[^\d]/g, "");
-	// 7桁になるように左を0で埋める
-	const paddedNumbers = numbers.padStart(7, "0");
-	// xxx-xxxxの形式に変換
-	return `${paddedNumbers.slice(0, 3)}-${paddedNumbers.slice(3)}`;
-}
-
-function formatAmount(amount: number) {
-	return new Intl.NumberFormat("ja-JP", {
-		style: "currency",
-		currency: "JPY",
-	}).format(amount);
-}
-
-export function EntryCard({
-	entry,
-	koudenId,
-	onEdit,
-	onDelete,
-	isLoadingRelationships,
-}: EntryCardProps) {
+export function EntryCard({ entry, koudenId }: EntryCardProps) {
 	const [isEditing, setIsEditing] = useState(false);
 	const [isOpen, setIsOpen] = useState(false);
-
-	const handleDelete = async () => {
-		try {
-			await onDelete(entry.id);
-			toast({
-				title: "削除成功",
-				description: "データが正常に削除されました",
-			});
-		} catch (error) {
-			console.error("EntryCard: Delete failed", error);
-			toast({
-				title: "削除エラー",
-				description: "データの削除に失敗しました",
-				variant: "destructive",
-			});
-		}
-	};
 
 	return (
 		<Drawer open={isOpen} onOpenChange={setIsOpen}>
@@ -88,14 +42,10 @@ export function EntryCard({
 									<h3 className="font-medium text-lg truncate">
 										{entry.name || "名前未設定"}
 									</h3>
-									{isLoadingRelationships ? (
-										<RelationshipSkeleton />
-									) : (
-										entry.relationship?.name && (
-											<Badge variant="outline" className="font-normal">
-												{entry.relationship.name}
-											</Badge>
-										)
+									{entry.relationship?.name && (
+										<Badge variant="outline" className="font-normal">
+											{entry.relationship.name}
+										</Badge>
 									)}
 								</div>
 								{entry.organization && (
@@ -104,7 +54,7 @@ export function EntryCard({
 									</p>
 								)}
 								<p className="text-2xl font-bold">
-									{formatAmount(entry.amount)}
+									{formatCurrency(entry.amount)}
 								</p>
 							</div>
 							<div className="flex flex-col items-end gap-2 ml-4">
@@ -140,7 +90,7 @@ export function EntryCard({
 									{entry.name || "名前未設定"}
 								</DrawerTitle>
 								<p className="text-2xl font-bold">
-									{formatAmount(entry.amount)}
+									{formatCurrency(entry.amount)}
 								</p>
 							</div>
 							<div className="space-y-1">
@@ -157,14 +107,10 @@ export function EntryCard({
 								</Badge>
 							</div>
 						</div>
-						{isLoadingRelationships ? (
-							<RelationshipSkeleton />
-						) : (
-							entry.relationship?.name && (
-								<Badge variant="outline" className="font-normal mt-2">
-									{entry.relationship.name}
-								</Badge>
-							)
+						{entry.relationship?.name && (
+							<Badge variant="outline" className="font-normal mt-2">
+								{entry.relationship.name}
+							</Badge>
 						)}
 					</DrawerHeader>
 
@@ -267,34 +213,20 @@ export function EntryCard({
 					<DrawerFooter className="px-4 py-4">
 						<div className="flex flex-col gap-2 w-full">
 							<EntryDialog
+								variant="edit"
 								koudenId={koudenId}
-								defaultValues={isEditing ? entry : undefined}
+								defaultValues={entry}
 								onSuccess={async (updatedEntry) => {
-									await onEdit(
-										{ ...updatedEntry, kouden_id: koudenId },
-										entry.id,
-									);
 									setIsEditing(false);
+									setIsOpen(false);
 								}}
-								trigger={
-									<Button
-										className="w-full"
-										variant="default"
-										onClick={() => setIsEditing(true)}
-									>
-										<Pencil className="h-4 w-4 mr-2" />
-										編集
-									</Button>
-								}
 							/>
-							<Button
-								className="w-full"
-								variant="destructive"
-								onClick={handleDelete}
-							>
-								<Trash2 className="h-4 w-4 mr-2" />
-								削除
-							</Button>
+							<DeleteEntryDialog
+								koudenId={koudenId}
+								entryId={entry.id}
+								entryName={entry.name || "名前未設定"}
+								onSuccess={() => setIsOpen(false)}
+							/>
 						</div>
 					</DrawerFooter>
 				</div>

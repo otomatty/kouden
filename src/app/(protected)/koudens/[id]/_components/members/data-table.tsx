@@ -1,97 +1,146 @@
 "use client";
 
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@/components/ui/table";
-import { Card } from "@/components/ui/card";
+import * as React from "react";
+import { DataTable as BaseDataTable } from "@/components/custom/data-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ColumnDef } from "@tanstack/react-table";
+import type { KoudenMember } from "@/types/member";
+import type { KoudenPermission } from "@/types/role";
+import { v4 as uuidv4 } from "uuid";
 import {
-	flexRender,
 	useReactTable,
 	getCoreRowModel,
+	getFilteredRowModel,
+	getSortedRowModel,
+	type SortingState,
+	type ColumnFiltersState,
+	type VisibilityState,
 } from "@tanstack/react-table";
-import type { KoudenMember } from "@/types/member";
-import { v4 as uuidv4 } from "uuid";
+import { DataTableToolbar } from "@/components/custom/data-table/toolbar";
+import { ShareLinkForm } from "./share-link-dialog";
+import type { KoudenRole } from "@/types/role";
+import {
+	columnLabels,
+	searchOptions,
+	sortOptions,
+	defaultColumnVisibility,
+	tabletColumnVisibility,
+} from "./columns";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
-interface DataTableProps {
+interface MembersTableProps {
 	columns: ColumnDef<KoudenMember>[];
 	data: KoudenMember[];
 	isLoading?: boolean;
+	permission: KoudenPermission;
+	koudenId: string;
+	roles?: KoudenRole[];
 }
 
-export function DataTable({
+export function MembersTable({
 	columns,
 	data,
+	permission,
+	koudenId,
+	roles = [],
 	isLoading = false,
-}: DataTableProps) {
+}: MembersTableProps) {
+	const isTablet = useMediaQuery("(max-width: 1024px)");
+	const [sorting, setSorting] = React.useState<SortingState>([]);
+	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+		[],
+	);
+	const [columnVisibility, setColumnVisibility] =
+		React.useState<VisibilityState>(
+			isTablet ? tabletColumnVisibility : defaultColumnVisibility,
+		);
+	const [globalFilter, setGlobalFilter] = React.useState("");
+
+	// 画面サイズが変更された時に列の表示状態を更新
+	React.useEffect(() => {
+		setColumnVisibility(
+			isTablet ? tabletColumnVisibility : defaultColumnVisibility,
+		);
+	}, [isTablet]);
+
 	const table = useReactTable({
-		data,
 		columns,
+		data,
 		getCoreRowModel: getCoreRowModel(),
+		getFilteredRowModel: getFilteredRowModel(),
+		getSortedRowModel: getSortedRowModel(),
+		onSortingChange: setSorting,
+		onColumnFiltersChange: setColumnFilters,
+		onColumnVisibilityChange: setColumnVisibility,
+		onGlobalFilterChange: setGlobalFilter,
+		enableGlobalFilter: true,
+		globalFilterFn: (row, _columnId, filterValue) => {
+			if (!filterValue) return true;
+
+			const searchValue = String(filterValue).toLowerCase();
+			const searchableColumns = ["member", "role"];
+
+			// 各カラムのマッチング結果を収集
+			const matchResults = searchableColumns.map((columnId) => {
+				const value = row.getValue(columnId);
+				const matches =
+					value != null && String(value).toLowerCase().includes(searchValue);
+				return { columnId, value: value ?? "null", matches };
+			});
+
+			// いずれかのカラムがマッチした場合、その行の情報を表示
+			const hasMatch = matchResults.some((result) => result.matches);
+			return hasMatch;
+		},
+		state: {
+			sorting,
+			columnFilters,
+			columnVisibility,
+			globalFilter,
+		},
 	});
 
-	const skeletonRows = Array.from({ length: 3 }, () => ({
-		id: uuidv4(),
-		cells: Array.from({ length: columns.length }, () => uuidv4()),
-	}));
+	if (isLoading) {
+		return (
+			<div className="space-y-4">
+				<div className="flex items-center justify-between">
+					<Skeleton className="h-10 w-[250px]" />
+					<Skeleton className="h-10 w-[200px]" />
+				</div>
+				<div className="space-y-2">
+					{Array.from({ length: 3 }, () => uuidv4()).map((id) => (
+						<Skeleton key={id} className="h-16 w-full" />
+					))}
+				</div>
+			</div>
+		);
+	}
 
 	return (
-		<Card className="p-4">
-			<Table>
-				<TableHeader>
-					<TableRow>
-						{table
-							.getHeaderGroups()
-							.map((headerGroup) =>
-								headerGroup.headers.map((header) => (
-									<TableHead key={header.id}>
-										{flexRender(
-											header.column.columnDef.header,
-											header.getContext(),
-										)}
-									</TableHead>
-								)),
-							)}
-					</TableRow>
-				</TableHeader>
-				<TableBody>
-					{isLoading ? (
-						<>
-							{skeletonRows.map((row) => (
-								<TableRow key={row.id}>
-									{row.cells.map((cellId) => (
-										<TableCell key={cellId}>
-											<Skeleton className="h-6 w-full" />
-										</TableCell>
-									))}
-								</TableRow>
-							))}
-						</>
-					) : table.getRowModel().rows.length === 0 ? (
-						<TableRow>
-							<TableCell colSpan={columns.length} className="text-center">
-								メンバーがいません
-							</TableCell>
-						</TableRow>
-					) : (
-						table.getRowModel().rows.map((row) => (
-							<TableRow key={row.id}>
-								{row.getVisibleCells().map((cell) => (
-									<TableCell key={cell.id}>
-										{flexRender(cell.column.columnDef.cell, cell.getContext())}
-									</TableCell>
-								))}
-							</TableRow>
-						))
-					)}
-				</TableBody>
-			</Table>
-		</Card>
+		<div className="space-y-4">
+			<DataTableToolbar
+				searchOptions={searchOptions}
+				sortOptions={sortOptions}
+				columnLabels={columnLabels}
+				table={table}
+			>
+				{permission === "owner" && (
+					<div className="flex items-center justify-end">
+						<ShareLinkForm koudenId={koudenId} roles={roles} />
+					</div>
+				)}
+			</DataTableToolbar>
+			<BaseDataTable
+				columns={columns}
+				data={data}
+				sorting={sorting}
+				onSortingChange={setSorting}
+				columnFilters={columnFilters}
+				onColumnFiltersChange={setColumnFilters}
+				columnVisibility={columnVisibility}
+				onColumnVisibilityChange={setColumnVisibility}
+				emptyMessage="メンバーがいません"
+			/>
+		</div>
 	);
 }

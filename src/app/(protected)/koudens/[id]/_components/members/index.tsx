@@ -1,72 +1,79 @@
 "use client";
 
 import { useEffect } from "react";
-import { useAtomValue, useSetAtom } from "jotai";
-import { getKoudenMembers } from "@/app/_actions/members";
-import { getKoudenRoles } from "@/app/_actions/roles";
-import { checkKoudenPermission } from "@/app/_actions/koudens";
-import { userAtom } from "@/store/auth";
-import { membersAtomFamily, isCacheValid } from "@/store/members";
-import { ShareLinkForm } from "./share-link-form";
-import { DataTable } from "./data-table";
+import { useAtom } from "jotai";
+import { membersAtom } from "@/store/members";
+import { MembersTable } from "./data-table";
 import { createColumns } from "./columns";
+import { getKoudenMembers, getKoudenRoles } from "@/app/_actions/members";
+import { useQuery } from "@tanstack/react-query";
+import type { KoudenPermission } from "@/types/role";
 
-interface MemberTableProps {
+interface MemberViewProps {
 	koudenId: string;
+	currentUserId?: string;
+	permission: KoudenPermission;
 }
 
-export function MemberTable({ koudenId }: MemberTableProps) {
-	const membersAtom = membersAtomFamily(koudenId);
-	const { members, roles, permission, isLoading, lastUpdated } =
-		useAtomValue(membersAtom);
-	const setMembersState = useSetAtom(membersAtom);
-	const user = useAtomValue(userAtom);
+export function MemberView({
+	koudenId,
+	currentUserId,
+	permission,
+}: MemberViewProps) {
+	const [members, setMembers] = useAtom(membersAtom);
+
+	// メンバー一覧の取得
+	const {
+		data: fetchedMembers,
+		isLoading: isMembersLoading,
+		error: membersError,
+	} = useQuery({
+		queryKey: ["members", koudenId],
+		queryFn: () => getKoudenMembers(koudenId),
+	});
+
+	// ロール一覧の取得
+	const {
+		data: roles = [],
+		isLoading: isRolesLoading,
+		error: rolesError,
+	} = useQuery({
+		queryKey: ["roles", koudenId],
+		queryFn: () => getKoudenRoles(koudenId),
+	});
 
 	useEffect(() => {
-		const loadData = async () => {
-			// キャッシュが有効な場合はスキップ
-			if (isCacheValid(lastUpdated)) {
-				return;
-			}
+		if (fetchedMembers) {
+			setMembers(fetchedMembers);
+		}
+	}, [fetchedMembers, setMembers]);
 
-			try {
-				setMembersState((prev) => ({ ...prev, isLoading: true }));
-				const [membersData, rolesData, permissionData] = await Promise.all([
-					getKoudenMembers(koudenId),
-					getKoudenRoles(koudenId),
-					checkKoudenPermission(koudenId),
-				]);
+	if (membersError || rolesError) {
+		return (
+			<div className="text-center text-destructive">
+				エラーが発生しました。再度お試しください。
+			</div>
+		);
+	}
 
-				setMembersState({
-					members: membersData,
-					roles: rolesData,
-					permission: permissionData,
-					isLoading: false,
-					lastUpdated: Date.now(),
-				});
-			} catch (error) {
-				console.error("[ERROR] Failed to load data:", error);
-				setMembersState((prev) => ({ ...prev, isLoading: false }));
-			}
-		};
-		loadData();
-	}, [koudenId, lastUpdated, setMembersState]);
-
-	const canManageMembers = permission === "owner" || permission === "editor";
 	const columns = createColumns({
 		permission,
-		currentUserId: user?.id,
+		currentUserId,
 		membersAtom,
+		koudenId,
+		roles,
 	});
 
 	return (
-		<div className="space-y-4">
-			{canManageMembers && (
-				<div className="flex justify-end">
-					<ShareLinkForm koudenId={koudenId} roles={roles} />
-				</div>
-			)}
-			<DataTable columns={columns} data={members} isLoading={isLoading} />
-		</div>
+		<>
+			<MembersTable
+				columns={columns}
+				data={members}
+				permission={permission}
+				koudenId={koudenId}
+				roles={roles}
+				isLoading={isMembersLoading || isRolesLoading}
+			/>
+		</>
 	);
 }

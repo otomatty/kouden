@@ -1,8 +1,7 @@
 import { atomFamily } from "jotai/utils";
 import { atom } from "jotai";
 import type { KoudenMember } from "@/types/member";
-import type { KoudenRole } from "@/types/role";
-import type { KoudenPermission } from "@/app/_actions/koudens";
+import type { KoudenRole, KoudenPermission } from "@/types/role";
 
 export interface MembersState {
 	members: KoudenMember[];
@@ -19,7 +18,7 @@ export const membersAtomFamily = atomFamily((koudenId: string) =>
 	atom<MembersState>({
 		members: [],
 		roles: [],
-		permission: null,
+		permission: "viewer",
 		isLoading: true,
 		lastUpdated: 0,
 	}),
@@ -29,3 +28,5 @@ export const membersAtomFamily = atomFamily((koudenId: string) =>
 export const isCacheValid = (lastUpdated: number) => {
 	return Date.now() - lastUpdated < CACHE_EXPIRY;
 };
+
+export const membersAtom = atom<KoudenMember[]>([]);

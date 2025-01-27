@@ -11,6 +11,12 @@ import type {
 	KoudenEntry,
 } from "@/types/kouden";
 import { initializeDefaultRelationships } from "./relationships";
+import {
+	checkKoudenPermission,
+	hasEditPermission,
+	isKoudenOwner,
+} from "./permissions";
+import { KOUDEN_ROLES } from "@/types/role";
 
 const koudenSchema = z.object({
 	title: z.string().min(1, "香典帳のタイトルを入力してください"),
@@ -19,61 +25,13 @@ const koudenSchema = z.object({
 
 export type CreateKoudenInput = z.infer<typeof koudenSchema>;
 
-// 権限の型定義を追加
-export type KoudenPermission = "owner" | "editor" | "viewer" | null;
-
-// 権限チェック関数を追加
-export async function checkKoudenPermission(
-	koudenId: string,
-): Promise<KoudenPermission> {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-
-	if (!user) {
-		return null;
-	}
-
-	// オーナーチェック
-	const { data: kouden } = await supabase
-		.from("koudens")
-		.select("owner_id, created_by")
-		.eq("id", koudenId)
-		.single();
-
-	if (!kouden) {
-		return null;
-	}
-
-	if (kouden.owner_id === user.id || kouden.created_by === user.id) {
-		return "owner";
-	}
-
-	// メンバーロールチェック
-	const { data: member } = await supabase
-		.from("kouden_members")
-		.select("role_id, kouden_roles!inner(name)")
-		.eq("kouden_id", koudenId)
-		.eq("user_id", user.id)
-		.single();
-
-	if (member?.kouden_roles.name === "編集者") {
-		return "editor";
-	}
-	if (member?.kouden_roles.name === "閲覧者") {
-		return "viewer";
-	}
-
-	return null;
-}
-
 export async function createKouden({
 	title,
 	description,
 	userId,
 }: CreateKoudenParams): Promise<{ kouden?: Kouden; error?: string }> {
 	try {
+		console.log("[DEBUG] createKouden開始:", { title, description, userId });
 		const supabase = await createClient();
 
 		// ユーザーIDが渡されていない場合は現在のユーザーのIDを使用
@@ -81,6 +39,7 @@ export async function createKouden({
 			const {
 				data: { user },
 			} = await supabase.auth.getUser();
+			console.log("[DEBUG] 現在のユーザー:", user);
 			if (!user) {
 				return { error: "認証が必要です" };
 			}
@@ -99,6 +58,8 @@ export async function createKouden({
 			.select("*")
 			.single();
 
+		console.log("[DEBUG] 香典帳作成結果:", { kouden, error: koudenError });
+
 		if (koudenError) {
 			throw koudenError;
 		}
@@ -110,23 +71,33 @@ export async function createKouden({
 			.eq("id", userId)
 			.single();
 
+		console.log("[DEBUG] オーナー情報取得結果:", { owner, error: ownerError });
+
 		if (ownerError) {
 			throw ownerError;
 		}
 
-		// 3. 編集者ロールを取得
+		// 3. デフォルトの関係性を初期化（トリガーで自動的に作成されるため、待機する）
+		await new Promise((resolve) => setTimeout(resolve, 1000));
+
+		// 4. 編集者ロールを取得
 		const { data: ownerRole, error: roleError } = await supabase
 			.from("kouden_roles")
 			.select("id")
 			.eq("kouden_id", kouden.id)
-			.eq("name", "編集者")
+			.eq("name", KOUDEN_ROLES.EDITOR)
 			.single();
+
+		console.log("[DEBUG] 編集者ロール取得結果:", {
+			ownerRole,
+			error: roleError,
+		});
 
 		if (!ownerRole || roleError) {
 			throw new Error("編集者ロールの取得に失敗しました");
 		}
 
-		// 4. メンバーとして登録
+		// 5. メンバーとして登録
 		const { error: memberError } = await supabase
 			.from("kouden_members")
 			.insert({
@@ -136,12 +107,11 @@ export async function createKouden({
 				added_by: userId,
 			});
 
+		console.log("[DEBUG] メンバー登録結果:", { error: memberError });
+
 		if (memberError) {
 			throw memberError;
 		}
-
-		// 5. デフォルトの関係性を初期化
-		await initializeDefaultRelationships(kouden.id);
 
 		return {
 			kouden: {
@@ -150,7 +120,7 @@ export async function createKouden({
 			} as unknown as Kouden,
 		};
 	} catch (error) {
-		console.error("[ERROR] Error creating kouden:", error);
+		console.error("[ERROR] 香典帳作成エラー:", error);
 		return { error: "香典帳の作成に失敗しました" };
 	}
 }
@@ -399,7 +369,7 @@ export async function shareKouden(id: string, userIds: string[]) {
 		.from("kouden_roles")
 		.select("id")
 		.eq("kouden_id", id)
-		.eq("name", "閲覧者")
+		.eq("name", "viewer")
 		.single();
 
 	if (!viewerRole) {
@@ -515,7 +485,7 @@ export async function duplicateKouden(
 			.from("kouden_roles")
 			.select("id")
 			.eq("kouden_id", newKouden.id)
-			.eq("name", "編集者")
+			.eq("name", KOUDEN_ROLES.EDITOR)
 			.single();
 
 		if (!ownerRole || roleError) {

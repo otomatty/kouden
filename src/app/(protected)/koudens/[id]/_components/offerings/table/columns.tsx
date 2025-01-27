@@ -12,7 +12,7 @@ import {
 	ImageIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import type { KoudenPermission } from "@/app/_actions/koudens";
+import type { KoudenPermission } from "@/types/role";
 import type { Table, Row, Column } from "@tanstack/react-table";
 import type { Offering } from "@/types/offering";
 import {

@@ -11,6 +11,7 @@ import {
 	type ColumnFiltersState,
 	type VisibilityState,
 } from "@tanstack/react-table";
+import { useAtom } from "jotai";
 import type { Telegram } from "@/types/telegram";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { DataTable as BaseDataTable } from "@/components/custom/data-table";
@@ -27,18 +28,24 @@ import {
 	tabletColumnVisibility,
 	editableColumns,
 } from "./columns";
-import type { KoudenPermission } from "@/app/_actions/koudens";
+import type { KoudenPermission } from "@/types/role";
 import { TelegramDialog } from "../dialog";
 import type { KoudenEntry } from "@/types/kouden";
+import {
+	telegramStateAtom,
+	telegramFilterTextAtom,
+	telegramSortStateAtom,
+	updateTelegramAtom,
+	deleteTelegramAtom,
+} from "@/store/telegrams";
+import type { TelegramInput } from "@/types/telegram";
 
 interface DataTableProps {
-	columns: ColumnDef<Telegram, string | number | boolean | null>[];
+	columns: ColumnDef<Telegram>[];
 	data: Telegram[];
 	permission?: KoudenPermission;
 	koudenId: string;
 	koudenEntries: KoudenEntry[];
-	onUpdate?: (id: string, data: Partial<Telegram>) => Promise<void>;
-	onDelete?: (ids: string[]) => Promise<void>;
 }
 
 export function DataTable({
@@ -47,11 +54,13 @@ export function DataTable({
 	permission,
 	koudenId,
 	koudenEntries,
-	onUpdate,
-	onDelete,
 }: DataTableProps) {
 	const isTablet = useMediaQuery("(max-width: 1024px)");
-	const [sorting, setSorting] = React.useState<SortingState>([]);
+	const [filterText, setFilterText] = useAtom(telegramFilterTextAtom);
+	const [sortState, setSortState] = useAtom(telegramSortStateAtom);
+	const [updateTelegram] = useAtom(updateTelegramAtom);
+	const [deleteTelegram] = useAtom(deleteTelegramAtom);
+
 	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
 		[],
 	);
@@ -60,10 +69,6 @@ export function DataTable({
 			isTablet ? tabletColumnVisibility : defaultColumnVisibility,
 		);
 	const [rowSelection, setRowSelection] = React.useState({});
-	const [globalFilter, setGlobalFilter] = React.useState("");
-	const [editingTelegram, setEditingTelegram] = React.useState<Telegram | null>(
-		null,
-	);
 
 	// 画面サイズが変更された時に列の表示状態を更新
 	React.useEffect(() => {
@@ -81,7 +86,7 @@ export function DataTable({
 	const handleDeleteRows = React.useCallback(
 		async (ids: string[]) => {
 			try {
-				await onDelete?.(ids);
+				await deleteTelegram?.(ids);
 				toast({
 					title: "削除完了",
 					description: `${ids.length}件のデータを削除しました`,
@@ -96,7 +101,7 @@ export function DataTable({
 				});
 			}
 		},
-		[onDelete],
+		[deleteTelegram],
 	);
 
 	const table = useReactTable({
@@ -105,61 +110,66 @@ export function DataTable({
 		getCoreRowModel: getCoreRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
 		getSortedRowModel: getSortedRowModel(),
-		onSortingChange: setSorting,
 		onColumnFiltersChange: setColumnFilters,
 		onColumnVisibilityChange: setColumnVisibility,
 		onRowSelectionChange: setRowSelection,
-		onGlobalFilterChange: setGlobalFilter,
 		state: {
-			sorting,
+			sorting: [{ id: sortState.field, desc: sortState.direction === "desc" }],
 			columnFilters,
 			columnVisibility,
 			rowSelection,
-			globalFilter,
+			globalFilter: filterText,
 		},
 	});
 
-	const handleCellEdit = async (
-		columnId: string,
-		rowId: string,
-		value: CellValue,
-	) => {
-		try {
-			let targetRow: Telegram | undefined;
-			if (/^\d+$/.test(rowId)) {
-				const index = Number.parseInt(rowId, 10);
-				targetRow = data[index];
-			} else {
-				targetRow = data.find((row) => row.id === rowId);
+	const handleCellEdit = React.useCallback(
+		async (columnId: string, rowId: string, newValue: CellValue) => {
+			console.log("Cell edit triggered:", { rowId, columnId, newValue });
+			const row = data.find((item) => item.id === rowId);
+			if (!row) {
+				console.error("Row not found for editing:", rowId);
+				return;
 			}
 
-			if (!targetRow) {
-				throw new Error("編集対象の行が見つかりません");
+			const value = newValue === null ? "" : String(newValue);
+
+			try {
+				await updateTelegram?.(row.id, {
+					senderName: row.senderName,
+					senderOrganization:
+						columnId === "senderOrganization"
+							? value || undefined
+							: row.senderOrganization || undefined,
+					senderPosition:
+						columnId === "senderPosition"
+							? value || undefined
+							: row.senderPosition || undefined,
+					message:
+						columnId === "message"
+							? value || undefined
+							: row.message || undefined,
+					notes:
+						columnId === "notes" ? value || undefined : row.notes || undefined,
+					koudenEntryId:
+						columnId === "koudenEntryId"
+							? value || undefined
+							: row.koudenEntryId || undefined,
+				});
+				console.log("Cell edit successful");
+			} catch (error) {
+				console.error("Cell edit failed:", error);
+				toast({
+					title: "エラーが発生しました",
+					description:
+						error instanceof Error
+							? error.message
+							: "データの更新に失敗しました",
+					variant: "destructive",
+				});
 			}
-
-			// 値の型変換
-			let convertedValue: string | number | undefined;
-
-			if (columnId === "price") {
-				convertedValue =
-					value === "" || value === null ? undefined : Number(value);
-			} else {
-				convertedValue =
-					value === "" || value === null ? undefined : String(value);
-			}
-
-			await onUpdate?.(targetRow.id, {
-				[columnId]: convertedValue,
-			});
-		} catch (error) {
-			toast({
-				title: "エラーが発生しました",
-				description:
-					error instanceof Error ? error.message : "データの更新に失敗しました",
-				variant: "destructive",
-			});
-		}
-	};
+		},
+		[data, updateTelegram],
+	);
 
 	return (
 		<div className="space-y-4">
@@ -168,14 +178,20 @@ export function DataTable({
 				searchOptions={searchOptions}
 				sortOptions={sortOptions}
 				columnLabels={columnLabels}
+				searchValue={filterText}
+				onSearchChange={setFilterText}
+				sortValue={`${sortState.field}_${sortState.direction}`}
+				onSortChange={(value) => {
+					const [field, direction] = value.split("_");
+					setSortState({
+						field: field as keyof Telegram,
+						direction: direction as "asc" | "desc",
+					});
+				}}
 			>
 				<div className="flex items-center gap-4">
 					{!isTablet && (
-						<TelegramDialog
-							koudenId={koudenId}
-							koudenEntries={koudenEntries}
-							isOpen={!!editingTelegram}
-						/>
+						<TelegramDialog koudenId={koudenId} koudenEntries={koudenEntries} />
 					)}
 				</div>
 			</DataTableToolbar>
@@ -198,8 +214,17 @@ export function DataTable({
 				data={table.getFilteredRowModel().rows.map((row) => row.original)}
 				editableColumns={editableColumns}
 				onCellEdit={handleCellEdit}
-				sorting={sorting}
-				onSortingChange={setSorting}
+				sorting={[
+					{ id: sortState.field, desc: sortState.direction === "desc" },
+				]}
+				onSortingChange={(sorting) => {
+					if (Array.isArray(sorting) && sorting.length > 0) {
+						setSortState({
+							field: sorting[0].id as keyof Telegram,
+							direction: sorting[0].desc ? "desc" : "asc",
+						});
+					}
+				}}
 				columnFilters={columnFilters}
 				onColumnFiltersChange={setColumnFilters}
 				columnVisibility={columnVisibility}

@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import type { Telegram } from "@/atoms/telegrams";
 import { getOfferings } from "@/app/_actions/offerings";
 import {
 	createReturnItem,
@@ -14,6 +13,7 @@ import {
 	updateKouden,
 	deleteKouden,
 } from "@/app/_actions/koudens";
+import { checkKoudenPermission } from "@/app/_actions/permissions";
 import { KoudenDetail } from "./_components/kouden-detail";
 import { getTelegrams } from "@/app/_actions/telegrams";
 import type { OfferingType } from "@/types/offering";
@@ -61,12 +61,21 @@ const wrappedDeleteKouden = async (id: string) => {
 export default async function KoudenDetailPage({ params }: Props) {
 	const { id } = await params;
 	const data = await getKoudenWithEntries(id);
-	const telegrams = (await getTelegrams(id)) as unknown as Telegram[];
+	const telegrams = await getTelegrams(id);
 	const rawOfferings = await getOfferings(id);
 	const offerings = rawOfferings.map((offering) => ({
 		...offering,
 		type: offering.type as OfferingType,
 	}));
+	const permission = await checkKoudenPermission(id);
+
+	console.log("Current user permission:", {
+		koudenId: id,
+		permission,
+		canEdit: permission === "owner" || permission === "editor",
+		canDelete: permission === "owner",
+	});
+
 	if (!data) {
 		notFound();
 	}
@@ -77,11 +86,10 @@ export default async function KoudenDetailPage({ params }: Props) {
 			entries={data.entries}
 			telegrams={telegrams}
 			offerings={offerings}
+			permission={permission}
 			createReturnItem={wrappedCreateReturnItem}
 			updateReturnItem={wrappedUpdateReturnItem}
 			deleteReturnItem={wrappedDeleteReturnItem}
-			updateKouden={wrappedUpdateKouden}
-			deleteKouden={wrappedDeleteKouden}
 		/>
 	);
 }

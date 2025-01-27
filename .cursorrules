@@ -7,7 +7,7 @@ expertise:
   - Jotai
   - Cloudflare Pages
   - Bun
-  - Firebase
+  - Supabase
 
 # コーディングスタイルとベストプラクティス
 coding_guidelines:
@@ -61,3 +61,4 @@ database:
   - "データベースのテーブルはSQLファイルとして配置し、テーブル名はテーブル名.sqlとすること。"
   - "RLSポリシーを設定すること。"
   - "ポリシーについては自己参照、相互参照を避けること。"
+  - "データベースの構造を調べる際のクエリについてはSupabaseのSQLエディターで実行できる形式で記述すること。"

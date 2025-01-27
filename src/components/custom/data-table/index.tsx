@@ -39,6 +39,7 @@ export function DataTable<TData>({
 	headerClassName,
 	bodyClassName,
 	cellClassName,
+	permission,
 }: DataTableProps<TData, CellValue>) {
 	const table = useReactTable({
 		data,
@@ -59,13 +60,15 @@ export function DataTable<TData>({
 	});
 
 	const renderCell = React.useCallback(
-		(cell: Cell<TData, CellValue>, columnId: string) => {
+		(cell: Cell<TData, unknown>, columnId: string) => {
 			const config = editableColumns[columnId];
-			if (!config || config.type === "readonly") {
+			const canEdit = permission === "owner" || permission === "editor";
+
+			if (!config || config.type === "readonly" || !canEdit) {
 				return flexRender(cell.column.columnDef.cell, cell.getContext());
 			}
 
-			const value = cell.getValue();
+			const value = cell.getValue() as CellValue;
 			const rowId = cell.row.id;
 
 			const handleSave = async (newValue: CellValue) => {
@@ -110,7 +113,7 @@ export function DataTable<TData>({
 					);
 			}
 		},
-		[editableColumns, onCellEdit],
+		[editableColumns, onCellEdit, permission],
 	);
 
 	return (

@@ -1,22 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-
-import type { Database } from "@/types/supabase";
-import type { KoudenEntry } from "@/types/kouden";
-import type { Offering } from "@/types/offering";
-import type { AttendanceType } from "./entries/types";
-import type { KoudenPermission } from "@/app/_actions/koudens";
-import type { Telegram } from "@/atoms/telegrams";
-import { checkKoudenPermission } from "@/app/_actions/koudens";
-import type {
-	CreateReturnItemInput,
-	UpdateReturnItemInput,
-	ReturnItemResponse,
-} from "@/types/actions";
+// ライブラリ
 import { useRouter } from "next/navigation";
+import { useSetAtom } from "jotai";
 
-import { Button } from "@/components/ui/button";
+// UIコンポーネント/アイコン
 import {
 	ArrowLeft,
 	Table2,
@@ -26,32 +15,44 @@ import {
 	Package,
 	Users,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-// 各タブのコンポーネント
-// _componentsディレクトリにディレクトリを分けて配置している
-import { KoudenEntryTable } from "./entries";
-import { KoudenStatistics } from "./statistics";
-import { OfferingView } from "./offerings";
-import { ReturnItemTable } from "./return-items";
-import { MemberTable } from "./members";
-import { TelegramsView } from "./telegrams";
-// カスタムフック
-import { useMediaQuery } from "@/hooks/use-media-query";
+import { cn } from "@/lib/utils";
+// 型定義
+import type { Kouden } from "@/types/kouden";
+import type { KoudenEntry } from "@/types/kouden";
+import type { Offering } from "@/types/offering";
+import type { AttendanceType } from "@/types/kouden";
+import type { KoudenPermission } from "@/types/role";
+import type { Telegram } from "@/types/telegram";
+import type {
+	CreateReturnItemInput,
+	UpdateReturnItemInput,
+	ReturnItemResponse,
+} from "@/types/actions";
+// 状態管理
+import { permissionAtom } from "@/store/permission";
 // 共通UI(common)
 import { MobileMenu } from "./_common/mobile-menu";
 import { KoudenTitle } from "./_common/kouden-title";
 import { KoudenActionsMenu } from "./actions/kouden-actions-menu";
-
-import { cn } from "@/lib/utils";
-
-type Kouden = Database["public"]["Tables"]["koudens"]["Row"];
+// 各タブのコンポーネント
+// _componentsディレクトリにディレクトリを分けて配置している
+import { EntryView } from "./entries";
+import { KoudenStatistics } from "./statistics";
+import { OfferingView } from "./offerings";
+import { ReturnItemTable } from "./return-items";
+import { MemberView } from "./members";
+import { TelegramsView } from "./telegrams";
+// カスタムフック
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 interface KoudenDetailProps {
 	kouden: Kouden;
 	entries: KoudenEntry[];
 	telegrams: Telegram[];
 	offerings: Offering[];
-
+	permission: KoudenPermission;
 	createReturnItem: (
 		input: CreateReturnItemInput,
 	) => Promise<ReturnItemResponse>;
@@ -60,11 +61,6 @@ interface KoudenDetailProps {
 		input: UpdateReturnItemInput,
 	) => Promise<ReturnItemResponse>;
 	deleteReturnItem: (id: string, koudenEntryId: string) => Promise<void>;
-	updateKouden: (
-		id: string,
-		input: { title: string; description?: string },
-	) => Promise<void>;
-	deleteKouden: (id: string) => Promise<void>;
 }
 
 export function KoudenDetail({
@@ -72,10 +68,11 @@ export function KoudenDetail({
 	entries: initialEntries,
 	telegrams,
 	offerings,
-	updateKouden,
-	deleteKouden,
+	permission,
 }: KoudenDetailProps) {
 	const router = useRouter();
+	const setPermission = useSetAtom(permissionAtom);
+
 	const [entries, setEntries] = useState(initialEntries);
 	const [viewMode, setViewMode] = useState<
 		| "table"
@@ -85,7 +82,6 @@ export function KoudenDetail({
 		| "return-items"
 		| "members"
 	>("table");
-	const [permission, setPermission] = useState<KoudenPermission>(null);
 	const isDesktop = useMediaQuery("(min-width: 768px)");
 
 	// entriesの更新を監視
@@ -93,13 +89,10 @@ export function KoudenDetail({
 		setEntries(initialEntries);
 	}, [initialEntries]);
 
+	// 権限の更新
 	useEffect(() => {
-		const checkPermission = async () => {
-			const userPermission = await checkKoudenPermission(kouden.id);
-			setPermission(userPermission);
-		};
-		checkPermission();
-	}, [kouden.id]);
+		setPermission(permission);
+	}, [permission, setPermission]);
 
 	return (
 		<>
@@ -114,19 +107,11 @@ export function KoudenDetail({
 				</Button>
 				<div className="flex items-center justify-between">
 					<KoudenTitle
+						koudenId={kouden.id}
 						title={kouden.title}
 						description={kouden.description}
-						permission={permission}
-						onUpdate={async (data) => {
-							await updateKouden(kouden.id, data);
-						}}
 					/>
-					<KoudenActionsMenu
-						koudenId={kouden.id}
-						koudenTitle={kouden.title}
-						permission={permission}
-						onDelete={deleteKouden}
-					/>
+					<KoudenActionsMenu koudenId={kouden.id} koudenTitle={kouden.title} />
 				</div>
 			</div>
 
@@ -242,7 +227,7 @@ export function KoudenDetail({
 
 				<div className="mt-4">
 					<TabsContent value="table" className="m-0">
-						<KoudenEntryTable
+						<EntryView
 							koudenId={kouden.id}
 							entries={entries.map((entry) => ({
 								...entry,
@@ -255,10 +240,16 @@ export function KoudenDetail({
 							offerings={offerings}
 							koudenId={kouden.id}
 							koudenEntries={entries}
+							permission={permission}
 						/>
 					</TabsContent>
 					<TabsContent value="telegrams" className="m-0">
-						<TelegramsView koudenId={kouden.id} telegrams={telegrams} />
+						<TelegramsView
+							koudenId={kouden.id}
+							telegrams={telegrams}
+							permission={permission}
+							koudenEntries={entries}
+						/>
 					</TabsContent>
 					<TabsContent value="return-items" className="m-0">
 						<ReturnItemTable koudenId={kouden.id} />
@@ -267,7 +258,7 @@ export function KoudenDetail({
 						<KoudenStatistics entries={entries} />
 					</TabsContent>
 					<TabsContent value="members" className="m-0">
-						<MemberTable koudenId={kouden.id} />
+						<MemberView koudenId={kouden.id} permission={permission} />
 					</TabsContent>
 				</div>
 			</Tabs>

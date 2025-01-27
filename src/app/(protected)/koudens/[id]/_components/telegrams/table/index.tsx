@@ -4,7 +4,7 @@ import * as React from "react";
 import { DataTable } from "./data-table";
 import { createColumns } from "./columns";
 import type { Telegram } from "@/types/telegram";
-import type { KoudenPermission } from "@/app/_actions/koudens";
+import type { KoudenPermission } from "@/types/role";
 import { TelegramDialog } from "../dialog";
 import { toast } from "@/hooks/use-toast";
 import { useTelegrams } from "@/hooks/useTelegrams";
@@ -24,13 +24,11 @@ export function TelegramTable({
 	koudenId,
 	koudenEntries,
 }: TelegramTableProps) {
-	const [selectedRows, setSelectedRows] = React.useState<string[]>([]);
 	const [editingTelegram, setEditingTelegram] = React.useState<Telegram | null>(
 		null,
 	);
 
-	const { updateTelegram, deleteTelegram, error, loading } =
-		useTelegrams(koudenId);
+	const { state, updateTelegram, deleteTelegram } = useTelegrams(koudenId);
 
 	const isTablet = useMediaQuery("(max-width: 1024px)");
 
@@ -94,20 +92,25 @@ export function TelegramTable({
 	const columns = React.useMemo(
 		() =>
 			createColumns({
-				onEditRow: setEditingTelegram,
+				onEditRow: async (telegram) => {
+					setEditingTelegram(telegram);
+					return Promise.resolve();
+				},
 				onDeleteRows: handleDelete,
-				selectedRows,
+				selectedRows: [],
 				permission,
 				koudenEntries,
 			}),
-		[selectedRows, permission, handleDelete, koudenEntries],
+		[permission, handleDelete, koudenEntries],
 	);
 
-	if (error) {
+	if (state.error) {
 		toast({
 			title: "エラーが発生しました",
 			description:
-				typeof error === "string" ? error : "データの操作に失敗しました",
+				typeof state.error === "string"
+					? state.error
+					: "データの操作に失敗しました",
 			variant: "destructive",
 		});
 	}
@@ -120,16 +123,9 @@ export function TelegramTable({
 				permission={permission}
 				koudenId={koudenId}
 				koudenEntries={koudenEntries}
-				onUpdate={handleUpdate}
-				onDelete={handleDelete}
 			/>
 			{editingTelegram && !isTablet && (
-				<TelegramDialog
-					koudenId={koudenId}
-					koudenEntries={koudenEntries}
-					defaultValues={editingTelegram}
-					isOpen={!!editingTelegram}
-				/>
+				<TelegramDialog koudenId={koudenId} koudenEntries={koudenEntries} />
 			)}
 		</>
 	);

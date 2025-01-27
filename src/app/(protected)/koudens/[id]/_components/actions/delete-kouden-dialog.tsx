@@ -7,22 +7,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
+import { deleteKouden } from "@/app/_actions/koudens";
+import { useRouter } from "next/navigation";
+import { toast } from "@/hooks/use-toast";
 
 interface DeleteKoudenDialogProps {
 	koudenId: string;
 	koudenTitle: string;
-	onDelete: (id: string) => Promise<void>;
 }
 
 export function DeleteKoudenDialog({
 	koudenId,
 	koudenTitle,
-	onDelete,
 }: DeleteKoudenDialogProps) {
 	const [isOpen, setIsOpen] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [confirmTitle, setConfirmTitle] = useState("");
 	const isDesktop = useMediaQuery("(min-width: 768px)");
+	const router = useRouter();
 
 	const handleDelete = async () => {
 		if (confirmTitle !== koudenTitle) {
@@ -31,9 +33,18 @@ export function DeleteKoudenDialog({
 
 		try {
 			setIsDeleting(true);
-			await onDelete(koudenId);
+			await deleteKouden(koudenId);
+			toast({
+				title: "香典帳を削除しました",
+			});
+			router.push("/koudens");
 		} catch (error) {
 			console.error("Failed to delete kouden:", error);
+			toast({
+				title: "エラー",
+				description: "香典帳の削除に失敗しました",
+				variant: "destructive",
+			});
 		} finally {
 			setIsDeleting(false);
 			setIsOpen(false);

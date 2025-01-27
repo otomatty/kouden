@@ -5,28 +5,29 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Pencil } from "lucide-react";
-import type { KoudenPermission } from "@/app/_actions/koudens";
+import { useAtomValue } from "jotai";
+import { permissionAtom } from "@/store/permission";
+import { updateKouden } from "@/app/_actions/koudens";
 
 interface KoudenTitleProps {
+	koudenId: string;
 	title: string;
 	description?: string | null;
-	permission: KoudenPermission;
-	onUpdate: (data: { title: string; description?: string }) => Promise<void>;
 }
 
 export function KoudenTitle({
+	koudenId,
 	title: initialTitle,
 	description: initialDescription,
-	permission,
-	onUpdate,
 }: KoudenTitleProps) {
 	const [isEditing, setIsEditing] = useState(false);
 	const [title, setTitle] = useState(initialTitle);
 	const [description, setDescription] = useState(initialDescription || "");
+	const permission = useAtomValue(permissionAtom);
 
 	const handleSave = async () => {
 		try {
-			await onUpdate({
+			await updateKouden(koudenId, {
 				title,
 				description: description || undefined,
 			});

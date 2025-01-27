@@ -1,28 +1,37 @@
-import type { MemberRole } from "./sharing";
 import type { Database } from "./supabase";
 
-export interface Kouden {
+export type Kouden = Database["public"]["Tables"]["koudens"]["Row"];
+
+export type AttendanceType = "FUNERAL" | "CONDOLENCE_VISIT" | "ABSENT";
+
+export interface Relationship {
 	id: string;
-	title: string;
-	description: string | null;
-	owner_id: string;
-	created_by: string;
-	created_at: string;
-	updated_at: string;
-	status: string;
+	name: string;
+	description?: string;
 }
 
-export type KoudenEntry =
-	Database["public"]["Tables"]["kouden_entries"]["Row"] & {
-		offerings?: Database["public"]["Tables"]["offerings"]["Row"][];
-		offering_entries?: {
-			offering: Database["public"]["Tables"]["offerings"]["Row"] & {
-				offering_photos: Database["public"]["Tables"]["offering_photos"]["Row"][];
-			};
-		}[];
-		return_items?: Database["public"]["Tables"]["return_items"]["Row"][];
-		relationship_id?: string | null;
-	};
+// データベースの型定義
+type DbKoudenEntry = Database["public"]["Tables"]["kouden_entries"]["Row"];
+type DbKoudenEntryInsert =
+	Database["public"]["Tables"]["kouden_entries"]["Insert"];
+
+// データベースに保存されるエントリー（メタデータを含む）
+export interface KoudenEntry extends Omit<DbKoudenEntry, "attendance_type"> {
+	attendance_type: AttendanceType;
+	relationship?: Relationship;
+}
+
+// フォームデータ用のエントリー型
+export type EditKoudenEntryFormData = Omit<
+	DbKoudenEntryInsert,
+	"created_at" | "updated_at" | "created_by" | "version" | "attendance_type"
+> & {
+	attendance_type: AttendanceType;
+	has_offering: boolean;
+	is_return_completed: boolean;
+	kouden_id: string;
+	relationship_id: string | null;
+};
 
 export interface Offering {
 	id: string;
@@ -58,4 +67,20 @@ export interface CreateKoudenParams {
 	title: string;
 	description?: string;
 	userId: string;
+}
+
+// フォームの状態管理用の型
+export interface KoudenEntryForm {
+	name: string | null;
+	organization: string | null;
+	position: string | null;
+	amount: number;
+	postal_code: string | null;
+	address: string | null;
+	phone_number: string | null;
+	relationship_id: string | null;
+	attendance_type: AttendanceType;
+	has_offering: boolean;
+	is_return_completed: boolean;
+	notes: string | null;
 }
