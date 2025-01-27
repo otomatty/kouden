@@ -29,6 +29,13 @@ export function KoudenList({ koudens }: KoudenListProps) {
 	const router = useRouter();
 	const [loadingKoudenId, setLoadingKoudenId] = useState<string | null>(null);
 
+	// 更新日時でソート
+	const sortedKoudens = [...koudens].sort((a, b) => {
+		const dateA = new Date(a.updated_at || a.created_at);
+		const dateB = new Date(b.updated_at || b.created_at);
+		return dateB.getTime() - dateA.getTime();
+	});
+
 	const handleViewDetails = (koudenId: string) => {
 		setLoadingState({ isLoading: true, title: "詳細を読み込み中..." });
 		setLoadingKoudenId(koudenId);
@@ -44,17 +51,20 @@ export function KoudenList({ koudens }: KoudenListProps) {
 	}
 
 	return (
-		<div className="koudens-list grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-			{koudens.map((kouden) => (
+		<div className="koudens-list grid gap-2 md:grid-cols-2 lg:grid-cols-3 md:gap-6">
+			{sortedKoudens.map((kouden) => (
 				<Card key={kouden.id} className="kouden-card flex flex-col">
 					<div className="flex-1">
 						<CardHeader>
 							<CardTitle>{kouden.title}</CardTitle>
 							<CardDescription>
-								{formatDistanceToNow(new Date(kouden.created_at), {
-									addSuffix: true,
-									locale: ja,
-								})}
+								{formatDistanceToNow(
+									new Date(kouden.updated_at || kouden.created_at),
+									{
+										addSuffix: true,
+										locale: ja,
+									},
+								)}
 							</CardDescription>
 						</CardHeader>
 						{kouden.description && (

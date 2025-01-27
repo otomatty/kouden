@@ -240,14 +240,12 @@ export function KoudenDetail({
 							offerings={offerings}
 							koudenId={kouden.id}
 							koudenEntries={entries}
-							permission={permission}
 						/>
 					</TabsContent>
 					<TabsContent value="telegrams" className="m-0">
 						<TelegramsView
 							koudenId={kouden.id}
 							telegrams={telegrams}
-							permission={permission}
 							koudenEntries={entries}
 						/>
 					</TabsContent>

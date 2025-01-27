@@ -38,7 +38,6 @@ export function EntryDialog({
 			canCreate={canCreateEntry(permission)}
 			canUpdate={canUpdateEntry(permission)}
 			createButtonLabel="香典を登録する"
-			editButtonLabel="編集"
 		>
 			<EntryForm
 				koudenId={koudenId}

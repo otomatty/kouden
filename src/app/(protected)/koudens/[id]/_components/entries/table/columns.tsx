@@ -14,6 +14,8 @@ import {
 import type { EditableColumnConfig } from "@/components/custom/data-table/types";
 import { formatCurrency, formatPostalCode } from "@/lib/utils";
 import { RelationshipSkeleton } from "./relationship-skeleton";
+import { SelectCell } from "@/components/custom/data-table/select-cell";
+import type { CellValue } from "@/components/custom/data-table/types";
 
 const attendanceTypeMap = {
 	FUNERAL: "葬儀",
@@ -47,6 +49,11 @@ interface ColumnProps {
 		field: keyof Omit<KoudenEntry, "relationship">,
 		value: string | number | boolean | null,
 	) => void;
+	onCellEdit: (
+		columnId: string,
+		rowId: string,
+		value: CellValue,
+	) => Promise<void>;
 	selectedRows: string[];
 	relationships: Relationship[];
 	permission?: KoudenPermission;
@@ -119,6 +126,13 @@ export const editableColumns: Record<string, EditableColumnConfig> = {
 	relationship_id: {
 		type: "select",
 		options: [], // 動的に設定されるため、空配列をデフォルトとする
+		getOptions: (relationships: Relationship[]) => {
+			console.log("Getting relationship options:", relationships);
+			return relationships.map((rel) => ({
+				value: rel.id,
+				label: rel.name,
+			}));
+		},
 	},
 	attendance_type: {
 		type: "select",
@@ -153,6 +167,7 @@ export function createColumns({
 	onEditRow,
 	onDeleteRows,
 	onCellUpdate,
+	onCellEdit,
 	selectedRows,
 	relationships,
 	permission,
@@ -249,7 +264,6 @@ export function createColumns({
 			header: ({ column }: { column: Column<KoudenEntry> }) => (
 				<Button
 					variant="ghost"
-					className="hover:bg-transparent"
 					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
 				>
 					ご関係
@@ -260,14 +274,38 @@ export function createColumns({
 				if (isLoadingRelationships) {
 					return <RelationshipSkeleton />;
 				}
-				const relationship = relationships.find(
-					(rel) => rel.id === row.getValue("relationship_id"),
-				);
-				return relationship ? (
-					<Badge variant="outline" className="font-normal">
-						{relationship.name}
-					</Badge>
-				) : null;
+
+				const relationshipId = row.getValue("relationship_id") as string;
+				const relationship = relationships.find((r) => r.id === relationshipId);
+
+				// 編集可能な場合はSelectCellを表示
+				if (canEdit) {
+					const options = relationships.map((rel) => ({
+						value: rel.id,
+						label: rel.name,
+					}));
+					console.log("[RelationshipCell] Rendering SelectCell:", {
+						rowId: row.original.id,
+						relationshipId,
+						options,
+					});
+					return (
+						<SelectCell
+							value={relationshipId}
+							options={options}
+							onSave={(value) => {
+								console.log("[RelationshipCell] Saving value:", {
+									rowId: row.original.id,
+									value,
+								});
+								onCellEdit("relationship_id", row.original.id, value);
+							}}
+						/>
+					);
+				}
+
+				// 編集不可の場合は通常のテキスト表示
+				return relationship ? relationship.name : relationshipId;
 			},
 		},
 		{

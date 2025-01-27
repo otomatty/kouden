@@ -96,12 +96,10 @@ export function MobileFilters({
 }: MobileFiltersProps) {
 	return (
 		<MobileDataTableToolbar
-			table={table}
 			searchOptions={searchOptions}
 			sortOptions={sortOptions}
 			filterOptions={filterOptions}
 			filterColumn="type"
-			showColumnVisibility={false}
 		/>
 	);
 }

@@ -39,14 +39,12 @@ import type { KoudenEntry } from "@/types/kouden";
 interface TelegramsViewProps {
 	telegrams: Telegram[];
 	koudenId: string;
-	permission: KoudenPermission;
 	koudenEntries: KoudenEntry[];
 }
 
 export function TelegramsView({
 	telegrams,
 	koudenId,
-	permission,
 	koudenEntries,
 }: TelegramsViewProps) {
 	const [storedTelegrams, setTelegrams] = useAtom(telegramsAtom);
@@ -116,7 +114,6 @@ export function TelegramsView({
 		onDeleteRows: handleDeleteSelectedRows,
 		selectedRows: [],
 		koudenEntries,
-		permission,
 	});
 
 	const table = useReactTable({
@@ -175,7 +172,6 @@ export function TelegramsView({
 					data={storedTelegrams}
 					koudenId={koudenId}
 					koudenEntries={koudenEntries}
-					permission={permission}
 				/>
 			)}
 

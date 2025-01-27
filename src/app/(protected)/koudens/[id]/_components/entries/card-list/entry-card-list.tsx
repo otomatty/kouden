@@ -1,20 +1,28 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import type { Table } from "@tanstack/react-table";
+import { useAtomValue } from "jotai";
 import type { KoudenEntry } from "@/types/kouden";
 import { MobileFilters } from "./mobile-filters";
 import { EntryCard } from "./entry-card";
+import { entriesAtom } from "@/store/entries";
 
 interface EntryCardListProps {
 	entries: KoudenEntry[];
 	koudenId: string;
 }
 
-export function EntryCardList({ entries, koudenId }: EntryCardListProps) {
+export function EntryCardList({
+	entries: initialEntries,
+	koudenId,
+}: EntryCardListProps) {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [searchField, setSearchField] = useState("name");
 	const [sortOrder, setSortOrder] = useState("created_at_desc");
+
+	// Jotaiのatomから最新のentriesを取得
+	const currentEntries = useAtomValue(entriesAtom);
+	const entries = currentEntries.length > 0 ? currentEntries : initialEntries;
 
 	// フィルタリングとソートを適用したデータ
 	const filteredAndSortedData = useMemo(() => {

@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { updateUserSettings } from "@/app/_actions/settings";
-import { useGuideMode } from "@/hooks/use-guide-mode";
+import { useSetAtom } from "jotai";
+import { guideModeAtom } from "@/store/guide";
 
 interface SettingsFormProps {
 	userId: string;
@@ -26,7 +27,7 @@ interface SettingsFormProps {
 export function SettingsForm({ userId, initialSettings }: SettingsFormProps) {
 	const router = useRouter();
 	const [isPending, setIsPending] = useState(false);
-	const { setIsEnabled: setGuideMode } = useGuideMode();
+	const setGuideMode = useSetAtom(guideModeAtom);
 
 	const handleGuideMode = async (checked: boolean) => {
 		try {

@@ -12,9 +12,9 @@ import {
 	Menu,
 	ShieldCheck,
 	User as UserIcon,
-	HelpCircle,
 	BookOpen,
 	PlayCircle,
+	Settings,
 } from "lucide-react";
 import {
 	Sheet,
@@ -99,6 +99,17 @@ export function Header({ user, isAdmin }: HeaderProps) {
 										>
 											<UserIcon className="mr-2 h-4 w-4" />
 											プロフィール
+										</Button>
+										<Button
+											variant="ghost"
+											className="justify-start"
+											onClick={() => {
+												router.push("/guide/tour");
+												setIsOpen(false);
+											}}
+										>
+											<Settings className="mr-2 h-4 w-4" />
+											設定
 										</Button>
 										{isAdmin && (
 											<Button

@@ -12,6 +12,7 @@ import {
 } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { useAtomValue } from "jotai";
 
 // UIコンポーネント/アイコン
 import { Trash2 } from "lucide-react";
@@ -19,7 +20,6 @@ import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 // 型定義
 import type { KoudenEntry } from "@/types/kouden";
-import type { Database } from "@/types/supabase";
 // Server Actions
 import { getRelationships } from "@/app/_actions/relationships";
 import {
@@ -28,6 +28,8 @@ import {
 } from "@/app/_actions/kouden-entries";
 // フック
 import { useMediaQuery } from "@/hooks/use-media-query";
+// 状態管理
+import { permissionAtom } from "@/store/permission";
 // コンポーネント
 import { DataTable as BaseDataTable } from "@/components/custom/data-table";
 import { DataTableToolbar } from "@/components/custom/data-table/toolbar";
@@ -52,25 +54,32 @@ interface DataTableProps {
 }
 
 export function DataTable({ koudenId, entries, onDataChange }: DataTableProps) {
-	const isTablet = useMediaQuery("(max-width: 1024px)");
+	const permission = useAtomValue(permissionAtom);
+	const isMobile = useMediaQuery("(max-width: 767px)");
 	const [sorting, setSorting] = React.useState<SortingState>([]);
 	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
 		[],
 	);
 	const [columnVisibility, setColumnVisibility] =
 		React.useState<VisibilityState>(
-			isTablet ? tabletColumnVisibility : defaultColumnVisibility,
+			isMobile ? tabletColumnVisibility : defaultColumnVisibility,
 		);
 	const [rowSelection, setRowSelection] = React.useState({});
 	const [globalFilter, setGlobalFilter] = React.useState("");
 	const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
+	// 編集ダイアログの状態
+	const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
+	const [editingEntry, setEditingEntry] = React.useState<
+		KoudenEntry | undefined
+	>();
+
 	// 画面サイズが変更された時に列の表示状態を更新
 	React.useEffect(() => {
 		setColumnVisibility(
-			isTablet ? tabletColumnVisibility : defaultColumnVisibility,
+			isMobile ? tabletColumnVisibility : defaultColumnVisibility,
 		);
-	}, [isTablet]);
+	}, [isMobile]);
 
 	// 選択された行のIDを取得
 	const selectedRowsIds = React.useMemo(() => {
@@ -115,31 +124,62 @@ export function DataTable({ koudenId, entries, onDataChange }: DataTableProps) {
 			},
 		});
 
-	// セルの更新
-	const handleCellUpdate = React.useCallback(
-		async (
-			id: string,
-			field: keyof Omit<KoudenEntry, "relationship">,
-			value: CellValue,
-		) => {
+	// セルの編集
+	const handleCellEdit = React.useCallback(
+		async (columnId: string, rowId: string, value: CellValue) => {
+			console.log("[handleCellEdit] Starting update:", {
+				columnId,
+				rowId,
+				value,
+				allEntries: entries,
+			});
+
+			// インデックスからエントリーを取得
+			const entryIndex = Number.parseInt(rowId, 10);
+			if (
+				Number.isNaN(entryIndex) ||
+				entryIndex < 0 ||
+				entryIndex >= entries.length
+			) {
+				console.error("[handleCellEdit] Invalid row index:", rowId);
+				toast({
+					title: "エラーが発生しました",
+					description: "無効な行インデックスです",
+					variant: "destructive",
+				});
+				return;
+			}
+
+			const targetEntry = entries[entryIndex];
+			console.log("[handleCellEdit] Found target entry:", targetEntry);
+
 			try {
 				const updatedEntry = (await updateKoudenEntryField(
-					id,
-					field,
+					targetEntry.id,
+					columnId as keyof Omit<KoudenEntry, "relationship">,
 					value,
-				)) as KoudenEntry;
+				)) as unknown as KoudenEntry;
+
+				console.log("[handleCellEdit] Update successful:", updatedEntry);
+
 				if (onDataChange) {
-					onDataChange(
-						entries.map((entry) =>
-							entry.id === id ? { ...entry, ...updatedEntry } : entry,
-						),
+					const newEntries = entries.map((entry) =>
+						entry.id === targetEntry.id ? { ...entry, ...updatedEntry } : entry,
 					);
+					console.log("[handleCellEdit] Updated entries:", {
+						oldEntry: targetEntry,
+						newEntry: updatedEntry,
+						allNewEntries: newEntries,
+					});
+					onDataChange(newEntries);
 				}
+
 				toast({
 					title: "更新完了",
 					description: "データを更新しました",
 				});
 			} catch (error) {
+				console.error("[handleCellEdit] Update failed:", error);
 				toast({
 					title: "エラーが発生しました",
 					description: "データの更新に失敗しました",
@@ -150,24 +190,52 @@ export function DataTable({ koudenId, entries, onDataChange }: DataTableProps) {
 		[entries, onDataChange],
 	);
 
+	// 編集ダイアログを開く
+	const handleEditRow = React.useCallback((entry: KoudenEntry) => {
+		setEditingEntry(entry);
+		setIsEditDialogOpen(true);
+	}, []);
+
+	// 編集成功時の処理
+	const handleEditSuccess = React.useCallback(
+		(updatedEntry: KoudenEntry) => {
+			if (onDataChange) {
+				onDataChange(
+					entries.map((entry) =>
+						entry.id === updatedEntry.id ? updatedEntry : entry,
+					),
+				);
+			}
+			setIsEditDialogOpen(false);
+			setEditingEntry(undefined);
+			toast({
+				title: "更新完了",
+				description: "香典記録を更新しました",
+			});
+		},
+		[entries, onDataChange],
+	);
+
 	const columns = React.useMemo(
 		() =>
 			createColumns({
-				onEditRow: (entry: KoudenEntry) => {
-					// TODO: 編集ダイアログを開く処理は別途実装
-				},
+				onEditRow: handleEditRow,
 				onDeleteRows: handleDeleteRows,
-				onCellUpdate: handleCellUpdate,
+				onCellEdit: handleCellEdit,
+				onCellUpdate: handleCellEdit,
 				selectedRows: selectedRowsIds,
 				relationships,
+				permission,
 				koudenId,
 				isLoadingRelationships,
 			}),
 		[
+			handleEditRow,
 			handleDeleteRows,
-			handleCellUpdate,
+			handleCellEdit,
 			selectedRowsIds,
 			relationships,
+			permission,
 			koudenId,
 			isLoadingRelationships,
 		],
@@ -221,7 +289,7 @@ export function DataTable({ koudenId, entries, onDataChange }: DataTableProps) {
 				columnLabels={columnLabels}
 			>
 				<div className="flex items-center justify-end">
-					<EntryDialog koudenId={koudenId} variant="create" />
+					{!isMobile && <EntryDialog koudenId={koudenId} variant="create" />}
 				</div>
 			</DataTableToolbar>
 
@@ -239,9 +307,19 @@ export function DataTable({ koudenId, entries, onDataChange }: DataTableProps) {
 			)}
 
 			<BaseDataTable
+				permission={permission}
 				columns={columns}
 				data={table.getFilteredRowModel().rows.map((row) => row.original)}
-				editableColumns={editableColumns}
+				editableColumns={{
+					...editableColumns,
+					relationship_id: {
+						...editableColumns.relationship_id,
+						options: relationships.map((rel) => ({
+							value: rel.id,
+							label: rel.name,
+						})),
+					},
+				}}
 				sorting={sorting}
 				onSortingChange={setSorting}
 				columnFilters={columnFilters}
@@ -250,7 +328,17 @@ export function DataTable({ koudenId, entries, onDataChange }: DataTableProps) {
 				onColumnVisibilityChange={setColumnVisibility}
 				rowSelection={rowSelection}
 				onRowSelectionChange={setRowSelection}
+				onCellEdit={handleCellEdit}
 				emptyMessage="香典の記録がありません"
+			/>
+
+			{/* 編集ダイアログ */}
+			<EntryDialog
+				koudenId={koudenId}
+				defaultValues={editingEntry}
+				open={isEditDialogOpen}
+				onOpenChange={setIsEditDialogOpen}
+				onSuccess={handleEditSuccess}
 			/>
 
 			<div className="flex items-center justify-end space-x-2">

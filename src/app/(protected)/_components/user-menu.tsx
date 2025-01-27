@@ -13,7 +13,7 @@ import {
 	DropdownMenuGroup,
 	DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Settings, User as UserIcon } from "lucide-react";
+import { LogOut, Settings, User as UserIcon, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 interface UserMenuProps {
@@ -66,7 +66,7 @@ export function UserMenu({ user, isAdmin }: UserMenuProps) {
 					<>
 						<DropdownMenuLabel>管理者</DropdownMenuLabel>
 						<DropdownMenuItem onClick={() => router.push("/admin")}>
-							<Settings className="mr-2 h-4 w-4" />
+							<ShieldCheck className="mr-2 h-4 w-4" />
 							管理者ページ
 						</DropdownMenuItem>
 						<DropdownMenuSeparator />

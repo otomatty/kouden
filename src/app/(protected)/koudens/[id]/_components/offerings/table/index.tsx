@@ -3,21 +3,18 @@
 import type { Offering } from "@/types/offering";
 import { createColumns } from "./columns";
 import { DataTable } from "./data-table";
-import type { KoudenPermission } from "@/app/_actions/koudens";
 import { deleteOffering, updateOffering } from "@/app/_actions/offerings";
 import { toast } from "@/hooks/use-toast";
 import type { KoudenEntry } from "@/types/kouden";
 
 interface OfferingTableProps {
 	offerings: Offering[];
-	permission?: KoudenPermission;
 	koudenId: string;
 	koudenEntries: KoudenEntry[];
 }
 
 export function OfferingTable({
 	offerings,
-	permission,
 	koudenId,
 	koudenEntries,
 }: OfferingTableProps) {
@@ -63,14 +60,12 @@ export function OfferingTable({
 		onEditRow: () => {},
 		onDeleteRows: handleDelete,
 		selectedRows: [],
-		permission,
 	});
 
 	return (
 		<DataTable
 			columns={columns}
 			data={offerings}
-			permission={permission}
 			koudenId={koudenId}
 			koudenEntries={koudenEntries}
 			onUpdate={handleUpdate}

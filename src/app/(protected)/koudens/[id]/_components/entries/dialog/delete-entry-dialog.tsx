@@ -7,6 +7,8 @@ import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 import { deleteKoudenEntry } from "@/app/_actions/kouden-entries";
 import { toast } from "@/hooks/use-toast";
 
+// 香典情報を削除するためのダイアログ
+
 interface DeleteEntryDialogProps {
 	koudenId: string;
 	entryId: string;

@@ -5,6 +5,7 @@ import type {
 	VisibilityState,
 	OnChangeFn,
 } from "@tanstack/react-table";
+import type { Relationship } from "@/types/kouden";
 
 export type CellType =
 	| "text"
@@ -24,6 +25,7 @@ export interface EditableColumnConfig {
 	type: CellType;
 	options?: SelectOption[]; // select型の場合の選択肢
 	format?: "currency" | "postal_code"; // 表示フォーマット
+	getOptions?: (data: Relationship[]) => SelectOption[]; // 動的な選択肢の生成
 }
 
 export type CellValue = string | number | boolean | null;

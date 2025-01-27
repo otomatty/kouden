@@ -30,7 +30,11 @@ export function MobileMenu({
 	return (
 		<div className="fixed bottom-0 left-0 right-0 bg-background border-t py-2 flex justify-center items-center md:hidden shadow-lg">
 			{viewMode === "table" && (
-				<EntryDialog koudenId={koudenId} defaultValues={undefined} />
+				<EntryDialog
+					variant="create"
+					koudenId={koudenId}
+					defaultValues={undefined}
+				/>
 			)}
 			{viewMode === "offerings" && (
 				<OfferingDialog koudenId={koudenId} koudenEntries={koudenEntries} />

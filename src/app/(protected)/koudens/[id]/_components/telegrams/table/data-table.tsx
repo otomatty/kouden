@@ -38,12 +38,12 @@ import {
 	updateTelegramAtom,
 	deleteTelegramAtom,
 } from "@/store/telegrams";
-import type { TelegramInput } from "@/types/telegram";
+import { permissionAtom } from "@/store/permission";
+import { useAtomValue } from "jotai";
 
 interface DataTableProps {
 	columns: ColumnDef<Telegram>[];
 	data: Telegram[];
-	permission?: KoudenPermission;
 	koudenId: string;
 	koudenEntries: KoudenEntry[];
 }
@@ -51,7 +51,6 @@ interface DataTableProps {
 export function DataTable({
 	columns,
 	data,
-	permission,
 	koudenId,
 	koudenEntries,
 }: DataTableProps) {
@@ -60,7 +59,7 @@ export function DataTable({
 	const [sortState, setSortState] = useAtom(telegramSortStateAtom);
 	const [updateTelegram] = useAtom(updateTelegramAtom);
 	const [deleteTelegram] = useAtom(deleteTelegramAtom);
-
+	const permission = useAtomValue(permissionAtom);
 	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
 		[],
 	);
@@ -211,6 +210,7 @@ export function DataTable({
 
 			<BaseDataTable
 				columns={columns}
+				permission={permission}
 				data={table.getFilteredRowModel().rows.map((row) => row.original)}
 				editableColumns={editableColumns}
 				onCellEdit={handleCellEdit}

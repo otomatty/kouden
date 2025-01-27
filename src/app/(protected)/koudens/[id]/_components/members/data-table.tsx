@@ -131,6 +131,7 @@ export function MembersTable({
 				)}
 			</DataTableToolbar>
 			<BaseDataTable
+				permission={permission}
 				columns={columns}
 				data={data}
 				sorting={sorting}

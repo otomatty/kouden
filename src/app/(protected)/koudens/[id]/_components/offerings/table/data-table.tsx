@@ -33,6 +33,8 @@ import { OfferingDialog } from "../dialog";
 import type { KoudenEntry } from "@/types/kouden";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { OfferingCardList } from "../card-list/offering-card-list";
+import { permissionAtom } from "@/store/permission";
+import { useAtomValue } from "jotai";
 
 interface DataTableProps {
 	columns: ColumnDef<Offering, string | number | boolean | null>[];
@@ -47,7 +49,6 @@ interface DataTableProps {
 export function DataTable({
 	columns,
 	data,
-	permission,
 	koudenId,
 	koudenEntries,
 	onUpdate,
@@ -68,7 +69,7 @@ export function DataTable({
 		);
 	const [rowSelection, setRowSelection] = React.useState({});
 	const [globalFilter, setGlobalFilter] = React.useState("");
-
+	const permission = useAtomValue(permissionAtom);
 	// 画面サイズが変更された時に列の表示状態を更新
 	React.useEffect(() => {
 		setColumnVisibility(
@@ -242,6 +243,7 @@ export function DataTable({
 					rowSelection={rowSelection}
 					onRowSelectionChange={setRowSelection}
 					emptyMessage="お供え物が登録されていません"
+					permission={permission}
 				/>
 			) : (
 				<OfferingCardList

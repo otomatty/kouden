@@ -220,6 +220,8 @@ export function EntryCard({ entry, koudenId }: EntryCardProps) {
 									setIsEditing(false);
 									setIsOpen(false);
 								}}
+								open={isEditing}
+								onOpenChange={setIsEditing}
 							/>
 							<DeleteEntryDialog
 								koudenId={koudenId}

@@ -5,7 +5,8 @@ import {
 	HoverCardContent,
 	HoverCardTrigger,
 } from "@/components/ui/hover-card";
-import { useGuideMode } from "@/hooks/use-guide-mode";
+import { useAtomValue } from "jotai";
+import { guideModeAtom } from "@/store/guide";
 
 interface GuideCardProps {
 	children: React.ReactNode;
@@ -20,9 +21,10 @@ export function GuideCard({
 	align,
 	sideOffset,
 }: GuideCardProps) {
-	const { isEnabled } = useGuideMode();
+	const isEnabled = useAtomValue(guideModeAtom);
 
-	if (!isEnabled) {
+	// nullの場合はデフォルト値としてtrueを返す
+	if (isEnabled === null || !isEnabled) {
 		return <>{children}</>;
 	}
 

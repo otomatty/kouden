@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 
 // 独自の型
 import type { KoudenEntry } from "@/types/kouden";
@@ -7,8 +7,8 @@ import type { KoudenEntry } from "@/types/kouden";
 import { useMediaQuery } from "@/hooks/use-media-query";
 // カスタムコンポーネント
 import { DataTable } from "./table/data-table";
-import { EntryDialog } from "./dialog/entry-dialog";
 import { EntryCardList } from "./card-list/entry-card-list";
+import { Loading } from "../_common/loading";
 
 // Props
 interface EntryViewProps {
@@ -19,12 +19,19 @@ interface EntryViewProps {
 // EntryViewコンポーネント
 // 役割：エントリーの表示
 export function EntryView({ entries, koudenId }: EntryViewProps) {
-	const [editingEntry, setEditingEntry] = useState<KoudenEntry | undefined>(
-		undefined,
-	);
-	const [editingDialogOpen, setEditingDialogOpen] = useState(false);
 	const [data, setData] = useState<KoudenEntry[]>(entries || []);
 	const isMobile = useMediaQuery("(max-width: 767px)");
+
+	// 初期レンダリング時はローディング状態を表示
+	const [isClient, setIsClient] = useState(false);
+
+	useEffect(() => {
+		setIsClient(true);
+	}, []);
+
+	if (!isClient) {
+		return <Loading message="表示モードを確認中..." />;
+	}
 
 	return (
 		<>
@@ -33,22 +40,6 @@ export function EntryView({ entries, koudenId }: EntryViewProps) {
 			) : (
 				<DataTable koudenId={koudenId} entries={data} onDataChange={setData} />
 			)}
-
-			<EntryDialog
-				koudenId={koudenId}
-				defaultValues={editingEntry}
-				open={editingDialogOpen}
-				onOpenChange={setEditingDialogOpen}
-				onSuccess={(updatedEntry) => {
-					setData((prevData) =>
-						prevData.map((entry) =>
-							entry.id === updatedEntry.id ? updatedEntry : entry,
-						),
-					);
-					setEditingEntry(undefined);
-					setEditingDialogOpen(false);
-				}}
-			/>
 		</>
 	);
 }

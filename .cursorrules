@@ -27,6 +27,7 @@ coding_guidelines:
     - "共通ロジックでhooksがないものはutilsディレクトリに配置すること。"
   types:
     - "型はtypesディレクトリに配置すること。"
+    - "any型は使用しないこと。"
     - "型はinterfaceを使用し、型推論を活用すること。"
     - "型はconvertToCamelCase関数を使用し、キャメルケースに変換すること。"
     - "convertToCamelCase関数はサービスロジック内で使用すること"
@@ -45,6 +46,10 @@ coding_guidelines:
   error_handling:
     - "エラーハンドリングを徹底し、ユーザーに適切なフィードバックを提供すること。"
     - "Firebaseからのエラーは適切にキャッチし、ユーザーにわかりやすいメッセージを表示すること。"
+
+# コメント
+  - "コメントはコードの意図を明確にするために使用すること。"
+  - "JSDocを使用し、コードの意図を明確にすること。"
 
 # ビルドとランタイム
 build_and_runtime:

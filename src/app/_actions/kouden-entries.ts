@@ -226,25 +226,35 @@ export async function updateKoudenEntryField(
 	}
 
 	try {
+		console.log("[updateKoudenEntryField] Updating with:", {
+			id,
+			field,
+			value,
+			user: user.id,
+		});
+
 		const { error, data: updatedData } = await supabase
 			.from("kouden_entries")
 			.update({
 				[field]: value === "" ? null : value,
 			})
 			.eq("id", id)
-			.select()
-			.single();
+			.select();
 
 		if (error) {
+			console.error("[updateKoudenEntryField] Error:", error);
 			throw new Error(`${field}の更新に失敗しました`);
 		}
 
+		console.log("[updateKoudenEntryField] Updated data:", updatedData);
+
 		Promise.resolve().then(() => {
-			revalidatePath(`/koudens/${updatedData.kouden_id}`);
+			revalidatePath(`/koudens/${updatedData[0].kouden_id}`);
 		});
 
-		return updatedData;
+		return updatedData[0];
 	} catch (error) {
+		console.error("[updateKoudenEntryField] Caught error:", error);
 		throw new Error(`${field}の更新に失敗しました`);
 	}
 }

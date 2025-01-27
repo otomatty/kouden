@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { KoudenList } from "./_components/kouden-list";
 import { CreateKoudenForm } from "./_components/create-kouden-form";
+import { Guide } from "./_components/guide";
 import { getKoudens } from "@/app/_actions/koudens";
 
 export const metadata: Metadata = {
@@ -29,10 +30,12 @@ export default async function KoudensPage() {
 
 	return (
 		<div className="space-y-8">
+			<Guide />
 			<div className="flex justify-between items-center">
 				<h2 className="text-2xl font-bold">香典帳一覧</h2>
 				<CreateKoudenForm />
 			</div>
+
 			<KoudenList koudens={koudens || []} />
 		</div>
 	);

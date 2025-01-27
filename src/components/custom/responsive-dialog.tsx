@@ -49,7 +49,6 @@ export function ResponsiveDialog({
 	const [_open, _setOpen] = React.useState(false);
 	const isControlled = open !== undefined;
 	const isDesktop = useMediaQuery("(min-width: 768px)");
-	const router = useRouter();
 
 	React.useEffect(() => {
 		if (!isControlled && _open) {
