@@ -58,6 +58,8 @@ export function OfferingTable({
 
 	const columns = createColumns({
 		onEditRow: () => {},
+		onCellUpdate: () => {},
+		onCellEdit: async () => Promise.resolve(),
 		onDeleteRows: handleDelete,
 		selectedRows: [],
 	});

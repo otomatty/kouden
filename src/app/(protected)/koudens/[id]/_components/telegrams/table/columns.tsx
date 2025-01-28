@@ -188,7 +188,6 @@ export function createColumns({
 							{canEdit && (
 								<DropdownMenuItem
 									onClick={() => {
-										console.log("Edit button clicked for telegram:", telegram);
 										dispatch({
 											type: "setDialog",
 											payload: {

@@ -142,9 +142,6 @@ export function useTelegrams(koudenId: string) {
 	const updateTelegram = useCallback(
 		async (id: string, input: TelegramInput): Promise<void> => {
 			try {
-				console.log("Updating telegram with id:", id);
-				console.log("Raw update input:", input);
-
 				// 入力データの検証と変換
 				const sanitizedInput = Object.fromEntries(
 					Object.entries(input).map(([key, value]) => [
@@ -152,10 +149,8 @@ export function useTelegrams(koudenId: string) {
 						value === "" ? null : value,
 					]),
 				);
-				console.log("Sanitized input:", sanitizedInput);
 
 				const snakeCaseInput = toSnakeCase(sanitizedInput as TelegramInput);
-				console.log("Snake case input for Supabase:", snakeCaseInput);
 
 				const { data, error } = await supabase
 					.from("telegrams")
@@ -170,10 +165,7 @@ export function useTelegrams(koudenId: string) {
 				}
 				if (!data) throw new Error("弔電の更新に失敗しました");
 
-				console.log("Update successful, received data:", data);
-
 				const telegram = convertToCamelCase<Telegram>(data);
-				console.log("Converted telegram data:", telegram);
 
 				setTelegrams((prev) =>
 					prev.map((item) => (item.id === id ? telegram : item)),
@@ -195,7 +187,6 @@ export function useTelegrams(koudenId: string) {
 	const deleteTelegram = useCallback(
 		async (id: string): Promise<void> => {
 			try {
-				console.log("useTelegrams.deleteTelegram called with id:", id);
 				const { error } = await supabase
 					.from("telegrams")
 					.delete()
@@ -206,7 +197,6 @@ export function useTelegrams(koudenId: string) {
 					throw error;
 				}
 
-				console.log("Telegram deleted from database successfully");
 				setTelegrams((prev) => prev.filter((item) => item.id !== id));
 
 				toast({
@@ -214,7 +204,6 @@ export function useTelegrams(koudenId: string) {
 					description: "弔電を削除しました",
 				});
 			} catch (error) {
-				console.error("Error in deleteTelegram:", error);
 				handleError(error as Error);
 			}
 		},

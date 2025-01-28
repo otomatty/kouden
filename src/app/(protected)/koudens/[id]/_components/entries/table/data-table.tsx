@@ -43,9 +43,7 @@ import {
 	editableColumns,
 	createColumns,
 } from "./columns";
-
-// 型定義の追加
-type CellValue = string | number | boolean | null;
+import type { CellValue } from "@/types/table";
 
 interface DataTableProps {
 	koudenId: string;
@@ -127,13 +125,6 @@ export function DataTable({ koudenId, entries, onDataChange }: DataTableProps) {
 	// セルの編集
 	const handleCellEdit = React.useCallback(
 		async (columnId: string, rowId: string, value: CellValue) => {
-			console.log("[handleCellEdit] Starting update:", {
-				columnId,
-				rowId,
-				value,
-				allEntries: entries,
-			});
-
 			// インデックスからエントリーを取得
 			const entryIndex = Number.parseInt(rowId, 10);
 			if (
@@ -151,7 +142,6 @@ export function DataTable({ koudenId, entries, onDataChange }: DataTableProps) {
 			}
 
 			const targetEntry = entries[entryIndex];
-			console.log("[handleCellEdit] Found target entry:", targetEntry);
 
 			try {
 				const updatedEntry = (await updateKoudenEntryField(
@@ -160,17 +150,10 @@ export function DataTable({ koudenId, entries, onDataChange }: DataTableProps) {
 					value,
 				)) as unknown as KoudenEntry;
 
-				console.log("[handleCellEdit] Update successful:", updatedEntry);
-
 				if (onDataChange) {
 					const newEntries = entries.map((entry) =>
 						entry.id === targetEntry.id ? { ...entry, ...updatedEntry } : entry,
 					);
-					console.log("[handleCellEdit] Updated entries:", {
-						oldEntry: targetEntry,
-						newEntry: updatedEntry,
-						allNewEntries: newEntries,
-					});
 					onDataChange(newEntries);
 				}
 

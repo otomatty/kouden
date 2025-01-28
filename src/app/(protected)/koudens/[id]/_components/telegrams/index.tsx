@@ -70,12 +70,9 @@ export function TelegramsView({
 	useEffect(() => {
 		setUpdateTelegram(() => updateTelegram);
 		setDeleteTelegram(() => async (ids: string[]) => {
-			console.log("handleDeleteSelectedRows called with ids:", ids);
 			try {
 				for (const id of ids) {
-					console.log("Attempting to delete telegram with id:", id);
 					await deleteTelegram(id);
-					console.log("Telegram deleted successfully:", id);
 				}
 			} catch (error) {
 				console.error("Error in handleDeleteSelectedRows:", error);
@@ -84,12 +81,9 @@ export function TelegramsView({
 	}, [updateTelegram, setUpdateTelegram, deleteTelegram, setDeleteTelegram]);
 
 	const handleDeleteSelectedRows = async (ids: string[]) => {
-		console.log("handleDeleteSelectedRows called with ids:", ids);
 		try {
 			for (const id of ids) {
-				console.log("Attempting to delete telegram with id:", id);
 				await deleteTelegram(id);
-				console.log("Telegram deleted successfully:", id);
 			}
 		} catch (error) {
 			console.error("Error in handleDeleteSelectedRows:", error);
@@ -98,7 +92,6 @@ export function TelegramsView({
 
 	const columns = createColumns({
 		onEditRow: async (telegram: Telegram) => {
-			console.log("onEditRow called with telegram:", telegram);
 			const { id, createdAt, updatedAt, ...rest } = telegram;
 			const data = {
 				senderName: rest.senderName,
@@ -108,7 +101,6 @@ export function TelegramsView({
 				notes: rest.notes || undefined,
 				koudenEntryId: rest.koudenEntryId || undefined,
 			};
-			console.log("Prepared update data:", data);
 			await updateTelegram(id, data);
 		},
 		onDeleteRows: handleDeleteSelectedRows,

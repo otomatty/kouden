@@ -30,6 +30,7 @@ import { OfferingPhotoGallery } from "../photo-gallery";
 import Image from "next/image";
 import { toast } from "@/hooks/use-toast";
 import { deleteOffering, updateOfferingPhoto } from "@/app/_actions/offerings";
+import type { CellValue } from "@/types/table";
 
 const typeIcons = {
 	FLOWER: <Flower2 className="h-4 w-4" />,
@@ -60,6 +61,7 @@ export const columnLabels: Record<string, string> = {
 export const searchOptions = [
 	{ value: "provider_name", label: "提供者名" },
 	{ value: "description", label: "内容" },
+	{ value: "type", label: "種類" },
 ];
 
 // ソートオプションの定義
@@ -69,6 +71,7 @@ export const sortOptions = [
 	{ value: "price_desc", label: "金額が高い順" },
 	{ value: "price_asc", label: "金額が低い順" },
 	{ value: "provider_name_asc", label: "提供者名順" },
+	{ value: "type_asc", label: "種類順" },
 ];
 
 // フィルターオプションの定義
@@ -105,6 +108,13 @@ export const editableColumns: Record<string, EditableColumnConfig> = {
 			{ value: "OTHER", label: "その他" },
 		],
 	},
+	has_photos: {
+		type: "boolean",
+		options: [
+			{ value: "true", label: "あり" },
+			{ value: "false", label: "なし" },
+		],
+	},
 	// 編集不可のカラム
 	select: { type: "readonly" },
 	actions: { type: "readonly" },
@@ -114,6 +124,16 @@ export const editableColumns: Record<string, EditableColumnConfig> = {
 interface ColumnProps {
 	onEditRow: (offering: Offering) => void;
 	onDeleteRows: (ids: string[]) => void;
+	onCellUpdate: (
+		id: string,
+		field: keyof Omit<Offering, "offering_photos">,
+		value: string | number | boolean | null,
+	) => void;
+	onCellEdit: (
+		columnId: string,
+		rowId: string,
+		value: CellValue,
+	) => Promise<void>;
 	selectedRows: string[];
 	permission?: KoudenPermission;
 }
@@ -121,6 +141,8 @@ interface ColumnProps {
 export function createColumns({
 	onEditRow,
 	onDeleteRows,
+	onCellUpdate,
+	onCellEdit,
 	selectedRows,
 	permission,
 }: ColumnProps) {

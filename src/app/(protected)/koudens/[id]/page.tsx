@@ -1,21 +1,14 @@
-import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getOfferings } from "@/app/_actions/offerings";
-import {
-	createReturnItem,
-	updateReturnItem,
-	deleteReturnItem,
-	type CreateReturnItemInput,
-	type UpdateReturnItemInput,
-} from "@/app/_actions/return-items";
-import {
-	getKoudenWithEntries,
-	updateKouden,
-	deleteKouden,
-} from "@/app/_actions/koudens";
+
+// Server Actions
 import { checkKoudenPermission } from "@/app/_actions/permissions";
-import { KoudenDetail } from "./_components/kouden-detail";
+import { getOfferings } from "@/app/_actions/offerings";
+import { getKoudenWithEntries } from "@/app/_actions/koudens";
 import { getTelegrams } from "@/app/_actions/telegrams";
+import { getReturnItems } from "@/app/_actions/return-items";
+// import { getMembers } from "@/app/_actions/members";
+// コンポーネント
+import { KoudenDetail } from "./_components/kouden-detail";
 import type { OfferingType } from "@/types/offering";
 
 export const metadata: Metadata = {
@@ -27,58 +20,23 @@ type Props = {
 	params: Promise<{ id: string }>;
 };
 
-const wrappedCreateReturnItem = async (input: CreateReturnItemInput) => {
-	"use server";
-	return createReturnItem(input);
-};
-
-const wrappedUpdateReturnItem = async (
-	id: string,
-	input: UpdateReturnItemInput,
-) => {
-	"use server";
-	return updateReturnItem(id, input);
-};
-
-const wrappedDeleteReturnItem = async (id: string, koudenEntryId: string) => {
-	"use server";
-	return deleteReturnItem(id, koudenEntryId);
-};
-
-const wrappedUpdateKouden = async (
-	id: string,
-	input: { title: string; description?: string },
-) => {
-	"use server";
-	return updateKouden(id, input);
-};
-
-const wrappedDeleteKouden = async (id: string) => {
-	"use server";
-	return deleteKouden(id);
-};
-
 export default async function KoudenDetailPage({ params }: Props) {
 	const { id } = await params;
+
 	const data = await getKoudenWithEntries(id);
+
+	const returnItems = await getReturnItems(id);
+
 	const telegrams = await getTelegrams(id);
+
 	const rawOfferings = await getOfferings(id);
+
 	const offerings = rawOfferings.map((offering) => ({
 		...offering,
 		type: offering.type as OfferingType,
 	}));
+
 	const permission = await checkKoudenPermission(id);
-
-	console.log("Current user permission:", {
-		koudenId: id,
-		permission,
-		canEdit: permission === "owner" || permission === "editor",
-		canDelete: permission === "owner",
-	});
-
-	if (!data) {
-		notFound();
-	}
 
 	return (
 		<KoudenDetail
@@ -86,10 +44,8 @@ export default async function KoudenDetailPage({ params }: Props) {
 			entries={data.entries}
 			telegrams={telegrams}
 			offerings={offerings}
+			returnItems={returnItems}
 			permission={permission}
-			createReturnItem={wrappedCreateReturnItem}
-			updateReturnItem={wrappedUpdateReturnItem}
-			deleteReturnItem={wrappedDeleteReturnItem}
 		/>
 	);
 }

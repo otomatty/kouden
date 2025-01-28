@@ -1,56 +1,41 @@
-export type OfferingType = "FLOWER" | "FOOD" | "OTHER";
+import type { Database } from "@/types/supabase";
 
-export interface OfferingPhoto {
-	id: string;
-	storage_key: string;
-	caption: string | null;
-	created_at: string;
-	updated_at: string;
-}
+export type OfferingType = Database["public"]["Enums"]["offering_type"];
 
-export interface BaseOffering {
-	id: string;
-	type: OfferingType;
-	description: string | null;
-	quantity: number;
-	price: number | null;
-	provider_name: string;
-	notes: string | null;
-	created_at: string;
-	updated_at: string;
-	created_by: string;
-}
+// データベースのレスポンス型
+export type OfferingPhoto =
+	Database["public"]["Tables"]["offering_photos"]["Row"];
 
-export interface Offering {
-	id: string;
-	type: OfferingType;
-	description: string | null;
-	quantity: number;
-	price: number | null;
-	provider_name: string;
-	notes: string | null;
-	created_at: string;
-	updated_at: string;
+export type OfferingEntry =
+	Database["public"]["Tables"]["offering_entries"]["Row"];
+
+export type BaseOffering = Database["public"]["Tables"]["offerings"]["Row"];
+
+export interface Offering extends BaseOffering {
 	offering_photos: OfferingPhoto[];
-	created_by: string;
+	offering_entries: OfferingEntry[];
 }
 
-export interface CreateOfferingInput {
-	type: OfferingType;
-	description: string | null;
-	quantity: number;
-	price?: number | null;
-	provider_name: string;
-	notes?: string | null;
-	kouden_entry_id: string;
-	photos?: File[];
-}
+// 入力型
+export type CreateOfferingInput = Omit<
+	Database["public"]["Tables"]["offerings"]["Insert"],
+	"created_by"
+> & {
+	kouden_entry_ids?: string[];
+	photos?: { storage_key: string; caption?: string }[];
+};
 
-export interface UpdateOfferingInput {
-	type?: OfferingType;
-	description?: string;
-	quantity?: number;
-	price?: number | null;
-	provider_name?: string;
-	notes?: string | null;
-}
+export type UpdateOfferingInput =
+	Database["public"]["Tables"]["offerings"]["Update"];
+
+// 写真関連の入力型
+export type CreateOfferingPhotoInput =
+	Database["public"]["Tables"]["offering_photos"]["Insert"];
+
+export type UpdateOfferingPhotoInput =
+	Database["public"]["Tables"]["offering_photos"]["Update"];
+
+// データベースのレスポンス型（Server Actions用）
+export type OfferingResponse = BaseOffering;
+export type OfferingEntryResponse = OfferingEntry;
+export type OfferingPhotoResponse = OfferingPhoto;

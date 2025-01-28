@@ -114,7 +114,7 @@ CREATE POLICY "Users can view offerings of their koudens"
                     JOIN kouden_roles r ON m.role_id = r.id
                     WHERE m.kouden_id = k.id
                     AND m.user_id = auth.uid()
-                    AND r.name IN ('編集者', '閲覧者')
+                    AND r.name IN ('editor', 'viewer')
                 )
             )
         )

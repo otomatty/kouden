@@ -25,11 +25,7 @@ import type { Offering } from "@/types/offering";
 import type { AttendanceType } from "@/types/kouden";
 import type { KoudenPermission } from "@/types/role";
 import type { Telegram } from "@/types/telegram";
-import type {
-	CreateReturnItemInput,
-	UpdateReturnItemInput,
-	ReturnItemResponse,
-} from "@/types/actions";
+import type { ReturnItem } from "@/types/return-item";
 // 状態管理
 import { permissionAtom } from "@/store/permission";
 // 共通UI(common)
@@ -53,14 +49,7 @@ interface KoudenDetailProps {
 	telegrams: Telegram[];
 	offerings: Offering[];
 	permission: KoudenPermission;
-	createReturnItem: (
-		input: CreateReturnItemInput,
-	) => Promise<ReturnItemResponse>;
-	updateReturnItem: (
-		id: string,
-		input: UpdateReturnItemInput,
-	) => Promise<ReturnItemResponse>;
-	deleteReturnItem: (id: string, koudenEntryId: string) => Promise<void>;
+	returnItems: ReturnItem[];
 }
 
 export function KoudenDetail({
@@ -237,9 +226,9 @@ export function KoudenDetail({
 					</TabsContent>
 					<TabsContent value="offerings" className="m-0">
 						<OfferingView
-							offerings={offerings}
 							koudenId={kouden.id}
 							koudenEntries={entries}
+							offerings={offerings}
 						/>
 					</TabsContent>
 					<TabsContent value="telegrams" className="m-0">

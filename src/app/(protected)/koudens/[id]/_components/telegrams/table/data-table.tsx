@@ -123,10 +123,8 @@ export function DataTable({
 
 	const handleCellEdit = React.useCallback(
 		async (columnId: string, rowId: string, newValue: CellValue) => {
-			console.log("Cell edit triggered:", { rowId, columnId, newValue });
 			const row = data.find((item) => item.id === rowId);
 			if (!row) {
-				console.error("Row not found for editing:", rowId);
 				return;
 			}
 
@@ -154,9 +152,7 @@ export function DataTable({
 							? value || undefined
 							: row.koudenEntryId || undefined,
 				});
-				console.log("Cell edit successful");
 			} catch (error) {
-				console.error("Cell edit failed:", error);
 				toast({
 					title: "エラーが発生しました",
 					description:

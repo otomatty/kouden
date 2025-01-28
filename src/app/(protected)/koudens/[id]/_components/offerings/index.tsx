@@ -12,30 +12,30 @@ import { useReactTable, getCoreRowModel } from "@tanstack/react-table";
 import type { KoudenEntry } from "@/types/kouden";
 
 interface OfferingViewProps {
-	offerings: Offering[];
 	koudenId: string;
 	koudenEntries: KoudenEntry[];
+	offerings: Offering[];
 }
 
 export function OfferingView({
-	offerings,
 	koudenId,
 	koudenEntries,
+	offerings,
 }: OfferingViewProps) {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [searchField, setSearchField] = useState("description");
 	const [sortOrder, setSortOrder] = useState("created_at_desc");
-	const {
-		offerings: data,
-		deleteOffering,
-		updateOffering,
-	} = useKoudenOfferings(koudenId);
+	const { deleteOffering, updateOffering } = useKoudenOfferings(koudenId);
 
 	const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
 	const handleDeleteSelectedRows = async (ids: string[]) => {
 		for (const id of ids) {
-			await deleteOffering(id);
+			try {
+				await deleteOffering(id);
+			} catch (error) {
+				console.error("Error deleting offering:", id, error);
+			}
 		}
 	};
 
@@ -44,7 +44,7 @@ export function OfferingView({
 
 	// フィルタリングとソートを適用したデータ
 	const filteredAndSortedData = useMemo(() => {
-		let result = [...(data || [])];
+		let result = [...(offerings || [])];
 
 		// 検索を適用
 		if (searchQuery) {
@@ -74,7 +74,7 @@ export function OfferingView({
 		});
 
 		return result;
-	}, [data, searchQuery, searchField, sortOrder]);
+	}, [offerings, searchQuery, searchField, sortOrder]);
 
 	const columns = createColumns({
 		onEditRow: async (offering: Offering) => {
@@ -89,6 +89,12 @@ export function OfferingView({
 		},
 		onDeleteRows: handleDeleteSelectedRows,
 		selectedRows,
+		onCellUpdate: async (id, field, value) => {
+			await updateOffering({ id, data: { [field]: value } });
+		},
+		onCellEdit: async (columnId, rowId, value) => {
+			await updateOffering({ id: rowId, data: { [columnId]: value } });
+		},
 	});
 
 	const table = useReactTable({

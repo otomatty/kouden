@@ -86,14 +86,13 @@ export async function deleteRelationship(id: string) {
 }
 
 // 香典帳作成時にデフォルトの関係性を初期化
+// TODO: デフォルトの関係性作成はfunctionsの方で実装していた気がするので確認する
 export async function initializeDefaultRelationships(koudenId: string) {
 	try {
-		console.log("[DEBUG] デフォルト関係性の初期化開始:", { koudenId });
 		const supabase = await createClient();
 		const {
 			data: { user },
 		} = await supabase.auth.getUser();
-		console.log("[DEBUG] ユーザー情報:", user);
 		if (!user) throw new Error("Not authenticated");
 
 		const defaultRelationships = [
@@ -102,9 +101,7 @@ export async function initializeDefaultRelationships(koudenId: string) {
 			{ name: "親族", description: "親族・家族" },
 		];
 
-		console.log("[DEBUG] デフォルト関係性の設定:", defaultRelationships);
-
-		const { data, error } = await supabase
+		const { error } = await supabase
 			.from("relationships")
 			.insert(
 				defaultRelationships.map((rel) => ({
@@ -117,12 +114,9 @@ export async function initializeDefaultRelationships(koudenId: string) {
 			)
 			.select();
 
-		console.log("[DEBUG] 関係性の挿入結果:", { data, error });
-
 		if (error) throw error;
 		revalidatePath(`/koudens/${koudenId}`);
 	} catch (error) {
-		console.error("[ERROR] デフォルト関係性の初期化エラー:", error);
-		throw error;
+		throw new Error("デフォルトの関係性の初期化に失敗しました");
 	}
 }

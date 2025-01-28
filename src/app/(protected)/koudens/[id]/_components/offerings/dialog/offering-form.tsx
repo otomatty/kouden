@@ -1,8 +1,11 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import type * as z from "zod";
+import { useAtom } from "jotai";
+// UIコンポーネント
 import { Button } from "@/components/ui/button";
 import {
 	Form,
@@ -21,30 +24,36 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
-import { OfferingPhotoUploader } from "./offering-photo-uploader";
 import { Label } from "@/components/ui/label";
-import type { KoudenEntry } from "@/types/kouden";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
+// 型定義
+import type { KoudenEntry } from "@/types/kouden";
+import type { Offering, OfferingType, BaseOffering } from "@/types/offering";
+// Server Actions
+import { createOffering, updateOffering } from "@/app/_actions/offerings";
+// 状態管理
 import { formSchema, offeringFormAtom } from "./atoms";
-import { useAtom } from "jotai";
+// カスタムコンポーネント
+import { OfferingPhotoUploader } from "./offering-photo-uploader";
 import { SearchableCheckboxList } from "@/components/ui/searchable-checkbox-list";
-import { useKoudenOfferings } from "@/hooks/useKoudenOfferings";
 
 interface OfferingFormProps {
 	koudenId: string;
 	koudenEntries: KoudenEntry[];
-	onSuccess?: () => void;
+	defaultValues?: BaseOffering;
+	onSuccess?: (offering: Offering) => void;
+	onCancel?: () => void;
 }
 
 export function OfferingForm({
 	koudenId,
 	koudenEntries,
+	defaultValues,
 	onSuccess,
+	onCancel,
 }: OfferingFormProps) {
-	const { createOffering } = useKoudenOfferings(koudenId);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [photos, setPhotos] = useState<File[]>([]);
 	const [currentTab, setCurrentTab] = useState("basic");
@@ -52,52 +61,111 @@ export function OfferingForm({
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
-		defaultValues: savedFormState || {
-			type: undefined,
-			description: "",
-			quantity: 1,
-			price: undefined,
-			provider_name: "",
-			notes: undefined,
-			kouden_entry_ids: [],
-		},
+		defaultValues: defaultValues
+			? {
+					type: defaultValues.type as z.infer<typeof formSchema>["type"],
+					description: defaultValues.description || undefined,
+					quantity: defaultValues.quantity,
+					price: defaultValues.price || undefined,
+					provider_name: defaultValues.provider_name,
+					notes: defaultValues.notes || undefined,
+					kouden_entry_ids: [],
+				}
+			: savedFormState || {
+					type: undefined,
+					description: "",
+					quantity: 1,
+					price: undefined,
+					provider_name: "",
+					notes: undefined,
+					kouden_entry_ids: [],
+				},
 	});
 
 	// フォームの値が変更されたときに状態を保存
 	useEffect(() => {
-		const subscription = form.watch((value) => {
-			setSavedFormState({
-				...value,
-				photos,
-			} as z.infer<typeof formSchema> & { photos: File[] });
-		});
-		return () => subscription.unsubscribe();
-	}, [form, photos, setSavedFormState]);
+		if (!defaultValues) {
+			const subscription = form.watch((value) => {
+				setSavedFormState({
+					...value,
+					photos,
+				} as z.infer<typeof formSchema> & { photos: File[] });
+			});
+			return () => subscription.unsubscribe();
+		}
+	}, [form, photos, setSavedFormState, defaultValues]);
 
 	// 保存された写真の復元
 	useEffect(() => {
-		if (savedFormState?.photos) {
+		if (!defaultValues && savedFormState?.photos) {
 			setPhotos(savedFormState.photos);
 		}
-	}, [savedFormState?.photos]);
+	}, [savedFormState?.photos, defaultValues]);
 
 	async function onSubmit(values: z.infer<typeof formSchema>) {
+		console.log("[DEBUG] Form submission started");
+		console.log("[DEBUG] Values:", values);
+		console.log("[DEBUG] KoudenId:", koudenId);
+		console.log("[DEBUG] Selected entries:", values.kouden_entry_ids);
+		console.log("[DEBUG] Photos:", photos);
+
 		try {
 			setIsSubmitting(true);
-			await createOffering({
-				...values,
-				kouden_id: koudenId,
-				kouden_entry_ids: values.kouden_entry_ids,
-				photos,
-			});
+			console.log("[DEBUG] Setting isSubmitting to true");
+			let result: Offering;
+
+			if (defaultValues?.id) {
+				// 更新の場合
+				console.log("[DEBUG] Updating offering:", defaultValues.id);
+				const response = await updateOffering(defaultValues.id, {
+					...values,
+					kouden_id: koudenId,
+				});
+				console.log("[DEBUG] Update response:", response);
+				result = {
+					...response,
+					type: response.type as OfferingType,
+					offering_photos: [],
+					offering_entries: [],
+				};
+			} else {
+				// 新規作成の場合
+				console.log(
+					"[DEBUG] Creating new offering with photos:",
+					photos.length,
+				);
+				const response = await createOffering({
+					...values,
+					kouden_id: koudenId,
+				});
+				console.log("[DEBUG] Create response:", response);
+				result = {
+					...response,
+					type: response.type as OfferingType,
+					offering_photos: [],
+					offering_entries: [],
+				};
+			}
+
+			console.log("[DEBUG] Final result:", result);
+
 			toast({
-				title: "お供え物を追加しました",
+				title: defaultValues
+					? "お供え物を更新しました"
+					: "お供え物を追加しました",
 			});
-			setSavedFormState(null);
-			onSuccess?.();
+
+			if (!defaultValues) {
+				setSavedFormState(null);
+			}
+
+			onSuccess?.(result);
 		} catch (error) {
+			console.error("[ERROR] Failed to save offering:", error);
 			toast({
-				title: "お供え物の追加に失敗しました",
+				title: defaultValues
+					? "お供え物の更新に失敗しました"
+					: "お供え物の追加に失敗しました",
 				variant: "destructive",
 			});
 		} finally {
@@ -105,9 +173,38 @@ export function OfferingForm({
 		}
 	}
 
+	console.log("[DEBUG] Form state:", {
+		isSubmitting,
+		currentValues: form.getValues(),
+		formErrors: form.formState.errors,
+	});
+
 	return (
 		<Form {...form}>
-			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+			<form
+				onSubmit={async (e) => {
+					e.preventDefault();
+					console.log("[DEBUG] Form submit event triggered");
+
+					const values = form.getValues();
+					console.log("[DEBUG] Form values before validation:", values);
+
+					const isValid = await form.trigger();
+					console.log("[DEBUG] Form validation result:", isValid);
+
+					if (!isValid) {
+						console.log(
+							"[DEBUG] Form validation errors:",
+							form.formState.errors,
+						);
+						return;
+					}
+
+					console.log("[DEBUG] Calling onSubmit with values:", values);
+					await onSubmit(values);
+				}}
+				className="space-y-4"
+			>
 				<Tabs
 					value={currentTab}
 					onValueChange={setCurrentTab}
@@ -161,7 +258,7 @@ export function OfferingForm({
 							name="kouden_entry_ids"
 							render={({ field }) => (
 								<FormItem>
-									<FormLabel>香典情報</FormLabel>
+									<FormLabel>香典情報（任意）</FormLabel>
 									<FormControl>
 										<SearchableCheckboxList
 											items={koudenEntries.map((entry) => ({
@@ -261,16 +358,25 @@ export function OfferingForm({
 								</FormItem>
 							)}
 						/>
-						<div>
-							<Label>写真（任意）</Label>
-							<OfferingPhotoUploader onPhotosChange={setPhotos} />
-						</div>
+						{!defaultValues && (
+							<div>
+								<Label>写真（任意）</Label>
+								<OfferingPhotoUploader onPhotosChange={setPhotos} />
+							</div>
+						)}
 					</TabsContent>
 				</Tabs>
-				<Button type="submit" className="w-full" disabled={isSubmitting}>
-					{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-					追加
-				</Button>
+				<div className="flex justify-end gap-2">
+					{onCancel && (
+						<Button type="button" variant="outline" onClick={onCancel}>
+							キャンセル
+						</Button>
+					)}
+					<Button type="submit" disabled={isSubmitting}>
+						{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+						{defaultValues ? "保存" : "追加"}
+					</Button>
+				</div>
 			</form>
 		</Form>
 	);

@@ -79,27 +79,13 @@ export function MobileDataTableToolbar<TData>({
 		searchOptions[0]?.value || "",
 	);
 
-	// デバッグ用のログ出力
-	React.useEffect(() => {
-		console.log("MobileDataTableToolbar Debug:", {
-			searchValue,
-			globalFilter,
-			searchField,
-			searchFieldState,
-			sortOrder,
-		});
-	}, [searchValue, globalFilter, searchField, searchFieldState, sortOrder]);
-
 	// グローバル検索の処理
 	const handleSearch = React.useCallback(
 		(value: string) => {
-			console.log("handleSearch called with:", value);
 			setGlobalFilter(value);
 			if (onSearchChange) {
-				console.log("calling onSearchChange with:", value);
 				onSearchChange(value);
 			} else {
-				console.log("using table.setGlobalFilter with:", value);
 				setGlobalFilter(value);
 			}
 		},

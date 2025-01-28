@@ -26,7 +26,6 @@ export function EntryCardList({
 
 	// フィルタリングとソートを適用したデータ
 	const filteredAndSortedData = useMemo(() => {
-		console.log("Filtering with:", { searchQuery, searchField });
 		let result = [...entries];
 
 		// 検索を適用
@@ -40,7 +39,6 @@ export function EntryCardList({
 						const matches = value
 							.toLowerCase()
 							.includes(searchQuery.toLowerCase());
-						console.log("Filtering entry:", { field, value, matches });
 						return matches;
 					}
 					return false;
@@ -50,7 +48,6 @@ export function EntryCardList({
 
 		// ソートを適用
 		const [field, order] = sortOrder.split("_");
-		console.log("Sorting with:", { field, order });
 		result.sort((a, b) => {
 			if (field === "created_at") {
 				return order === "desc"
@@ -69,24 +66,7 @@ export function EntryCardList({
 		});
 
 		return result;
-	}, [entries, searchQuery, searchField, sortOrder]);
-
-	// デバッグ用のログ出力
-	useEffect(() => {
-		console.log("EntryCardList Debug:", {
-			searchQuery,
-			searchField,
-			sortOrder,
-			entriesCount: entries.length,
-			filteredCount: filteredAndSortedData.length,
-		});
-	}, [
-		searchQuery,
-		searchField,
-		sortOrder,
-		entries.length,
-		filteredAndSortedData.length,
-	]);
+	}, [entries, searchQuery, sortOrder]);
 
 	return (
 		<div className="flex flex-col h-[100vh]">

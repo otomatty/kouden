@@ -102,7 +102,6 @@ export async function getKoudenEntry(id: string) {
 		.select("*")
 		.eq("id", id)
 		.single();
-
 	if (error) {
 		throw new Error("香典情報の取得に失敗しました");
 	}
@@ -124,7 +123,6 @@ export async function updateKoudenEntry(
 	}
 
 	try {
-		// データベースに送信するデータから不要なフィールドを除外
 		const { id: _id, offering_entries, ...updateData } = input;
 
 		const { error, data: updatedData } = await supabase
@@ -226,13 +224,6 @@ export async function updateKoudenEntryField(
 	}
 
 	try {
-		console.log("[updateKoudenEntryField] Updating with:", {
-			id,
-			field,
-			value,
-			user: user.id,
-		});
-
 		const { error, data: updatedData } = await supabase
 			.from("kouden_entries")
 			.update({
@@ -242,11 +233,8 @@ export async function updateKoudenEntryField(
 			.select();
 
 		if (error) {
-			console.error("[updateKoudenEntryField] Error:", error);
 			throw new Error(`${field}の更新に失敗しました`);
 		}
-
-		console.log("[updateKoudenEntryField] Updated data:", updatedData);
 
 		Promise.resolve().then(() => {
 			revalidatePath(`/koudens/${updatedData[0].kouden_id}`);
@@ -254,7 +242,6 @@ export async function updateKoudenEntryField(
 
 		return updatedData[0];
 	} catch (error) {
-		console.error("[updateKoudenEntryField] Caught error:", error);
 		throw new Error(`${field}の更新に失敗しました`);
 	}
 }

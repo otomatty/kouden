@@ -1,7 +1,7 @@
 "use client";
 
 import { EntryDialog } from "../entries/dialog/entry-dialog";
-import { OfferingDialog } from "../offerings/dialog";
+import { OfferingDialog } from "../offerings/dialog/offering-dialog";
 import { TelegramDialog } from "../telegrams/dialog";
 import { useAtom } from "jotai";
 import { telegramDialogAtom } from "@/store/telegrams";

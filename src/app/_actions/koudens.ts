@@ -31,7 +31,6 @@ export async function createKouden({
 	userId,
 }: CreateKoudenParams): Promise<{ kouden?: Kouden; error?: string }> {
 	try {
-		console.log("[DEBUG] createKouden開始:", { title, description, userId });
 		const supabase = await createClient();
 
 		// ユーザーIDが渡されていない場合は現在のユーザーのIDを使用
@@ -39,7 +38,6 @@ export async function createKouden({
 			const {
 				data: { user },
 			} = await supabase.auth.getUser();
-			console.log("[DEBUG] 現在のユーザー:", user);
 			if (!user) {
 				return { error: "認証が必要です" };
 			}
@@ -58,8 +56,6 @@ export async function createKouden({
 			.select("*")
 			.single();
 
-		console.log("[DEBUG] 香典帳作成結果:", { kouden, error: koudenError });
-
 		if (koudenError) {
 			throw koudenError;
 		}
@@ -70,8 +66,6 @@ export async function createKouden({
 			.select("id, display_name")
 			.eq("id", userId)
 			.single();
-
-		console.log("[DEBUG] オーナー情報取得結果:", { owner, error: ownerError });
 
 		if (ownerError) {
 			throw ownerError;
@@ -88,11 +82,6 @@ export async function createKouden({
 			.eq("name", KOUDEN_ROLES.EDITOR)
 			.single();
 
-		console.log("[DEBUG] 編集者ロール取得結果:", {
-			ownerRole,
-			error: roleError,
-		});
-
 		if (!ownerRole || roleError) {
 			throw new Error("編集者ロールの取得に失敗しました");
 		}
@@ -107,8 +96,6 @@ export async function createKouden({
 				added_by: userId,
 			});
 
-		console.log("[DEBUG] メンバー登録結果:", { error: memberError });
-
 		if (memberError) {
 			throw memberError;
 		}
@@ -120,7 +107,6 @@ export async function createKouden({
 			} as unknown as Kouden,
 		};
 	} catch (error) {
-		console.error("[ERROR] 香典帳作成エラー:", error);
 		return { error: "香典帳の作成に失敗しました" };
 	}
 }

@@ -15,7 +15,7 @@ import type { EditableColumnConfig } from "@/components/custom/data-table/types"
 import { formatCurrency, formatPostalCode } from "@/lib/utils";
 import { RelationshipSkeleton } from "./relationship-skeleton";
 import { SelectCell } from "@/components/custom/data-table/select-cell";
-import type { CellValue } from "@/components/custom/data-table/types";
+import type { CellValue } from "@/types/table";
 
 const attendanceTypeMap = {
 	FUNERAL: "葬儀",
@@ -127,7 +127,6 @@ export const editableColumns: Record<string, EditableColumnConfig> = {
 		type: "select",
 		options: [], // 動的に設定されるため、空配列をデフォルトとする
 		getOptions: (relationships: Relationship[]) => {
-			console.log("Getting relationship options:", relationships);
 			return relationships.map((rel) => ({
 				value: rel.id,
 				label: rel.name,
@@ -284,20 +283,12 @@ export function createColumns({
 						value: rel.id,
 						label: rel.name,
 					}));
-					console.log("[RelationshipCell] Rendering SelectCell:", {
-						rowId: row.original.id,
-						relationshipId,
-						options,
-					});
+
 					return (
 						<SelectCell
 							value={relationshipId}
 							options={options}
 							onSave={(value) => {
-								console.log("[RelationshipCell] Saving value:", {
-									rowId: row.original.id,
-									value,
-								});
 								onCellEdit("relationship_id", row.original.id, value);
 							}}
 						/>
@@ -436,7 +427,6 @@ export function createColumns({
 							{canEdit && (
 								<DropdownMenuItem
 									onClick={() => {
-										console.log("Edit button clicked for entry:", entry);
 										onEditRow(entry);
 									}}
 								>

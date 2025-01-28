@@ -29,12 +29,15 @@ import {
 	editableColumns,
 } from "./columns";
 import type { KoudenPermission } from "@/types/role";
-import { OfferingDialog } from "../dialog";
+import { OfferingDialog } from "../dialog/offering-dialog";
 import type { KoudenEntry } from "@/types/kouden";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { OfferingCardList } from "../card-list/offering-card-list";
 import { permissionAtom } from "@/store/permission";
 import { useAtomValue } from "jotai";
+import { useQuery } from "@tanstack/react-query";
+import { getRelationships } from "@/app/_actions/relationships";
+import { createColumns } from "./columns";
 
 interface DataTableProps {
 	columns: ColumnDef<Offering, string | number | boolean | null>[];
@@ -47,7 +50,6 @@ interface DataTableProps {
 }
 
 export function DataTable({
-	columns,
 	data,
 	koudenId,
 	koudenEntries,
@@ -70,6 +72,8 @@ export function DataTable({
 	const [rowSelection, setRowSelection] = React.useState({});
 	const [globalFilter, setGlobalFilter] = React.useState("");
 	const permission = useAtomValue(permissionAtom);
+	const isMobile = useMediaQuery("(max-width: 767px)");
+
 	// 画面サイズが変更された時に列の表示状態を更新
 	React.useEffect(() => {
 		setColumnVisibility(
@@ -85,7 +89,7 @@ export function DataTable({
 	}, [isTablet, viewMode, setViewMode]);
 
 	// 選択された行のIDを取得
-	const selectedRows = React.useMemo(() => {
+	const selectedRowsIds = React.useMemo(() => {
 		return Object.keys(rowSelection);
 	}, [rowSelection]);
 
@@ -109,6 +113,56 @@ export function DataTable({
 			}
 		},
 		[onDelete],
+	);
+
+	// 関係性データの取得
+	const { data: relationships = [], isLoading: isLoadingRelationships } =
+		useQuery({
+			queryKey: ["relationships", koudenId],
+			queryFn: async () => {
+				const data = await getRelationships(koudenId);
+				return data.map((rel) => ({
+					id: rel.id,
+					name: rel.name,
+					description: rel.description || undefined,
+				}));
+			},
+		});
+
+	// 編集ダイアログの状態
+	const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
+	const [editingOffering, setEditingOffering] = React.useState<
+		Offering | undefined
+	>();
+
+	// 編集ダイアログを開く
+	const handleEditRow = React.useCallback((offering: Offering) => {
+		setEditingOffering(offering);
+		setIsEditDialogOpen(true);
+	}, []);
+
+	// 編集成功時の処理
+	const handleEditSuccess = React.useCallback(() => {
+		setIsEditDialogOpen(false);
+		setEditingOffering(undefined);
+		toast({
+			title: "更新完了",
+			description: "お供え物を更新しました",
+		});
+	}, []);
+
+	// カラムの生成
+	const columns = React.useMemo(
+		() =>
+			createColumns({
+				onEditRow: handleEditRow,
+				onDeleteRows: handleDeleteRows,
+				onCellEdit: handleCellEdit,
+				onCellUpdate: handleCellEdit,
+				selectedRows: selectedRowsIds,
+				permission,
+			}),
+		[handleEditRow, handleDeleteRows, selectedRowsIds, permission],
 	);
 
 	const table = useReactTable({
@@ -210,21 +264,25 @@ export function DataTable({
 			>
 				<div className="flex items-center gap-4">
 					{!isTablet && (
-						<OfferingDialog koudenId={koudenId} koudenEntries={koudenEntries} />
+						<OfferingDialog
+							koudenId={koudenId}
+							onSuccess={handleEditSuccess}
+							koudenEntries={koudenEntries}
+						/>
 					)}
 				</div>
 			</DataTableToolbar>
 
 			{/* 削除ボタン */}
-			{selectedRows.length > 0 && (
+			{selectedRowsIds.length > 0 && (
 				<Button
 					variant="destructive"
 					size="sm"
-					onClick={() => handleDeleteRows(selectedRows)}
+					onClick={() => handleDeleteRows(selectedRowsIds)}
 					className="flex items-center gap-2"
 				>
 					<Trash2 className="h-4 w-4" />
-					<span>{selectedRows.length}件を削除</span>
+					<span>{selectedRowsIds.length}件を削除</span>
 				</Button>
 			)}
 
@@ -254,7 +312,7 @@ export function DataTable({
 
 			<div className="flex items-center justify-end space-x-2">
 				<div className="flex-1 text-sm text-muted-foreground">
-					{selectedRows.length} / {table.getFilteredRowModel().rows.length}{" "}
+					{selectedRowsIds.length} / {table.getFilteredRowModel().rows.length}{" "}
 					行を選択中
 				</div>
 			</div>
