@@ -5,7 +5,7 @@ import { Copy } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { duplicateKouden } from "@/app/_actions/koudens";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 
@@ -13,13 +13,11 @@ interface DuplicateKoudenButtonProps {
 	koudenId: string;
 }
 
-export function DuplicateKoudenButton({
-	koudenId,
-}: DuplicateKoudenButtonProps) {
+export function DuplicateKoudenButton({ koudenId }: DuplicateKoudenButtonProps) {
 	const router = useRouter();
 	const [loading, setLoading] = useState(false);
 	const isDesktop = useMediaQuery("(min-width: 768px)");
-
+	const { toast } = useToast();
 	const handleDuplicate = async () => {
 		try {
 			setLoading(true);
@@ -43,8 +41,7 @@ export function DuplicateKoudenButton({
 			console.error("Error:", error);
 			toast({
 				title: "エラー",
-				description:
-					error instanceof Error ? error.message : "香典帳の複製に失敗しました",
+				description: error instanceof Error ? error.message : "香典帳の複製に失敗しました",
 				variant: "destructive",
 			});
 		} finally {
@@ -61,9 +58,7 @@ export function DuplicateKoudenButton({
 				className="flex items-center gap-2 text-sm"
 			>
 				<Copy className="h-4 w-4" />
-				<span className="text-sm">
-					{loading ? "複製中..." : "香典帳を複製する"}
-				</span>
+				<span className="text-sm">{loading ? "複製中..." : "香典帳を複製する"}</span>
 			</Button>
 		);
 	}
@@ -80,9 +75,7 @@ export function DuplicateKoudenButton({
 			)}
 		>
 			<Copy className="h-5 w-5" />
-			<span className="text-sm font-medium">
-				{loading ? "複製中..." : "香典帳を複製する"}
-			</span>
+			<span className="text-sm font-medium">{loading ? "複製中..." : "香典帳を複製する"}</span>
 		</button>
 	);
 }

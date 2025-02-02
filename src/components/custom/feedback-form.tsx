@@ -6,13 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { sendFeedback } from "@/app/_actions/feedback";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 
 export function FeedbackForm() {
@@ -45,6 +39,7 @@ export function FeedbackForm() {
 				});
 			}
 		} catch (error) {
+			console.error("Failed to send feedback:", error);
 			toast({
 				title: "エラーが発生しました",
 				description: "予期せぬエラーが発生しました。",
@@ -59,30 +54,17 @@ export function FeedbackForm() {
 		<Card className="w-full max-w-2xl mx-auto">
 			<CardHeader>
 				<CardTitle>不具合・ご要望はこちら</CardTitle>
-				<CardDescription>
-					アプリについてのご意見・ご要望をお聞かせください
-				</CardDescription>
+				<CardDescription>アプリについてのご意見・ご要望をお聞かせください</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<form onSubmit={onSubmit} className="space-y-4">
 					<div className="space-y-2">
 						<Label htmlFor="email">メールアドレス</Label>
-						<Input
-							id="email"
-							name="email"
-							type="email"
-							placeholder="your@email.com"
-							required
-						/>
+						<Input id="email" name="email" type="email" placeholder="your@email.com" required />
 					</div>
 					<div className="space-y-2">
 						<Label htmlFor="title">件名</Label>
-						<Input
-							id="title"
-							name="title"
-							placeholder="フィードバックの件名"
-							required
-						/>
+						<Input id="title" name="title" placeholder="フィードバックの件名" required />
 					</div>
 					<div className="space-y-2">
 						<Label htmlFor="description">内容</Label>

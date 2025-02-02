@@ -11,6 +11,11 @@ const feedbackSchema = z.object({
 
 type FeedbackInput = z.infer<typeof feedbackSchema>;
 
+/**
+ * フィードバックの送信
+ * @param input フィードバック情報
+ * @returns フィードバック
+ */
 export async function sendFeedback(input: FeedbackInput) {
 	try {
 		const validatedData = feedbackSchema.parse(input);

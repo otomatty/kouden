@@ -16,12 +16,9 @@ export const TourGuide = ({ children }: { children: React.ReactNode }) => {
 		if (tourState.isActive && tourState.currentPage) {
 			const steps = getTourSteps(tourState.currentPage);
 			if (steps.length === 0) {
-				console.warn(
-					"No tour steps found for current page:",
-					tourState.currentPage,
-				);
+				console.warn("No tour steps found for current page:", tourState.currentPage);
 				setTourState((prev) => ({ ...prev, isActive: false }));
-				return;
+				return () => {};
 			}
 
 			driverObj.current = driver({
@@ -109,6 +106,7 @@ export const TourGuide = ({ children }: { children: React.ReactNode }) => {
 				style.remove();
 			};
 		}
+		return () => {};
 	}, [tourState.isActive, tourState.currentPage, setTourState]);
 
 	return <>{children}</>;

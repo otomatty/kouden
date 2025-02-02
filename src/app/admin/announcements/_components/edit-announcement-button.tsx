@@ -3,28 +3,17 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
-import {
-	type Announcement,
-	updateAnnouncement,
-} from "@/app/_actions/admin/announcements";
-import {
-	AnnouncementForm,
-	type AnnouncementFormData,
-} from "./announcement-form";
+import { type Announcement, updateAnnouncement } from "@/app/_actions/admin/announcements";
+import { AnnouncementForm, type AnnouncementFormData } from "./announcement-form";
 
 interface EditAnnouncementButtonProps {
 	announcement: Announcement;
 }
 
-export function EditAnnouncementButton({
-	announcement,
-}: EditAnnouncementButtonProps) {
-	const [open, setOpen] = useState(false);
-
+export function EditAnnouncementButton({ announcement }: EditAnnouncementButtonProps) {
 	const onSubmit = async (values: AnnouncementFormData) => {
 		try {
 			await updateAnnouncement(announcement.id, values);
-			setOpen(false);
 		} catch (error) {
 			console.error("Failed to update announcement:", error);
 		}
@@ -32,8 +21,6 @@ export function EditAnnouncementButton({
 
 	return (
 		<ResponsiveDialog
-			open={open}
-			onOpenChange={setOpen}
 			trigger={
 				<Button variant="outline" size="sm">
 					編集

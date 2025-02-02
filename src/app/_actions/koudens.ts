@@ -4,18 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import type {
-	CreateKoudenParams,
-	GetKoudensParams,
-	Kouden,
-	KoudenEntry,
-} from "@/types/kouden";
-import { initializeDefaultRelationships } from "./relationships";
-import {
-	checkKoudenPermission,
-	hasEditPermission,
-	isKoudenOwner,
-} from "./permissions";
+import type { CreateKoudenParams, GetKoudensParams, Kouden } from "@//types/kouden";
+import type { Entry } from "@/types/entries";
+import { checkKoudenPermission, hasEditPermission, isKoudenOwner } from "./permissions";
 import { KOUDEN_ROLES } from "@/types/role";
 
 const koudenSchema = z.object({
@@ -25,6 +16,13 @@ const koudenSchema = z.object({
 
 export type CreateKoudenInput = z.infer<typeof koudenSchema>;
 
+/**
+ * 香典帳の作成
+ * @param title 香典帳のタイトル
+ * @param description 香典帳の説明
+ * @param userId ユーザーID
+ * @returns ユーザーが所属している(作成したorメンバーとして参加している)香典帳
+ */
 export async function createKouden({
 	title,
 	description,
@@ -87,14 +85,12 @@ export async function createKouden({
 		}
 
 		// 5. メンバーとして登録
-		const { error: memberError } = await supabase
-			.from("kouden_members")
-			.insert({
-				kouden_id: kouden.id,
-				user_id: userId,
-				role_id: ownerRole.id,
-				added_by: userId,
-			});
+		const { error: memberError } = await supabase.from("kouden_members").insert({
+			kouden_id: kouden.id,
+			user_id: userId,
+			role_id: ownerRole.id,
+			added_by: userId,
+		});
 
 		if (memberError) {
 			throw memberError;
@@ -107,13 +103,15 @@ export async function createKouden({
 			} as unknown as Kouden,
 		};
 	} catch (error) {
+		console.error("[ERROR] Error creating kouden:", error);
 		return { error: "香典帳の作成に失敗しました" };
 	}
 }
 
-export async function getKoudens({
-	userId,
-}: GetKoudensParams): Promise<{ koudens?: Kouden[]; error?: string }> {
+export async function getKoudens(): Promise<{
+	koudens?: Kouden[];
+	error?: string;
+}> {
 	try {
 		const supabase = await createClient();
 
@@ -185,6 +183,11 @@ export async function getKoudens({
 	}
 }
 
+/**
+ * 香典帳の取得
+ * @param id 香典帳ID
+ * @returns 香典帳
+ */
 export async function getKouden(id: string) {
 	const supabase = await createClient();
 	const {
@@ -288,14 +291,11 @@ export async function getKoudenWithEntries(id: string) {
 			...kouden,
 			owner,
 		},
-		entries: entries as unknown as KoudenEntry[],
+		entries: entries as unknown as Entry[],
 	};
 }
 
-export async function updateKouden(
-	id: string,
-	input: { title: string; description?: string },
-) {
+export async function updateKouden(id: string, input: { title: string; description?: string }) {
 	const supabase = await createClient();
 	const role = await checkKoudenPermission(id);
 
@@ -362,11 +362,7 @@ export async function shareKouden(id: string, userIds: string[]) {
 		throw new Error("閲覧者ロールの取得に失敗しました");
 	}
 
-	await supabase
-		.from("kouden_members")
-		.delete()
-		.eq("kouden_id", id)
-		.neq("user_id", user.id);
+	await supabase.from("kouden_members").delete().eq("kouden_id", id).neq("user_id", user.id);
 
 	const { error } = await supabase.from("kouden_members").insert(
 		userIds.map((userId) => ({
@@ -409,9 +405,12 @@ export async function archiveKouden(id: string) {
 	return data;
 }
 
-export async function duplicateKouden(
-	id: string,
-): Promise<{ kouden?: Kouden; error?: string }> {
+/**
+ * 香典帳の複製
+ * @param id 香典帳ID
+ * @returns 複製された香典帳
+ */
+export async function duplicateKouden(id: string): Promise<{ kouden?: Kouden; error?: string }> {
 	try {
 		const supabase = await createClient();
 		const role = await checkKoudenPermission(id);
@@ -479,14 +478,12 @@ export async function duplicateKouden(
 		}
 
 		// 5. メンバーとして登録
-		const { error: memberError } = await supabase
-			.from("kouden_members")
-			.insert({
-				kouden_id: newKouden.id,
-				user_id: user.id,
-				role_id: ownerRole.id,
-				added_by: user.id,
-			});
+		const { error: memberError } = await supabase.from("kouden_members").insert({
+			kouden_id: newKouden.id,
+			user_id: user.id,
+			role_id: ownerRole.id,
+			added_by: user.id,
+		});
 
 		if (memberError) {
 			throw memberError;
@@ -504,17 +501,15 @@ export async function duplicateKouden(
 
 		// 7. 関係性を新しい香典帳にコピー
 		if (relationships.length > 0) {
-			const { error: copyRelationshipsError } = await supabase
-				.from("relationships")
-				.insert(
-					relationships.map((rel) => ({
-						kouden_id: newKouden.id,
-						name: rel.name,
-						description: rel.description,
-						is_default: false,
-						created_by: user.id,
-					})),
-				);
+			const { error: copyRelationshipsError } = await supabase.from("relationships").insert(
+				relationships.map((rel) => ({
+					kouden_id: newKouden.id,
+					name: rel.name,
+					description: rel.description,
+					is_default: false,
+					created_by: user.id,
+				})),
+			);
 
 			if (copyRelationshipsError) {
 				throw copyRelationshipsError;
@@ -567,7 +562,9 @@ export async function duplicateKouden(
 
 			// エントリーIDのマッピングを作成
 			entries.forEach((oldEntry, index) => {
-				entryIdMap.set(oldEntry.id, newEntries[index].id);
+				if (newEntries?.[index]?.id) {
+					entryIdMap.set(oldEntry.id, newEntries[index].id);
+				}
 			});
 
 			// 10. 関係性IDのマッピングを作成
@@ -589,6 +586,7 @@ export async function duplicateKouden(
 			// 11. 関係性IDを更新
 			for (let i = 0; i < entries.length; i++) {
 				const oldEntry = entries[i];
+				if (!oldEntry) continue;
 				const newEntryId = entryIdMap.get(oldEntry.id);
 				const oldRelationship = oldEntry.relationship_id
 					? relationships.find((rel) => rel.id === oldEntry.relationship_id)
@@ -645,23 +643,29 @@ export async function duplicateKouden(
 				}
 
 				// 次に offering_entries を作成
-				const { error: copyOfferingEntriesError } = await supabase
-					.from("offering_entries")
-					.insert(
-						offerings.map((offering, index) => {
-							const newEntryId = entryIdMap.get(
-								offering.offering_entries[0].kouden_entry_id,
-							);
-							if (!newEntryId) {
-								throw new Error("Failed to map entry ID for offering");
-							}
+				const { error: copyOfferingEntriesError } = await supabase.from("offering_entries").insert(
+					offerings
+						.filter(
+							(offering, index) =>
+								offering.offering_entries?.[0]?.kouden_entry_id &&
+								newOfferings?.[index]?.id &&
+								entryIdMap.has(offering.offering_entries[0].kouden_entry_id),
+						)
+						.map((offering, index) => {
+							const newOffering = newOfferings?.find((_, i) => i === index);
+							const entryId = offering.offering_entries?.[0]?.kouden_entry_id;
+							const mappedEntryId = entryId && entryIdMap.get(entryId);
+
+							if (!(newOffering?.id && mappedEntryId)) return null;
+
 							return {
-								offering_id: newOfferings[index].id,
-								kouden_entry_id: newEntryId,
+								offering_id: newOffering.id,
+								kouden_entry_id: mappedEntryId,
 								created_by: user.id,
 							};
-						}),
-					);
+						})
+						.filter((entry): entry is NonNullable<typeof entry> => entry !== null),
+				);
 
 				if (copyOfferingEntriesError) {
 					throw copyOfferingEntriesError;
@@ -682,22 +686,20 @@ export async function duplicateKouden(
 			}
 
 			if (returnItems && returnItems.length > 0) {
-				const { error: copyReturnItemsError } = await supabase
-					.from("return_items")
-					.insert(
-						returnItems.map((item) => {
-							const newEntryId = entryIdMap.get(item.kouden_entry_id);
-							if (!newEntryId) {
-								throw new Error("Failed to map entry ID for return item");
-							}
-							return {
-								...item,
-								id: undefined,
-								kouden_entry_id: newEntryId,
-								created_by: user.id,
-							};
-						}),
-					);
+				const { error: copyReturnItemsError } = await supabase.from("return_items").insert(
+					returnItems.map((item) => {
+						const newEntryId = entryIdMap.get(item.kouden_entry_id);
+						if (!newEntryId) {
+							throw new Error("Failed to map entry ID for return item");
+						}
+						return {
+							...item,
+							id: undefined,
+							kouden_entry_id: newEntryId,
+							created_by: user.id,
+						};
+					}),
+				);
 
 				if (copyReturnItemsError) {
 					throw copyReturnItemsError;

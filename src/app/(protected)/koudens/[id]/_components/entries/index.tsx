@@ -1,44 +1,66 @@
 "use client";
+// library
 import { useState, useEffect } from "react";
 
-// 独自の型
-import type { KoudenEntry } from "@/types/kouden";
-// カスタムフック
+// types
+import type { Entry } from "@/types/entries";
+import type { Relationship } from "@/types/relationships";
+// hooks
 import { useMediaQuery } from "@/hooks/use-media-query";
-// カスタムコンポーネント
+// components
 import { DataTable } from "./table/data-table";
 import { EntryCardList } from "./card-list/entry-card-list";
 import { Loading } from "../_common/loading";
 
 // Props
 interface EntryViewProps {
-	entries: KoudenEntry[];
+	entries: Entry[];
 	koudenId: string;
+	relationships: Relationship[];
 }
 
-// EntryViewコンポーネント
-// 役割：エントリーの表示
-export function EntryView({ entries, koudenId }: EntryViewProps) {
-	const [data, setData] = useState<KoudenEntry[]>(entries || []);
+/**
+ * EntryViewコンポーネント
+ * 役割：エントリーの表示
+ */
+export function EntryView({ entries = [], koudenId, relationships = [] }: EntryViewProps) {
+	const [data, setData] = useState<Entry[]>(entries);
 	const isMobile = useMediaQuery("(max-width: 767px)");
-
-	// 初期レンダリング時はローディング状態を表示
 	const [isClient, setIsClient] = useState(false);
+	const [isLoading, setIsLoading] = useState(true);
 
 	useEffect(() => {
 		setIsClient(true);
+		setIsLoading(false);
 	}, []);
 
-	if (!isClient) {
+	useEffect(() => {
+		if (!Array.isArray(entries)) {
+			console.error("Invalid entries data:", entries);
+			return;
+		}
+		setData(entries);
+	}, [entries]);
+
+	if (!isClient || isLoading) {
 		return <Loading message="表示モードを確認中..." />;
+	}
+
+	if (!Array.isArray(data)) {
+		return <Loading message="データを読み込み中..." />;
 	}
 
 	return (
 		<>
 			{isMobile ? (
-				<EntryCardList entries={data} koudenId={koudenId} />
+				<EntryCardList entries={data} koudenId={koudenId} relationships={relationships} />
 			) : (
-				<DataTable koudenId={koudenId} entries={data} onDataChange={setData} />
+				<DataTable
+					koudenId={koudenId}
+					entries={Array.isArray(data) ? data : []}
+					relationships={Array.isArray(relationships) ? relationships : []}
+					onDataChange={setData}
+				/>
 			)}
 		</>
 	);

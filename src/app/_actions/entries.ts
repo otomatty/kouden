@@ -1,0 +1,331 @@
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
+import type { CellValue } from "@/types/table";
+import type {
+	CreateEntryInput,
+	EntryResponse,
+	UpdateEntryInput,
+	Entry,
+	AttendanceType,
+} from "@/types/entries";
+
+export async function createEntry(input: CreateEntryInput): Promise<EntryResponse> {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	if (!user) {
+		throw new Error("認証が必要です");
+	}
+
+	try {
+		// フロントエンドのキーをデータベースのカラム名に変換
+		const {
+			koudenId,
+			attendanceType,
+			relationshipId,
+			postalCode,
+			phoneNumber,
+			hasOffering,
+			isReturnCompleted,
+			...rest
+		} = input;
+
+		const createData = {
+			...rest,
+			kouden_id: koudenId,
+			attendance_type: attendanceType ?? "ABSENT",
+			relationship_id: relationshipId,
+			postal_code: postalCode,
+			phone_number: phoneNumber,
+			has_offering: hasOffering,
+			is_return_completed: isReturnCompleted,
+			created_by: user.id,
+		};
+
+		const { data, error } = await supabase
+			.from("kouden_entries")
+			.insert(createData)
+			.select("*")
+			.single();
+
+		if (error) {
+			console.error("[ERROR] Create failed:", {
+				error,
+				errorCode: error.code,
+				errorMessage: error.message,
+				errorDetails: error.details,
+				input,
+			});
+			throw new Error("香典情報の作成に失敗しました");
+		}
+
+		Promise.resolve().then(() => {
+			revalidatePath(`/koudens/${input.kouden_id}`);
+		});
+
+		const response = {
+			...data,
+			attendanceType: data.attendance_type as AttendanceType,
+			relationshipId: data.relationship_id,
+		};
+
+		return response;
+	} catch (error) {
+		console.error("[ERROR] Unexpected error in createEntry:", {
+			error,
+			input,
+			errorMessage: error instanceof Error ? error.message : "Unknown error",
+		});
+		throw new Error("香典情報の作成に失敗しました");
+	}
+}
+
+export async function getEntries(koudenId: string): Promise<Entry[]> {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	if (!user) {
+		throw new Error("認証が必要です");
+	}
+
+	try {
+		// エントリー情報の取得
+		const { data: entries, error: entriesError } = await supabase
+			.from("kouden_entries")
+			.select("*")
+			.eq("kouden_id", koudenId)
+			.order("created_at", { ascending: false });
+
+		if (entriesError) {
+			console.error("[ERROR] Failed to fetch entries:", {
+				message: entriesError.message,
+				details: entriesError.details,
+				hint: entriesError.hint,
+				code: entriesError.code,
+			});
+			throw new Error("香典情報の取得に失敗しました");
+		}
+
+		// 関係性情報の取得
+		const { data: relationships, error: relationshipsError } = await supabase
+			.from("relationships")
+			.select("id, name, description")
+			.eq("kouden_id", koudenId);
+
+		if (relationshipsError) {
+			console.error("[ERROR] Failed to fetch relationships:", {
+				message: relationshipsError.message,
+				details: relationshipsError.details,
+				hint: relationshipsError.hint,
+				code: relationshipsError.code,
+			});
+			throw new Error("関係性情報の取得に失敗しました");
+		}
+
+		// 関係性情報をエントリーにマッピング
+		const entriesWithRelationships = entries.map((entry) => ({
+			...entry,
+			attendanceType: entry.attendance_type as AttendanceType,
+			relationshipId: entry.relationship_id,
+			relationship: relationships.find((r) => r.id === entry.relationship_id) || null,
+		}));
+
+		return entriesWithRelationships;
+	} catch (error) {
+		console.error("[ERROR] Unexpected error in getEntries:", error);
+		throw error;
+	}
+}
+
+export async function getEntry(id: string) {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	if (!user) {
+		throw new Error("認証が必要です");
+	}
+
+	const { data, error } = await supabase.from("kouden_entries").select("*").eq("id", id).single();
+	if (error) {
+		throw new Error("香典情報の取得に失敗しました");
+	}
+
+	return data;
+}
+
+export async function updateEntry(id: string, input: UpdateEntryInput): Promise<EntryResponse> {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	if (!user) {
+		throw new Error("認証が必要です");
+	}
+
+	try {
+		// フロントエンドのキーをデータベースのカラム名に変換
+		const {
+			id: _id,
+			offering_entries,
+			koudenId,
+			attendanceType,
+			hasOffering,
+			isReturnCompleted,
+			postalCode,
+			phoneNumber,
+			relationshipId,
+			...rest
+		} = input;
+		const updateData = {
+			...rest,
+			kouden_id: koudenId,
+			attendance_type: attendanceType,
+			has_offering: hasOffering,
+			is_return_completed: isReturnCompleted,
+			postal_code: postalCode,
+			phone_number: phoneNumber,
+			relationship_id: relationshipId,
+		};
+
+		const { error, data: updatedData } = await supabase
+			.from("kouden_entries")
+			.update({
+				...updateData,
+				attendance_type:
+					updateData.attendance_type === null ? undefined : updateData.attendance_type,
+				relationship_id: updateData.relationship_id === "" ? undefined : updateData.relationship_id,
+			})
+			.eq("id", id)
+			.select()
+			.single();
+
+		if (error || !updatedData) {
+			console.error("[ERROR] Update failed:", {
+				error,
+				id,
+			});
+			throw new Error("香典情報の更新に失敗しました");
+		}
+
+		Promise.resolve().then(() => {
+			revalidatePath(`/koudens/${updatedData.kouden_id}`);
+		});
+
+		return {
+			...updatedData,
+			attendanceType: updatedData.attendance_type as AttendanceType,
+			relationshipId: updatedData.relationship_id,
+		};
+	} catch (error) {
+		console.error("[ERROR] Failed to update entry:", error);
+		throw new Error("香典情報の更新に失敗しました");
+	}
+}
+
+export async function deleteEntry(id: string, koudenId: string): Promise<void> {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	if (!user) {
+		throw new Error("認証が必要です");
+	}
+
+	const { error } = await supabase.from("kouden_entries").delete().eq("id", id);
+
+	if (error) {
+		throw new Error("香典情報の削除に失敗しました");
+	}
+
+	Promise.resolve().then(() => {
+		revalidatePath(`/koudens/${koudenId}`);
+	});
+}
+
+// 複数エントリーの一括削除機能
+export async function deleteEntries(ids: string[], koudenId: string): Promise<void> {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	if (!user) {
+		throw new Error("認証が必要です");
+	}
+
+	const { error } = await supabase.from("kouden_entries").delete().in("id", ids);
+
+	if (error) {
+		throw new Error("香典情報の一括削除に失敗しました");
+	}
+
+	Promise.resolve().then(() => {
+		revalidatePath(`/koudens/${koudenId}`);
+	});
+}
+
+// セル単位の更新用に最適化した関数
+export async function updateEntryField(
+	id: string,
+	field: keyof EntryResponse,
+	value: CellValue,
+): Promise<EntryResponse> {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	if (!user) {
+		throw new Error("認証が必要です");
+	}
+
+	try {
+		// フロントエンドのキーをデータベースのカラム名に変換
+		const dbFieldMap: Record<string, string> = {
+			postalCode: "postal_code",
+			phoneNumber: "phone_number",
+			relationshipId: "relationship_id",
+			hasOffering: "has_offering",
+			isReturnCompleted: "is_return_completed",
+			attendanceType: "attendance_type",
+		};
+
+		const dbField = dbFieldMap[field] || field;
+
+		const { error, data: updatedData } = await supabase
+			.from("kouden_entries")
+			.update({
+				[dbField]: value === "" ? null : value,
+			})
+			.eq("id", id)
+			.select()
+			.single();
+
+		if (error || !updatedData) {
+			throw new Error(`${field}の更新に失敗しました`);
+		}
+
+		Promise.resolve().then(() => {
+			revalidatePath(`/koudens/${updatedData.kouden_id}`);
+		});
+
+		return {
+			...updatedData,
+			attendanceType: updatedData.attendance_type as AttendanceType,
+			relationshipId: updatedData.relationship_id,
+		};
+	} catch (error) {
+		console.error("[ERROR] Failed to update entry:", error);
+		throw new Error(`${field}の更新に失敗しました`);
+	}
+}

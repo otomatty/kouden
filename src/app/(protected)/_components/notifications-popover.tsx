@@ -2,11 +2,7 @@
 
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
@@ -33,42 +29,33 @@ const categoryLabels = {
 
 export function NotificationsPopover() {
 	const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-	const [readAnnouncementIds, setReadAnnouncementIds] = useState<Set<string>>(
-		new Set(),
-	);
+	const [readAnnouncementIds, setReadAnnouncementIds] = useState<Set<string>>(new Set());
 	const [unreadCount, setUnreadCount] = useState(0);
 	const [isOpen, setIsOpen] = useState(false);
-	const [selectedAnnouncement, setSelectedAnnouncement] =
-		useState<Announcement | null>(null);
+	const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
 	const [hoverTimer, setHoverTimer] = useState<NodeJS.Timeout | null>(null);
 	const supabase = createClient();
 
 	const fetchAnnouncementsAndReads = useCallback(async () => {
-		const { data: announcementsData, error: announcementsError } =
-			await supabase
-				.from("system_announcements")
-				.select("*")
-				.eq("status", "published")
-				.gte(
-					"published_at",
-					new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-				)
-				.order("created_at", { ascending: false })
-				.limit(10);
+		const { data: announcementsData, error: announcementsError } = await supabase
+			.from("system_announcements")
+			.select("*")
+			.eq("status", "published")
+			.gte("published_at", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+			.order("created_at", { ascending: false })
+			.limit(10);
 
 		if (announcementsError) {
 			console.error("Failed to fetch announcements:", announcementsError);
 			return;
 		}
 
-		const { data: readsData, error: readsError } = await supabase
+		const { data: readsData } = await supabase
 			.from("user_announcement_reads")
 			.select("announcement_id, is_read")
 			.eq("is_read", true);
 
-		const readIds = new Set(
-			readsData?.map((read) => read.announcement_id) || [],
-		);
+		const readIds = new Set(readsData?.map((read) => read.announcement_id) || []);
 		setReadAnnouncementIds(readIds);
 
 		const formattedAnnouncements = announcementsData.map((item) => ({
@@ -86,9 +73,7 @@ export function NotificationsPopover() {
 		})) as Announcement[];
 
 		setAnnouncements(formattedAnnouncements);
-		setUnreadCount(
-			formattedAnnouncements.filter((a) => !readIds.has(a.id)).length,
-		);
+		setUnreadCount(formattedAnnouncements.filter((a) => !readIds.has(a.id)).length);
 	}, [supabase]);
 
 	useEffect(() => {
@@ -167,9 +152,7 @@ export function NotificationsPopover() {
 	}, [hoverTimer]);
 
 	const markAllAsRead = useCallback(async () => {
-		const unreadAnnouncements = announcements.filter(
-			(a) => !readAnnouncementIds.has(a.id),
-		);
+		const unreadAnnouncements = announcements.filter((a) => !readAnnouncementIds.has(a.id));
 		const {
 			data: { user },
 		} = await supabase.auth.getUser();
@@ -188,10 +171,7 @@ export function NotificationsPopover() {
 			return;
 		}
 
-		const newReadIds = new Set([
-			...readAnnouncementIds,
-			...unreadAnnouncements.map((a) => a.id),
-		]);
+		const newReadIds = new Set([...readAnnouncementIds, ...unreadAnnouncements.map((a) => a.id)]);
 		setReadAnnouncementIds(newReadIds);
 		setUnreadCount(0);
 	}, [supabase, announcements, readAnnouncementIds]);
@@ -235,9 +215,7 @@ export function NotificationsPopover() {
 					</div>
 					<ScrollArea className="h-[400px]">
 						{announcements.length === 0 ? (
-							<div className="p-4 text-center text-sm text-gray-500">
-								お知らせはありません
-							</div>
+							<div className="p-4 text-center text-sm text-gray-500">お知らせはありません</div>
 						) : (
 							<div className="divide-y">
 								{announcements.map((announcement) => (
@@ -257,22 +235,15 @@ export function NotificationsPopover() {
 											<div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-blue-500" />
 										)}
 										<div className="flex items-center gap-2 mb-2">
-											<Badge
-												variant="secondary"
-												className={categoryColors[announcement.category]}
-											>
+											<Badge variant="secondary" className={categoryColors[announcement.category]}>
 												{categoryLabels[announcement.category]}
 											</Badge>
 											<span className="text-xs text-gray-500">
-												{announcement.publishedAt
-													? formatDate(announcement.publishedAt)
-													: "-"}
+												{announcement.publishedAt ? formatDate(announcement.publishedAt) : "-"}
 											</span>
 										</div>
 										<h5 className="font-medium mb-1">{announcement.title}</h5>
-										<p className="text-sm text-gray-600 line-clamp-2">
-											{announcement.content}
-										</p>
+										<p className="text-sm text-gray-600 line-clamp-2">{announcement.content}</p>
 									</button>
 								))}
 							</div>
@@ -282,8 +253,6 @@ export function NotificationsPopover() {
 			</Popover>
 
 			<ResponsiveDialog
-				open={!!selectedAnnouncement}
-				onOpenChange={(open) => !open && setSelectedAnnouncement(null)}
 				trigger={<div />}
 				title={selectedAnnouncement?.title}
 				contentClassName="sm:max-w-2xl"
@@ -291,10 +260,7 @@ export function NotificationsPopover() {
 				<div className="flex items-center gap-2 mb-4">
 					{selectedAnnouncement && (
 						<>
-							<Badge
-								variant="secondary"
-								className={categoryColors[selectedAnnouncement.category]}
-							>
+							<Badge variant="secondary" className={categoryColors[selectedAnnouncement.category]}>
 								{categoryLabels[selectedAnnouncement.category]}
 							</Badge>
 							<span className="text-sm text-gray-500">
@@ -305,9 +271,7 @@ export function NotificationsPopover() {
 						</>
 					)}
 				</div>
-				<div className="prose prose-sm max-w-none">
-					{selectedAnnouncement?.content}
-				</div>
+				<div className="prose prose-sm max-w-none">{selectedAnnouncement?.content}</div>
 			</ResponsiveDialog>
 		</>
 	);

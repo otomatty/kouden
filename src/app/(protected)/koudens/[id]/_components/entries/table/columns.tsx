@@ -1,205 +1,78 @@
-import { Checkbox } from "@/components/ui/checkbox";
+// ui
+import { ArrowUpDown, Trash2, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ArrowUpDown, Pencil, Trash2, MoreHorizontal } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import type { KoudenPermission } from "@/types/role";
-import type { Table, Row, Column } from "@tanstack/react-table";
-import type { KoudenEntry, Relationship } from "@/types/kouden";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { EditableColumnConfig } from "@/components/custom/data-table/types";
-import { formatCurrency, formatPostalCode } from "@/lib/utils";
-import { RelationshipSkeleton } from "./relationship-skeleton";
-import { SelectCell } from "@/components/custom/data-table/select-cell";
+
+// types
+import type { KoudenPermission } from "@/types/role";
+import type { Table, Row, Column } from "@tanstack/react-table";
+import type { Entry, AttendanceType } from "@/types/entries";
+import type { Relationship } from "@/types/relationships";
 import type { CellValue } from "@/types/table";
-
-const attendanceTypeMap = {
-	FUNERAL: "葬儀",
-	CONDOLENCE_VISIT: "弔問",
-	ABSENT: "欠席",
-} as const;
-
-// カスタムソート用の優先順位マップ
-const attendanceTypePriority = {
-	FUNERAL: 3,
-	CONDOLENCE_VISIT: 2,
-	ABSENT: 1,
-} as const;
-
-const attendanceTypeOptions = [
-	{ value: "FUNERAL", label: "葬儀" },
-	{ value: "CONDOLENCE_VISIT", label: "弔問" },
-	{ value: "ABSENT", label: "欠席" },
-];
-
-const offeringOptions = [
-	{ value: "true", label: "あり" },
-	{ value: "false", label: "なし" },
-];
+// utils
+import { formatCurrency } from "@/utils/currency";
+import { formatPostalCode } from "@/utils/postal-code";
+// components
+import { EntryDialog } from "../dialog/entry-dialog";
+// constants
+import { attendanceTypeMap, attendanceTypePriority } from "./constants";
 
 interface ColumnProps {
-	onEditRow: (entry: KoudenEntry) => void;
-	onDeleteRows: (ids: string[]) => void;
-	onCellUpdate: (
-		id: string,
-		field: keyof Omit<KoudenEntry, "relationship">,
-		value: string | number | boolean | null,
-	) => void;
-	onCellEdit: (
-		columnId: string,
-		rowId: string,
-		value: CellValue,
-	) => Promise<void>;
-	selectedRows: string[];
-	relationships: Relationship[];
-	permission?: KoudenPermission;
 	koudenId: string;
-	isLoadingRelationships: boolean;
+	onDeleteRows: (ids: string[]) => void;
+	selectedRows: string[];
+	permission?: KoudenPermission;
+	relationships: Relationship[];
 }
 
-// カラムラベルの定義
-export const columnLabels: Record<string, string> = {
-	select: "選択",
-	name: "ご芳名",
-	organization: "団体名",
-	position: "役職",
-	created_at: "登録日時",
-	relationship_id: "ご関係",
-	amount: "金額",
-	postal_code: "郵便番号",
-	address: "住所",
-	phone_number: "電話番号",
-	attendance_type: "参列",
-	has_offering: "供物",
-	is_return_completed: "返礼",
-	notes: "備考",
-	actions: "アクション",
-};
-
-// 検索オプションの定義
-export const searchOptions = [
-	{ value: "name", label: "ご芳名" },
-	{ value: "address", label: "住所" },
-	{ value: "organization", label: "団体名" },
-	{ value: "position", label: "役職" },
-];
-
-// ソートオプションの定義
-export const sortOptions = [
-	{ value: "created_at_desc", label: "新しい順" },
-	{ value: "created_at_asc", label: "古い順" },
-	{ value: "amount_desc", label: "金額が高い順" },
-	{ value: "amount_asc", label: "金額が低い順" },
-	{ value: "name_asc", label: "名前順" },
-];
-
-// 画面サイズに応じた列の表示設定
-export const defaultColumnVisibility = {
-	position: false,
-	phone_number: false,
-	attendance_type: false,
-	is_return_completed: false,
-	created_at: false,
-};
-
-export const tabletColumnVisibility = {
-	...defaultColumnVisibility,
-	organization: false,
-	postal_code: false,
-	address: false,
-	notes: false,
-};
-
-// 編集可能なカラムの設定
-export const editableColumns: Record<string, EditableColumnConfig> = {
-	name: { type: "text" },
-	organization: { type: "text" },
-	position: { type: "text" },
-	amount: { type: "number", format: "currency" },
-	postal_code: { type: "postal_code" },
-	address: { type: "text" },
-	phone_number: { type: "text" },
-	relationship_id: {
-		type: "select",
-		options: [], // 動的に設定されるため、空配列をデフォルトとする
-		getOptions: (relationships: Relationship[]) => {
-			return relationships.map((rel) => ({
-				value: rel.id,
-				label: rel.name,
-			}));
-		},
-	},
-	attendance_type: {
-		type: "select",
-		options: [
-			{ value: "FUNERAL", label: "葬儀" },
-			{ value: "CONDOLENCE_VISIT", label: "弔問" },
-			{ value: "ABSENT", label: "香典のみ" },
-		],
-	},
-	has_offering: {
-		type: "boolean",
-		options: [
-			{ value: "true", label: "あり" },
-			{ value: "false", label: "なし" },
-		],
-	},
-	is_return_completed: {
-		type: "boolean",
-		options: [
-			{ value: "true", label: "返礼済み" },
-			{ value: "false", label: "未返礼" },
-		],
-	},
-	notes: { type: "text" },
-	// 編集不可のカラム
-	select: { type: "readonly" },
-	actions: { type: "readonly" },
-	created_at: { type: "readonly" },
-};
-
-export function createColumns({
-	onEditRow,
-	onDeleteRows,
-	onCellUpdate,
-	onCellEdit,
-	selectedRows,
-	relationships,
-	permission,
-	koudenId,
-	isLoadingRelationships,
-}: ColumnProps) {
+export function createColumns({ onDeleteRows, relationships, permission, koudenId }: ColumnProps) {
 	const canEdit = permission === "owner" || permission === "editor";
 
-	const formatCell = (
-		value: string | number | boolean | null | undefined,
-		format?: "currency" | "postal_code",
-	) => {
+	// セルのフォーマット
+	type FormatType = "currency" | "postal_code" | "attendance" | "default";
+
+	const formatCell = (value: CellValue, format?: FormatType): string => {
 		if (value == null) return "";
-		if (format === "currency") {
-			return `¥${formatCurrency(value as number)}`;
+
+		try {
+			switch (format) {
+				case "currency":
+					return `${formatCurrency(value as number)}`;
+				case "postal_code":
+					return `${formatPostalCode(value as string)}`;
+				case "attendance":
+					return attendanceTypeMap[value as AttendanceType] ?? "-";
+				default:
+					return String(value) || "";
+			}
+		} catch (error) {
+			console.error("[ERROR] Cell format failed:", {
+				value,
+				format,
+				error,
+			});
+			return "-";
 		}
-		if (format === "postal_code") {
-			return `〒${formatPostalCode(value as string)}`;
-		}
-		return String(value);
 	};
 
 	return [
 		{
 			id: "select",
-			header: ({ table }: { table: Table<KoudenEntry> }) => (
+			header: ({ table }: { table: Table<Entry> }) => (
 				<Checkbox
 					checked={table.getIsAllPageRowsSelected()}
 					onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
 					aria-label="全選択"
 				/>
 			),
-			cell: ({ row }: { row: Row<KoudenEntry> }) => (
+			cell: ({ row }: { row: Row<Entry> }) => (
 				<Checkbox
 					checked={row.getIsSelected()}
 					onCheckedChange={(value) => row.toggleSelected(!!value)}
@@ -210,8 +83,8 @@ export function createColumns({
 			enableHiding: false,
 		},
 		{
-			accessorKey: "created_at",
-			header: ({ column }: { column: Column<KoudenEntry> }) => (
+			accessorKey: "createdAt",
+			header: ({ column }: { column: Column<Entry> }) => (
 				<Button
 					variant="ghost"
 					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
@@ -220,7 +93,7 @@ export function createColumns({
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			),
-			cell: ({ row }: { row: Row<KoudenEntry> }) => {
+			cell: ({ row }: { row: Row<Entry> }) => {
 				const date = new Date(row.getValue("created_at") as string);
 				return date.toLocaleString("ja-JP", {
 					year: "numeric",
@@ -233,7 +106,7 @@ export function createColumns({
 		},
 		{
 			accessorKey: "name",
-			header: ({ column }: { column: Column<KoudenEntry> }) => (
+			header: ({ column }: { column: Column<Entry> }) => (
 				<Button
 					variant="ghost"
 					className="hover:bg-transparent"
@@ -243,65 +116,54 @@ export function createColumns({
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			),
-			cell: ({ row }: { row: Row<KoudenEntry> }) =>
-				formatCell(row.getValue("name")),
+			cell: ({ row }: { row: Row<Entry> }) => {
+				const value = row.getValue("name") as string;
+
+				return formatCell(value);
+			},
 		},
 		{
 			accessorKey: "organization",
 			header: "団体名",
-			cell: ({ row }: { row: Row<KoudenEntry> }) =>
-				formatCell(row.getValue("organization")),
+			cell: ({ row }: { row: Row<Entry> }) => {
+				const value = row.getValue("organization") as string;
+
+				return formatCell(value);
+			},
 		},
 		{
 			accessorKey: "position",
 			header: "役職",
-			cell: ({ row }: { row: Row<KoudenEntry> }) =>
-				formatCell(row.getValue("position")),
+			cell: ({ row }: { row: Row<Entry> }) => {
+				const value = row.getValue("position") as string;
+
+				return formatCell(value);
+			},
 		},
 		{
-			accessorKey: "relationship_id",
-			header: ({ column }: { column: Column<KoudenEntry> }) => (
+			accessorKey: "relationshipId",
+			header: ({ column }: { column: Column<Entry> }) => (
 				<Button
 					variant="ghost"
+					className="hover:bg-transparent"
 					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
 				>
 					ご関係
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			),
-			cell: ({ row }: { row: Row<KoudenEntry> }) => {
-				if (isLoadingRelationships) {
-					return <RelationshipSkeleton />;
-				}
-
-				const relationshipId = row.getValue("relationship_id") as string;
+			cell: ({ row }: { row: Row<Entry> }) => {
+				const relationshipId =
+					(row.getValue("relationshipId") as string) || row.original.relationship_id;
 				const relationship = relationships.find((r) => r.id === relationshipId);
 
-				// 編集可能な場合はSelectCellを表示
-				if (canEdit) {
-					const options = relationships.map((rel) => ({
-						value: rel.id,
-						label: rel.name,
-					}));
-
-					return (
-						<SelectCell
-							value={relationshipId}
-							options={options}
-							onSave={(value) => {
-								onCellEdit("relationship_id", row.original.id, value);
-							}}
-						/>
-					);
-				}
-
 				// 編集不可の場合は通常のテキスト表示
-				return relationship ? relationship.name : relationshipId;
+				return relationship ? relationship.name : "";
 			},
 		},
 		{
 			accessorKey: "amount",
-			header: ({ column }: { column: Column<KoudenEntry> }) => (
+			header: ({ column }: { column: Column<Entry> }) => (
 				<Button
 					variant="ghost"
 					className="hover:bg-transparent"
@@ -311,30 +173,34 @@ export function createColumns({
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			),
-			cell: ({ row }: { row: Row<KoudenEntry> }) =>
-				formatCell(row.getValue("amount"), "currency"),
+			cell: ({ row }: { row: Row<Entry> }) => {
+				const value = row.getValue("amount") as number;
+
+				return formatCell(value, "currency");
+			},
 		},
 		{
-			accessorKey: "postal_code",
+			accessorKey: "postalCode",
 			header: "郵便番号",
-			cell: ({ row }: { row: Row<KoudenEntry> }) =>
-				formatCell(row.getValue("postal_code"), "postal_code"),
+			cell: ({ row }: { row: Row<Entry> }) => {
+				const value = row.getValue("postalCode") as string;
+
+				return formatCell(value, "postal_code");
+			},
 		},
 		{
 			accessorKey: "address",
 			header: "住所",
-			cell: ({ row }: { row: Row<KoudenEntry> }) =>
-				formatCell(row.getValue("address")),
+			cell: ({ row }: { row: Row<Entry> }) => formatCell(row.getValue("address")),
 		},
 		{
-			accessorKey: "phone_number",
+			accessorKey: "phoneNumber",
 			header: "電話番号",
-			cell: ({ row }: { row: Row<KoudenEntry> }) =>
-				formatCell(row.getValue("phone_number")),
+			cell: ({ row }: { row: Row<Entry> }) => formatCell(row.getValue("phoneNumber")),
 		},
 		{
-			accessorKey: "attendance_type",
-			header: ({ column }: { column: Column<KoudenEntry> }) => (
+			accessorKey: "attendanceType",
+			header: ({ column }: { column: Column<Entry> }) => (
 				<Button
 					variant="ghost"
 					className="hover:bg-transparent"
@@ -344,25 +210,19 @@ export function createColumns({
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			),
-			cell: ({ row }: { row: Row<KoudenEntry> }) => {
-				const value = row.getValue(
-					"attendance_type",
-				) as keyof typeof attendanceTypeMap;
+			cell: ({ row }: { row: Row<Entry> }) => {
+				const value = row.getValue("attendanceType") as keyof typeof attendanceTypeMap;
 				return <Badge variant="outline">{attendanceTypeMap[value]}</Badge>;
 			},
-			sortingFn: (rowA: Row<KoudenEntry>, rowB: Row<KoudenEntry>) => {
-				const a = rowA.getValue(
-					"attendance_type",
-				) as keyof typeof attendanceTypePriority;
-				const b = rowB.getValue(
-					"attendance_type",
-				) as keyof typeof attendanceTypePriority;
+			sortingFn: (rowA: Row<Entry>, rowB: Row<Entry>) => {
+				const a = rowA.getValue("attendanceType") as keyof typeof attendanceTypePriority;
+				const b = rowB.getValue("attendanceType") as keyof typeof attendanceTypePriority;
 				return attendanceTypePriority[b] - attendanceTypePriority[a];
 			},
 		},
 		{
-			accessorKey: "has_offering",
-			header: ({ column }: { column: Column<KoudenEntry> }) => (
+			accessorKey: "hasOffering",
+			header: ({ column }: { column: Column<Entry> }) => (
 				<Button
 					variant="ghost"
 					className="hover:bg-transparent"
@@ -372,14 +232,14 @@ export function createColumns({
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			),
-			cell: ({ row }: { row: Row<KoudenEntry> }) => {
-				const value = row.getValue("has_offering") as boolean;
+			cell: ({ row }: { row: Row<Entry> }) => {
+				const value = row.getValue("hasOffering") as boolean;
 				return value ? "あり" : "なし";
 			},
 		},
 		{
-			accessorKey: "is_return_completed",
-			header: ({ column }: { column: Column<KoudenEntry> }) => (
+			accessorKey: "isReturnCompleted",
+			header: ({ column }: { column: Column<Entry> }) => (
 				<Button
 					variant="ghost"
 					className="hover:bg-transparent"
@@ -389,30 +249,24 @@ export function createColumns({
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			),
-			cell: ({ row }: { row: Row<KoudenEntry> }) => {
-				const value = row.getValue("is_return_completed") as boolean;
-				return (
-					<Badge variant={value ? "default" : "secondary"}>
-						{value ? "完了" : "未完了"}
-					</Badge>
-				);
+			cell: ({ row }: { row: Row<Entry> }) => {
+				const value = row.getValue("isReturnCompleted") as boolean;
+				return <Badge variant={value ? "default" : "secondary"}>{value ? "完了" : "未完了"}</Badge>;
 			},
 		},
 		{
 			accessorKey: "notes",
 			header: "備考",
-			cell: ({ row }: { row: Row<KoudenEntry> }) =>
-				formatCell(row.getValue("notes")),
+			cell: ({ row }: { row: Row<Entry> }) => formatCell(row.getValue("notes")),
 		},
 		{
 			id: "actions",
 			header: "操作",
-			cell: ({ row }: { row: Row<KoudenEntry> }) => {
+			cell: ({ row }: { row: Row<Entry> }) => {
 				const entry = row.original;
-				const canEdit = permission === "owner" || permission === "editor";
-				const canDelete = permission === "owner" || permission === "editor";
+				const hasPermission = permission === "owner" || permission === "editor";
 
-				if (!canEdit && !canDelete) {
+				if (!hasPermission) {
 					return null;
 				}
 
@@ -425,23 +279,27 @@ export function createColumns({
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="end">
 							{canEdit && (
-								<DropdownMenuItem
-									onClick={() => {
-										onEditRow(entry);
-									}}
-								>
-									<Pencil className="mr-2 h-4 w-4" />
-									編集
-								</DropdownMenuItem>
-							)}
-							{canDelete && (
-								<DropdownMenuItem
-									onClick={() => onDeleteRows([entry.id])}
-									className="text-destructive"
-								>
-									<Trash2 className="mr-2 h-4 w-4" />
-									削除
-								</DropdownMenuItem>
+								<>
+									<DropdownMenuItem asChild>
+										<EntryDialog
+											koudenId={koudenId}
+											relationships={relationships}
+											defaultValues={entry}
+											variant="edit"
+										/>
+									</DropdownMenuItem>
+
+									<DropdownMenuItem asChild>
+										<button
+											type="button"
+											onClick={() => onDeleteRows([entry.id])}
+											className="text-destructive w-full justify-start"
+										>
+											<Trash2 className="h-4 w-4" />
+											削除する
+										</button>
+									</DropdownMenuItem>
+								</>
 							)}
 						</DropdownMenuContent>
 					</DropdownMenu>

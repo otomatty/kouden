@@ -4,12 +4,17 @@ import { createClient } from "@/lib/supabase/server";
 import * as XLSX from "xlsx";
 import type { Database } from "@/types/supabase";
 
-type KoudenEntry = Database["public"]["Tables"]["kouden_entries"]["Row"] & {
+type Entry = Database["public"]["Tables"]["kouden_entries"]["Row"] & {
 	relationship: {
 		name: string;
 	} | null;
 };
 
+/**
+ * 香典帳のエクスポート
+ * @param koudenId 香典帳ID
+ * @returns エクスポートされた香典帳
+ */
 export async function exportKoudenToExcel(koudenId: string) {
 	const supabase = await createClient();
 
@@ -55,26 +60,24 @@ export async function exportKoudenToExcel(koudenId: string) {
 	const workbook = XLSX.utils.book_new();
 
 	// データを変換
-	const excelData = (mergedEntries as unknown as KoudenEntry[]).map(
-		(entry) => ({
-			ご芳名: entry.name,
-			団体名: entry.organization || "",
-			役職: entry.position || "",
-			ご関係: entry.relationship?.name || "",
-			金額: entry.amount,
-			郵便番号: entry.postal_code || "",
-			住所: entry.address,
-			電話番号: entry.phone_number || "",
-			参列:
-				entry.attendance_type === "FUNERAL"
-					? "葬儀"
-					: entry.attendance_type === "CONDOLENCE_VISIT"
-						? "弔問"
-						: "欠席",
-			供物: entry.has_offering ? "有" : "無",
-			備考: entry.notes || "",
-		}),
-	);
+	const excelData = (mergedEntries as unknown as Entry[]).map((entry) => ({
+		ご芳名: entry.name,
+		団体名: entry.organization || "",
+		役職: entry.position || "",
+		ご関係: entry.relationship?.name || "",
+		金額: entry.amount,
+		郵便番号: entry.postal_code || "",
+		住所: entry.address,
+		電話番号: entry.phone_number || "",
+		参列:
+			entry.attendance_type === "FUNERAL"
+				? "葬儀"
+				: entry.attendance_type === "CONDOLENCE_VISIT"
+					? "弔問"
+					: "欠席",
+		供物: entry.has_offering ? "有" : "無",
+		備考: entry.notes || "",
+	}));
 
 	// ワークシートを作成
 	const worksheet = XLSX.utils.json_to_sheet(excelData);

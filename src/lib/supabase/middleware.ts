@@ -4,7 +4,8 @@ import { NextResponse, type NextRequest } from "next/server";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
+const hasValidEnv = supabaseUrl && supabaseAnonKey;
+if (!hasValidEnv) {
 	throw new Error("Missing Supabase environment variables");
 }
 
@@ -19,7 +20,7 @@ export async function updateSession(request: NextRequest) {
 				return request.cookies.getAll();
 			},
 			setAll(cookiesToSet) {
-				for (const { name, value, options } of cookiesToSet) {
+				for (const { name, value } of cookiesToSet) {
 					request.cookies.set(name, value);
 				}
 				supabaseResponse = NextResponse.next({
@@ -36,11 +37,9 @@ export async function updateSession(request: NextRequest) {
 		data: { user },
 	} = await supabase.auth.getUser();
 
-	if (
-		!user &&
-		!request.nextUrl.pathname.startsWith("/login") &&
-		!request.nextUrl.pathname.startsWith("/auth")
-	) {
+	const publicPaths = ["/login", "/auth"];
+	const requiresAuth = !publicPaths.some((path) => request.nextUrl.pathname.startsWith(path));
+	if (requiresAuth && !user) {
 		const url = request.nextUrl.clone();
 		url.pathname = "/login";
 		return NextResponse.redirect(url);

@@ -17,16 +17,14 @@ const categoryNames = {
 
 export function DocsList({ docs }: DocsListProps) {
 	const pathname = usePathname();
-	const categories = docs.reduce(
-		(acc, doc) => {
-			if (!acc[doc.category]) {
-				acc[doc.category] = [];
-			}
-			acc[doc.category].push(doc);
-			return acc;
-		},
-		{} as Record<string, DocMeta[]>,
-	);
+	const categories = docs.reduce<Record<string, DocMeta[]>>((acc, doc) => {
+		const category = doc.category;
+		if (!acc[category]) {
+			acc[category] = [];
+		}
+		acc[category].push(doc);
+		return acc;
+	}, {});
 
 	return (
 		<nav className="space-y-6">

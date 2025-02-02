@@ -1,53 +1,44 @@
 "use client";
 
-import { useAtomValue } from "jotai";
-import { permissionAtom } from "@/store/permission";
-import { canCreateEntry, canUpdateEntry } from "@/store/permission";
-import type { KoudenEntry } from "@/types/kouden";
+import type { Entry } from "@/types/entries";
+import type { Relationship } from "@/types/relationships";
 import { CrudDialog } from "@/components/custom/crud-dialog";
 import { EntryForm } from "./entry-form";
 
 export interface EntryDialogProps {
 	koudenId: string;
-	defaultValues?: KoudenEntry;
-	variant?: "create" | "edit";
-	buttonClassName?: string;
-	onSuccess?: (entry: KoudenEntry) => void;
-	open?: boolean;
-	onOpenChange?: (open: boolean) => void;
+	relationships: Relationship[];
+	defaultValues?: Entry;
+	variant?: "create" | "edit" | undefined; // undefinedはボタンが表示されないことを表す
+	onSuccess?: (entry: Entry) => void;
 }
 
 export function EntryDialog({
 	koudenId,
+	relationships,
 	defaultValues,
 	variant,
-	buttonClassName,
 	onSuccess,
-	open,
-	onOpenChange,
 }: EntryDialogProps) {
-	const permission = useAtomValue(permissionAtom);
-
 	return (
-		<CrudDialog<KoudenEntry>
-			title={variant === "create" ? "新規香典記録" : "香典記録の編集"}
+		<CrudDialog<Entry>
+			title={variant === "create" ? "香典を登録する" : "編集する"}
 			variant={variant}
-			buttonClassName={buttonClassName}
-			open={open}
-			onOpenChange={onOpenChange}
-			canCreate={canCreateEntry(permission)}
-			canUpdate={canUpdateEntry(permission)}
 			createButtonLabel="香典を登録する"
+			editButtonLabel="編集する"
+			onSuccess={onSuccess}
 		>
-			<EntryForm
-				koudenId={koudenId}
-				defaultValues={defaultValues}
-				onSuccess={(entry) => {
-					onSuccess?.(entry);
-					onOpenChange?.(false);
-				}}
-				onCancel={() => onOpenChange?.(false)}
-			/>
+			{({ close }) => (
+				<EntryForm
+					koudenId={koudenId}
+					relationships={relationships}
+					defaultValues={defaultValues}
+					onSuccess={(entry) => {
+						onSuccess?.(entry);
+						close();
+					}}
+				/>
+			)}
 		</CrudDialog>
 	);
 }

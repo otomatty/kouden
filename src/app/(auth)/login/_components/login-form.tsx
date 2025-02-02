@@ -32,9 +32,7 @@ export function LoginForm() {
 			<Button
 				type="button"
 				variant="outline"
-				onClick={(e) => {
-					handleGoogleLogin();
-				}}
+				onClick={handleGoogleLogin}
 				className="flex items-center justify-center gap-2"
 			>
 				<GoogleIcon className="h-5 w-5" />

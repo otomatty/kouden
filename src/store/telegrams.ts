@@ -1,39 +1,32 @@
 import { atom } from "jotai";
 import type { Database } from "@/types/supabase";
-import type { Telegram, TelegramInput } from "@/types/telegram";
-
-type SupabaseTelegram = Database["public"]["Tables"]["telegrams"]["Row"];
+import type { Telegram, TelegramRow, UpdateTelegramInput } from "@/types/telegram";
 
 // スネークケースからキャメルケースへの変換
-export const toCamelCase = (telegram: SupabaseTelegram): Telegram => ({
-	id: telegram.id,
-	koudenId: telegram.kouden_id,
-	koudenEntryId: telegram.kouden_entry_id,
-	senderName: telegram.sender_name,
-	senderOrganization: telegram.sender_organization,
-	senderPosition: telegram.sender_position,
-	message: telegram.message,
-	notes: telegram.notes,
-	createdAt: telegram.created_at,
-	updatedAt: telegram.updated_at,
-	createdBy: telegram.created_by,
+export const toCamelCase = (row: TelegramRow): Telegram => ({
+	id: row.id,
+	koudenId: row.kouden_id,
+	koudenEntryId: row.kouden_entry_id,
+	senderName: row.sender_name,
+	senderOrganization: row.sender_organization,
+	senderPosition: row.sender_position,
+	message: row.message,
+	notes: row.notes,
+	createdAt: row.created_at,
+	updatedAt: row.updated_at,
+	createdBy: row.created_by,
 });
 
 // キャメルケースからスネークケースへの変換
-const toSnakeCase = (
-	telegram: Partial<Telegram>,
-): Partial<SupabaseTelegram> => {
-	const result: Partial<SupabaseTelegram> = {};
+export const toSnakeCase = (telegram: Partial<Telegram>): Partial<TelegramRow> => {
+	const result: Partial<TelegramRow> = {};
 	if (telegram.id !== undefined) result.id = telegram.id;
 	if (telegram.koudenId !== undefined) result.kouden_id = telegram.koudenId;
-	if (telegram.koudenEntryId !== undefined)
-		result.kouden_entry_id = telegram.koudenEntryId;
-	if (telegram.senderName !== undefined)
-		result.sender_name = telegram.senderName;
+	if (telegram.koudenEntryId !== undefined) result.kouden_entry_id = telegram.koudenEntryId;
+	if (telegram.senderName !== undefined) result.sender_name = telegram.senderName;
 	if (telegram.senderOrganization !== undefined)
 		result.sender_organization = telegram.senderOrganization;
-	if (telegram.senderPosition !== undefined)
-		result.sender_position = telegram.senderPosition;
+	if (telegram.senderPosition !== undefined) result.sender_position = telegram.senderPosition;
 	if (telegram.message !== undefined) result.message = telegram.message;
 	if (telegram.notes !== undefined) result.notes = telegram.notes;
 	if (telegram.createdAt !== undefined) result.created_at = telegram.createdAt;
@@ -76,87 +69,84 @@ export interface OptimisticTelegram extends Telegram {
 export const optimisticTelegramsAtom = atom<OptimisticTelegram[]>([]);
 
 // テーブルの更新関数を提供するatom
-export const telegramsActionsAtom = atom(
-	null,
-	(get, set, action: TelegramAction) => {
-		const state = get(telegramStateAtom);
+export const telegramsActionsAtom = atom(null, (get, set, action: TelegramAction) => {
+	const state = get(telegramStateAtom);
 
-		switch (action.type) {
-			case "setLoading":
-				set(telegramStateAtom, { ...state, isLoading: action.payload });
-				break;
-			case "setError":
-				set(telegramStateAtom, {
-					...state,
-					error: action.payload as Error | null,
-				});
-				break;
-			case "setItems":
-				set(telegramStateAtom, {
-					...state,
-					data: { ...state.data, items: action.payload as Telegram[] },
-				});
-				break;
-			case "updateOptimistic": {
-				const { id, data } = action.payload;
-				const newOptimisticUpdates = new Map(state.data.optimisticUpdates);
-				newOptimisticUpdates.set(id, data);
-				set(telegramStateAtom, {
-					...state,
-					data: {
-						...state.data,
-						optimisticUpdates: newOptimisticUpdates,
-					},
-				});
-				break;
-			}
-			case "clearOptimistic": {
-				const optimisticUpdates = new Map(state.data.optimisticUpdates);
-				optimisticUpdates.delete(action.payload);
-				set(telegramStateAtom, {
-					...state,
-					data: { ...state.data, optimisticUpdates },
-				});
-				break;
-			}
-			case "setDialog": {
-				const { dialog, props } = action.payload;
-				set(telegramStateAtom, {
-					...state,
-					dialogs: { ...state.dialogs, [dialog]: props },
-				});
-				break;
-			}
-			case "setFilter":
-				set(telegramStateAtom, {
-					...state,
-					data: {
-						...state.data,
-						filter: { ...state.data.filter, ...action.payload },
-					},
-				});
-				break;
-			case "setSort":
-				set(telegramStateAtom, {
-					...state,
-					data: {
-						...state.data,
-						sort: { ...state.data.sort, ...action.payload },
-					},
-				});
-				break;
-			case "setPagination":
-				set(telegramStateAtom, {
-					...state,
-					data: {
-						...state.data,
-						pagination: { ...state.data.pagination, ...action.payload },
-					},
-				});
-				break;
+	switch (action.type) {
+		case "setLoading":
+			set(telegramStateAtom, { ...state, isLoading: action.payload });
+			break;
+		case "setError":
+			set(telegramStateAtom, {
+				...state,
+				error: action.payload as Error | null,
+			});
+			break;
+		case "setItems":
+			set(telegramStateAtom, {
+				...state,
+				data: { ...state.data, items: action.payload as Telegram[] },
+			});
+			break;
+		case "updateOptimistic": {
+			const { id, data } = action.payload;
+			const newOptimisticUpdates = new Map(state.data.optimisticUpdates);
+			newOptimisticUpdates.set(id, data);
+			set(telegramStateAtom, {
+				...state,
+				data: {
+					...state.data,
+					optimisticUpdates: newOptimisticUpdates,
+				},
+			});
+			break;
 		}
-	},
-);
+		case "clearOptimistic": {
+			const optimisticUpdates = new Map(state.data.optimisticUpdates);
+			optimisticUpdates.delete(action.payload);
+			set(telegramStateAtom, {
+				...state,
+				data: { ...state.data, optimisticUpdates },
+			});
+			break;
+		}
+		case "setDialog": {
+			const { dialog, props } = action.payload;
+			set(telegramStateAtom, {
+				...state,
+				dialogs: { ...state.dialogs, [dialog]: props },
+			});
+			break;
+		}
+		case "setFilter":
+			set(telegramStateAtom, {
+				...state,
+				data: {
+					...state.data,
+					filter: { ...state.data.filter, ...action.payload },
+				},
+			});
+			break;
+		case "setSort":
+			set(telegramStateAtom, {
+				...state,
+				data: {
+					...state.data,
+					sort: { ...state.data.sort, ...action.payload },
+				},
+			});
+			break;
+		case "setPagination":
+			set(telegramStateAtom, {
+				...state,
+				data: {
+					...state.data,
+					pagination: { ...state.data.pagination, ...action.payload },
+				},
+			});
+			break;
+	}
+});
 
 // 実際のデータと楽観的更新データを統合するatom
 export const mergedTelegramsAtom = atom((get) => {
@@ -274,8 +264,8 @@ export const telegramLoadingAtom = atom<boolean>(false);
 // エラー状態を管理するatom
 export const telegramErrorAtom = atom<Error | null>(null);
 
-// フォームの状態を管理するatom
-export const telegramFormStateAtom = atom<{
+// フォームの送信状態を管理するatom
+export const formSubmissionAtom = atom<{
 	isSubmitting: boolean;
 	error: string | null;
 }>({
@@ -383,112 +373,91 @@ export const totalTelegramPagesAtom = atom((get) => {
 	return Math.ceil(filteredTelegrams.length / itemsPerPage);
 });
 
-// アクション用のペイロード型
-type TelegramActionPayload = {
-	setLoading: boolean;
-	setError: Error | null;
-	setItems: Telegram[];
-	updateOptimistic: { id: string; data: Telegram };
-	clearOptimistic: string;
-	setDialog: {
-		dialog: keyof TelegramState["dialogs"];
-		props: TelegramState["dialogs"][keyof TelegramState["dialogs"]];
-	};
-	setFilter: Partial<TelegramState["data"]["filter"]>;
-	setSort: Partial<TelegramState["data"]["sort"]>;
-	setPagination: Partial<TelegramState["data"]["pagination"]>;
-};
-
 // アクション用のatom
-export const telegramActionsAtom = atom(
-	null,
-	(get, set, action: TelegramAction) => {
-		const state = get(telegramStateAtom);
+export const telegramActionsAtom = atom(null, (get, set, action: TelegramAction) => {
+	const state = get(telegramStateAtom);
 
-		switch (action.type) {
-			case "setLoading":
-				set(telegramStateAtom, {
-					...state,
-					isLoading: action.payload as boolean,
-				});
-				break;
-			case "setError":
-				set(telegramStateAtom, {
-					...state,
-					error: action.payload as Error | null,
-				});
-				break;
-			case "setItems":
-				set(telegramStateAtom, {
-					...state,
-					data: { ...state.data, items: action.payload as Telegram[] },
-				});
-				break;
-			case "updateOptimistic": {
-				const { id, data } = action.payload;
-				const newOptimisticUpdates = new Map(state.data.optimisticUpdates);
-				newOptimisticUpdates.set(id, data);
-				set(telegramStateAtom, {
-					...state,
-					data: {
-						...state.data,
-						optimisticUpdates: newOptimisticUpdates,
-					},
-				});
-				break;
-			}
-			case "clearOptimistic": {
-				const optimisticUpdates = new Map(state.data.optimisticUpdates);
-				optimisticUpdates.delete(action.payload);
-				set(telegramStateAtom, {
-					...state,
-					data: { ...state.data, optimisticUpdates },
-				});
-				break;
-			}
-			case "setDialog": {
-				const { dialog, props } = action.payload;
-				set(telegramStateAtom, {
-					...state,
-					dialogs: { ...state.dialogs, [dialog]: props },
-				});
-				break;
-			}
-			case "setFilter":
-				set(telegramStateAtom, {
-					...state,
-					data: {
-						...state.data,
-						filter: { ...state.data.filter, ...action.payload },
-					},
-				});
-				break;
-			case "setSort":
-				set(telegramStateAtom, {
-					...state,
-					data: {
-						...state.data,
-						sort: { ...state.data.sort, ...action.payload },
-					},
-				});
-				break;
-			case "setPagination":
-				set(telegramStateAtom, {
-					...state,
-					data: {
-						...state.data,
-						pagination: { ...state.data.pagination, ...action.payload },
-					},
-				});
-				break;
+	switch (action.type) {
+		case "setLoading":
+			set(telegramStateAtom, {
+				...state,
+				isLoading: action.payload as boolean,
+			});
+			break;
+		case "setError":
+			set(telegramStateAtom, {
+				...state,
+				error: action.payload as Error | null,
+			});
+			break;
+		case "setItems":
+			set(telegramStateAtom, {
+				...state,
+				data: { ...state.data, items: action.payload as Telegram[] },
+			});
+			break;
+		case "updateOptimistic": {
+			const { id, data } = action.payload;
+			const newOptimisticUpdates = new Map(state.data.optimisticUpdates);
+			newOptimisticUpdates.set(id, data);
+			set(telegramStateAtom, {
+				...state,
+				data: {
+					...state.data,
+					optimisticUpdates: newOptimisticUpdates,
+				},
+			});
+			break;
 		}
-	},
-);
+		case "clearOptimistic": {
+			const optimisticUpdates = new Map(state.data.optimisticUpdates);
+			optimisticUpdates.delete(action.payload);
+			set(telegramStateAtom, {
+				...state,
+				data: { ...state.data, optimisticUpdates },
+			});
+			break;
+		}
+		case "setDialog": {
+			const { dialog, props } = action.payload;
+			set(telegramStateAtom, {
+				...state,
+				dialogs: { ...state.dialogs, [dialog]: props },
+			});
+			break;
+		}
+		case "setFilter":
+			set(telegramStateAtom, {
+				...state,
+				data: {
+					...state.data,
+					filter: { ...state.data.filter, ...action.payload },
+				},
+			});
+			break;
+		case "setSort":
+			set(telegramStateAtom, {
+				...state,
+				data: {
+					...state.data,
+					sort: { ...state.data.sort, ...action.payload },
+				},
+			});
+			break;
+		case "setPagination":
+			set(telegramStateAtom, {
+				...state,
+				data: {
+					...state.data,
+					pagination: { ...state.data.pagination, ...action.payload },
+				},
+			});
+			break;
+	}
+});
 
 export const updateTelegramAtom = atom<
-	((id: string, input: TelegramInput) => Promise<void>) | null
+	((id: string, input: UpdateTelegramInput) => Promise<void>) | null
 >(null);
 
-export const deleteTelegramAtom = atom<
-	((ids: string[]) => Promise<void>) | null
->(null);
+export const deleteTelegramAtom = atom<((ids: string[]) => Promise<void>) | null>(null);

@@ -93,11 +93,7 @@ export function DataTableToolbar<TData>({
 	// デスクトップサイズでテーブル表示にリセットする
 	useEffect(() => {
 		const handleResize = () => {
-			if (
-				window.innerWidth >= 1024 &&
-				viewMode === "grid" &&
-				onViewModeChange
-			) {
+			if (window.innerWidth >= 1024 && viewMode === "grid" && onViewModeChange) {
 				onViewModeChange("table");
 			}
 		};
@@ -192,15 +188,9 @@ export function DataTableToolbar<TData>({
 							>
 								<div className="flex-1 hover:border-primary/50 transition-colors">
 									<Select
-										value={
-											(table
-												.getColumn(filterColumn)
-												?.getFilterValue() as string) ?? "all"
-										}
+										value={(table.getColumn(filterColumn)?.getFilterValue() as string) ?? "all"}
 										onValueChange={(value) =>
-											table
-												.getColumn(filterColumn)
-												?.setFilterValue(value === "all" ? "" : value)
+											table.getColumn(filterColumn)?.setFilterValue(value === "all" ? "" : value)
 										}
 									>
 										<SelectTrigger className="w-[160px] bg-background">
@@ -232,16 +222,12 @@ export function DataTableToolbar<TData>({
 											記録を様々な条件で整理して表示できます。
 										</p>
 										<div className="space-y-2">
-											<h5 className="text-sm font-medium">
-												並び替えオプション
-											</h5>
+											<h5 className="text-sm font-medium">並び替えオプション</h5>
 											<div className="grid gap-2">
 												{sortOptions
 													.filter((option) => {
 														const columnId = option.value.split("_")[0];
-														const column = table
-															.getAllColumns()
-															.find((col) => col.id === columnId);
+														const column = table.getAllColumns().find((col) => col.id === columnId);
 														return column?.getIsVisible?.() ?? false;
 													})
 													.map((option) => (
@@ -254,9 +240,7 @@ export function DataTableToolbar<TData>({
 															) : (
 																<ArrowUpAZ className="h-4 w-4" />
 															)}
-															<p className="font-medium text-sm">
-																{option.label}
-															</p>
+															<p className="font-medium text-sm">{option.label}</p>
 														</div>
 													))}
 											</div>
@@ -278,7 +262,7 @@ export function DataTableToolbar<TData>({
 												const [field, direction] = value.split("_");
 												table.setSorting([
 													{
-														id: field,
+														id: field ?? "",
 														desc: direction === "desc",
 													},
 												]);
@@ -293,9 +277,7 @@ export function DataTableToolbar<TData>({
 											{sortOptions
 												.filter((option) => {
 													const columnId = option.value.split("_")[0];
-													const column = table
-														.getAllColumns()
-														.find((col) => col.id === columnId);
+													const column = table.getAllColumns().find((col) => col.id === columnId);
 													return column?.getIsVisible?.() ?? false;
 												})
 												.map((option) => (
@@ -316,9 +298,7 @@ export function DataTableToolbar<TData>({
 									<div className="space-y-4">
 										<div className="flex items-center gap-2">
 											<Columns className="h-5 w-5" />
-											<h4 className="text-lg font-semibold">
-												表示列のカスタマイズ
-											</h4>
+											<h4 className="text-lg font-semibold">表示列のカスタマイズ</h4>
 										</div>
 										<p className="text-sm text-muted-foreground">
 											必要な情報だけを表示して、見やすい表を作成できます。
@@ -329,10 +309,7 @@ export function DataTableToolbar<TData>({
 								<div className="flex-1 hover:border-primary/50 transition-colors">
 									<DropdownMenu>
 										<DropdownMenuTrigger asChild>
-											<Button
-												variant="outline"
-												className="w-[160px] bg-background"
-											>
+											<Button variant="outline" className="w-[160px] bg-background">
 												<Columns className="h-4 w-4" />
 												<span>表示列を選択</span>
 											</Button>
@@ -347,9 +324,7 @@ export function DataTableToolbar<TData>({
 															key={column.id}
 															className="capitalize"
 															checked={column.getIsVisible()}
-															onCheckedChange={(value) =>
-																column.toggleVisibility(!!value)
-															}
+															onCheckedChange={(value) => column.toggleVisibility(!!value)}
 														>
 															{columnLabels[column.id] || column.id}
 														</DropdownMenuCheckboxItem>
@@ -378,11 +353,7 @@ export function DataTableToolbar<TData>({
 								<div className="flex-1 hover:border-primary/50 transition-colors">
 									<DropdownMenu>
 										<DropdownMenuTrigger asChild>
-											<Button
-												variant="outline"
-												size="icon"
-												className="h-8 w-8 bg-background"
-											>
+											<Button variant="outline" size="icon" className="h-8 w-8 bg-background">
 												{viewMode === "table" ? (
 													<Table2 className="h-4 w-4" />
 												) : (

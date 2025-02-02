@@ -6,26 +6,19 @@ import { useRouter } from "next/navigation";
 import { useSetAtom } from "jotai";
 
 // UIコンポーネント/アイコン
-import {
-	ArrowLeft,
-	Table2,
-	BarChart3,
-	Gift,
-	Mail,
-	Package,
-	Users,
-} from "lucide-react";
+import { ArrowLeft, Table2, BarChart3, Gift, Mail, Package, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 // 型定義
 import type { Kouden } from "@/types/kouden";
-import type { KoudenEntry } from "@/types/kouden";
-import type { Offering } from "@/types/offering";
-import type { AttendanceType } from "@/types/kouden";
+import type { Entry } from "@/types/entries";
+import type { Offering } from "@/types/offerings";
+import type { AttendanceType } from "@/types/entries";
 import type { KoudenPermission } from "@/types/role";
 import type { Telegram } from "@/types/telegram";
 import type { ReturnItem } from "@/types/return-item";
+import type { Relationship } from "@/types/relationships";
 // 状態管理
 import { permissionAtom } from "@/store/permission";
 // 共通UI(common)
@@ -45,7 +38,8 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 
 interface KoudenDetailProps {
 	kouden: Kouden;
-	entries: KoudenEntry[];
+	entries: Entry[];
+	relationships: Relationship[];
 	telegrams: Telegram[];
 	offerings: Offering[];
 	permission: KoudenPermission;
@@ -55,6 +49,7 @@ interface KoudenDetailProps {
 export function KoudenDetail({
 	kouden,
 	entries: initialEntries,
+	relationships,
 	telegrams,
 	offerings,
 	permission,
@@ -64,12 +59,7 @@ export function KoudenDetail({
 
 	const [entries, setEntries] = useState(initialEntries);
 	const [viewMode, setViewMode] = useState<
-		| "table"
-		| "statistics"
-		| "offerings"
-		| "telegrams"
-		| "return-items"
-		| "members"
+		"table" | "statistics" | "offerings" | "telegrams" | "return-items" | "members"
 	>("table");
 	const isDesktop = useMediaQuery("(min-width: 768px)");
 
@@ -95,11 +85,7 @@ export function KoudenDetail({
 					<span>一覧に戻る</span>
 				</Button>
 				<div className="flex items-center justify-between">
-					<KoudenTitle
-						koudenId={kouden.id}
-						title={kouden.title}
-						description={kouden.description}
-					/>
+					<KoudenTitle koudenId={kouden.id} title={kouden.title} description={kouden.description} />
 					<KoudenActionsMenu koudenId={kouden.id} koudenTitle={kouden.title} />
 				</div>
 			</div>
@@ -118,12 +104,7 @@ export function KoudenDetail({
 						)}
 					>
 						<Table2 className="h-5 w-5" />
-						<span
-							className={cn(
-								isDesktop ? "inline" : "hidden",
-								viewMode === "table" && "inline",
-							)}
-						>
+						<span className={cn(isDesktop ? "inline" : "hidden", viewMode === "table" && "inline")}>
 							香典帳
 						</span>
 					</TabsTrigger>
@@ -136,10 +117,7 @@ export function KoudenDetail({
 					>
 						<Gift className="h-5 w-5" />
 						<span
-							className={cn(
-								isDesktop ? "inline" : "hidden",
-								viewMode === "offerings" && "inline",
-							)}
+							className={cn(isDesktop ? "inline" : "hidden", viewMode === "offerings" && "inline")}
 						>
 							お供物
 						</span>
@@ -153,10 +131,7 @@ export function KoudenDetail({
 					>
 						<Mail className="h-4 w-4" />
 						<span
-							className={cn(
-								isDesktop ? "inline" : "hidden",
-								viewMode === "telegrams" && "inline",
-							)}
+							className={cn(isDesktop ? "inline" : "hidden", viewMode === "telegrams" && "inline")}
 						>
 							弔電
 						</span>
@@ -187,10 +162,7 @@ export function KoudenDetail({
 					>
 						<BarChart3 className="h-4 w-4" />
 						<span
-							className={cn(
-								isDesktop ? "inline" : "hidden",
-								viewMode === "statistics" && "inline",
-							)}
+							className={cn(isDesktop ? "inline" : "hidden", viewMode === "statistics" && "inline")}
 						>
 							統計
 						</span>
@@ -204,10 +176,7 @@ export function KoudenDetail({
 					>
 						<Users className="h-4 w-4" />
 						<span
-							className={cn(
-								isDesktop ? "inline" : "hidden",
-								viewMode === "members" && "inline",
-							)}
+							className={cn(isDesktop ? "inline" : "hidden", viewMode === "members" && "inline")}
 						>
 							メンバー
 						</span>
@@ -218,25 +187,21 @@ export function KoudenDetail({
 					<TabsContent value="table" className="m-0">
 						<EntryView
 							koudenId={kouden.id}
+							relationships={relationships}
 							entries={entries.map((entry) => ({
 								...entry,
-								attendance_type: entry.attendance_type as AttendanceType,
+								attendanceType: entry.attendance_type as AttendanceType,
+								relationship: relationships.find(
+									(relationship) => relationship.kouden_id === kouden.id,
+								),
 							}))}
 						/>
 					</TabsContent>
 					<TabsContent value="offerings" className="m-0">
-						<OfferingView
-							koudenId={kouden.id}
-							koudenEntries={entries}
-							offerings={offerings}
-						/>
+						<OfferingView koudenId={kouden.id} entries={entries} offerings={offerings} />
 					</TabsContent>
 					<TabsContent value="telegrams" className="m-0">
-						<TelegramsView
-							koudenId={kouden.id}
-							telegrams={telegrams}
-							koudenEntries={entries}
-						/>
+						<TelegramsView koudenId={kouden.id} telegrams={telegrams} entries={entries} />
 					</TabsContent>
 					<TabsContent value="return-items" className="m-0">
 						<ReturnItemTable koudenId={kouden.id} />
@@ -255,7 +220,14 @@ export function KoudenDetail({
 				<MobileMenu
 					koudenId={kouden.id}
 					viewMode={viewMode}
-					koudenEntries={entries}
+					entries={entries}
+					relationships={relationships}
+					onEntryCreated={(newEntry) => {
+						setEntries((prev) => {
+							const updated = [newEntry, ...prev];
+							return updated;
+						});
+					}}
 				/>
 			)}
 		</>

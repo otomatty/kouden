@@ -4,18 +4,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 import { createAnnouncement } from "@/app/_actions/admin/announcements";
-import {
-	AnnouncementForm,
-	type AnnouncementFormData,
-} from "./announcement-form";
+import { AnnouncementForm, type AnnouncementFormData } from "./announcement-form";
 
 export function AddAnnouncementButton() {
-	const [open, setOpen] = useState(false);
-
 	const onSubmit = async (values: AnnouncementFormData) => {
 		try {
 			await createAnnouncement(values);
-			setOpen(false);
 		} catch (error) {
 			console.error("Failed to create announcement:", error);
 		}
@@ -23,8 +17,6 @@ export function AddAnnouncementButton() {
 
 	return (
 		<ResponsiveDialog
-			open={open}
-			onOpenChange={setOpen}
 			trigger={<Button>新規作成</Button>}
 			title="新規お知らせ作成"
 			description="新しいお知らせを作成します。全ての項目を入力してください。"

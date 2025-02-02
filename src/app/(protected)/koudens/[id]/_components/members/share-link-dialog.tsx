@@ -37,7 +37,6 @@ const getRoleDisplayName = (roleName: string) => {
 
 export function ShareLinkForm({ koudenId, roles }: ShareLinkFormProps) {
 	const isMobile = useMediaQuery("(max-width: 768px)");
-	const [open, setOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [invitationLink, setInvitationLink] = useState<string>("");
 	const [copied, setCopied] = useState(false);
@@ -48,9 +47,7 @@ export function ShareLinkForm({ koudenId, roles }: ShareLinkFormProps) {
 		try {
 			setLoading(true);
 			const roleId = formData.get("role") as string;
-			const maxUses = formData.get("maxUses")
-				? Number(formData.get("maxUses"))
-				: null;
+			const maxUses = formData.get("maxUses") ? Number(formData.get("maxUses")) : null;
 			const expiresIn = (formData.get("expiresIn") as string) || "7d";
 
 			const invitation = await createShareInvitation({
@@ -71,10 +68,7 @@ export function ShareLinkForm({ koudenId, roles }: ShareLinkFormProps) {
 			console.error("Error creating invitation:", error);
 			toast({
 				title: "エラー",
-				description:
-					error instanceof Error
-						? error.message
-						: "招待リンクの作成に失敗しました",
+				description: error instanceof Error ? error.message : "招待リンクの作成に失敗しました",
 				variant: "destructive",
 			});
 		} finally {
@@ -94,6 +88,7 @@ export function ShareLinkForm({ koudenId, roles }: ShareLinkFormProps) {
 				setCopied(false);
 			}, 2000);
 		} catch (error) {
+			console.error("Error copying link:", error);
 			toast({
 				title: "エラー",
 				description: "リンクのコピーに失敗しました",
@@ -104,16 +99,10 @@ export function ShareLinkForm({ koudenId, roles }: ShareLinkFormProps) {
 
 	return (
 		<ResponsiveDialog
-			open={open}
-			onOpenChange={setOpen}
 			trigger={
 				<Button
 					size={isMobile ? "lg" : "default"}
-					className={
-						isMobile
-							? "w-full mx-4 flex items-center gap-2"
-							: "flex items-center gap-2"
-					}
+					className={isMobile ? "w-full mx-4 flex items-center gap-2" : "flex items-center gap-2"}
 				>
 					<Share2 className="h-4 w-4" />
 					共有リンクを作成
@@ -168,30 +157,14 @@ export function ShareLinkForm({ koudenId, roles }: ShareLinkFormProps) {
 				<div className="mt-4 space-y-4">
 					<Label>招待リンク</Label>
 					<div className="flex gap-2">
-						<Input
-							value={invitationLink}
-							readOnly
-							className="font-mono text-sm"
-						/>
-						<Button
-							onClick={handleCopyLink}
-							variant="outline"
-							disabled={copied}
-						>
+						<Input value={invitationLink} readOnly className="font-mono text-sm" />
+						<Button onClick={handleCopyLink} variant="outline" disabled={copied}>
 							<Copy className="h-4 w-4" />
 							{copied ? "コピー完了" : "コピー"}
 						</Button>
-						<Button
-							onClick={() => setShowQR(!showQR)}
-							variant="outline"
-							className="gap-2"
-						>
+						<Button onClick={() => setShowQR(!showQR)} variant="outline" className="gap-2">
 							<QrCode className="h-4 w-4" />
-							{showQR ? (
-								<ChevronUp className="h-4 w-4" />
-							) : (
-								<ChevronDown className="h-4 w-4" />
-							)}
+							{showQR ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
 						</Button>
 					</div>
 					{showQR && (

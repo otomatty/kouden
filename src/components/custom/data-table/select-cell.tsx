@@ -7,7 +7,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import type { SelectOption } from "./types";
+import type { SelectOption } from "@/types/table";
 
 interface SelectCellProps {
 	value: string | number | boolean | null;
@@ -16,12 +16,7 @@ interface SelectCellProps {
 	className?: string;
 }
 
-export function SelectCell({
-	value,
-	options,
-	onSave,
-	className,
-}: SelectCellProps) {
+export function SelectCell({ value, options, onSave, className }: SelectCellProps) {
 	const [isOpen, setIsOpen] = useState(false);
 
 	const handleSelect = useCallback(
@@ -41,8 +36,7 @@ export function SelectCell({
 	);
 
 	const currentOption = options.find(
-		(opt) =>
-			opt.value === (typeof value === "boolean" ? value.toString() : value),
+		(opt) => opt.value === (typeof value === "boolean" ? value.toString() : value),
 	);
 
 	return (

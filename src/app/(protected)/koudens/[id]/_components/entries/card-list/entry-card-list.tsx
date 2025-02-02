@@ -1,28 +1,37 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { useAtomValue } from "jotai";
-import type { KoudenEntry } from "@/types/kouden";
+import { useAtom } from "jotai";
+import type { Entry } from "@/types/entries";
 import { MobileFilters } from "./mobile-filters";
 import { EntryCard } from "./entry-card";
 import { entriesAtom } from "@/store/entries";
+import type { Relationship } from "@/types/relationships";
 
 interface EntryCardListProps {
-	entries: KoudenEntry[];
+	entries: Entry[];
 	koudenId: string;
+	relationships: Relationship[];
 }
 
 export function EntryCardList({
 	entries: initialEntries,
 	koudenId,
+	relationships,
 }: EntryCardListProps) {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [searchField, setSearchField] = useState("name");
 	const [sortOrder, setSortOrder] = useState("created_at_desc");
 
 	// Jotaiのatomから最新のentriesを取得
-	const currentEntries = useAtomValue(entriesAtom);
-	const entries = currentEntries.length > 0 ? currentEntries : initialEntries;
+	const [entries, setEntries] = useAtom(entriesAtom);
+
+	// 初期表示時にinitialEntriesをatomに設定
+	useEffect(() => {
+		if (entries.length === 0 && initialEntries.length > 0) {
+			setEntries(initialEntries);
+		}
+	}, [initialEntries, entries.length, setEntries]);
 
 	// フィルタリングとソートを適用したデータ
 	const filteredAndSortedData = useMemo(() => {
@@ -36,9 +45,7 @@ export function EntryCardList({
 				return searchFields.some((field) => {
 					const value = entry[field as keyof typeof entry];
 					if (typeof value === "string") {
-						const matches = value
-							.toLowerCase()
-							.includes(searchQuery.toLowerCase());
+						const matches = value.toLowerCase().includes(searchQuery.toLowerCase());
 						return matches;
 					}
 					return false;
@@ -81,12 +88,15 @@ export function EntryCardList({
 			<div className="flex-1 overflow-auto">
 				<div className="space-y-2 py-4">
 					{filteredAndSortedData.map((entry) => (
-						<EntryCard key={entry.id} entry={entry} koudenId={koudenId} />
+						<EntryCard
+							key={entry.id}
+							entry={entry}
+							koudenId={koudenId}
+							relationships={relationships}
+						/>
 					))}
 					{filteredAndSortedData.length === 0 && (
-						<div className="text-center py-8 text-muted-foreground">
-							データがありません
-						</div>
+						<div className="text-center py-8 text-muted-foreground">データがありません</div>
 					)}
 				</div>
 			</div>

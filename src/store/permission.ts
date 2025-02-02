@@ -22,13 +22,13 @@ export const canDeleteKouden = (permission: KoudenPermission) =>
 // UI表示権限(香典情報、お供え物、弔電、返礼品)
 // ----------------
 // 香典情報の作成
-export const canCreateEntry = (permission: KoudenPermission) =>
+export const canCreateData = (permission: KoudenPermission) =>
 	permission === "owner" || permission === "editor";
 // 香典情報の更新
-export const canUpdateEntry = (permission: KoudenPermission) =>
+export const canUpdateData = (permission: KoudenPermission) =>
 	permission === "owner" || permission === "editor";
 // 香典情報の削除
-export const canDeleteEntry = (permission: KoudenPermission) =>
+export const canDeleteData = (permission: KoudenPermission) =>
 	permission === "owner" || permission === "editor";
 // ----------------
 

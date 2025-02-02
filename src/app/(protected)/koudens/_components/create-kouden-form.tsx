@@ -14,7 +14,6 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 
 export function CreateKoudenForm() {
 	const router = useRouter();
-	const [open, setOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const formRef = useRef<HTMLFormElement>(null);
 	const isMobile = useMediaQuery("(max-width: 640px)");
@@ -45,7 +44,6 @@ export function CreateKoudenForm() {
 				throw new Error(result.error);
 			}
 
-			setOpen(false);
 			router.refresh();
 		} catch (error) {
 			console.error("[ERROR] 香典帳作成エラー:", error);
@@ -56,8 +54,6 @@ export function CreateKoudenForm() {
 
 	return (
 		<ResponsiveDialog
-			open={open}
-			onOpenChange={setOpen}
 			trigger={
 				<Button className="create-kouden-button flex items-center gap-2">
 					<Plus className="h-4 w-4" />
@@ -79,18 +75,10 @@ export function CreateKoudenForm() {
 				</div>
 				<div className="space-y-2">
 					<Label htmlFor="description">説明（任意）</Label>
-					<Textarea
-						id="description"
-						name="description"
-						placeholder="説明を入力してください"
-					/>
+					<Textarea id="description" name="description" placeholder="説明を入力してください" />
 				</div>
 				<div className="flex justify-end">
-					<Button
-						type="submit"
-						disabled={loading}
-						className="create-kouden-form-button"
-					>
+					<Button type="submit" disabled={loading} className="create-kouden-form-button">
 						{loading ? "作成中..." : "作成"}
 					</Button>
 				</div>

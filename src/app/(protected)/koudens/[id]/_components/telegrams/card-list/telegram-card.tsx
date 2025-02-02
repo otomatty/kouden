@@ -1,75 +1,64 @@
-"use client";
-
+// library
+import { useState } from "react";
+import { useAtomValue } from "jotai";
+// ui
 import { Card, CardContent } from "@/components/ui/card";
-import type { Telegram } from "@/types/telegram";
-import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-	AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { ChevronRight } from "lucide-react";
+import { Drawer, DrawerTrigger } from "@/components/ui/drawer";
+// types
+import type { Telegram } from "@/types/telegram";
+import type { Entry } from "@/types/entries";
+// components
+import { TelegramDrawerContent } from "./telegram-drawer-content";
+// stores
+import { mergedTelegramsAtom } from "@/store/telegrams";
 
 interface TelegramCardProps {
 	telegram: Telegram;
-	onDelete: () => Promise<void>;
+	koudenId: string;
+	entries: Entry[];
 }
 
-export function TelegramCard({ telegram, onDelete }: TelegramCardProps) {
+export function TelegramCard({ telegram: initialTelegram, koudenId, entries }: TelegramCardProps) {
+	const [isOpen, setIsOpen] = useState(false);
+	const mergedTelegrams = useAtomValue(mergedTelegramsAtom);
+
+	// 最新の電報情報を取得（楽観的更新を含む）
+	const telegram = mergedTelegrams.find((t) => t.id === initialTelegram.id) || initialTelegram;
+
 	return (
-		<Card>
-			<CardContent className="p-4">
-				<div className="flex justify-between items-start gap-4">
-					<div className="min-w-0 flex-1 space-y-3">
-						<div className="flex items-center gap-2">
-							<div className="font-medium truncate">
-								{telegram.senderName ||
-									telegram.senderOrganization ||
-									"名前なし"}
+		<Drawer open={isOpen} onOpenChange={setIsOpen}>
+			<DrawerTrigger asChild>
+				<Card className="w-full hover:bg-accent/50 transition-colors cursor-pointer">
+					<CardContent className="p-4">
+						<div className="flex justify-between items-center">
+							<div className="space-y-1.5 flex-1 min-w-0">
+								<div className="flex items-center gap-2 flex-wrap">
+									<h3 className="font-medium text-lg truncate">
+										{telegram.senderName || "差出人未設定"}
+									</h3>
+								</div>
+								{telegram.senderOrganization && (
+									<p className="text-sm text-muted-foreground truncate">
+										{telegram.senderOrganization}
+									</p>
+								)}
 							</div>
-							{telegram.senderPosition && (
-								<Badge variant="outline">{telegram.senderPosition}</Badge>
-							)}
+							<div className="flex flex-col items-end gap-2 ml-4">
+								<ChevronRight className="h-5 w-5 text-muted-foreground" />
+							</div>
 						</div>
-						{telegram.message && (
-							<div className="text-sm text-muted-foreground line-clamp-2">
-								{telegram.message}
-							</div>
-						)}
-						{telegram.notes && (
-							<div className="text-sm text-muted-foreground line-clamp-2">
-								{telegram.notes}
-							</div>
-						)}
-					</div>
-					<AlertDialog>
-						<AlertDialogTrigger asChild>
-							<Button variant="ghost" size="icon" className="shrink-0">
-								<Trash2 className="h-4 w-4" />
-							</Button>
-						</AlertDialogTrigger>
-						<AlertDialogContent>
-							<AlertDialogHeader>
-								<AlertDialogTitle>電報を削除</AlertDialogTitle>
-								<AlertDialogDescription>
-									この電報を削除してもよろしいですか？この操作は取り消せません。
-								</AlertDialogDescription>
-							</AlertDialogHeader>
-							<AlertDialogFooter>
-								<AlertDialogCancel>キャンセル</AlertDialogCancel>
-								<AlertDialogAction onClick={onDelete}>削除</AlertDialogAction>
-							</AlertDialogFooter>
-						</AlertDialogContent>
-					</AlertDialog>
-				</div>
-			</CardContent>
-		</Card>
+					</CardContent>
+				</Card>
+			</DrawerTrigger>
+
+			<TelegramDrawerContent
+				telegram={telegram}
+				koudenId={koudenId}
+				entries={entries}
+				onClose={() => setIsOpen(false)}
+			/>
+		</Drawer>
 	);
 }

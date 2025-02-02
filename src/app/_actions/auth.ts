@@ -2,6 +2,10 @@
 
 import { createClient } from "@/lib/supabase/server";
 
+/**
+ * プロフィールの存在確認
+ * @returns プロフィール
+ */
 export async function ensureProfile() {
 	try {
 		const supabase = await createClient();

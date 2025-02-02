@@ -20,9 +20,48 @@ import {
 import { cn } from "@/lib/utils";
 import { EditableCell } from "./editable-cell";
 import { SelectCell } from "./select-cell";
-import type { DataTableProps, CellValue } from "./types";
+import { SearchableSelectorDialog } from "@/components/custom/searchable-selector-dialog";
+import { Button } from "@/components/ui/button";
+import type { CellValue, DataTableProperties } from "@/types/table";
 
-export function DataTable<TData>({
+/**
+ * カスタマイズ可能なデータテーブルコンポーネント
+ *
+ * このコンポーネントは以下の機能を提供します：
+ * - ソート機能
+ * - フィルタリング機能
+ * - カラムの表示/非表示制御
+ * - 行の選択機能
+ * - セルの編集機能（権限に基づく）
+ *
+ * 編集可能なセルタイプ：
+ * - テキスト入力
+ * - 数値入力（フォーマット指定可能）
+ * - セレクトボックス
+ * - 郵便番号入力
+ * - 検索可能なチェックボックス
+ *
+ * @example
+ * ```tsx
+ * <DataTable
+ *   columns={columns}
+ *   data={data}
+ *   editableColumns={{
+ *     name: { type: "text" },
+ *     age: { type: "number" },
+ *     status: { type: "select", options: ["active", "inactive"] }
+ *   }}
+ *   onCellEdit={(columnId, rowId, newValue) => {
+ *     // セルの編集処理
+ *   }}
+ *   permission="editor"
+ * />
+ * ```
+ *
+ * @param {DataTableProperties<Data, CellValue>} props - テーブルのプロパティ
+ * @returns {JSX.Element} データテーブルコンポーネント
+ */
+export function DataTable<Data>({
 	columns,
 	data,
 	editableColumns = {},
@@ -40,7 +79,14 @@ export function DataTable<TData>({
 	bodyClassName,
 	cellClassName,
 	permission,
-}: DataTableProps<TData, CellValue>) {
+}: DataTableProperties<Data, CellValue>) {
+	/**
+	 * @tanstack/react-tableを使用してテーブルの状態と機能を管理
+	 * - ソート状態
+	 * - フィルター状態
+	 * - カラムの表示/非表示状態
+	 * - 行の選択状態
+	 */
 	const table = useReactTable({
 		data,
 		columns,
@@ -59,11 +105,19 @@ export function DataTable<TData>({
 		},
 	});
 
+	/**
+	 * セルのレンダリングロジック
+	 * @param cell - テーブルのセル情報
+	 * @param columnId - カラムのID
+	 * @returns 編集可能なセルまたは通常のセルコンポーネント
+	 */
 	const renderCell = React.useCallback(
-		(cell: Cell<TData, unknown>, columnId: string) => {
+		(cell: Cell<Data, unknown>, columnId: string) => {
 			const config = editableColumns[columnId];
+			// 権限チェック: owner または editor の場合のみ編集可能
 			const canEdit = permission === "owner" || permission === "editor";
 
+			// 編集不可の場合は通常のセルを表示
 			if (!config || config.type === "readonly" || !canEdit) {
 				return flexRender(cell.column.columnDef.cell, cell.getContext());
 			}
@@ -71,22 +125,21 @@ export function DataTable<TData>({
 			const value = cell.getValue() as CellValue;
 			const rowId = cell.row.id;
 
+			/**
+			 * セル編集時のコールバック
+			 * 親コンポーネントで定義された onCellEdit を呼び出す
+			 */
 			const handleSave = async (newValue: CellValue) => {
 				if (onCellEdit) {
 					await onCellEdit(columnId, rowId, newValue);
 				}
 			};
 
+			// セルタイプに応じて適切な編集コンポーネントを返す
 			switch (config.type) {
 				case "select":
 				case "boolean":
-					return (
-						<SelectCell
-							value={value}
-							options={config.options || []}
-							onSave={handleSave}
-						/>
-					);
+					return <SelectCell value={value} options={config.options || []} onSave={handleSave} />;
 				case "number":
 					return (
 						<EditableCell
@@ -104,13 +157,25 @@ export function DataTable<TData>({
 							format="postal_code"
 						/>
 					);
-				default:
+				case "searchable-selector": {
+					if (!config.selectorItems) return null;
+					const selectedIds = (value as string)?.split(",").filter(Boolean) || [];
 					return (
-						<EditableCell
-							value={value as string | number | null}
-							onSave={handleSave}
+						<SearchableSelectorDialog
+							items={config.selectorItems}
+							selectedIds={selectedIds}
+							onSelectionChange={(newSelectedIds) => handleSave(newSelectedIds.join(","))}
+							trigger={
+								<Button variant="outline" size="sm" className="w-full justify-start">
+									{selectedIds.length > 0 ? `${selectedIds.length}件選択中` : "選択してください"}
+								</Button>
+							}
+							{...config.selectorConfig}
 						/>
 					);
+				}
+				default:
+					return <EditableCell value={value as string | number | null} onSave={handleSave} />;
 			}
 		},
 		[editableColumns, onCellEdit, permission],
@@ -120,12 +185,8 @@ export function DataTable<TData>({
 		<div className="rounded-md border overflow-hidden">
 			<div className="relative">
 				<Table>
-					<TableHeader
-						className={cn(
-							"sticky top-0 z-10 bg-background shadow-sm",
-							headerClassName,
-						)}
-					>
+					{/* ヘッダー部分: スティッキーポジションで固定表示 */}
+					<TableHeader className={cn("sticky top-0 z-10 bg-background shadow-sm", headerClassName)}>
 						{table.getHeaderGroups().map((headerGroup) => (
 							<TableRow key={headerGroup.id} className="hover:bg-transparent">
 								{headerGroup.headers.map((header) => (
@@ -138,10 +199,7 @@ export function DataTable<TData>({
 									>
 										{header.isPlaceholder
 											? null
-											: flexRender(
-													header.column.columnDef.header,
-													header.getContext(),
-												)}
+											: flexRender(header.column.columnDef.header, header.getContext())}
 									</TableHead>
 								))}
 							</TableRow>

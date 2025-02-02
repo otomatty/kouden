@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, Pencil } from "lucide-react";
-import type { OfferingPhoto } from "@/types/offering";
+import type { OfferingPhoto } from "@/types/offerings";
 
 interface PhotoCaptionProps {
 	photo: OfferingPhoto;
@@ -23,7 +23,7 @@ export function PhotoCaption({ photo, onCaptionChange }: PhotoCaptionProps) {
 			await onCaptionChange(photo.id, caption);
 			setIsEditing(false);
 		} catch (error) {
-			// エラーハンドリングは親コンポーネントで行う
+			console.error(error);
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -56,15 +56,8 @@ export function PhotoCaption({ photo, onCaptionChange }: PhotoCaptionProps) {
 
 	return (
 		<div className="flex items-center justify-between">
-			<p className="text-sm text-muted-foreground">
-				{photo.caption || "キャプションなし"}
-			</p>
-			<Button
-				variant="ghost"
-				size="sm"
-				onClick={() => setIsEditing(true)}
-				className="h-8"
-			>
+			<p className="text-sm text-muted-foreground">{photo.caption || "キャプションなし"}</p>
+			<Button variant="ghost" size="sm" onClick={() => setIsEditing(true)} className="h-8">
 				<Pencil className="mr-2 h-4 w-4" />
 				編集
 			</Button>

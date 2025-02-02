@@ -29,8 +29,9 @@ coding_guidelines:
     - "型はtypesディレクトリに配置すること。"
     - "any型は使用しないこと。"
     - "型はinterfaceを使用し、型推論を活用すること。"
-    - "型はconvertToCamelCase関数を使用し、キャメルケースに変換すること。"
-    - "convertToCamelCase関数はサービスロジック内で使用すること"
+    - "型はlowerCamelCaseで命名すること。"
+    - "Supabaseの型はServerActionsで使用すること。"
+    - "型変換にはlodashを使用すること。"
   state_management:
     - "状態管理にはJotaiを使用し、必要に応じてatomやatomFamilyを活用すること。"
     - "グローバル状態の使用を最小限に抑え、ローカル状態を優先すること。"

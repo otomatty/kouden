@@ -8,7 +8,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getInitials } from "@/lib/utils";
 import { RemoveMemberButton } from "./remove-member-button";
 import type { PrimitiveAtom } from "jotai";
-import type { MembersState } from "@/store/members";
 import {
 	Select,
 	SelectContent,
@@ -55,8 +54,7 @@ export const createColumns = ({
 		} catch (error) {
 			toast({
 				title: "エラー",
-				description:
-					error instanceof Error ? error.message : "ロールの更新に失敗しました",
+				description: error instanceof Error ? error.message : "ロールの更新に失敗しました",
 				variant: "destructive",
 			});
 		}
@@ -72,9 +70,7 @@ export const createColumns = ({
 					<div className="flex items-center gap-2">
 						<Avatar>
 							<AvatarImage src={member.profile?.avatar_url || undefined} />
-							<AvatarFallback>
-								{getInitials(member.profile?.display_name || "")}
-							</AvatarFallback>
+							<AvatarFallback>{getInitials(member.profile?.display_name || "")}</AvatarFallback>
 						</Avatar>
 						<span>{member.profile?.display_name}</span>
 					</div>
@@ -121,11 +117,7 @@ export const createColumns = ({
 					);
 				}
 
-				return (
-					<Badge variant="outline">
-						{getRoleDisplayName(member.role.name)}
-					</Badge>
-				);
+				return <Badge variant="outline">{getRoleDisplayName(member.role.name)}</Badge>;
 			},
 		},
 		{
@@ -145,13 +137,7 @@ export const createColumns = ({
 					return null;
 				}
 
-				return (
-					<RemoveMemberButton
-						member={member}
-						isSelf={isSelf}
-						membersAtom={membersAtom}
-					/>
-				);
+				return <RemoveMemberButton member={member} isSelf={isSelf} membersAtom={membersAtom} />;
 			},
 		},
 	];

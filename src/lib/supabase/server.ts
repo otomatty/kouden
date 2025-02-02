@@ -7,9 +7,8 @@ export async function createClient() {
 	const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 	const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-	if (!supabaseUrl || !supabaseAnonKey) {
-		throw new Error("Missing Supabase environment variables");
-	}
+	if (!supabaseUrl) throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL");
+	if (!supabaseAnonKey) throw new Error("Missing NEXT_PUBLIC_SUPABASE_ANON_KEY");
 
 	return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
 		cookies: {
@@ -25,6 +24,7 @@ export async function createClient() {
 						cookieStore.set({ name, value, ...options });
 					}
 				} catch (error) {
+					console.error("Error setting cookies:", error);
 					// Handle or log error if needed
 				}
 			},

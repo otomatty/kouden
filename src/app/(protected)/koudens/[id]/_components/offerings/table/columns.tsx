@@ -1,152 +1,65 @@
-import { Checkbox } from "@/components/ui/checkbox";
+import Image from "next/image";
+// ui
+import { ArrowUpDown, Trash2, MoreHorizontal, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-	ArrowUpDown,
-	Pencil,
-	Trash2,
-	MoreHorizontal,
-	Copy,
-	Flower2,
-	Gift,
-	Package,
-	ImageIcon,
-} from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import type { KoudenPermission } from "@/types/role";
-import type { Table, Row, Column } from "@tanstack/react-table";
-import type { Offering } from "@/types/offering";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { EditableColumnConfig } from "@/components/custom/data-table/types";
-import { formatCurrency } from "@/lib/utils";
-import { useState } from "react";
-import { OfferingPhotoGallery } from "../photo-gallery";
-import Image from "next/image";
-import { toast } from "@/hooks/use-toast";
-import { deleteOffering, updateOfferingPhoto } from "@/app/_actions/offerings";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+// types
+import type { KoudenPermission } from "@/types/role";
+import type { Table, Row, Column } from "@tanstack/react-table";
+import type { Entry } from "@/types/entries";
+import type { Offering, OfferingType, OfferingWithKoudenEntries } from "@/types/offerings";
 import type { CellValue } from "@/types/table";
-
-const typeIcons = {
-	FLOWER: <Flower2 className="h-4 w-4" />,
-	FOOD: <Gift className="h-4 w-4" />,
-	OTHER: <Package className="h-4 w-4" />,
-} as const;
-
-const typeLabels = {
-	FLOWER: "供花",
-	FOOD: "供物",
-	OTHER: "その他",
-} as const;
-
-// カラムラベルの定義
-export const columnLabels: Record<string, string> = {
-	select: "選択",
-	type: "種類",
-	provider_name: "提供者名",
-	description: "内容",
-	price: "金額",
-	quantity: "数量",
-	notes: "備考",
-	offering_photos: "写真",
-	actions: "アクション",
-};
-
-// 検索オプションの定義
-export const searchOptions = [
-	{ value: "provider_name", label: "提供者名" },
-	{ value: "description", label: "内容" },
-	{ value: "type", label: "種類" },
-];
-
-// ソートオプションの定義
-export const sortOptions = [
-	{ value: "created_at_desc", label: "新しい順" },
-	{ value: "created_at_asc", label: "古い順" },
-	{ value: "price_desc", label: "金額が高い順" },
-	{ value: "price_asc", label: "金額が低い順" },
-	{ value: "provider_name_asc", label: "提供者名順" },
-	{ value: "type_asc", label: "種類順" },
-];
-
-// フィルターオプションの定義
-export const filterOptions = [
-	{ value: "FLOWER", label: "供花" },
-	{ value: "FOOD", label: "供物" },
-	{ value: "OTHER", label: "その他" },
-];
-
-// 画面サイズに応じた列の表示設定
-export const defaultColumnVisibility = {
-	notes: false,
-	offering_photos: false,
-};
-
-export const tabletColumnVisibility = {
-	...defaultColumnVisibility,
-	description: false,
-	quantity: false,
-};
-
-// 編集可能なカラムの設定
-export const editableColumns: Record<string, EditableColumnConfig> = {
-	provider_name: { type: "text" },
-	description: { type: "text" },
-	price: { type: "number", format: "currency" },
-	quantity: { type: "number" },
-	notes: { type: "text" },
-	type: {
-		type: "select",
-		options: [
-			{ value: "FLOWER", label: "供花" },
-			{ value: "FOOD", label: "供物" },
-			{ value: "OTHER", label: "その他" },
-		],
-	},
-	has_photos: {
-		type: "boolean",
-		options: [
-			{ value: "true", label: "あり" },
-			{ value: "false", label: "なし" },
-		],
-	},
-	// 編集不可のカラム
-	select: { type: "readonly" },
-	actions: { type: "readonly" },
-	offering_photos: { type: "readonly" },
-};
+// utils
+import { formatCurrency } from "@/utils/currency";
+// components
+import { OfferingDialog } from "../dialog/offering-dialog";
+// constants
+import { typeLabels } from "./constants";
 
 interface ColumnProps {
-	onEditRow: (offering: Offering) => void;
+	koudenId: string;
 	onDeleteRows: (ids: string[]) => void;
-	onCellUpdate: (
-		id: string,
-		field: keyof Omit<Offering, "offering_photos">,
-		value: string | number | boolean | null,
-	) => void;
-	onCellEdit: (
-		columnId: string,
-		rowId: string,
-		value: CellValue,
-	) => Promise<void>;
 	selectedRows: string[];
 	permission?: KoudenPermission;
+	entries: Entry[];
 }
 
-export function createColumns({
-	onEditRow,
-	onDeleteRows,
-	onCellUpdate,
-	onCellEdit,
-	selectedRows,
-	permission,
-}: ColumnProps) {
+export function createColumns({ onDeleteRows, permission, koudenId, entries }: ColumnProps) {
 	const canEdit = permission === "owner" || permission === "editor";
+
+	// セルのフォーマット
+	const formatCell = (
+		value: CellValue,
+		format?: "currency" | "quantity" | "type" | "default",
+	): string => {
+		if (value == null) return "-";
+
+		try {
+			switch (format) {
+				case "currency":
+					return `${formatCurrency(value as number)}`;
+				case "quantity":
+					return `${value}点`;
+				case "type": // お供物の種別のフォーマット
+					return typeLabels[value as OfferingType];
+
+				default:
+					return String(value);
+			}
+		} catch (error) {
+			console.error(error);
+			return "-";
+		}
+	};
 
 	return [
 		{
@@ -181,17 +94,12 @@ export function createColumns({
 				</Button>
 			),
 			cell: ({ row }: { row: Row<Offering> }) => {
-				const type = row.getValue("type") as keyof typeof typeIcons;
-				return (
-					<div className="flex items-center gap-2">
-						{typeIcons[type]}
-						<span>{typeLabels[type]}</span>
-					</div>
-				);
+				const value = row.getValue("type") as OfferingType;
+				return formatCell(value);
 			},
 		},
 		{
-			accessorKey: "provider_name",
+			accessorKey: "providerName",
 			header: ({ column }: { column: Column<Offering> }) => (
 				<Button
 					variant="ghost"
@@ -202,7 +110,9 @@ export function createColumns({
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			),
-			cell: ({ row }: { row: Row<Offering> }) => row.getValue("provider_name"),
+			cell: ({ row }: { row: Row<Offering> }) => {
+				return row.getValue("providerName");
+			},
 		},
 		{
 			accessorKey: "description",
@@ -232,7 +142,64 @@ export function createColumns({
 			),
 			cell: ({ row }: { row: Row<Offering> }) => {
 				const price = row.getValue("price") as number | null;
-				return price ? formatCurrency(price) : "-";
+				return formatCell(price, "currency");
+			},
+		},
+		{
+			accessorKey: "entries",
+			id: "entries",
+			header: "関連する香典情報",
+			cell: ({ row }: { row: Row<OfferingWithKoudenEntries> }) => {
+				// 1. 必要なデータの取得
+				const offeringEntries = row.original.offeringEntries || [];
+				const relatedEntries = offeringEntries.map((oe) => oe.koudenEntry) || [];
+
+				// 2. entriesの存在チェック
+				if (!Array.isArray(entries)) {
+					return <span className="text-muted-foreground">読み込み中...</span>;
+				}
+
+				// 3. 表示内容の決定
+				if (relatedEntries.length === 0) {
+					return <span className="text-muted-foreground">なし</span>;
+				}
+
+				// 5. 香典情報の表示
+				return (
+					<div className="flex flex-wrap gap-1">
+						{relatedEntries.map((entry) => {
+							if (!entry) return null;
+
+							// 表示名の決定（優先順位: 個人名 > 組織名+役職 > 組織名）
+							const displayName =
+								entry.name || (entry.organization ? `${entry.organization}` : "名前なし");
+
+							// ツールチップの内容を構築
+							const tooltipContent = [
+								entry.name && `ご芳名: ${entry.name}`,
+								entry.organization && `所属: ${entry.organization}`,
+								`金額: ¥${formatCurrency(entry.amount)}`,
+							]
+								.filter(Boolean)
+								.join("\n");
+
+							return (
+								<TooltipProvider key={entry.id}>
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<Badge variant="secondary" className="cursor-help">
+												{displayName}
+											</Badge>
+										</TooltipTrigger>
+										<TooltipContent>
+											<p className="whitespace-pre-line text-sm">{tooltipContent}</p>
+										</TooltipContent>
+									</Tooltip>
+								</TooltipProvider>
+							);
+						})}
+					</div>
+				);
 			},
 		},
 		{
@@ -249,11 +216,10 @@ export function createColumns({
 			cell: ({ row }: { row: Row<Offering> }) => row.getValue("notes") || "-",
 		},
 		{
-			accessorKey: "offering_photos",
+			accessorKey: "offeringPhotos",
 			header: "写真",
 			cell: ({ row }: { row: Row<Offering> }) => {
-				const photos = row.original.offering_photos;
-				const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+				const photos = row.original.offeringPhotos || [];
 
 				if (photos.length === 0) {
 					return (
@@ -264,45 +230,21 @@ export function createColumns({
 					);
 				}
 
-				const handleCaptionChange = async (
-					photoId: string,
-					caption: string,
-				) => {
-					try {
-						await updateOfferingPhoto(photoId, { caption });
-						toast({
-							title: "キャプションを更新しました",
-						});
-					} catch (error) {
-						toast({
-							title: "キャプションの更新に失敗しました",
-							variant: "destructive",
-						});
-					}
-				};
-
 				return (
 					<div className="flex items-center gap-2">
 						<button
 							type="button"
-							onClick={() => setIsGalleryOpen(true)}
 							className="relative h-8 w-8 rounded-md overflow-hidden hover:ring-2 hover:ring-primary transition-all"
 						>
 							<Image
-								src={`/api/storage/${photos[0].storage_key}`}
-								alt={photos[0].caption || "写真"}
+								src={`/api/storage/${photos[0]?.storage_key}`}
+								alt={photos[0]?.caption || "写真"}
 								className="object-cover"
 								fill
 								sizes="32px"
 							/>
 						</button>
 						<Badge variant="secondary">{photos.length}枚</Badge>
-						{isGalleryOpen && (
-							<OfferingPhotoGallery
-								photos={photos}
-								onCaptionChange={handleCaptionChange}
-							/>
-						)}
 					</div>
 				);
 			},
@@ -311,21 +253,11 @@ export function createColumns({
 			id: "actions",
 			cell: ({ row }: { row: Row<Offering> }) => {
 				const offering = row.original;
-				const isSelected = selectedRows.includes(offering.id);
+				const hasPermission = permission === "owner" || permission === "editor";
 
-				const handleDelete = async () => {
-					try {
-						await deleteOffering(offering.id);
-						toast({
-							title: "お供え物を削除しました",
-						});
-					} catch (error) {
-						toast({
-							title: "お供え物の削除に失敗しました",
-							variant: "destructive",
-						});
-					}
-				};
+				if (!hasPermission) {
+					return null;
+				}
 
 				return (
 					<DropdownMenu>
@@ -336,36 +268,38 @@ export function createColumns({
 							</Button>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="end">
-							<DropdownMenuLabel>アクション</DropdownMenuLabel>
 							{canEdit && (
 								<>
-									<DropdownMenuItem onClick={() => onEditRow(offering)}>
-										<Pencil className="h-4 w-4 mr-2" />
-										編集
+									<DropdownMenuItem asChild>
+										<OfferingDialog
+											koudenId={koudenId}
+											entries={entries}
+											defaultValues={offering}
+											variant="edit"
+										/>
 									</DropdownMenuItem>
-									<DropdownMenuItem
-										onClick={() => navigator.clipboard.writeText(offering.id)}
-									>
-										<Copy className="h-4 w-4 mr-2" />
-										IDをコピー
-									</DropdownMenuItem>
-									<DropdownMenuSeparator />
-									<DropdownMenuItem
-										onClick={handleDelete}
-										disabled={isSelected}
-										className="text-destructive"
-									>
-										<Trash2 className="h-4 w-4 mr-2" />
-										削除
+									<DropdownMenuItem asChild>
+										<button
+											type="button"
+											onClick={() => onDeleteRows([offering.id])}
+											className="text-destructive w-full justify-start"
+										>
+											<Trash2 className="h-4 w-4" />
+											削除する
+										</button>
 									</DropdownMenuItem>
 								</>
 							)}
-							{!canEdit && (
-								<DropdownMenuItem
-									onClick={() => navigator.clipboard.writeText(offering.id)}
-								>
-									<Copy className="h-4 w-4 mr-2" />
-									IDをコピー
+							{canEdit && (
+								<DropdownMenuItem asChild>
+									<button
+										type="button"
+										onClick={() => onDeleteRows([offering.id])}
+										className="text-destructive w-full justify-start"
+									>
+										<Trash2 className="h-4 w-4" />
+										削除する
+									</button>
 								</DropdownMenuItem>
 							)}
 						</DropdownMenuContent>

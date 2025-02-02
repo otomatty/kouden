@@ -1,7 +1,6 @@
 "use client";
-
+// library
 import * as React from "react";
-import type { ColumnDef } from "@tanstack/react-table";
 import {
 	useReactTable,
 	getCoreRowModel,
@@ -11,100 +10,82 @@ import {
 	type ColumnFiltersState,
 	type VisibilityState,
 } from "@tanstack/react-table";
-import type { Offering } from "@/types/offering";
+import { useAtomValue } from "jotai";
+import { useState, useCallback, useEffect, useMemo } from "react";
+
+// ui
+import { Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
+// types
+import type { Offering, OfferingWithKoudenEntries } from "@/types/offerings";
+import type { Entry } from "@/types/entries";
+import type { CellValue } from "@/types/table";
+// Server Actions
+import { deleteOffering, updateOfferingField } from "@/app/_actions/offerings";
+// hooks
 import { useMediaQuery } from "@/hooks/use-media-query";
+// stores
+import { permissionAtom } from "@/store/permission";
+// components
 import { DataTable as BaseDataTable } from "@/components/custom/data-table";
 import { DataTableToolbar } from "@/components/custom/data-table/toolbar";
-import { Button } from "@/components/ui/button";
-import { Trash2, LayoutGrid, Table2 } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
-import type { CellValue } from "@/components/custom/data-table/types";
+import { OfferingDialog } from "../dialog/offering-dialog";
+import { createColumns } from "./columns";
 import {
 	columnLabels,
 	searchOptions,
 	sortOptions,
-	filterOptions,
 	defaultColumnVisibility,
 	tabletColumnVisibility,
 	editableColumns,
-} from "./columns";
-import type { KoudenPermission } from "@/types/role";
-import { OfferingDialog } from "../dialog/offering-dialog";
-import type { KoudenEntry } from "@/types/kouden";
-import { useLocalStorage } from "@/hooks/use-local-storage";
-import { OfferingCardList } from "../card-list/offering-card-list";
-import { permissionAtom } from "@/store/permission";
-import { useAtomValue } from "jotai";
-import { useQuery } from "@tanstack/react-query";
-import { getRelationships } from "@/app/_actions/relationships";
-import { createColumns } from "./columns";
+} from "./constants";
 
 interface DataTableProps {
-	columns: ColumnDef<Offering, string | number | boolean | null>[];
-	data: Offering[];
-	permission?: KoudenPermission;
 	koudenId: string;
-	koudenEntries: KoudenEntry[];
-	onUpdate?: (id: string, data: Partial<Offering>) => Promise<void>;
-	onDelete?: (ids: string[]) => Promise<void>;
+	entries: Entry[];
+	offerings: OfferingWithKoudenEntries[];
+	onDataChange?: (offerings: OfferingWithKoudenEntries[]) => void;
 }
 
-export function DataTable({
-	data,
-	koudenId,
-	koudenEntries,
-	onUpdate,
-	onDelete,
-}: DataTableProps) {
-	const isTablet = useMediaQuery("(max-width: 1024px)");
-	const [viewMode, setViewMode] = useLocalStorage<"table" | "grid">(
-		"offering-view-mode",
-		isTablet ? "grid" : "table",
-	);
-	const [sorting, setSorting] = React.useState<SortingState>([]);
-	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-		[],
-	);
-	const [columnVisibility, setColumnVisibility] =
-		React.useState<VisibilityState>(
-			isTablet ? tabletColumnVisibility : defaultColumnVisibility,
-		);
-	const [rowSelection, setRowSelection] = React.useState({});
-	const [globalFilter, setGlobalFilter] = React.useState("");
+export function DataTable({ koudenId, entries, offerings, onDataChange }: DataTableProps) {
 	const permission = useAtomValue(permissionAtom);
 	const isMobile = useMediaQuery("(max-width: 767px)");
 
-	// 画面サイズが変更された時に列の表示状態を更新
-	React.useEffect(() => {
-		setColumnVisibility(
-			isTablet ? tabletColumnVisibility : defaultColumnVisibility,
-		);
-	}, [isTablet]);
+	const [sorting, setSorting] = useState<SortingState>([]);
+	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]); //列フィルター
+	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
+		isMobile ? tabletColumnVisibility : defaultColumnVisibility,
+	); //列表示
+	const [rowSelection, setRowSelection] = useState({});
+	const [globalFilter, setGlobalFilter] = useState("");
+	const [, setSelectedRows] = useState<string[]>([]);
 
-	// モバイルの場合は強制的にグリッド表示
-	React.useEffect(() => {
-		if (isTablet && viewMode !== "grid") {
-			setViewMode("grid");
-		}
-	}, [isTablet, viewMode, setViewMode]);
+	// 画面サイズが変更された時に列の表示状態を更新
+	useEffect(() => {
+		setColumnVisibility(isMobile ? tabletColumnVisibility : defaultColumnVisibility);
+	}, [isMobile]);
 
 	// 選択された行のIDを取得
-	const selectedRowsIds = React.useMemo(() => {
+	const selectedRowsIds = useMemo(() => {
 		return Object.keys(rowSelection);
 	}, [rowSelection]);
 
 	// 選択された行を削除
-	const handleDeleteRows = React.useCallback(
+	const handleDeleteRows = useCallback(
 		async (ids: string[]) => {
 			try {
-				await onDelete?.(ids);
+				await Promise.all(ids.map((id) => deleteOffering(id, koudenId)));
+				setSelectedRows([]);
+				if (onDataChange) {
+					onDataChange(offerings.filter((offering) => !ids.includes(offering.id)));
+				}
 				toast({
 					title: "削除完了",
 					description: `${ids.length}件のデータを削除しました`,
 				});
-				setRowSelection({});
 			} catch (error) {
-				console.error("Failed to delete offerings:", error);
+				console.error("[handleDeleteRows] Delete failed:", error);
 				toast({
 					title: "エラーが発生しました",
 					description: "データの削除に失敗しました",
@@ -112,61 +93,78 @@ export function DataTable({
 				});
 			}
 		},
-		[onDelete],
+		[koudenId, offerings, onDataChange],
 	);
 
-	// 関係性データの取得
-	const { data: relationships = [], isLoading: isLoadingRelationships } =
-		useQuery({
-			queryKey: ["relationships", koudenId],
-			queryFn: async () => {
-				const data = await getRelationships(koudenId);
-				return data.map((rel) => ({
-					id: rel.id,
-					name: rel.name,
-					description: rel.description || undefined,
-				}));
-			},
-		});
+	// セルの編集
+	const handleCellEdit = useCallback(
+		async (columnId: string, rowId: string, value: CellValue) => {
+			// インデックスからエントリーを取得
+			const offeringIndex = Number.parseInt(rowId, 10);
+			if (Number.isNaN(offeringIndex) || offeringIndex < 0 || offeringIndex >= offerings.length) {
+				toast({
+					title: "エラーが発生しました",
+					description: "無効な行インデックスです",
+					variant: "destructive",
+				});
+				return;
+			}
 
-	// 編集ダイアログの状態
-	const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
-	const [editingOffering, setEditingOffering] = React.useState<
-		Offering | undefined
-	>();
+			const targetOffering = offerings[offeringIndex];
+			if (!targetOffering) {
+				toast({
+					title: "エラーが発生しました",
+					description: "対象のお供え物が見つかりませんでした",
+					variant: "destructive",
+				});
+				return;
+			}
 
-	// 編集ダイアログを開く
-	const handleEditRow = React.useCallback((offering: Offering) => {
-		setEditingOffering(offering);
-		setIsEditDialogOpen(true);
-	}, []);
+			try {
+				const updatedOffering = await updateOfferingField(
+					targetOffering.id,
+					columnId as keyof Omit<Offering, "offering_entries">,
+					value,
+				);
 
-	// 編集成功時の処理
-	const handleEditSuccess = React.useCallback(() => {
-		setIsEditDialogOpen(false);
-		setEditingOffering(undefined);
-		toast({
-			title: "更新完了",
-			description: "お供え物を更新しました",
-		});
-	}, []);
+				if (onDataChange) {
+					const newOfferings = offerings.map((offering) =>
+						offering.id === targetOffering.id ? { ...offering, ...updatedOffering } : offering,
+					);
+					onDataChange(newOfferings);
+				}
+
+				toast({
+					title: "更新完了",
+					description: "データを更新しました",
+				});
+			} catch (error) {
+				console.error("[handleCellEdit] Update failed:", error);
+				toast({
+					title: "エラーが発生しました",
+					description: "データの更新に失敗しました",
+					variant: "destructive",
+				});
+			}
+		},
+		[offerings, onDataChange],
+	);
 
 	// カラムの生成
-	const columns = React.useMemo(
+	const columns = useMemo(
 		() =>
 			createColumns({
-				onEditRow: handleEditRow,
 				onDeleteRows: handleDeleteRows,
-				onCellEdit: handleCellEdit,
-				onCellUpdate: handleCellEdit,
 				selectedRows: selectedRowsIds,
 				permission,
+				koudenId,
+				entries,
 			}),
-		[handleEditRow, handleDeleteRows, selectedRowsIds, permission],
+		[handleDeleteRows, selectedRowsIds, permission, koudenId, entries],
 	);
 
 	const table = useReactTable({
-		data,
+		data: offerings,
 		columns,
 		getCoreRowModel: getCoreRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
@@ -181,19 +179,17 @@ export function DataTable({
 			if (!filterValue) return true;
 
 			const searchValue = String(filterValue).toLowerCase();
-			const searchableColumns = ["provider_name", "description"];
+			const searchableColumns = ["provider_name", "description", "type"];
 
 			// 各カラムのマッチング結果を収集
 			const matchResults = searchableColumns.map((columnId) => {
 				const value = row.getValue(columnId);
-				const matches =
-					value != null && String(value).toLowerCase().includes(searchValue);
+				const matches = value != null && String(value).toLowerCase().includes(searchValue);
 				return { columnId, value: value ?? "null", matches };
 			});
 
 			// いずれかのカラムがマッチした場合、その行の情報を表示
 			const hasMatch = matchResults.some((result) => result.matches);
-
 			return hasMatch;
 		},
 		state: {
@@ -205,71 +201,16 @@ export function DataTable({
 		},
 	});
 
-	const handleCellEdit = async (
-		columnId: string,
-		rowId: string,
-		value: CellValue,
-	) => {
-		try {
-			let targetRow: Offering | undefined;
-			if (/^\d+$/.test(rowId)) {
-				const index = Number.parseInt(rowId, 10);
-				targetRow = data[index];
-			} else {
-				targetRow = data.find((row) => row.id === rowId);
-			}
-
-			if (!targetRow) {
-				throw new Error("編集対象の行が見つかりません");
-			}
-
-			// 値の型変換
-			let convertedValue: string | number | undefined;
-
-			if (columnId === "type") {
-				convertedValue = value as string;
-			} else if (columnId === "price" || columnId === "quantity") {
-				convertedValue =
-					value === "" || value === null ? undefined : Number(value);
-			} else {
-				convertedValue =
-					value === "" || value === null ? undefined : String(value);
-			}
-
-			await onUpdate?.(targetRow.id, {
-				[columnId]: convertedValue,
-			});
-		} catch (error) {
-			toast({
-				title: "エラーが発生しました",
-				description:
-					error instanceof Error ? error.message : "データの更新に失敗しました",
-				variant: "destructive",
-			});
-		}
-	};
-
 	return (
 		<div className="space-y-4">
 			<DataTableToolbar
 				table={table}
 				searchOptions={searchOptions}
-				filterColumn="type"
-				filterOptions={filterOptions}
 				sortOptions={sortOptions}
 				columnLabels={columnLabels}
-				showViewToggle={!isTablet}
-				viewMode={viewMode}
-				onViewModeChange={setViewMode}
 			>
-				<div className="flex items-center gap-4">
-					{!isTablet && (
-						<OfferingDialog
-							koudenId={koudenId}
-							onSuccess={handleEditSuccess}
-							koudenEntries={koudenEntries}
-						/>
-					)}
+				<div className="flex items-center justify-end">
+					{!isMobile && <OfferingDialog koudenId={koudenId} entries={entries} variant="create" />}
 				</div>
 			</DataTableToolbar>
 
@@ -286,34 +227,26 @@ export function DataTable({
 				</Button>
 			)}
 
-			{viewMode === "table" && !isTablet ? (
-				<BaseDataTable
-					columns={columns}
-					data={table.getFilteredRowModel().rows.map((row) => row.original)}
-					editableColumns={editableColumns}
-					onCellEdit={handleCellEdit}
-					sorting={sorting}
-					onSortingChange={setSorting}
-					columnFilters={columnFilters}
-					onColumnFiltersChange={setColumnFilters}
-					columnVisibility={columnVisibility}
-					onColumnVisibilityChange={setColumnVisibility}
-					rowSelection={rowSelection}
-					onRowSelectionChange={setRowSelection}
-					emptyMessage="お供え物が登録されていません"
-					permission={permission}
-				/>
-			) : (
-				<OfferingCardList
-					offerings={data}
-					onDelete={() => setRowSelection({})}
-				/>
-			)}
+			<BaseDataTable
+				permission={permission}
+				columns={columns}
+				data={table.getFilteredRowModel().rows.map((row) => row.original)}
+				editableColumns={editableColumns}
+				sorting={sorting}
+				onSortingChange={setSorting}
+				columnFilters={columnFilters}
+				onColumnFiltersChange={setColumnFilters}
+				columnVisibility={columnVisibility}
+				onColumnVisibilityChange={setColumnVisibility}
+				rowSelection={rowSelection}
+				onRowSelectionChange={setRowSelection}
+				onCellEdit={handleCellEdit}
+				emptyMessage="お供え物が登録されていません"
+			/>
 
 			<div className="flex items-center justify-end space-x-2">
 				<div className="flex-1 text-sm text-muted-foreground">
-					{selectedRowsIds.length} / {table.getFilteredRowModel().rows.length}{" "}
-					行を選択中
+					{selectedRowsIds.length} / {table.getFilteredRowModel().rows.length} 行を選択中
 				</div>
 			</div>
 		</div>

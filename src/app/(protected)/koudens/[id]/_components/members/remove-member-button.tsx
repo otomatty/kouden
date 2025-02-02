@@ -27,15 +27,11 @@ interface RemoveMemberButtonProps {
 	membersAtom: PrimitiveAtom<KoudenMember[]>;
 }
 
-export function RemoveMemberButton({
-	member,
-	isSelf,
-	membersAtom,
-}: RemoveMemberButtonProps) {
+export function RemoveMemberButton({ member, isSelf, membersAtom }: RemoveMemberButtonProps) {
 	const { toast } = useToast();
 	const router = useRouter();
 	const [isLoading, setIsLoading] = useState(false);
-	const [isOpen, setIsOpen] = useState(false);
+	const [, setIsOpen] = useState(false);
 	const setMembersState = useSetAtom(membersAtom);
 	const isOwner = member.role?.name === "owner";
 
@@ -79,8 +75,6 @@ export function RemoveMemberButton({
 
 	return (
 		<ResponsiveDialog
-			open={isOpen}
-			onOpenChange={setIsOpen}
 			trigger={
 				<Button
 					variant="ghost"
@@ -101,9 +95,7 @@ export function RemoveMemberButton({
 				<div className="flex items-center gap-2 p-4 bg-muted rounded-lg">
 					<Avatar>
 						<AvatarImage src={member.profile?.avatar_url || undefined} />
-						<AvatarFallback>
-							{getInitials(member.profile?.display_name || "")}
-						</AvatarFallback>
+						<AvatarFallback>{getInitials(member.profile?.display_name || "")}</AvatarFallback>
 					</Avatar>
 					<div>
 						<p className="font-medium">{member.profile?.display_name}</p>
@@ -113,18 +105,10 @@ export function RemoveMemberButton({
 					</div>
 				</div>
 				<div className="flex justify-end gap-2">
-					<Button
-						variant="outline"
-						onClick={() => setIsOpen(false)}
-						disabled={isLoading}
-					>
+					<Button variant="outline" onClick={() => setIsOpen(false)} disabled={isLoading}>
 						キャンセル
 					</Button>
-					<Button
-						variant="destructive"
-						onClick={handleRemove}
-						disabled={isLoading}
-					>
+					<Button variant="destructive" onClick={handleRemove} disabled={isLoading}>
 						{isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 						{isSelf ? "退出する" : "削除する"}
 					</Button>

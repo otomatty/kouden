@@ -117,6 +117,7 @@ export async function initializeDefaultRelationships(koudenId: string) {
 		if (error) throw error;
 		revalidatePath(`/koudens/${koudenId}`);
 	} catch (error) {
+		console.error("[ERROR] Error initializing default relationships:", error);
 		throw new Error("デフォルトの関係性の初期化に失敗しました");
 	}
 }

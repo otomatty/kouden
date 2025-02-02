@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import type { KoudenEntry } from "@/types/kouden";
-import { formatCurrency } from "@/lib/utils";
+import type { Entry } from "@//types/entries";
+import { formatCurrency } from "@/utils/currency";
 import {
 	PieChart,
 	Pie,
@@ -15,7 +15,7 @@ import {
 } from "recharts";
 
 interface KoudenStatisticsProps {
-	entries: KoudenEntry[];
+	entries: Entry[];
 }
 
 const ATTENDANCE_COLORS = {
@@ -36,13 +36,10 @@ export function KoudenStatistics({ entries }: KoudenStatisticsProps) {
 
 	const attendanceCounts = entries.reduce(
 		(acc, entry) => {
-			acc[entry.attendance_type]++;
+			acc[entry.attendanceType] = (acc[entry.attendanceType] || 0) + 1;
 			return acc;
 		},
-		{ FUNERAL: 0, CONDOLENCE_VISIT: 0, ABSENT: 0 } as Record<
-			KoudenEntry["attendance_type"],
-			number
-		>,
+		{ FUNERAL: 0, CONDOLENCE_VISIT: 0, ABSENT: 0 } as Record<Entry["attendance_type"], number>,
 	);
 
 	const returnProgress = entries.reduce(
@@ -53,8 +50,7 @@ export function KoudenStatistics({ entries }: KoudenStatisticsProps) {
 		{ completed: 0, pending: 0 },
 	);
 
-	const returnProgressPercentage =
-		(returnProgress.completed / entries.length) * 100;
+	const returnProgressPercentage = (returnProgress.completed / entries.length) * 100;
 
 	// 金額帯別の分布データ
 	const amountRanges = [
@@ -71,20 +67,17 @@ export function KoudenStatistics({ entries }: KoudenStatisticsProps) {
 	const amountDistribution = amountRanges
 		.map((range) => ({
 			name: range.range,
-			count: entries.filter(
-				(entry) => entry.amount >= range.min && entry.amount < range.max,
-			).length,
+			count: entries.filter((entry) => entry.amount >= range.min && entry.amount < range.max)
+				.length,
 		}))
 		.reverse();
 
 	// 参列種別の円グラフデータ
-	const attendanceData = Object.entries(attendanceCounts).map(
-		([key, value]) => ({
-			name: ATTENDANCE_LABELS[key as keyof typeof ATTENDANCE_LABELS],
-			value,
-			color: ATTENDANCE_COLORS[key as keyof typeof ATTENDANCE_COLORS],
-		}),
-	);
+	const attendanceData = Object.entries(attendanceCounts).map(([key, value]) => ({
+		name: ATTENDANCE_LABELS[key as keyof typeof ATTENDANCE_LABELS],
+		value,
+		color: ATTENDANCE_COLORS[key as keyof typeof ATTENDANCE_COLORS],
+	}));
 
 	return (
 		<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -94,9 +87,7 @@ export function KoudenStatistics({ entries }: KoudenStatisticsProps) {
 					<CardTitle className="text-sm font-medium">香典総額</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<div className="text-2xl font-bold">
-						{formatCurrency(totalAmount)}
-					</div>
+					<div className="text-2xl font-bold">{formatCurrency(totalAmount)}</div>
 				</CardContent>
 			</Card>
 
@@ -108,8 +99,7 @@ export function KoudenStatistics({ entries }: KoudenStatisticsProps) {
 				<CardContent>
 					<div className="text-2xl font-bold">{entries.length}名</div>
 					<div className="text-xs text-muted-foreground">
-						葬儀: {attendanceCounts.FUNERAL}名 / 弔問:{" "}
-						{attendanceCounts.CONDOLENCE_VISIT}名 / 欠席:{" "}
+						葬儀: {attendanceCounts.FUNERAL}名 / 弔問: {attendanceCounts.CONDOLENCE_VISIT}名 / 欠席:{" "}
 						{attendanceCounts.ABSENT}名
 					</div>
 				</CardContent>
@@ -122,9 +112,7 @@ export function KoudenStatistics({ entries }: KoudenStatisticsProps) {
 				</CardHeader>
 				<CardContent>
 					<div className="flex items-center justify-between">
-						<div className="text-2xl font-bold">
-							{Math.round(returnProgressPercentage)}%
-						</div>
+						<div className="text-2xl font-bold">{Math.round(returnProgressPercentage)}%</div>
 						<div className="text-xs text-muted-foreground">
 							{returnProgress.completed} / {entries.length}
 						</div>
@@ -172,29 +160,11 @@ export function KoudenStatistics({ entries }: KoudenStatisticsProps) {
 					</CardHeader>
 					<CardContent className="h-[400px]">
 						<ResponsiveContainer width="100%" height="100%">
-							<BarChart
-								data={amountDistribution}
-								layout="vertical"
-								margin={{ left: 80 }}
-							>
+							<BarChart data={amountDistribution} layout="vertical" margin={{ left: 80 }}>
 								<XAxis type="number" allowDecimals={false} />
-								<YAxis
-									type="category"
-									dataKey="name"
-									width={80}
-									fontSize={12}
-								/>
-								<Tooltip
-									formatter={(value, name) =>
-										name === "件数" ? `${value}件` : value
-									}
-								/>
-								<Bar
-									dataKey="count"
-									fill="#2563eb"
-									name="件数"
-									radius={[0, 4, 4, 0]}
-								/>
+								<YAxis type="category" dataKey="name" width={80} fontSize={12} />
+								<Tooltip formatter={(value, name) => (name === "件数" ? `${value}件` : value)} />
+								<Bar dataKey="count" fill="#2563eb" name="件数" radius={[0, 4, 4, 0]} />
 							</BarChart>
 						</ResponsiveContainer>
 					</CardContent>

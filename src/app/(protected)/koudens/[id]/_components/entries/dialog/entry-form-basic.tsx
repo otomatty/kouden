@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { useFormContext } from "react-hook-form";
+import { useSetAtom } from "jotai";
+import { FormControl, FormField, FormItem, FormMessage, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
 	Select,
 	SelectContent,
@@ -12,14 +13,10 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import type { AttendanceType } from "@/types/kouden";
+import type { AttendanceType } from "@/types/entries";
 import { formatCurrency, formatInputCurrency } from "@/utils/currency";
 import { formatPostalCode, searchAddress } from "./entry-form";
-import {
-	entryFormAtom,
-	updateEntryFormAtom,
-	addressSearchStateAtom,
-} from "@/store/entries";
+import { addressSearchStateAtom } from "@/store/entries";
 
 const attendanceTypeMap: Record<AttendanceType, string> = {
 	FUNERAL: "葬儀",
@@ -28,28 +25,28 @@ const attendanceTypeMap: Record<AttendanceType, string> = {
 } as const;
 
 export function EntryFormBasic() {
-	const [formData, setFormData] = useAtom(entryFormAtom);
-	const updateForm = useSetAtom(updateEntryFormAtom);
-	const [addressSearchState, setAddressSearchState] = useAtom(
-		addressSearchStateAtom,
-	);
+	const form = useFormContext();
+	const setAddressSearchState = useSetAtom(addressSearchStateAtom);
 
 	// 郵便番号が変更されたら住所を自動入力
 	useEffect(() => {
 		const fetchAddress = async () => {
+			const postalCode = form.getValues("postal_code");
+			const address = form.getValues("address");
+
 			// 住所が既に入力されている場合は検索しない
-			if (formData.address) return;
+			if (address) return;
 
 			// 7桁の数字のみの場合に検索
-			if (formData.postal_code?.replace(/[^\d]/g, "").length === 7) {
+			if (postalCode?.replace(/[^\d]/g, "").length === 7) {
 				setAddressSearchState({ isSearching: true, error: null });
 				try {
-					const address = await searchAddress(formData.postal_code);
-					if (address) {
-						updateForm({ field: "address", value: address });
+					const newAddress = await searchAddress(postalCode);
+					if (newAddress) {
+						form.setValue("address", newAddress);
 						toast({
 							title: "住所を自動入力しました",
-							description: address,
+							description: newAddress,
 						});
 					} else {
 						toast({
@@ -57,10 +54,11 @@ export function EntryFormBasic() {
 							description: "郵便番号を確認してください",
 						});
 					}
-				} catch (error) {
+				} catch (error: unknown) {
+					console.error("住所検索中にエラーが発生しました:", error);
 					setAddressSearchState({
 						isSearching: false,
-						error: "住所の検索に失敗しました",
+						error: "住所の検索に失敗しました。しばらく時間をおいて再度お試しください。",
 					});
 				} finally {
 					setAddressSearchState({ isSearching: false, error: null });
@@ -68,109 +66,143 @@ export function EntryFormBasic() {
 			}
 		};
 		fetchAddress();
-	}, [
-		formData.postal_code,
-		formData.address,
-		updateForm,
-		setAddressSearchState,
-	]);
+	}, [form, setAddressSearchState]);
 
 	return (
 		<div className="grid gap-4">
-			<div className="grid gap-2">
-				<Label htmlFor="name">ご芳名</Label>
-				<Input
-					id="name"
-					value={formData.name || ""}
-					onChange={(e) => updateForm({ field: "name", value: e.target.value })}
-				/>
-			</div>
-			<div className="grid grid-cols-2 gap-4">
-				<div className="grid gap-2">
-					<Label htmlFor="organization">団体名</Label>
-					<Input
-						id="organization"
-						value={formData.organization || ""}
-						onChange={(e) =>
-							updateForm({ field: "organization", value: e.target.value })
-						}
-					/>
-				</div>
-				<div className="grid gap-2">
-					<Label htmlFor="position">役職</Label>
-					<Input
-						id="position"
-						value={formData.position || ""}
-						onChange={(e) =>
-							updateForm({ field: "position", value: e.target.value })
-						}
-					/>
-				</div>
-			</div>
-			<div className="grid gap-2">
-				<Label htmlFor="postal_code">郵便番号</Label>
-				<Input
-					id="postal_code"
-					value={formData.postal_code || ""}
-					onChange={(e) =>
-						updateForm({
-							field: "postal_code",
-							value: formatPostalCode(e.target.value),
-						})
-					}
-					placeholder="000-0000"
-					maxLength={8}
-				/>
-			</div>
-			<div className="grid gap-2">
-				<Label htmlFor="address">住所</Label>
-				<Input
-					id="address"
-					value={formData.address || ""}
-					onChange={(e) =>
-						updateForm({ field: "address", value: e.target.value })
-					}
-				/>
-			</div>
-			<div className="grid gap-2">
-				<Label htmlFor="amount">金額</Label>
-				<Input
-					id="amount"
-					type="text"
-					inputMode="numeric"
-					value={formatInputCurrency(formData.amount)}
-					onChange={(e) => {
-						const value = Number(e.target.value.replace(/[^\d]/g, ""));
-						updateForm({ field: "amount", value });
-					}}
-					className="text-right"
-				/>
-				{typeof formData.amount === "number" && formData.amount > 0 && (
-					<div className="text-sm text-muted-foreground text-right">
-						{formatCurrency(formData.amount)}
-					</div>
+			<FormField
+				control={form.control}
+				name="name"
+				render={({ field }) => (
+					<FormItem>
+						<FormLabel optional>ご芳名</FormLabel>
+						<FormControl>
+							<Input placeholder="例：山田太郎" {...field} value={field.value || ""} />
+						</FormControl>
+						<FormMessage />
+					</FormItem>
 				)}
+			/>
+			<div className="grid grid-cols-2 gap-4">
+				<FormField
+					control={form.control}
+					name="organization"
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel optional>団体名</FormLabel>
+							<FormControl>
+								<Input placeholder="例：株式会社〇〇" {...field} value={field.value || ""} />
+							</FormControl>
+							<FormMessage />
+						</FormItem>
+					)}
+				/>
+				<FormField
+					control={form.control}
+					name="position"
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel optional>役職</FormLabel>
+							<FormControl>
+								<Input placeholder="例：代表取締役" {...field} value={field.value || ""} />
+							</FormControl>
+							<FormMessage />
+						</FormItem>
+					)}
+				/>
 			</div>
-			<div className="grid gap-2">
-				<Label htmlFor="attendance_type">参列</Label>
-				<Select
-					value={formData.attendance_type || "FUNERAL"}
-					onValueChange={(value: AttendanceType) =>
-						updateForm({ field: "attendance_type", value })
-					}
-				>
-					<SelectTrigger>
-						<SelectValue />
-					</SelectTrigger>
-					<SelectContent>
-						{Object.entries(attendanceTypeMap).map(([value, label]) => (
-							<SelectItem key={value} value={value}>
-								{label}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-			</div>
+			<FormField
+				control={form.control}
+				name="postal_code"
+				render={({ field }) => (
+					<FormItem>
+						<FormLabel optional>郵便番号</FormLabel>
+						<FormControl>
+							<Input
+								placeholder="000-0000"
+								maxLength={8}
+								{...field}
+								value={field.value || ""}
+								onChange={(e) => field.onChange(formatPostalCode(e.target.value))}
+							/>
+						</FormControl>
+						<FormMessage />
+					</FormItem>
+				)}
+			/>
+			<FormField
+				control={form.control}
+				name="address"
+				render={({ field }) => (
+					<FormItem>
+						<FormLabel optional>住所</FormLabel>
+						<FormControl>
+							<Input
+								placeholder="例：東京都千代田区永田町1-7-1"
+								{...field}
+								value={field.value || ""}
+								onChange={(e) => field.onChange(e.target.value)}
+							/>
+						</FormControl>
+						<FormMessage />
+					</FormItem>
+				)}
+			/>
+			<FormField
+				control={form.control}
+				name="amount"
+				render={({ field }) => (
+					<FormItem>
+						<FormLabel required>金額</FormLabel>
+						<FormControl>
+							<Input
+								type="text"
+								inputMode="numeric"
+								className="text-right"
+								{...field}
+								value={formatInputCurrency(field.value || 0)}
+								onChange={(e) => {
+									const value = Number(e.target.value.replace(/[^\d]/g, ""));
+									field.onChange(value);
+								}}
+							/>
+						</FormControl>
+						{field.value > 0 && (
+							<div className="text-sm text-muted-foreground text-right">
+								{formatCurrency(field.value)}
+							</div>
+						)}
+						<FormMessage />
+					</FormItem>
+				)}
+			/>
+			<FormField
+				control={form.control}
+				name="attendanceType"
+				render={({ field }) => (
+					<FormItem>
+						<FormLabel required>参列</FormLabel>
+						<FormControl>
+							<Select
+								value={field.value || "FUNERAL"}
+								onValueChange={(value: AttendanceType) => field.onChange(value)}
+							>
+								<SelectTrigger>
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{Object.entries(attendanceTypeMap).map(([value, label]) => (
+										<SelectItem key={value} value={value}>
+											{label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</FormControl>
+						<FormMessage />
+					</FormItem>
+				)}
+			/>
 		</div>
 	);
 }

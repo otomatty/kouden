@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { formatCurrency, formatPostalCode } from "@/lib/utils";
+import { formatCurrency } from "@/utils/currency";
+import { formatPostalCode } from "@/utils/postal-code";
 
 interface EditableCellProps {
 	value: string | number | null;
@@ -35,9 +36,7 @@ export function EditableCell({
 			setIsEditing(false);
 			if (value !== initialValue) {
 				const numericValue =
-					type === "number"
-						? Number(String(value).replace(/[^\d]/g, ""))
-						: value;
+					type === "number" ? Number(String(value).replace(/[^\d]/g, "")) : value;
 				onSave(numericValue);
 			}
 		}
@@ -49,9 +48,7 @@ export function EditableCell({
 				setIsEditing(false);
 				if (value !== initialValue) {
 					const numericValue =
-						type === "number"
-							? Number(String(value).replace(/[^\d]/g, ""))
-							: value;
+						type === "number" ? Number(String(value).replace(/[^\d]/g, "")) : value;
 					onSave(numericValue);
 				}
 			} else if (e.key === "Escape") {
@@ -74,7 +71,7 @@ export function EditableCell({
 
 	const displayValue =
 		format === "currency"
-			? formatCurrency(value)
+			? formatCurrency(Number(value))
 			: format === "postal_code"
 				? formatPostalCode(value)
 				: value;
@@ -96,10 +93,7 @@ export function EditableCell({
 	}
 
 	return (
-		<div
-			onDoubleClick={handleDoubleClick}
-			className={cn("cursor-pointer px-2 py-1", className)}
-		>
+		<div onDoubleClick={handleDoubleClick} className={cn("cursor-pointer px-2 py-1", className)}>
 			{displayValue}
 		</div>
 	);

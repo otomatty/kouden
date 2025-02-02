@@ -65,9 +65,7 @@ export function ReturnItemTable({ koudenId }: ReturnItemTableProps) {
 									<TableCell>{item.quantity}</TableCell>
 									<TableCell>¥{item.amount.toLocaleString()}</TableCell>
 									<TableCell>{item.recipient}</TableCell>
-									<TableCell>
-										{item.delivery_method === "DIRECT" ? "直接届ける" : "郵送"}
-									</TableCell>
+									<TableCell>{item.delivery_method === "DIRECT" ? "直接届ける" : "郵送"}</TableCell>
 									<TableCell>{item.status}</TableCell>
 									<TableCell>編集/削除</TableCell>
 								</TableRow>

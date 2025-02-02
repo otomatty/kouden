@@ -1,17 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import type { OfferingPhoto } from "@/types/offering";
+import type { OfferingPhoto } from "@/types/offerings";
 import { PhotoCaption } from "./photo-caption";
 
 interface OfferingPhotoGalleryProps {
@@ -19,10 +14,7 @@ interface OfferingPhotoGalleryProps {
 	onCaptionChange?: (photoId: string, caption: string) => Promise<void>;
 }
 
-export function OfferingPhotoGallery({
-	photos,
-	onCaptionChange,
-}: OfferingPhotoGalleryProps) {
+export function OfferingPhotoGallery({ photos, onCaptionChange }: OfferingPhotoGalleryProps) {
 	const [isOpen, setIsOpen] = useState(false);
 	const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -73,8 +65,8 @@ export function OfferingPhotoGallery({
 					</DialogHeader>
 					<div className="relative aspect-video">
 						<Image
-							src={`/api/storage/${currentPhoto.storage_key}`}
-							alt={currentPhoto.caption || "写真"}
+							src={`/api/storage/${currentPhoto?.storage_key}`}
+							alt={currentPhoto?.caption || "写真"}
 							className="object-contain"
 							fill
 							priority
@@ -101,11 +93,8 @@ export function OfferingPhotoGallery({
 							</Button>
 						</div>
 					</div>
-					{onCaptionChange && (
-						<PhotoCaption
-							photo={currentPhoto}
-							onCaptionChange={onCaptionChange}
-						/>
+					{onCaptionChange && currentPhoto && (
+						<PhotoCaption photo={currentPhoto} onCaptionChange={onCaptionChange} />
 					)}
 				</DialogContent>
 			</Dialog>

@@ -2,18 +2,20 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { ArrowUpDown, Pencil, MoreHorizontal, Trash } from "lucide-react";
 import type { KoudenPermission } from "@/types/role";
-import type { Table, Row, Column, ColumnDef } from "@tanstack/react-table";
+import type { Table, Row, Column } from "@tanstack/react-table";
 import type { Telegram } from "@/types/telegram";
-import type { KoudenEntry } from "@/types/kouden";
+import type { Entry } from "@/types/entries";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { EditableColumnConfig } from "@/components/custom/data-table/types";
-import { useAtom } from "jotai";
-import { telegramActionsAtom, deleteDialogAtom } from "@/store/telegrams";
+import { SelectCell } from "@/components/custom/data-table/select-cell";
+import { EditableCell } from "@/components/custom/data-table/editable-cell";
+import { SearchableSelectorDialog } from "@/components/custom/searchable-selector-dialog";
+import type { EditableColumnConfig } from "@/types/table";
+import type { CellValue } from "@/types/table";
 
 // カラムラベルの定義
 export const columnLabels: Record<string, string> = {
@@ -21,7 +23,7 @@ export const columnLabels: Record<string, string> = {
 	senderName: "差出人",
 	senderOrganization: "所属",
 	senderPosition: "役職",
-	koudenEntry: "関連する香典",
+	koudenEntryId: "関連する香典",
 	message: "メッセージ",
 	notes: "備考",
 	createdAt: "作成日時",
@@ -69,24 +71,27 @@ export const editableColumns: Record<string, EditableColumnConfig> = {
 	actions: { type: "readonly" },
 };
 
-interface CreateColumnsProps {
-	koudenEntries: KoudenEntry[];
+interface ColumnsProps {
+	entries: Entry[];
 	onEditRow: (telegram: Telegram) => Promise<void>;
 	onDeleteRows: (ids: string[]) => Promise<void>;
+	onCellEdit: (columnId: string, rowId: string, value: CellValue) => Promise<void>;
 	selectedRows: string[];
 	permission?: KoudenPermission;
 }
 
 export function createColumns({
-	koudenEntries,
 	onEditRow,
 	onDeleteRows,
-	selectedRows,
+	onCellEdit,
+	entries,
 	permission,
-}: CreateColumnsProps): ColumnDef<Telegram>[] {
+}: ColumnsProps) {
+	const canEdit = permission === "owner" || permission === "editor";
+
 	const getEntryName = (entryId: string | null | undefined) => {
 		if (!entryId) return "-";
-		const entry = koudenEntries.find((entry) => entry.id === entryId);
+		const entry = entries.find((entry) => entry.id === entryId);
 		return entry ? entry.name : "-";
 	};
 
@@ -122,31 +127,116 @@ export function createColumns({
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			),
-			cell: ({ row }: { row: Row<Telegram> }) =>
-				row.getValue("senderName") || "-",
+			cell: ({ row }: { row: Row<Telegram> }) => {
+				const value = row.getValue("senderName") as string;
+
+				if (canEdit) {
+					return (
+						<EditableCell
+							value={value}
+							onSave={(newValue) => {
+								onCellEdit("senderName", row.original.id, newValue);
+							}}
+						/>
+					);
+				}
+
+				return value || "-";
+			},
 		},
 		{
 			accessorKey: "senderOrganization",
-			header: "所属",
-			cell: ({ row }: { row: Row<Telegram> }) =>
-				row.getValue("senderOrganization") || "-",
+			header: "団体名",
+			cell: ({ row }: { row: Row<Telegram> }) => {
+				const value = row.getValue("senderOrganization") as string;
+
+				if (canEdit) {
+					return (
+						<EditableCell
+							value={value}
+							onSave={(newValue) => {
+								onCellEdit("senderOrganization", row.original.id, newValue);
+							}}
+						/>
+					);
+				}
+
+				return value || "-";
+			},
 		},
 		{
 			accessorKey: "senderPosition",
 			header: "役職",
-			cell: ({ row }: { row: Row<Telegram> }) =>
-				row.getValue("senderPosition") || "-",
+			cell: ({ row }: { row: Row<Telegram> }) => {
+				const value = row.getValue("senderPosition") as string;
+
+				if (canEdit) {
+					return (
+						<EditableCell
+							value={value}
+							onSave={(newValue) => {
+								onCellEdit("senderPosition", row.original.id, newValue);
+							}}
+						/>
+					);
+				}
+
+				return value || "-";
+			},
 		},
 		{
 			accessorKey: "koudenEntryId",
 			header: "関連する香典",
-			cell: ({ row }: { row: Row<Telegram> }) =>
-				getEntryName(row.getValue("koudenEntryId")),
+			cell: ({ row }: { row: Row<Telegram> }) => {
+				const value = row.getValue("koudenEntryId") as string;
+				const currentName = getEntryName(value);
+
+				if (canEdit) {
+					return (
+						<SearchableSelectorDialog
+							items={entries.map((entry) => ({
+								id: entry.id,
+								name: entry.name,
+								organization: entry.organization,
+								position: entry.position,
+								amount: entry.amount,
+								notes: entry.notes,
+							}))}
+							selectedIds={value ? [value] : []}
+							onSelectionChange={(ids) => {
+								onCellEdit("koudenEntryId", row.original.id, ids[0] || null);
+							}}
+							trigger={
+								<button className="w-full text-left px-2 py-1 hover:bg-accent" type="button">
+									{currentName}
+								</button>
+							}
+						/>
+					);
+				}
+
+				return currentName;
+			},
 		},
 		{
 			accessorKey: "message",
 			header: "メッセージ",
-			cell: ({ row }: { row: Row<Telegram> }) => row.getValue("message") || "-",
+			cell: ({ row }: { row: Row<Telegram> }) => {
+				const value = row.getValue("message") as string;
+
+				if (canEdit) {
+					return (
+						<EditableCell
+							value={value}
+							onSave={(newValue) => {
+								onCellEdit("message", row.original.id, newValue);
+							}}
+						/>
+					);
+				}
+
+				return value || "-";
+			},
 		},
 		{
 			accessorKey: "notes",
@@ -167,13 +257,9 @@ export function createColumns({
 			header: "操作",
 			cell: ({ row }: { row: Row<Telegram> }) => {
 				const telegram = row.original;
-				const [, dispatch] = useAtom(telegramActionsAtom);
-				const [, setDeleteDialog] = useAtom(deleteDialogAtom);
+				const hasPermission = permission === "owner" || permission === "editor";
 
-				const canEdit = permission === "owner" || permission === "editor";
-				const canDelete = permission === "owner" || permission === "editor";
-
-				if (!canEdit && !canDelete) {
+				if (!hasPermission) {
 					return null;
 				}
 
@@ -185,29 +271,20 @@ export function createColumns({
 							</Button>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="end">
-							{canEdit && (
+							{hasPermission && (
 								<DropdownMenuItem
 									onClick={() => {
-										dispatch({
-											type: "setDialog",
-											payload: {
-												dialog: "edit",
-												props: { isOpen: true, selectedTelegram: telegram },
-											},
-										});
+										onEditRow(telegram);
 									}}
 								>
 									<Pencil className="mr-2 h-4 w-4" />
 									編集
 								</DropdownMenuItem>
 							)}
-							{canDelete && (
+							{hasPermission && (
 								<DropdownMenuItem
 									onClick={() => {
-										setDeleteDialog({
-											isOpen: true,
-											telegramId: telegram.id,
-										});
+										onDeleteRows([telegram.id]);
 									}}
 									className="text-destructive"
 								>

@@ -1,0 +1,82 @@
+{
+	"$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+	"vcs": {
+		"enabled": false,
+		"clientKind": "git",
+		"useIgnoreFile": false
+	},
+	"files": {
+		"ignoreUnknown": false,
+		"ignore": [
+			"**/node_modules/**",
+			"**/.next/**",
+			"**/dist/**",
+			"**/build/**",
+			"**/coverage/**",
+			"**/public/**"
+		]
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab",
+		"lineWidth": 100
+	},
+	"organizeImports": {
+		"enabled": true
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true,
+
+			"suspicious": {
+				"noArrayIndexKey": "error",
+				"noConsoleLog": "warn",
+				"noEmptyInterface": "error",
+				"noExplicitAny": "error",
+				"noRedeclare": "error"
+			},
+			"complexity": {
+				"noUselessConstructor": "error",
+				"useOptionalChain": "error",
+				"useSimplifiedLogicExpression": "error",
+				"noBannedTypes": "error"
+			},
+			"style": {
+				"noNonNullAssertion": "error",
+				"useConst": "error",
+				"useTemplate": "error",
+				"useDefaultParameterLast": "error",
+				"useNamingConvention": "off"
+			},
+			"correctness": {
+				"noUnusedVariables": "error",
+				"useExhaustiveDependencies": "error",
+				"noUnusedPrivateClassMembers": "error",
+				"noUnreachable": "error",
+				"useHookAtTopLevel": "error"
+			},
+			"security": {
+				"noDangerouslySetInnerHtml": "error"
+			},
+			"performance": {
+				"noDelete": "error"
+			}
+		}
+	},
+	"javascript": {
+		"formatter": {
+			"quoteStyle": "double",
+			"trailingCommas": "all",
+			"semicolons": "always"
+		}
+	},
+	"json": {
+		"parser": {
+			"allowComments": true
+		},
+		"formatter": {
+			"enabled": true
+		}
+	}
+}

@@ -9,23 +9,20 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 import { deleteKouden } from "@/app/_actions/koudens";
 import { useRouter } from "next/navigation";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface DeleteKoudenDialogProps {
 	koudenId: string;
 	koudenTitle: string;
 }
 
-export function DeleteKoudenDialog({
-	koudenId,
-	koudenTitle,
-}: DeleteKoudenDialogProps) {
+export function DeleteKoudenDialog({ koudenId, koudenTitle }: DeleteKoudenDialogProps) {
 	const [isOpen, setIsOpen] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [confirmTitle, setConfirmTitle] = useState("");
 	const isDesktop = useMediaQuery("(min-width: 768px)");
 	const router = useRouter();
-
+	const { toast } = useToast();
 	const handleDelete = async () => {
 		if (confirmTitle !== koudenTitle) {
 			return;
@@ -71,17 +68,9 @@ export function DeleteKoudenDialog({
 
 	return (
 		<ResponsiveDialog
-			open={isOpen}
-			onOpenChange={(open) => {
-				setIsOpen(open);
-				if (!open) {
-					setConfirmTitle("");
-				}
-			}}
 			trigger={trigger}
 			title="香典帳の削除"
 			description="この操作は取り消せません。削除を確認するには、以下にタイトルを入力してください。"
-			showCloseButton
 		>
 			<div className="space-y-4 py-4">
 				<div className="space-y-2">
@@ -93,11 +82,7 @@ export function DeleteKoudenDialog({
 					/>
 				</div>
 				<div className="flex justify-end gap-2">
-					<Button
-						variant="destructive"
-						onClick={handleDelete}
-						disabled={isDeleteDisabled}
-					>
+					<Button variant="destructive" onClick={handleDelete} disabled={isDeleteDisabled}>
 						{isDeleting ? "削除中..." : "削除する"}
 					</Button>
 				</div>

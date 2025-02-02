@@ -1,128 +1,82 @@
-"use client";
-
+// library
 import { useState } from "react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { useAtomValue } from "jotai";
+// ui
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { formatCurrency } from "@/lib/utils";
-import { Flower2, Gift, Package, MoreHorizontal } from "lucide-react";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { deleteOffering, updateOfferingPhoto } from "@/app/_actions/offerings";
-import { toast } from "@/hooks/use-toast";
-import { OfferingPhotoGallery } from "../photo-gallery";
-import type { Offering } from "@/types/offering";
+import { ChevronRight } from "lucide-react";
+import { Drawer, DrawerTrigger } from "@/components/ui/drawer";
 
-const typeIcons = {
-	FLOWER: <Flower2 className="h-4 w-4" />,
-	FOOD: <Gift className="h-4 w-4" />,
-	OTHER: <Package className="h-4 w-4" />,
-};
+// types
+import type { Offering, OfferingType } from "@/types/offerings";
+import type { Entry } from "@/types/entries";
+// utils
+import { formatCurrency } from "@/utils/currency";
+// components
+import { OfferingDrawerContent } from "./offering-drawer-content";
+// stores
+import { mergedOfferingsAtom } from "@/store/offerings";
 
-const typeLabels = {
+const typeLabels: Record<OfferingType, string> = {
 	FLOWER: "供花",
 	FOOD: "供物",
 	OTHER: "その他",
+	INCENSE: "線香",
+	MONEY: "御供物量",
 };
 
 interface OfferingCardProps {
 	offering: Offering;
-	onDelete?: () => void;
+	koudenId: string;
+	entries: Entry[];
 }
 
-export function OfferingCard({ offering, onDelete }: OfferingCardProps) {
-	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+export function OfferingCard({ offering: initialOffering, koudenId }: OfferingCardProps) {
+	const [isOpen, setIsOpen] = useState(false);
+	const mergedOfferings = useAtomValue(mergedOfferingsAtom);
 
-	const handleDelete = async () => {
-		try {
-			await deleteOffering(offering.id);
-			toast({
-				title: "お供え物を削除しました",
-			});
-			onDelete?.();
-		} catch (error) {
-			toast({
-				title: "お供え物の削除に失敗しました",
-				variant: "destructive",
-			});
-		}
-	};
-
-	const handleCaptionChange = async (photoId: string, caption: string) => {
-		try {
-			await updateOfferingPhoto(photoId, { caption });
-			toast({
-				title: "キャプションを更新しました",
-			});
-		} catch (error) {
-			toast({
-				title: "キャプションの更新に失敗しました",
-				variant: "destructive",
-			});
-		}
-	};
+	// 最新の提供物情報を取得（楽観的更新を含む）
+	const offering = mergedOfferings.find((o) => o.id === initialOffering.id) || initialOffering;
 
 	return (
-		<Card>
-			<CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
-				<div className="flex items-center gap-2">
-					{typeIcons[offering.type]}
-					<span className="font-semibold">{typeLabels[offering.type]}</span>
-				</div>
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<Button variant="ghost" size="icon" className="h-8 w-8">
-							<span className="sr-only">メニューを開く</span>
-							<MoreHorizontal className="h-4 w-4" />
-						</Button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent align="end">
-						<DropdownMenuItem
-							className="text-destructive"
-							onClick={handleDelete}
-						>
-							削除
-						</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
-			</CardHeader>
-			<CardContent>
-				<div className="space-y-4">
-					<div>
-						<div className="flex items-center justify-between">
-							<div className="flex items-center gap-2">
-								<span>{offering.description}</span>
-								<Badge variant="secondary">{offering.quantity}点</Badge>
+		<Drawer open={isOpen} onOpenChange={setIsOpen}>
+			<DrawerTrigger asChild>
+				<Card className="w-full hover:bg-accent/50 transition-colors cursor-pointer">
+					<CardContent className="p-4">
+						<div className="flex justify-between items-center">
+							<div className="space-y-1.5 flex-1 min-w-0">
+								<div className="flex items-center gap-2 flex-wrap">
+									<h3 className="font-medium text-lg truncate">
+										{offering.description || "品名未設定"}
+									</h3>
+									<Badge variant="outline" className="font-normal">
+										{typeLabels[offering.type as OfferingType]}
+									</Badge>
+								</div>
+								{offering.provider_name && (
+									<p className="text-sm text-muted-foreground truncate">{offering.provider_name}</p>
+								)}
+								{offering.price && (
+									<p className="text-2xl font-bold">{formatCurrency(offering.price)}</p>
+								)}
 							</div>
-							{offering.price && (
-								<span className="text-sm text-muted-foreground">
-									{formatCurrency(offering.price)}
-								</span>
-							)}
+							<div className="flex flex-col items-end gap-2 ml-4">
+								<Badge variant="secondary" className="whitespace-nowrap">
+									{offering.quantity}点
+								</Badge>
+								<ChevronRight className="h-5 w-5 text-muted-foreground" />
+							</div>
 						</div>
-						<p className="text-sm text-muted-foreground">
-							{offering.provider_name}
-						</p>
-					</div>
+					</CardContent>
+				</Card>
+			</DrawerTrigger>
 
-					{offering.notes && (
-						<p className="text-sm text-muted-foreground">{offering.notes}</p>
-					)}
-
-					{offering.offering_photos.length > 0 && (
-						<div>
-							<OfferingPhotoGallery
-								photos={offering.offering_photos}
-								onCaptionChange={handleCaptionChange}
-							/>
-						</div>
-					)}
-				</div>
-			</CardContent>
-		</Card>
+			{/* Drawer Content */}
+			<OfferingDrawerContent
+				offering={offering}
+				koudenId={koudenId}
+				onClose={() => setIsOpen(false)}
+			/>
+		</Drawer>
 	);
 }

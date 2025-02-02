@@ -25,10 +25,7 @@ import type { Ticket } from "@/types/admin";
 interface TicketsTableProps {
 	tickets: Ticket[];
 	updateTicketStatus: (id: string, status: Ticket["status"]) => Promise<void>;
-	updateTicketPriority: (
-		id: string,
-		priority: Ticket["priority"],
-	) => Promise<void>;
+	updateTicketPriority: (id: string, priority: Ticket["priority"]) => Promise<void>;
 	assignTicket: (id: string, adminId: string | null) => Promise<void>;
 }
 
@@ -46,45 +43,14 @@ const statusColors = {
 	closed: "bg-gray-700",
 };
 
-export function TicketsTable({
-	tickets,
-	updateTicketStatus,
-	updateTicketPriority,
-	assignTicket,
-}: TicketsTableProps) {
+export function TicketsTable({ tickets, updateTicketStatus }: TicketsTableProps) {
 	const router = useRouter();
 	const [loading, setLoading] = useState<string | null>(null);
 
-	const handleUpdateStatus = async (
-		ticketId: string,
-		status: Ticket["status"],
-	) => {
+	const handleUpdateStatus = async (ticketId: string, status: Ticket["status"]) => {
 		try {
 			setLoading(ticketId);
 			await updateTicketStatus(ticketId, status);
-			router.refresh();
-		} finally {
-			setLoading(null);
-		}
-	};
-
-	const handleUpdatePriority = async (
-		ticketId: string,
-		priority: Ticket["priority"],
-	) => {
-		try {
-			setLoading(ticketId);
-			await updateTicketPriority(ticketId, priority);
-			router.refresh();
-		} finally {
-			setLoading(null);
-		}
-	};
-
-	const handleAssign = async (ticketId: string, adminId: string | null) => {
-		try {
-			setLoading(ticketId);
-			await assignTicket(ticketId, adminId);
 			router.refresh();
 		} finally {
 			setLoading(null);
@@ -110,10 +76,7 @@ export function TicketsTable({
 						<TableRow key={ticket.id}>
 							<TableCell>{ticket.subject}</TableCell>
 							<TableCell>
-								<Badge
-									variant="secondary"
-									className={statusColors[ticket.status]}
-								>
+								<Badge variant="secondary" className={statusColors[ticket.status]}>
 									{ticket.status === "open" && "未対応"}
 									{ticket.status === "in_progress" && "対応中"}
 									{ticket.status === "resolved" && "解決済み"}
@@ -121,10 +84,7 @@ export function TicketsTable({
 								</Badge>
 							</TableCell>
 							<TableCell>
-								<Badge
-									variant="secondary"
-									className={priorityColors[ticket.priority]}
-								>
+								<Badge variant="secondary" className={priorityColors[ticket.priority]}>
 									{ticket.priority === "low" && "低"}
 									{ticket.priority === "normal" && "中"}
 									{ticket.priority === "high" && "高"}
@@ -132,49 +92,33 @@ export function TicketsTable({
 								</Badge>
 							</TableCell>
 							<TableCell>{ticket.user.email}</TableCell>
-							<TableCell>
-								{ticket.assigned_admin?.email ?? "未割り当て"}
-							</TableCell>
+							<TableCell>{ticket.assigned_admin?.email ?? "未割り当て"}</TableCell>
 							<TableCell>{formatDate(ticket.created_at)}</TableCell>
 							<TableCell>
 								<DropdownMenu>
 									<DropdownMenuTrigger asChild>
-										<Button
-											variant="ghost"
-											size="sm"
-											disabled={loading === ticket.id}
-										>
+										<Button variant="ghost" size="sm" disabled={loading === ticket.id}>
 											<MoreHorizontal className="h-4 w-4" />
 										</Button>
 									</DropdownMenuTrigger>
 									<DropdownMenuContent align="end">
-										<DropdownMenuItem
-											onClick={() => router.push(`/admin/tickets/${ticket.id}`)}
-										>
+										<DropdownMenuItem onClick={() => router.push(`/admin/tickets/${ticket.id}`)}>
 											詳細を表示
 										</DropdownMenuItem>
 										{ticket.status === "open" && (
 											<DropdownMenuItem
-												onClick={() =>
-													handleUpdateStatus(ticket.id, "in_progress")
-												}
+												onClick={() => handleUpdateStatus(ticket.id, "in_progress")}
 											>
 												対応開始
 											</DropdownMenuItem>
 										)}
 										{ticket.status === "in_progress" && (
-											<DropdownMenuItem
-												onClick={() =>
-													handleUpdateStatus(ticket.id, "resolved")
-												}
-											>
+											<DropdownMenuItem onClick={() => handleUpdateStatus(ticket.id, "resolved")}>
 												解決済みにする
 											</DropdownMenuItem>
 										)}
 										{ticket.status === "resolved" && (
-											<DropdownMenuItem
-												onClick={() => handleUpdateStatus(ticket.id, "closed")}
-											>
+											<DropdownMenuItem onClick={() => handleUpdateStatus(ticket.id, "closed")}>
 												完了にする
 											</DropdownMenuItem>
 										)}

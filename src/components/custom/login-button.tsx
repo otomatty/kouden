@@ -11,7 +11,6 @@ interface LoginButtonProps {
 
 export function LoginButton({ invitationToken }: LoginButtonProps) {
 	const [loading, setLoading] = useState(false);
-	const router = useRouter();
 	const supabase = createClient();
 
 	const handleLogin = async () => {
@@ -42,12 +41,7 @@ export function LoginButton({ invitationToken }: LoginButtonProps) {
 	};
 
 	return (
-		<Button
-			onClick={handleLogin}
-			disabled={loading}
-			className="w-full"
-			variant="outline"
-		>
+		<Button onClick={handleLogin} disabled={loading} className="w-full" variant="outline">
 			{loading ? "ログイン中..." : "Googleでログイン"}
 		</Button>
 	);

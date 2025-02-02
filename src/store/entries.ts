@@ -1,17 +1,14 @@
 import { atom } from "jotai";
-import type {
-	KoudenEntry,
-	KoudenEntryForm,
-	AttendanceType,
-} from "@/types/kouden";
+import type { Entry, EntryForm, AttendanceType } from "@/types/entries";
 import type { KoudenPermission } from "@/types/role";
 
-// エントリーデータを管理するatom
-export const entriesAtom = atom<KoudenEntry[]>([]);
+// 香典データを管理するatom
+export const entriesAtom = atom<Entry[]>([]);
 
 // 楽観的更新用のデータ型
-export interface OptimisticEntry extends KoudenEntry {
+export interface OptimisticEntry extends Entry {
 	isOptimistic: boolean;
+	isDeleted?: boolean;
 }
 
 // 楽観的更新用のデータを管理するatom
@@ -22,19 +19,33 @@ export const mergedEntriesAtom = atom((get) => {
 	const realEntries = get(entriesAtom);
 	const optimisticEntries = get(optimisticEntriesAtom);
 
-	// 楽観的更新データを優先して表示
-	return [...optimisticEntries, ...realEntries];
+	// 実際のデータをIDでマップ化
+	const realEntriesMap = new Map(realEntries.map((e) => [e.id, e]));
+
+	// 楽観的更新データを処理
+	for (const optimisticEntry of optimisticEntries) {
+		if (optimisticEntry.isDeleted) {
+			// 削除された場合は実際のデータから削除
+			realEntriesMap.delete(optimisticEntry.id);
+		} else {
+			// 追加または更新の場合は上書き
+			realEntriesMap.set(optimisticEntry.id, optimisticEntry);
+		}
+	}
+
+	// Mapから配列に戻す
+	return Array.from(realEntriesMap.values());
 });
 
 // 選択されたエントリーを管理するatom
-export const selectedEntryAtom = atom<KoudenEntry | null>(null);
+export const selectedEntryAtom = atom<Entry | null>(null);
 
 // フィルタリング用のatom
 export const filterTextAtom = atom<string>("");
 
 // ソート用のatom
 export interface SortState {
-	field: keyof KoudenEntry;
+	field: keyof Entry;
 	direction: "asc" | "desc";
 }
 
@@ -113,32 +124,29 @@ export const isLoadingAtom = atom<boolean>(false);
 export const errorAtom = atom<Error | null>(null);
 
 // フォームの状態を管理するatom
-export const entryFormAtom = atom<KoudenEntryForm>({
+export const entryFormAtom = atom<EntryForm>({
 	name: null,
 	organization: null,
 	position: null,
 	amount: 0,
-	postal_code: null,
+	postalCode: null,
 	address: null,
-	phone_number: null,
-	relationship_id: null,
-	attendance_type: "FUNERAL",
-	has_offering: false,
-	is_return_completed: false,
+	phoneNumber: null,
+	relationshipId: null,
+	attendanceType: "FUNERAL",
+	hasOffering: false,
+	isReturnCompleted: false,
 	notes: null,
 });
 
 // フォームの初期値をセットするatom
-export const setEntryFormAtom = atom(
-	null,
-	(get, set, entry: Partial<KoudenEntryForm>) => {
-		const currentForm = get(entryFormAtom);
-		set(entryFormAtom, {
-			...currentForm,
-			...entry,
-		});
-	},
-);
+export const setEntryFormAtom = atom(null, (get, set, entry: Partial<EntryForm>) => {
+	const currentForm = get(entryFormAtom);
+	set(entryFormAtom, {
+		...currentForm,
+		...entry,
+	});
+});
 
 // フォームの値を更新するatom
 export const updateEntryFormAtom = atom(
@@ -147,8 +155,8 @@ export const updateEntryFormAtom = atom(
 		get,
 		set,
 		update: {
-			field: keyof KoudenEntryForm;
-			value: KoudenEntryForm[keyof KoudenEntryForm];
+			field: keyof EntryForm;
+			value: EntryForm[keyof EntryForm];
 		},
 	) => {
 		const currentForm = get(entryFormAtom);
@@ -160,19 +168,19 @@ export const updateEntryFormAtom = atom(
 );
 
 // フォームをリセットするatom
-export const resetEntryFormAtom = atom(null, (get, set) => {
+export const resetEntryFormAtom = atom(null, (_get, set) => {
 	set(entryFormAtom, {
 		name: null,
 		organization: null,
 		position: null,
 		amount: 0,
-		postal_code: null,
+		postalCode: null,
 		address: null,
-		phone_number: null,
-		relationship_id: null,
-		attendance_type: "FUNERAL",
-		has_offering: false,
-		is_return_completed: false,
+		phoneNumber: null,
+		relationshipId: null,
+		attendanceType: "FUNERAL",
+		hasOffering: false,
+		isReturnCompleted: false,
 		notes: null,
 	});
 });

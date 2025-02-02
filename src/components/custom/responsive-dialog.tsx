@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import {
 	Dialog,
@@ -9,30 +9,26 @@ import {
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger,
+	DialogClose,
 } from "@/components/ui/dialog";
 import {
 	Drawer,
-	DrawerClose,
 	DrawerContent,
 	DrawerDescription,
-	DrawerFooter,
 	DrawerHeader,
 	DrawerTitle,
 	DrawerTrigger,
 } from "@/components/ui/drawer";
 import { cn } from "@/lib/utils";
-import { useRouter } from "next/navigation";
 
 interface ResponsiveDialogProps {
-	children: React.ReactNode;
+	children: React.ReactNode | ((props: { close: () => void }) => React.ReactNode);
 	trigger: React.ReactNode;
 	title?: string;
 	description?: string;
 	className?: string;
 	contentClassName?: string;
-	showCloseButton?: boolean;
-	open?: boolean;
-	onOpenChange?: (open: boolean) => void;
+	onSuccess?: () => void;
 }
 
 export function ResponsiveDialog({
@@ -42,90 +38,61 @@ export function ResponsiveDialog({
 	description,
 	className,
 	contentClassName,
-	showCloseButton = false,
-	open,
-	onOpenChange,
+	onSuccess,
 }: ResponsiveDialogProps) {
-	const [_open, _setOpen] = React.useState(false);
-	const isControlled = open !== undefined;
+	const [open, setOpen] = useState(false);
 	const isDesktop = useMediaQuery("(min-width: 768px)");
+	const dialogRef = useRef<HTMLDivElement>(null);
 
-	React.useEffect(() => {
-		if (!isControlled && _open) {
-			window.history.pushState({ dialog: true }, "");
-		}
-	}, [isControlled, _open]);
+	const closeDialog = useCallback(() => {
+		setOpen(false);
+		onSuccess?.();
+	}, [onSuccess]);
 
-	React.useEffect(() => {
-		if (!isControlled) {
-			const handlePopState = (event: PopStateEvent) => {
-				if (!event.state?.dialog) {
-					_setOpen(false);
-				}
-			};
-
-			window.addEventListener("popstate", handlePopState);
-			return () => window.removeEventListener("popstate", handlePopState);
-		}
-	}, [isControlled]);
-
-	const handleOpenChange = (value: boolean) => {
-		if (!isControlled) {
-			_setOpen(value);
-			if (!value) {
-				// ダイアログを閉じるときに履歴を1つ戻る
-				window.history.back();
-			}
-		}
-		onOpenChange?.(value);
+	// DialogContentのaria-describedby警告を解消
+	const dialogContentProps = {
+		className: cn("sm:max-w-[425px]", contentClassName),
+		"aria-describedby": description ? "dialog-description" : undefined,
+		ref: dialogRef,
 	};
 
-	const currentOpen = isControlled ? open : _open;
+	const renderChildren = () => {
+		if (typeof children === "function") {
+			return children({ close: closeDialog });
+		}
+		return children;
+	};
 
 	if (isDesktop) {
 		return (
-			<Dialog open={currentOpen} onOpenChange={handleOpenChange}>
+			<Dialog open={open} onOpenChange={setOpen}>
 				<DialogTrigger asChild>{trigger}</DialogTrigger>
-				<DialogContent className={cn("sm:max-w-[425px]", contentClassName)}>
+				<DialogContent {...dialogContentProps}>
 					{(title || description) && (
 						<DialogHeader>
 							{title && <DialogTitle>{title}</DialogTitle>}
 							{description && (
-								<DialogDescription>{description}</DialogDescription>
+								<DialogDescription id="dialog-description">{description}</DialogDescription>
 							)}
 						</DialogHeader>
 					)}
-					<div className={className}>{children}</div>
+					<div className={className}>{renderChildren()}</div>
 				</DialogContent>
 			</Dialog>
 		);
 	}
 
 	return (
-		<Drawer open={currentOpen} onOpenChange={handleOpenChange}>
+		<Drawer open={open} onOpenChange={setOpen}>
 			<DrawerTrigger asChild>{trigger}</DrawerTrigger>
 			<DrawerContent>
 				{(title || description) && (
 					<DrawerHeader className="text-left">
 						{title && <DrawerTitle>{title}</DrawerTitle>}
-						{description && (
-							<DrawerDescription>{description}</DrawerDescription>
-						)}
+						{description && <DrawerDescription>{description}</DrawerDescription>}
 					</DrawerHeader>
 				)}
-				<div className={cn("px-4", className)}>{children}</div>
-				{showCloseButton && (
-					<DrawerFooter className="pt-2">
-						<DrawerClose asChild>
-							<button
-								type="button"
-								className="w-full h-12 bg-background text-foreground border rounded-md hover:bg-accent hover:text-accent-foreground"
-							>
-								閉じる
-							</button>
-						</DrawerClose>
-					</DrawerFooter>
-				)}
+				<div className={cn("px-4", className)}>{renderChildren()}</div>
 			</DrawerContent>
 		</Drawer>
 	);

@@ -1,3 +1,41 @@
+/**
+ * 検索可能なチェックボックスリストを提供するコンポーネント。
+ * 複数選択が可能で、選択された項目はバッジとして表示されます。
+ *
+ * @example
+ * ```tsx
+ * const items = [
+ *   { value: "1", label: "選択肢1" },
+ *   { value: "2", label: "選択肢2" },
+ * ];
+ *
+ * const [selectedItems, setSelectedItems] = useState<string[]>([]);
+ *
+ * return (
+ *   <SearchableCheckboxList
+ *     items={items}
+ *     selectedItems={selectedItems}
+ *     onSelectionChange={setSelectedItems}
+ *     searchPlaceholder="アイテムを検索..."
+ *   />
+ * );
+ * ```
+ *
+ * @param props
+ * @param props.items - 選択可能な項目の配列。各項目はvalue（一意の識別子）とlabel（表示名）を持つ
+ * @param props.selectedItems - 現在選択されている項目のvalue配列
+ * @param props.onSelectionChange - 選択が変更された時に呼び出されるコールバック関数
+ * @param props.searchPlaceholder - 検索入力欄のプレースホルダーテキスト（デフォルト: "検索..."）
+ * @param props.className - コンポーネントのルート要素に適用されるカスタムクラス名
+ *
+ * @features
+ * - 検索機能付きの複数選択可能なチェックボックスリスト
+ * - 選択された項目はバッジとして表示され、個別に削除可能
+ * - 最大10件までの検索結果を表示
+ * - クリックアウトサイドで自動的にリストを閉じる
+ * - アクセシビリティ対応（キーボード操作、スクリーンリーダー対応）
+ */
+
 import * as React from "react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -13,11 +51,26 @@ export type CheckboxListItem = {
 	label: string;
 };
 
-interface SearchableCheckboxListProps {
+export interface SearchableCheckboxListProps {
+	/**
+	 * 選択可能な項目の配列。各項目はvalue（一意の識別子）とlabel（表示名）を持つ
+	 */
 	items: CheckboxListItem[];
+	/**
+	 * 現在選択されている項目のvalue配列
+	 */
 	selectedItems: string[];
+	/**
+	 * 選択が変更された時に呼び出されるコールバック関数
+	 */
 	onSelectionChange: (selectedValues: string[]) => void;
+	/**
+	 * 検索入力欄のプレースホルダーテキスト（デフォルト: "検索..."）
+	 */
 	searchPlaceholder?: string;
+	/**
+	 * コンポーネントのルート要素に適用されるカスタムクラス名
+	 */
 	className?: string;
 }
 
@@ -35,10 +88,7 @@ export function SearchableCheckboxList({
 	// クリックイベントのハンドラーを追加
 	React.useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
-			if (
-				containerRef.current &&
-				!containerRef.current.contains(event.target as Node)
-			) {
+			if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
 				setIsOpen(false);
 			}
 		};
@@ -51,9 +101,7 @@ export function SearchableCheckboxList({
 
 	const filteredItems = React.useMemo(() => {
 		return items
-			.filter((item) =>
-				item.label.toLowerCase().includes(searchQuery.toLowerCase()),
-			)
+			.filter((item) => item.label.toLowerCase().includes(searchQuery.toLowerCase()))
 			.slice(0, 10);
 	}, [items, searchQuery]);
 
@@ -78,11 +126,7 @@ export function SearchableCheckboxList({
 			{selectedItemsData.length > 0 && (
 				<div className="flex flex-wrap gap-2">
 					{selectedItemsData.map((item) => (
-						<Badge
-							key={item.value}
-							variant="secondary"
-							className="flex items-center gap-1"
-						>
+						<Badge key={item.value} variant="secondary" className="flex items-center gap-1">
 							{item.label}
 							<button
 								type="button"
@@ -104,9 +148,7 @@ export function SearchableCheckboxList({
 					onClick={() => setIsOpen(!isOpen)}
 				>
 					<span>
-						{selectedItems.length > 0
-							? `${selectedItems.length}件選択中`
-							: "香典情報を選択"}
+						{selectedItems.length > 0 ? `${selectedItems.length}件選択中` : "香典情報を選択"}
 					</span>
 					<ChevronDown className="h-4 w-4 opacity-50" />
 				</Button>

@@ -22,7 +22,7 @@ export default async function KoudensPage() {
 		throw new Error("認証が必要です");
 	}
 
-	const { koudens = [], error } = await getKoudens({ userId: user.id });
+	const { koudens = [], error } = await getKoudens();
 
 	if (error) {
 		throw new Error(error);

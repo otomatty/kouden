@@ -43,16 +43,18 @@
  * ];
  */
 
-import { useState } from "react";
 import { Plus, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 import { useMediaQuery } from "@/hooks/use-media-query";
 
-export interface CrudDialogProps<T> {
+export interface CrudDialogProps<T = void> {
 	/**
 	 * ダイアログのタイトル
 	 * variant に応じて動的に変更することも可能です
+	 * @example
+	 * title={variant === "create" ? "新規香典記録" : "香典記録の編集"}
+	 * この際、variant が undefined の場合は title は無視されます
 	 */
 	title: string;
 
@@ -62,7 +64,7 @@ export interface CrudDialogProps<T> {
 	 * - "edit": 編集モード（編集アイコンのボタンが表示されます）
 	 * - undefined: ボタンが表示されず、open/onOpenChangeで外部から制御します
 	 */
-	variant?: "create" | "edit";
+	variant: "create" | "edit" | undefined;
 
 	/**
 	 * トリガーボタンのクラス名
@@ -77,30 +79,11 @@ export interface CrudDialogProps<T> {
 	contentClassName?: string;
 
 	/**
-	 * ダイアログの表示状態
-	 * 外部から制御する場合に使用します
-	 */
-	open?: boolean;
-
-	/**
-	 * ダイアログの表示状態が変更された時のコールバック
-	 * 外部から制御する場合に使用します
-	 */
-	onOpenChange?: (open: boolean) => void;
-
-	/**
-	 * 作成権限があるかどうか
-	 * variant="create" の場合に使用されます
-	 * @default true
-	 */
-	canCreate?: boolean;
-
-	/**
-	 * 編集権限があるかどうか
+	 * 編集ボタンのラベル
 	 * variant="edit" の場合に使用されます
-	 * @default true
+	 * @default "編集"
 	 */
-	canUpdate?: boolean;
+	editButtonLabel?: string;
 
 	/**
 	 * 作成ボタンのラベル
@@ -110,44 +93,32 @@ export interface CrudDialogProps<T> {
 	createButtonLabel?: string;
 
 	/**
-	 * 編集ボタンのラベル
-	 * variant="edit" の場合に使用されます
-	 * @default "編集"
-	 */
-	editButtonLabel?: string;
-
-	/**
 	 * ダイアログの中身となるフォームコンポーネント
 	 */
-	children: React.ReactNode;
+	children: React.ReactNode | ((props: { close: () => void }) => React.ReactNode);
+
+	/**
+	 * 成功時のコールバック
+	 */
+	onSuccess?: (data: T) => void;
 }
 
-export function CrudDialog<T>({
+export function CrudDialog<T = void>({
 	title,
 	variant,
 	buttonClassName,
 	contentClassName = "max-w-2xl",
-	open,
-	onOpenChange,
-	canCreate = true,
-	canUpdate = true,
 	createButtonLabel = "新規登録",
 	editButtonLabel = "編集",
 	children,
+	onSuccess,
 }: CrudDialogProps<T>) {
-	const [isOpen, setIsOpen] = useState(false);
 	const isMobile = useMediaQuery("(max-width: 768px)");
-
-	// パーミッションチェック
-	if (
-		(variant === "create" && !canCreate) ||
-		(variant === "edit" && !canUpdate)
-	) {
-		return null;
-	}
 
 	// ボタンのスタイルとコンテンツを設定
 	const buttonSize = isMobile ? "lg" : "default";
+
+	// ボタンの内容を設定（アイコンとラベル）
 	const buttonContent =
 		variant === "create" ? (
 			<>
@@ -161,30 +132,29 @@ export function CrudDialog<T>({
 			</>
 		);
 
+	// ボタンのスタイルを設定
+	// モバイル時：
+	// - 作成ボタン：全幅で中央寄せ
+	// - 編集ボタン：通常の幅
+	// デスクトップ時：
+	// - 作成ボタン：defaultバリアントで強調表示
+	// - 編集ボタン：ghostバリアントでドロップダウンメニューのような見た目
 	const defaultButtonClassName =
 		variant === "create"
-			? isMobile
-				? "w-full mx-4 flex items-center gap-2"
-				: "flex items-center gap-2"
-			: "flex items-center gap-2";
-
-	const handleOpenChange = (newOpen: boolean) => {
-		if (onOpenChange) {
-			onOpenChange(newOpen);
-		} else {
-			setIsOpen(newOpen);
-		}
-	};
+			? isMobile // モバイル
+				? "w-full mx-4 flex items-center gap-2" // 作成ボタン
+				: "flex items-center gap-2" // 編集ボタン
+			: isMobile //デスクトップ
+				? "flex items-center gap-2" // 作成ボタン
+				: "w-full relative flex cursor-default select-none justify-start items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:size-4 [&>svg]:shrink-0"; // 編集ボタン
 
 	return (
 		<ResponsiveDialog
-			open={open ?? isOpen}
-			onOpenChange={handleOpenChange}
 			trigger={
 				variant ? (
 					<Button
 						size={buttonSize}
-						variant="default"
+						variant={isMobile ? "default" : variant === "create" ? "default" : "ghost"}
 						className={buttonClassName || defaultButtonClassName}
 					>
 						{buttonContent}
@@ -193,6 +163,7 @@ export function CrudDialog<T>({
 			}
 			title={title}
 			contentClassName={contentClassName}
+			onSuccess={onSuccess ? () => onSuccess({} as T) : undefined}
 		>
 			{children}
 		</ResponsiveDialog>

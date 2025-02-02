@@ -1,6 +1,4 @@
 import { MobileDataTableToolbar } from "@/components/custom/data-table/mobile-toolbar";
-import type { Table } from "@tanstack/react-table";
-import type { KoudenEntry } from "@/types/kouden";
 import {
 	User,
 	Building2,
@@ -22,6 +20,7 @@ interface MobileFiltersProps {
 	onSortOrderChange: (value: string) => void;
 }
 
+// 検索オプション
 const searchOptions = [
 	{
 		value: "name",
@@ -49,6 +48,7 @@ const searchOptions = [
 	},
 ];
 
+// ソートオプション
 const sortOptions = [
 	{
 		value: "created_at_desc",
@@ -82,6 +82,18 @@ const sortOptions = [
 	},
 ];
 
+// フィルターオプション
+const filterOptions = [
+	{
+		value: "has_offering",
+		label: "供物あり",
+	},
+	{
+		value: "is_return_completed",
+		label: "返礼済",
+	},
+];
+
 export function MobileFilters({
 	searchQuery,
 	onSearchChange,
@@ -92,7 +104,8 @@ export function MobileFilters({
 		<MobileDataTableToolbar
 			searchOptions={searchOptions}
 			sortOptions={sortOptions}
-			showFilter={false}
+			filterOptions={filterOptions}
+			showFilter={true}
 			showSort={true}
 			searchValue={searchQuery}
 			onSearchChange={onSearchChange}

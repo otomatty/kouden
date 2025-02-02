@@ -6,6 +6,7 @@ import { Header } from "./_components/header";
 import { TourGuide } from "@/components/custom/TourGuide/TourGuide";
 import { FeedbackButton } from "@/components/custom/feedback-button";
 import { LoadingProvider } from "@/components/custom/loading-provider";
+import { Toaster } from "@/components/ui/toaster";
 
 interface ProtectedLayoutProps {
 	children: React.ReactNode;
@@ -34,6 +35,7 @@ export default async function ProtectedLayout({
 
 	return (
 		<LoadingProvider>
+			<Toaster />
 			<TourGuide>
 				<div className="min-h-screen bg-gray-50">
 					<Header user={user} isAdmin={isAdminUser} />

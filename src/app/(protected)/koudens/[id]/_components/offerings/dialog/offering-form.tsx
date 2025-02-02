@@ -1,380 +1,117 @@
 "use client";
-
-import { useState, useEffect } from "react";
+// library
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import type * as z from "zod";
-import { useAtom } from "jotai";
-// UIコンポーネント
+// ui
 import { Button } from "@/components/ui/button";
-import {
-	Form,
-	FormControl,
-	FormField,
-	FormItem,
-	FormLabel,
-	FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import { Form } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
-// 型定義
-import type { KoudenEntry } from "@/types/kouden";
-import type { Offering, OfferingType, BaseOffering } from "@/types/offering";
+import { useToast } from "@/hooks/use-toast";
+
+// types
+import type { Entry } from "@//types/entries";
+import type { Offering, OfferingType, BaseOffering, OfferingFormValues } from "@/types/offerings";
+import { offeringFormSchema } from "@/schemas/offerings";
+// components
+import { OfferingFormBasic } from "./offering-form-basic";
+import { OfferingFormAdditional } from "./offering-form-additional";
+// stores
+import { offeringsAtom, formSubmissionStateAtom } from "@/store/offerings";
 // Server Actions
 import { createOffering, updateOffering } from "@/app/_actions/offerings";
-// 状態管理
-import { formSchema, offeringFormAtom } from "./atoms";
-// カスタムコンポーネント
-import { OfferingPhotoUploader } from "./offering-photo-uploader";
-import { SearchableCheckboxList } from "@/components/ui/searchable-checkbox-list";
-
+import { handleOfferingSubmission } from "@/app/_actions/offering-form";
+// hooks
 interface OfferingFormProps {
 	koudenId: string;
-	koudenEntries: KoudenEntry[];
-	defaultValues?: BaseOffering;
+	entries: Entry[];
+	defaultValues?: Offering;
 	onSuccess?: (offering: Offering) => void;
-	onCancel?: () => void;
 }
 
-export function OfferingForm({
-	koudenId,
-	koudenEntries,
-	defaultValues,
-	onSuccess,
-	onCancel,
-}: OfferingFormProps) {
-	const [isSubmitting, setIsSubmitting] = useState(false);
-	const [photos, setPhotos] = useState<File[]>([]);
-	const [currentTab, setCurrentTab] = useState("basic");
-	const [savedFormState, setSavedFormState] = useAtom(offeringFormAtom);
+export function OfferingForm({ koudenId, entries, defaultValues, onSuccess }: OfferingFormProps) {
+	const [submissionState, setSubmissionState] = useAtom(formSubmissionStateAtom);
+	const { toast } = useToast();
 
-	const form = useForm<z.infer<typeof formSchema>>({
-		resolver: zodResolver(formSchema),
+	const form = useForm<OfferingFormValues>({
+		resolver: zodResolver(offeringFormSchema),
 		defaultValues: defaultValues
 			? {
-					type: defaultValues.type as z.infer<typeof formSchema>["type"],
-					description: defaultValues.description || undefined,
+					type: defaultValues.type as OfferingType,
+					description: defaultValues.description,
 					quantity: defaultValues.quantity,
-					price: defaultValues.price || undefined,
+					price: defaultValues.price,
 					provider_name: defaultValues.provider_name,
-					notes: defaultValues.notes || undefined,
+					notes: defaultValues.notes,
 					kouden_entry_ids: [],
+					photos: [],
+					entries: [],
 				}
-			: savedFormState || {
-					type: undefined,
-					description: "",
+			: {
+					type: "FLOWER",
+					description: null,
 					quantity: 1,
-					price: undefined,
+					price: null,
 					provider_name: "",
-					notes: undefined,
+					notes: null,
 					kouden_entry_ids: [],
+					photos: [],
+					entries: [],
 				},
 	});
 
-	// フォームの値が変更されたときに状態を保存
-	useEffect(() => {
-		if (!defaultValues) {
-			const subscription = form.watch((value) => {
-				setSavedFormState({
-					...value,
-					photos,
-				} as z.infer<typeof formSchema> & { photos: File[] });
-			});
-			return () => subscription.unsubscribe();
-		}
-	}, [form, photos, setSavedFormState, defaultValues]);
-
-	// 保存された写真の復元
-	useEffect(() => {
-		if (!defaultValues && savedFormState?.photos) {
-			setPhotos(savedFormState.photos);
-		}
-	}, [savedFormState?.photos, defaultValues]);
-
-	async function onSubmit(values: z.infer<typeof formSchema>) {
-		console.log("[DEBUG] Form submission started");
-		console.log("[DEBUG] Values:", values);
-		console.log("[DEBUG] KoudenId:", koudenId);
-		console.log("[DEBUG] Selected entries:", values.kouden_entry_ids);
-		console.log("[DEBUG] Photos:", photos);
-
+	const onSubmit = async (values: OfferingFormValues) => {
 		try {
-			setIsSubmitting(true);
-			console.log("[DEBUG] Setting isSubmitting to true");
-			let result: Offering;
+			setSubmissionState({ isSubmitting: true, error: null });
 
-			if (defaultValues?.id) {
-				// 更新の場合
-				console.log("[DEBUG] Updating offering:", defaultValues.id);
-				const response = await updateOffering(defaultValues.id, {
-					...values,
-					kouden_id: koudenId,
-				});
-				console.log("[DEBUG] Update response:", response);
-				result = {
-					...response,
-					type: response.type as OfferingType,
-					offering_photos: [],
-					offering_entries: [],
-				};
-			} else {
-				// 新規作成の場合
-				console.log(
-					"[DEBUG] Creating new offering with photos:",
-					photos.length,
-				);
-				const response = await createOffering({
-					...values,
-					kouden_id: koudenId,
-				});
-				console.log("[DEBUG] Create response:", response);
-				result = {
-					...response,
-					type: response.type as OfferingType,
-					offering_photos: [],
-					offering_entries: [],
-				};
+			if (values.relationshipId === undefined) {
+				values.relationshipId = null;
 			}
 
-			console.log("[DEBUG] Final result:", result);
+			const result = await handleOfferingSubmission(values, koudenId, defaultValues);
 
-			toast({
-				title: defaultValues
-					? "お供え物を更新しました"
-					: "お供え物を追加しました",
-			});
+			if (!result) {
+				throw new Error("保存に失敗しました");
+			}
 
-			if (!defaultValues) {
-				setSavedFormState(null);
+			if (defaultValues?.id) {
+				await updateOffering(values.id, result);
+			} else {
+				await createOffering(result);
 			}
 
 			onSuccess?.(result);
-		} catch (error) {
-			console.error("[ERROR] Failed to save offering:", error);
 			toast({
-				title: defaultValues
-					? "お供え物の更新に失敗しました"
-					: "お供え物の追加に失敗しました",
-				variant: "destructive",
+				title: defaultValues ? "更新しました" : "登録しました",
+				description: `${result.description || "説明未設定"}を${defaultValues ? "更新" : "登録"}しました`,
 			});
-		} finally {
-			setIsSubmitting(false);
-		}
-	}
 
-	console.log("[DEBUG] Form state:", {
-		isSubmitting,
-		currentValues: form.getValues(),
-		formErrors: form.formState.errors,
-	});
+			if (!defaultValues) {
+				form.reset();
+			}
+		} catch (error) {
+			console.error("[ERROR] Offering submission failed:", error);
+		}
+	};
 
 	return (
 		<Form {...form}>
-			<form
-				onSubmit={async (e) => {
-					e.preventDefault();
-					console.log("[DEBUG] Form submit event triggered");
-
-					const values = form.getValues();
-					console.log("[DEBUG] Form values before validation:", values);
-
-					const isValid = await form.trigger();
-					console.log("[DEBUG] Form validation result:", isValid);
-
-					if (!isValid) {
-						console.log(
-							"[DEBUG] Form validation errors:",
-							form.formState.errors,
-						);
-						return;
-					}
-
-					console.log("[DEBUG] Calling onSubmit with values:", values);
-					await onSubmit(values);
-				}}
-				className="space-y-4"
-			>
-				<Tabs
-					value={currentTab}
-					onValueChange={setCurrentTab}
-					className="w-full"
-				>
+			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+				<Tabs defaultValue="basic" className="w-full">
 					<TabsList className="grid w-full grid-cols-2">
 						<TabsTrigger value="basic">基本情報</TabsTrigger>
 						<TabsTrigger value="additional">追加情報</TabsTrigger>
 					</TabsList>
-					<TabsContent value="basic" className="space-y-4">
-						<FormField
-							control={form.control}
-							name="provider_name"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>提供者名</FormLabel>
-									<FormControl>
-										<Input placeholder="例：山田太郎" {...field} />
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-						<FormField
-							control={form.control}
-							name="type"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>種類</FormLabel>
-									<Select
-										onValueChange={field.onChange}
-										defaultValue={field.value}
-									>
-										<FormControl>
-											<SelectTrigger>
-												<SelectValue placeholder="種類を選択" />
-											</SelectTrigger>
-										</FormControl>
-										<SelectContent>
-											<SelectItem value="FLOWER">供花</SelectItem>
-											<SelectItem value="FOOD">供物</SelectItem>
-											<SelectItem value="OTHER">その他</SelectItem>
-										</SelectContent>
-									</Select>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-						<FormField
-							control={form.control}
-							name="kouden_entry_ids"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>香典情報（任意）</FormLabel>
-									<FormControl>
-										<SearchableCheckboxList
-											items={koudenEntries.map((entry) => ({
-												value: entry.id,
-												label: entry.name || entry.organization || "名前なし",
-											}))}
-											selectedItems={field.value}
-											onSelectionChange={field.onChange}
-											searchPlaceholder="香典情報を検索..."
-											className="w-full"
-										/>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-						<FormField
-							control={form.control}
-							name="description"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>内容（任意）</FormLabel>
-									<FormControl>
-										<Input
-											placeholder="例：胡蝶蘭"
-											{...field}
-											value={field.value ?? ""}
-											onChange={(e) => {
-												const value = e.target.value;
-												field.onChange(value === "" ? undefined : value);
-											}}
-										/>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-						<FormField
-							control={form.control}
-							name="price"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>金額（任意）</FormLabel>
-									<FormControl>
-										<Input
-											type="number"
-											min={0}
-											max={9999999}
-											placeholder="例：10000"
-											{...field}
-											value={field.value ?? ""}
-											onChange={(e) => {
-												const value = e.target.value;
-												field.onChange(
-													value === "" ? undefined : Number(value),
-												);
-											}}
-										/>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
+					<TabsContent value="basic" className="mt-4">
+						<OfferingFormBasic entries={entries} />
 					</TabsContent>
-					<TabsContent value="additional" className="space-y-4">
-						<FormField
-							control={form.control}
-							name="quantity"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>数量</FormLabel>
-									<FormControl>
-										<Input type="number" min={1} max={999} {...field} />
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-						<FormField
-							control={form.control}
-							name="notes"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>備考（任意）</FormLabel>
-									<FormControl>
-										<Textarea
-											placeholder="備考を入力"
-											{...field}
-											value={field.value ?? ""}
-											onChange={(e) => {
-												const value = e.target.value;
-												field.onChange(value === "" ? undefined : value);
-											}}
-										/>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-						{!defaultValues && (
-							<div>
-								<Label>写真（任意）</Label>
-								<OfferingPhotoUploader onPhotosChange={setPhotos} />
-							</div>
-						)}
+					<TabsContent value="additional" className="mt-4">
+						<OfferingFormAdditional defaultValues={!!defaultValues} />
 					</TabsContent>
 				</Tabs>
 				<div className="flex justify-end gap-2">
-					{onCancel && (
-						<Button type="button" variant="outline" onClick={onCancel}>
-							キャンセル
-						</Button>
-					)}
-					<Button type="submit" disabled={isSubmitting}>
-						{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-						{defaultValues ? "保存" : "追加"}
+					<Button type="submit" disabled={submissionState.isSubmitting}>
+						{submissionState.isSubmitting ? "保存中..." : defaultValues ? "更新" : "追加"}
 					</Button>
 				</div>
 			</form>
