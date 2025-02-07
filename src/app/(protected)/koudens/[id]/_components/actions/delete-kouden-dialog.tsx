@@ -17,7 +17,7 @@ interface DeleteKoudenDialogProps {
 }
 
 export function DeleteKoudenDialog({ koudenId, koudenTitle }: DeleteKoudenDialogProps) {
-	const [isOpen, setIsOpen] = useState(false);
+	const [, setIsOpen] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [confirmTitle, setConfirmTitle] = useState("");
 	const isDesktop = useMediaQuery("(min-width: 768px)");

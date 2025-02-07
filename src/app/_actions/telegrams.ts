@@ -8,7 +8,7 @@ import type {
 	TelegramRow,
 	CreateTelegramInput,
 	UpdateTelegramInput,
-} from "@/types/telegram";
+} from "@/types/telegrams";
 import { toCamelCase, toSnakeCase } from "@/store/telegrams";
 import type { EntryResponse, AttendanceType } from "@/types/entries";
 

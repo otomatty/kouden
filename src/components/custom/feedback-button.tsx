@@ -25,11 +25,7 @@ export function FeedbackButton() {
 	);
 
 	return (
-		<ResponsiveDialog
-			trigger={trigger}
-			title="不具合・ご要望はこちら"
-			className="p-4"
-		>
+		<ResponsiveDialog trigger={trigger} title="不具合・ご要望はこちら" className="p-4">
 			<FeedbackForm />
 		</ResponsiveDialog>
 	);

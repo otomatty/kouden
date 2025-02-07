@@ -31,6 +31,8 @@ import {
 	LayoutGrid,
 	Table2,
 } from "lucide-react";
+import { permissionAtom, canUpdateKouden } from "@/store/permission";
+import { useAtomValue } from "jotai";
 
 interface SearchOption {
 	value: string;
@@ -89,6 +91,7 @@ export function DataTableToolbar<TData>({
 	onSortChange,
 }: DataTableToolbarProps<TData>) {
 	const [globalFilter, setGlobalFilter] = React.useState(searchValue || "");
+	const permission = useAtomValue(permissionAtom);
 
 	// デスクトップサイズでテーブル表示にリセットする
 	useEffect(() => {
@@ -384,8 +387,8 @@ export function DataTableToolbar<TData>({
 						)}
 					</div>
 				</div>
-
-				{children}
+				{/* 編集権限のあるユーザーにのみchildrenを表示 */}
+				{canUpdateKouden(permission) && children}
 			</div>
 		</div>
 	);

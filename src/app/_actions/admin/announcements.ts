@@ -1,7 +1,6 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
 export type Announcement = {
@@ -77,7 +76,7 @@ export async function createAnnouncement({
 		created_by: user.id,
 	};
 
-	const { data, error } = await supabase
+	const { error } = await supabase
 		.from("system_announcements")
 		.insert(requestData)
 		.select()
@@ -139,10 +138,7 @@ export async function updateAnnouncement(
 
 export async function deleteAnnouncement(id: string) {
 	const supabase = await createClient();
-	const { error } = await supabase
-		.from("system_announcements")
-		.delete()
-		.eq("id", id);
+	const { error } = await supabase.from("system_announcements").delete().eq("id", id);
 
 	if (error) throw error;
 	revalidatePath("/admin/announcements");

@@ -7,7 +7,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import type { SelectOption } from "@/types/table";
+import type { SelectOption } from "@/types/additional-select";
 
 interface SelectCellProps {
 	value: string | number | boolean | null;

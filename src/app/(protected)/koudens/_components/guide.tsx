@@ -169,33 +169,22 @@ export function Guide() {
 				<Card
 					className={cn(
 						"cursor-pointer hover:bg-accent/50 transition-colors",
-						isDesktop
-							? "flex-1  max-w-[300px]"
-							: "flex-shrink-0 w-[160px] snap-start",
+						isDesktop ? "flex-1  max-w-[300px]" : "flex-shrink-0 w-[160px] snap-start",
 					)}
 				>
 					<CardHeader className={cn("pt-4 pb-2 px-4", !isDesktop && "pb-2")}>
 						<CardTitle
-							className={cn(
-								"flex items-center gap-2",
-								!isDesktop && "flex-col text-center",
-							)}
+							className={cn("flex items-center gap-2", !isDesktop && "flex-col text-center")}
 						>
-							<item.icon
-								className={cn("shrink-0", isDesktop ? "h-4 w-4" : "h-6 w-6")}
-							/>
-							<span
-								className={cn("text-base", !isDesktop && "text-sm font-medium")}
-							>
+							<item.icon className={cn("shrink-0", isDesktop ? "h-4 w-4" : "h-6 w-6")} />
+							<span className={cn("text-base", !isDesktop && "text-sm font-medium")}>
 								{item.title}
 							</span>
 						</CardTitle>
 					</CardHeader>
 					{isDesktop ? (
 						<CardContent className="pt-0">
-							<p className="text-sm text-muted-foreground line-clamp-2">
-								{item.summary}
-							</p>
+							<p className="text-sm text-muted-foreground line-clamp-2">{item.summary}</p>
 						</CardContent>
 					) : null}
 				</Card>
@@ -208,20 +197,13 @@ export function Guide() {
 						<CarouselItem key={uuidv4()} className="px-1">
 							<div className="space-y-4">
 								<div className="relative aspect-video w-full overflow-hidden rounded-lg">
-									<Image
-										src={step.image}
-										alt={step.title}
-										fill
-										className="object-cover"
-									/>
+									<Image src={step.image} alt={step.title} fill className="object-cover" />
 								</div>
 								<div className="space-y-2">
 									<h3 className="font-semibold">
 										{index + 1}. {step.title}
 									</h3>
-									<p className="text-sm text-muted-foreground">
-										{step.description}
-									</p>
+									<p className="text-sm text-muted-foreground">{step.description}</p>
 								</div>
 							</div>
 						</CarouselItem>
@@ -236,9 +218,7 @@ export function Guide() {
 	return (
 		<div className="space-y-2">
 			<h2 className="text-2xl font-bold">香典帳の使い方</h2>
-			<p className="text-sm text-muted-foreground">
-				クリックすると詳細な説明が表示されます
-			</p>
+			<p className="text-sm text-muted-foreground">クリックすると詳細な説明が表示されます</p>
 			<div
 				className={cn(
 					"overflow-x-auto py-2",

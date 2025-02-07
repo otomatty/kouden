@@ -1,6 +1,6 @@
 import { atom } from "jotai";
 import type { Database } from "@/types/supabase";
-import type { Telegram, TelegramRow, UpdateTelegramInput } from "@/types/telegram";
+import type { Telegram, TelegramRow, UpdateTelegramInput } from "@/types/telegrams";
 
 // スネークケースからキャメルケースへの変換
 export const toCamelCase = (row: TelegramRow): Telegram => ({

@@ -6,7 +6,7 @@ import type {
 	VisibilityState,
 	OnChangeFn,
 } from "@tanstack/react-table";
-import type { Relationship } from "@/types/relationships";
+import type { SelectOption } from "./additional-select";
 
 export type CellType =
 	| "text"
@@ -16,12 +16,9 @@ export type CellType =
 	| "boolean"
 	| "postal_code"
 	| "readonly"
-	| "searchable-selector";
-
-export interface SelectOption {
-	value: string;
-	label: string;
-}
+	| "date"
+	| "searchable-selector"
+	| "additional-select";
 
 export interface SearchableSelectorItem {
 	id: string;
@@ -32,18 +29,34 @@ export interface SearchableSelectorItem {
 	notes?: string | null;
 }
 
-export interface EditableColumnConfig {
-	type: CellType;
-	options?: SelectOption[]; // select型の場合の選択肢
-	format?: "currency" | "postal_code"; // 表示フォーマット
-	getOptions?: (data: Relationship[]) => SelectOption[]; // 動的な選択肢の生成
-	selectorItems?: SearchableSelectorItem[]; // searchable-selector型の場合の選択可能なアイテム
-	selectorConfig?: {
-		title?: string;
-		description?: string;
-		searchPlaceholder?: string;
-	};
-}
+export type EditableColumnConfig =
+	| {
+			type: "text" | "date" | "postal_code" | "readonly";
+			options?: never;
+	  }
+	| {
+			type: "number";
+			format?: "currency" | "postal_code";
+			options?: never;
+	  }
+	| {
+			type: "select" | "boolean";
+			options: string[];
+	  }
+	| {
+			type: "additional-select";
+			options: SelectOption[];
+			addOptionPlaceholder?: string;
+	  }
+	| {
+			type: "searchable-selector";
+			selectorItems: SearchableSelectorItem[];
+			selectorConfig?: {
+				title?: string;
+				description?: string;
+				searchPlaceholder?: string;
+			};
+	  };
 
 export type CellValue = string | number | boolean | null;
 

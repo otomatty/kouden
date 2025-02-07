@@ -72,6 +72,7 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
 
 	return (
 		<style
+			// biome-ignore lint: テーマに基づく動的スタイルの生成のため
 			dangerouslySetInnerHTML={{
 				__html: Object.entries(THEMES)
 					.map(
@@ -151,7 +152,11 @@ const ChartTooltipContent = React.forwardRef<
 			return <div className={cn("font-medium", labelClassName)}>{value}</div>;
 		}, [label, labelFormatter, payload, hideLabel, labelClassName, config, labelKey]);
 
-		if (!active || !payload?.length) {
+		if (!active) {
+			return null;
+		}
+
+		if (!payload?.length) {
 			return null;
 		}
 

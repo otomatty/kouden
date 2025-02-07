@@ -4,18 +4,79 @@ import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/supabase";
 import { revalidatePath } from "next/cache";
 
-// 香典帳の関係性を取得
-export async function getRelationships(koudenId: string) {
+// すべての関係性を取得
+export async function getAllRelationships() {
 	const supabase = await createClient();
 	const { data, error } = await supabase
 		.from("relationships")
-		.select("*")
-		.eq("kouden_id", koudenId)
+		.select(`
+			*,
+			kouden:koudens(
+				id,
+				title
+			)
+		`)
 		.order("is_default", { ascending: false })
 		.order("name");
 
 	if (error) throw error;
 	return data;
+}
+
+// 香典帳の関係性を取得
+export async function getRelationships(koudenId: string) {
+	const supabase = await createClient();
+
+	try {
+		// 1. まず関係性の存在確認
+		const { count, error: countError } = await supabase
+			.from("relationships")
+			.select("*", { count: "exact", head: true })
+			.eq("kouden_id", koudenId);
+
+		if (countError) {
+			console.error("[ERROR] Failed to count relationships:", countError);
+			throw countError;
+		}
+
+		// 関係性が存在しない場合はすぐに空配列を返す
+		if (count === 0) {
+			console.warn(`[WARN] No relationships found for kouden ${koudenId}`);
+			return [];
+		}
+
+		// 2. 関係性データの取得（必要な列のみ）
+		const { data, error } = await supabase
+			.from("relationships")
+			.select(`
+				id,
+				name,
+				description,
+				is_default,
+				kouden_id,
+				created_at,
+				updated_at,
+				created_by
+			`)
+			.eq("kouden_id", koudenId)
+			.order("is_default", { ascending: false })
+			.order("name");
+
+		if (error) {
+			console.error("[ERROR] Failed to fetch relationships:", error);
+			throw error;
+		}
+
+		if (!data || data.length === 0) {
+			console.warn(`[WARN] No relationships data returned for kouden ${koudenId}`);
+			return [];
+		}
+
+		return data;
+	} catch (error) {
+		console.error("[ERROR] Error in getRelationships:", error);
+		throw error;
+	}
 }
 
 // 香典帳に新しい関係性を追加

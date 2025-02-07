@@ -83,10 +83,35 @@ const config: Config = {
 						height: "0",
 					},
 				},
+				expand: {
+					"0%": {
+						height: "0",
+						opacity: "0",
+					},
+					"100%": {
+						height: "var(--radix-collapsible-content-height)",
+						opacity: "1",
+					},
+				},
+				collapse: {
+					"0%": {
+						height: "var(--radix-collapsible-content-height)",
+						opacity: "1",
+					},
+					"25%": {
+						opacity: "0",
+					},
+					"100%": {
+						height: "0",
+						opacity: "0",
+					},
+				},
 			},
 			animation: {
 				"accordion-down": "accordion-down 0.2s ease-out",
 				"accordion-up": "accordion-up 0.2s ease-out",
+				expand: "expand 0.3s ease-out",
+				collapse: "collapse 0.3s ease-out",
 			},
 			typography: {
 				DEFAULT: {

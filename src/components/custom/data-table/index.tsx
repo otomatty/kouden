@@ -20,9 +20,12 @@ import {
 import { cn } from "@/lib/utils";
 import { EditableCell } from "./editable-cell";
 import { SelectCell } from "./select-cell";
+import { DateCell } from "./date-cell";
+import { AdditionalSelectCell } from "./additional-select-cell";
 import { SearchableSelectorDialog } from "@/components/custom/searchable-selector-dialog";
 import { Button } from "@/components/ui/button";
 import type { CellValue, DataTableProperties } from "@/types/table";
+import type { SelectOption } from "@/types/additional-select";
 
 /**
  * カスタマイズ可能なデータテーブルコンポーネント
@@ -38,6 +41,7 @@ import type { CellValue, DataTableProperties } from "@/types/table";
  * - テキスト入力
  * - 数値入力（フォーマット指定可能）
  * - セレクトボックス
+ * - 項目追加型セレクトボックス
  * - 郵便番号入力
  * - 検索可能なチェックボックス
  *
@@ -139,7 +143,27 @@ export function DataTable<Data>({
 			switch (config.type) {
 				case "select":
 				case "boolean":
-					return <SelectCell value={value} options={config.options || []} onSave={handleSave} />;
+					return (
+						<SelectCell
+							value={value}
+							options={config.options.map((opt) => ({ value: opt, label: opt }))}
+							onSave={handleSave}
+						/>
+					);
+				case "additional-select":
+					return (
+						<AdditionalSelectCell
+							row={cell.row.original as Record<string, unknown>}
+							column={columnId}
+							options={config.options}
+							value={value as string | null}
+							onValueChange={handleSave}
+							onAddOption={(option: SelectOption) => {
+								handleSave(option.value);
+							}}
+							addOptionPlaceholder={config.addOptionPlaceholder}
+						/>
+					);
 				case "number":
 					return (
 						<EditableCell
@@ -147,6 +171,18 @@ export function DataTable<Data>({
 							onSave={handleSave}
 							type="number"
 							format={config.format}
+						/>
+					);
+				case "date":
+					return (
+						<DateCell
+							trigger={
+								<Button variant="outline" size="sm" className="w-full justify-start">
+									{value as string | null}
+								</Button>
+							}
+							value={value as string | null}
+							onSave={handleSave}
 						/>
 					);
 				case "postal_code":

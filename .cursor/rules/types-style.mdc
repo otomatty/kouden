@@ -1,0 +1,21 @@
+---
+description: 型定義に関するルール (types ディレクトリ)
+globs: src/types/**/*.ts, src/types/**/*.d.ts
+---
+## 型定義ファイルの配置場所
+- 型は `src/types` ディレクトリに配置すること。
+
+## `any` 型の使用禁止
+- `any` 型は使用しないこと。
+
+## `interface` の推奨と型推論の活用
+- 型は `interface` を優先的に使用し、型推論を活用すること。
+
+## 型の命名規則
+- 型は lowerCamelCase で命名すること。
+
+## Supabase の型の利用
+- Supabase の型は Server Actions で使用すること。
+
+## 型変換
+- 型変換には `src/utils/case-converter.ts`を使用して変換する

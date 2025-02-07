@@ -6,7 +6,14 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { CreateKoudenParams, GetKoudensParams, Kouden } from "@//types/kouden";
 import type { Entry } from "@/types/entries";
-import { checkKoudenPermission, hasEditPermission, isKoudenOwner } from "./permissions";
+import {
+	checkKoudenPermission,
+	hasEditPermission,
+	isKoudenOwner,
+	canAccessKouden,
+	canEditKouden,
+	canDeleteKouden,
+} from "./permissions";
 import { KOUDEN_ROLES } from "@/types/role";
 
 const koudenSchema = z.object({
@@ -108,34 +115,34 @@ export async function createKouden({
 	}
 }
 
+/**
+ * ユーザーが所属しているすべての香典帳を取得
+ * オーナー/作成者 OR メンバー
+ * @returns ユーザーが所属している香典帳
+ */
 export async function getKoudens(): Promise<{
 	koudens?: Kouden[];
 	error?: string;
 }> {
 	try {
 		const supabase = await createClient();
-
-		// セッション情報を確認
 		const {
-			data: { session },
-		} = await supabase.auth.getSession();
+			data: { user },
+		} = await supabase.auth.getUser();
 
-		if (!session?.user?.id) {
+		if (!user) {
 			return { error: "認証が必要です" };
 		}
 
 		// メンバーとして参加している香典帳のIDを取得
-		const { data: memberKoudens, error: memberError } = await supabase
+		const { data: memberKoudens } = await supabase
 			.from("kouden_members")
 			.select("kouden_id")
-			.eq("user_id", session.user.id);
+			.eq("user_id", user.id);
 
-		if (memberError) {
-			console.error("Member query error:", memberError);
-			throw memberError;
-		}
+		const memberKoudenIds = memberKoudens?.map((m) => m.kouden_id) || [];
 
-		// 香典帳を取得（オーナー/作成者 OR メンバーシップ）
+		// 香典帳を取得（オーナーまたはメンバー）
 		const { data: koudens, error } = await supabase
 			.from("koudens")
 			.select(`
@@ -148,26 +155,18 @@ export async function getKoudens(): Promise<{
 				created_by,
 				status
 			`)
-			.or(
-				`owner_id.eq.${session.user.id},created_by.eq.${
-					session.user.id
-				},id.in.(${memberKoudens?.map((m) => m.kouden_id).join(",") || ""})`,
-			)
+			.or(`owner_id.eq.${user.id},id.in.(${memberKoudenIds.join(",")})`)
+			.eq("status", "active")
 			.order("created_at", { ascending: false });
 
-		if (error) {
-			console.error("Koudens query error:", error);
-			throw error;
-		}
+		if (error) throw error;
 
 		// オーナー情報を取得
 		const ownerIds = [...new Set(koudens?.map((k) => k.owner_id) || [])];
-		const { data: profiles, error: profilesError } = await supabase
+		const { data: profiles } = await supabase
 			.from("profiles")
 			.select("id, display_name")
 			.in("id", ownerIds);
-
-		if (profilesError) throw profilesError;
 
 		const koudensWithProfiles = koudens?.map((kouden) => ({
 			...kouden,
@@ -296,40 +295,26 @@ export async function getKoudenWithEntries(id: string) {
 }
 
 export async function updateKouden(id: string, input: { title: string; description?: string }) {
-	const supabase = await createClient();
-	const role = await checkKoudenPermission(id);
-
-	if (!role) {
-		throw new Error("アクセス権限がありません");
-	}
-
-	if (role !== "owner" && role !== "editor") {
+	if (!(await canEditKouden(id))) {
 		throw new Error("編集権限がありません");
 	}
 
+	const supabase = await createClient();
 	const { error } = await supabase.from("koudens").update(input).eq("id", id);
 
-	if (error) {
-		throw new Error("香典帳の更新に失敗しました");
-	}
-
+	if (error) throw error;
 	revalidatePath(`/koudens/${id}`);
 }
 
 export async function deleteKouden(id: string) {
-	const supabase = await createClient();
-	const role = await checkKoudenPermission(id);
-
-	if (role !== "owner") {
+	if (!(await canDeleteKouden(id))) {
 		throw new Error("削除権限がありません");
 	}
 
+	const supabase = await createClient();
 	const { error } = await supabase.from("koudens").delete().eq("id", id);
 
-	if (error) {
-		throw new Error("香典帳の削除に失敗しました");
-	}
-
+	if (error) throw error;
 	revalidatePath("/koudens");
 	redirect("/koudens");
 }
@@ -674,10 +659,10 @@ export async function duplicateKouden(id: string): Promise<{ kouden?: Kouden; er
 
 			// 13. 返礼品情報を取得してコピー
 			const { data: returnItems, error: returnItemsError } = await supabase
-				.from("return_items")
+				.from("return_record_items")
 				.select("*")
 				.in(
-					"kouden_entry_id",
+					"return_record_id",
 					entries.map((e) => e.id),
 				);
 
@@ -686,9 +671,9 @@ export async function duplicateKouden(id: string): Promise<{ kouden?: Kouden; er
 			}
 
 			if (returnItems && returnItems.length > 0) {
-				const { error: copyReturnItemsError } = await supabase.from("return_items").insert(
+				const { error: copyReturnItemsError } = await supabase.from("return_record_items").insert(
 					returnItems.map((item) => {
-						const newEntryId = entryIdMap.get(item.kouden_entry_id);
+						const newEntryId = entryIdMap.get(item.return_record_id);
 						if (!newEntryId) {
 							throw new Error("Failed to map entry ID for return item");
 						}

@@ -5,6 +5,7 @@ import { ProfileForm } from "./_components/profile-form";
 import { AvatarUpload } from "./_components/avatar-upload";
 import { ActivityStats } from "./_components/activity-stats";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BackLink } from "@/components/custom/BackLink";
 import { getProfile, getActivityStats } from "@/app/_actions/profiles";
 
 export const metadata: Metadata = {
@@ -41,7 +42,8 @@ export default async function ProfilePage() {
 
 	return (
 		<div className="container py-8">
-			<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+			<BackLink />
+			<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
 				<div className="space-y-6">
 					<Card>
 						<CardHeader>

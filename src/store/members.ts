@@ -14,7 +14,7 @@ export interface MembersState {
 // キャッシュの有効期限を5分に設定
 const CACHE_EXPIRY = 5 * 60 * 1000;
 
-export const membersAtomFamily = atomFamily((koudenId: string) =>
+export const membersAtomFamily = atomFamily(() =>
 	atom<MembersState>({
 		members: [],
 		roles: [],

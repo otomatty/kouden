@@ -1,0 +1,20 @@
+---
+description: ロジックの記述スタイルと配置場所に関するルール (logic, actions, api, hooks, utils ディレクトリ)
+globs: src/app/_actions/**/*.ts, src/app/api/**/*.ts, src/hooks/**/*.ts, src/utils/**/*.ts
+---
+## ロジックのモジュール化と再利用性
+- ロジックは適切にモジュール化し、再利用可能な関数として定義すること。
+## ロジックとコンポーネントの分離
+- ロジックはコンポーネントから分離し、コンポーネントの責任を減らすこと。
+
+## サービスロジックと Server Actions
+- サービスロジックは Server Actions を使用し、`src/app/_actions` ディレクトリに配置すること。
+
+## Server Actions と API Routes の使い分け
+- Server Actions はシンプルな CRUD のみを担当し、より複雑な API は API Routes を使用し、`src/app/api` ディレクトリに配置すること。
+
+## カスタムフックの配置場所
+- 共通ロジックで hooks があるものはカスタムフックとして `src/hooks` ディレクトリに配置すること。
+
+## utils 関数の配置場所
+- 共通ロジックで hooks がないものは `src/utils` ディレクトリに配置すること。

@@ -1,0 +1,9 @@
+---
+description: パフォーマンス最適化に関するルール (パフォーマンス最適化関連ファイル)
+globs: **/*.tsx, **/*.jsx
+---
+## React.memo, useMemo, useCallback の適切な使用
+- React.memo, useMemo, useCallback を適切に使用し、不要な再レンダリングを防ぐこと。
+
+## Suspense, Error Boundary の活用
+- 非同期処理やデータフェッチングには Suspense や Error Boundary を活用すること。

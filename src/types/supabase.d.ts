@@ -90,6 +90,39 @@ export type Database = {
         }
         Relationships: []
       }
+      delivery_methods: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_system: boolean
+          kouden_id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          kouden_id: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          kouden_id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       kouden_entries: {
         Row: {
           address: string | null
@@ -636,49 +669,164 @@ export type Database = {
           },
         ]
       }
-      return_items: {
+      return_item_masters: {
         Row: {
           created_at: string
           created_by: string
-          delivery_method: string
+          description: string | null
           id: string
-          kouden_entry_id: string
+          kouden_id: string
           name: string
-          notes: string | null
           price: number
-          sent_date: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           created_by: string
-          delivery_method: string
+          description?: string | null
           id?: string
-          kouden_entry_id: string
+          kouden_id: string
           name: string
-          notes?: string | null
           price: number
-          sent_date?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           created_by?: string
-          delivery_method?: string
+          description?: string | null
           id?: string
-          kouden_entry_id?: string
+          kouden_id?: string
           name?: string
-          notes?: string | null
           price?: number
-          sent_date?: string | null
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "return_items_kouden_entry_id_fkey"
+            foreignKeyName: "return_item_masters_kouden_id_fkey"
+            columns: ["kouden_id"]
+            isOneToOne: false
+            referencedRelation: "koudens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      return_record_items: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          notes: string | null
+          price: number
+          quantity: number
+          return_item_master_id: string
+          return_record_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          notes?: string | null
+          price: number
+          quantity?: number
+          return_item_master_id: string
+          return_record_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          notes?: string | null
+          price?: number
+          quantity?: number
+          return_item_master_id?: string
+          return_record_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "return_record_items_return_item_master_id_fkey"
+            columns: ["return_item_master_id"]
+            isOneToOne: false
+            referencedRelation: "return_item_masters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "return_record_items_return_record_id_fkey"
+            columns: ["return_record_id"]
+            isOneToOne: false
+            referencedRelation: "return_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      return_records: {
+        Row: {
+          completed_date: string | null
+          created_at: string
+          created_by: string
+          id: string
+          kouden_delivery_method_id: string
+          kouden_entry_id: string
+          kouden_id: string
+          notes: string | null
+          scheduled_date: string | null
+          shipping_fee: number | null
+          status: string
+          total_amount: number | null
+          updated_at: string
+        }
+        Insert: {
+          completed_date?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          kouden_delivery_method_id: string
+          kouden_entry_id: string
+          kouden_id: string
+          notes?: string | null
+          scheduled_date?: string | null
+          shipping_fee?: number | null
+          status: string
+          total_amount?: number | null
+          updated_at?: string
+        }
+        Update: {
+          completed_date?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          kouden_delivery_method_id?: string
+          kouden_entry_id?: string
+          kouden_id?: string
+          notes?: string | null
+          scheduled_date?: string | null
+          shipping_fee?: number | null
+          status?: string
+          total_amount?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "return_records_kouden_delivery_method_id_fkey"
+            columns: ["kouden_delivery_method_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_methods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "return_records_kouden_entry_id_fkey"
             columns: ["kouden_entry_id"]
             isOneToOne: false
             referencedRelation: "kouden_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "return_records_kouden_id_fkey"
+            columns: ["kouden_id"]
+            isOneToOne: false
+            referencedRelation: "koudens"
             referencedColumns: ["id"]
           },
         ]
@@ -945,13 +1093,6 @@ export type Database = {
           p_max_uses?: number
         }
         Returns: string
-      }
-      initialize_default_relationships: {
-        Args: {
-          kouden_id: string
-          owner_id: string
-        }
-        Returns: undefined
       }
       is_admin: {
         Args: {
