@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { Loading } from "../../(protected)/koudens/[id]/_components/_common/loading";
+import { Loading } from "../../../components/custom/loading";
 import { ReturnRecordTable } from "./table/data-table";
 import { ReturnRecordCardList } from "./card-list/return-record-card-list";
 import type { ReturnRecord } from "@/types/return-records/return-records";

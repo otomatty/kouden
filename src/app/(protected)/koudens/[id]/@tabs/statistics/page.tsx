@@ -1,8 +1,4 @@
-import { Suspense } from "react";
 import { KoudenStatistics } from "./_components";
-import type { Entry } from "@/types/entries";
-
-// actions
 import { getEntries } from "@/app/_actions/entries";
 
 interface StatisticsPageProps {
@@ -16,12 +12,7 @@ interface StatisticsPageProps {
  */
 export default async function StatisticsPage({ params }: StatisticsPageProps) {
 	const { id: koudenId } = await params;
-	// TODO: データの取得処理を実装
 	const entries = await getEntries(koudenId);
 
-	return (
-		<Suspense fallback={<div>Loading...</div>}>
-			<KoudenStatistics entries={entries} />
-		</Suspense>
-	);
+	return <KoudenStatistics entries={entries} />;
 }

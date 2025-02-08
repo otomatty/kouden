@@ -16,6 +16,10 @@ import {
 } from "@/components/ui/carousel";
 import Image from "next/image";
 import { v4 as uuidv4 } from "uuid";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
+import { updateGuideVisibility } from "@/app/_actions/settings";
 
 const guideItems = [
 	{
@@ -156,6 +160,71 @@ const guideItems = [
 	},
 ];
 
+function HideGuideButton() {
+	const [isLoading, setIsLoading] = useState(false);
+	const { toast } = useToast();
+
+	const handleHideGuide = async () => {
+		try {
+			setIsLoading(true);
+			const result = await updateGuideVisibility(false);
+
+			if (!result.success) {
+				throw new Error(result.error ?? "ガイドの非表示に失敗しました");
+			}
+
+			toast({
+				title: "ガイドを非表示にしました",
+				description: "設定画面からいつでも表示できます",
+				action: (
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={async () => {
+							try {
+								const result = await updateGuideVisibility(true);
+								if (!result.success) {
+									throw new Error(result.error ?? "ガイドの表示に失敗しました");
+								}
+								toast({
+									title: "ガイドを再表示しました",
+								});
+							} catch (error) {
+								toast({
+									title: "エラーが発生しました",
+									description: error instanceof Error ? error.message : "設定の更新に失敗しました",
+									variant: "destructive",
+								});
+							}
+						}}
+					>
+						元に戻す
+					</Button>
+				),
+			});
+		} catch (error) {
+			toast({
+				title: "エラーが発生しました",
+				description: error instanceof Error ? error.message : "設定の更新に失敗しました",
+				variant: "destructive",
+			});
+		} finally {
+			setIsLoading(false);
+		}
+	};
+
+	return (
+		<Button
+			variant="link"
+			className="text-sm text-muted-foreground hover:text-primary"
+			onClick={handleHideGuide}
+			disabled={isLoading}
+		>
+			{isLoading ? "更新中..." : "ガイドを非表示にする"}
+		</Button>
+	);
+}
+
 export function Guide() {
 	const isEnabled = useAtomValue(guideModeAtom);
 	const isDesktop = useMediaQuery("(min-width: 768px)");
@@ -228,9 +297,12 @@ export function Guide() {
 				{guideItems.map(renderCard)}
 			</div>
 
-			<p className="text-sm text-muted-foreground">
-				※ガイドの表示/非表示は設定画面から切り替えることができます
-			</p>
+			<div className="flex items-center justify-between">
+				<p className="text-sm text-muted-foreground">
+					※ガイドの表示/非表示は設定画面から切り替えることができます
+				</p>
+				<HideGuideButton />
+			</div>
 		</div>
 	);
 }

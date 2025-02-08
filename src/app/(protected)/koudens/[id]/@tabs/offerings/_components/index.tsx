@@ -10,7 +10,7 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 // components
 import { DataTable } from "./table/data-table";
 import { OfferingCardList } from "./card-list/offering-card-list";
-import { Loading } from "../../../_components/_common/loading";
+import { Loading } from "../../../../../../../components/custom/loading";
 
 interface OfferingViewProps {
 	koudenId: string;

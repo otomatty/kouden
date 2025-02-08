@@ -26,8 +26,13 @@ export function SelectionColumn<TData>({
 	// 権限チェック
 	const canEdit = permission ? canUpdateKouden(permission) : false;
 
-	// 選択機能を表示しない場合、または編集権限がない場合は null を返す
-	if (showSelection || canEdit) {
+	// 選択機能を表示しない場合 null を返す
+	if (!showSelection) {
+		return null;
+	}
+
+	// 編集権限がない場合 null を返す
+	if (!canEdit) {
 		return null;
 	}
 

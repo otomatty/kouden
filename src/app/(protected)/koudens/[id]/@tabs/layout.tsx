@@ -1,7 +1,9 @@
 // Server Actions
 import { getKouden } from "@/app/_actions/koudens";
 // components
-import { TabNavigation } from "../_components/_common/tab-navigation";
+import { TabNavigation } from "./_components/tab-navigation";
+import { Suspense } from "react";
+import { KoudenRealtimeProvider } from "@/providers/kouden-realtime-provider";
 
 interface TabsLayoutProps {
 	params: Promise<{ id: string }>;
@@ -13,18 +15,21 @@ interface TabsLayoutProps {
  * - Parallel Routesを使用して各タブのコンテンツを表示
  * - タブの切り替えはURLの変更で行う
  * - 選択中のタブのコンテンツのみを表示
+ * - パフォーマンス最適化：
+ *   - Suspenseを使用してタブコンテンツのローディングを最適化
+ *   - リアルタイム更新のためのコンテキストプロバイダーを提供
  */
 export default async function TabsLayout({ params, children }: TabsLayoutProps) {
 	const { id: koudenId } = await params;
-	// 共通で使用するデータを取得
+	// 共通で使用するデータを取得（キャッシュを有効化）
 	const [kouden] = await Promise.all([getKouden(koudenId)]);
 
 	return (
-		<>
+		<KoudenRealtimeProvider koudenId={kouden.id}>
 			{/* タブナビゲーション */}
 			<TabNavigation id={kouden.id} />
 			{/* タブコンテンツ */}
-			{children}
-		</>
+			<Suspense fallback={<div>Loading...</div>}>{children}</Suspense>
+		</KoudenRealtimeProvider>
 	);
 }

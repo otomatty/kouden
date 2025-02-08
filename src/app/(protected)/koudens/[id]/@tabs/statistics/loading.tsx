@@ -1,6 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-const SUMMARY_CARDS = ["total", "average", "max", "min"] as const;
+const SUMMARY_CARDS = ["total", "attendees", "progress"] as const;
 const CHART_CARDS = ["daily", "monthly"] as const;
 
 /**
@@ -11,9 +11,9 @@ export default function StatisticsLoading() {
 	return (
 		<div className="space-y-8">
 			{/* サマリーカードのスケルトン */}
-			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 				{SUMMARY_CARDS.map((card) => (
-					<div key={`summary-${card}`} className="rounded-lg border p-4">
+					<div key={`summary-${card}`} className="rounded-lg border p-8">
 						<div className="space-y-3">
 							<Skeleton className="h-4 w-[100px]" />
 							<Skeleton className="h-8 w-[150px]" />

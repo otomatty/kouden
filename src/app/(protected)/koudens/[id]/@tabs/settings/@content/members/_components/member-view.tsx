@@ -7,17 +7,17 @@ import { MembersTable } from "./table/data-table";
 import { createColumns } from "./table/columns";
 import { getMembers, getKoudenRoles } from "@/app/_actions/members";
 import { useQuery } from "@tanstack/react-query";
-import type { KoudenPermission } from "@/types/role";
 import type { KoudenMember } from "@/types/member";
+import { permissionAtom } from "@/store/permission";
+
 interface MemberViewProps {
 	koudenId: string;
 	currentUserId?: string;
-	permission: KoudenPermission;
 }
 
-export function MemberView({ koudenId, currentUserId, permission }: MemberViewProps) {
+export function MemberView({ koudenId, currentUserId }: MemberViewProps) {
 	const [members, setMembers] = useAtom(membersAtom);
-
+	const [permission] = useAtom(permissionAtom);
 	// メンバー一覧の取得
 	const {
 		data: fetchedMembers,

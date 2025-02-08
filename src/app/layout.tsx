@@ -2,9 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
-import { createClient } from "@/lib/supabase/server";
-import { getUserSettings } from "./_actions/settings";
-import { InitializeGuideMode } from "@/components/providers/initialize-guide-mode";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -44,20 +41,6 @@ export default async function RootLayout({
 }: {
 	children: React.ReactNode;
 }) {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-
-	let guideMode = true; // デフォルト値
-
-	if (user) {
-		const { settings } = await getUserSettings(user.id);
-		if (settings) {
-			guideMode = settings.guide_mode ?? true;
-		}
-	}
-
 	return (
 		<html lang="ja" suppressHydrationWarning>
 			<head>
@@ -74,13 +57,9 @@ export default async function RootLayout({
 				<meta name="theme-color" content="#000000" />
 				<link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
 			</head>
-			<body
-				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-			>
+			<body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
 				<TooltipProvider>
-					<InitializeGuideMode initialValue={guideMode}>
-						<Providers>{children}</Providers>
-					</InitializeGuideMode>
+					<Providers>{children}</Providers>
 				</TooltipProvider>
 				<Analytics />
 				<SpeedInsights />

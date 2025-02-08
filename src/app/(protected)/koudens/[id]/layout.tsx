@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { checkKoudenPermission } from "@/app/_actions/permissions";
+import { PermissionProvider } from "@/components/providers/permission-provider";
 
 // ui
 import { Button } from "@/components/ui/button";
@@ -23,18 +25,17 @@ export const metadata: Metadata = {
 
 interface KoudenLayoutProps {
 	params: Promise<{ id: string }>;
-	children: React.ReactNode;
 	tabs: React.ReactNode;
 }
 
 /**
- * 香典帳詳細のレイアウトコンポーネント
- * - Parallel Routesを使用して各タブのコンテンツを表示
- * - タブの切り替えはURLの変更で行う
- * - 選択中のタブのコンテンツのみを表示
+ * 香典帳詳細ページのレイアウトコンポーネント
+ * @param params.id - 香典帳ID
+ * @param tabs - タブコンテンツ
  */
 export default async function KoudenLayout({ params, tabs }: KoudenLayoutProps) {
 	const { id: koudenId } = await params;
+	const permission = await checkKoudenPermission(koudenId);
 	// 共通で使用するデータを取得
 	const [kouden, entriesData, relationshipsData] = await Promise.all([
 		getKouden(koudenId),
@@ -43,29 +44,39 @@ export default async function KoudenLayout({ params, tabs }: KoudenLayoutProps) 
 	]);
 
 	return (
-		<div className="space-y-4">
-			{/* ヘッダー */}
-			<div className="space-y-4 py-4">
-				<Button variant="ghost" className="flex items-center gap-2 w-fit" asChild>
-					<Link href="/koudens">
-						<ArrowLeft className="h-4 w-4" />
-						<span>一覧に戻る</span>
-					</Link>
-				</Button>
-				<div className="flex items-center justify-between">
-					<KoudenTitle koudenId={kouden.id} title={kouden.title} description={kouden.description} />
-					<KoudenActionsMenu koudenId={kouden.id} koudenTitle={kouden.title} />
+		<PermissionProvider permission={permission}>
+			<div className="flex h-full flex-col">
+				<div className="flex-1 overflow-hidden">
+					<div className="space-y-4">
+						{/* ヘッダー */}
+						<div className="space-y-4 py-4">
+							<Button variant="ghost" className="flex items-center gap-2 w-fit" asChild>
+								<Link href="/koudens">
+									<ArrowLeft className="h-4 w-4" />
+									<span>一覧に戻る</span>
+								</Link>
+							</Button>
+							<div className="flex items-center justify-between">
+								<KoudenTitle
+									koudenId={kouden.id}
+									title={kouden.title}
+									description={kouden.description}
+								/>
+								<KoudenActionsMenu koudenId={kouden.id} koudenTitle={kouden.title} />
+							</div>
+						</div>
+
+						{tabs}
+
+						{/* モバイルメニュー */}
+						<MobileMenuWrapper
+							koudenId={kouden.id}
+							entries={entriesData}
+							relationships={relationshipsData}
+						/>
+					</div>
 				</div>
 			</div>
-
-			{tabs}
-
-			{/* モバイルメニュー */}
-			<MobileMenuWrapper
-				koudenId={kouden.id}
-				entries={entriesData}
-				relationships={relationshipsData}
-			/>
-		</div>
+		</PermissionProvider>
 	);
 }

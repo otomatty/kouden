@@ -11,6 +11,9 @@ import { getReturnItemMasters } from "@/app/_actions/return-records/return-item-
 import { getDeliveryMethods } from "@/app/_actions/return-records/delivery-methods";
 import { getEntries } from "@/app/_actions/entries";
 
+// components
+import { Loading } from "@/components/custom/loading";
+
 interface ReturnRecordsPageProps {
 	params: {
 		id: string;
@@ -30,7 +33,7 @@ export default async function ReturnRecordsPage({ params }: ReturnRecordsPagePro
 	const deliveryMethods: DeliveryMethod[] = await getDeliveryMethods(params.id);
 
 	return (
-		<Suspense fallback={<div>Loading...</div>}>
+		<Suspense fallback={<Loading message="データを読み込み中..." />}>
 			<ReturnRecordView
 				koudenId={params.id}
 				entries={entries}

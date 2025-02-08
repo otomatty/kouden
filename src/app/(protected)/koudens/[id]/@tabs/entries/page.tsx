@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { EntryView } from "./_components";
 import { getEntries } from "@/app/_actions/entries";
 import { getRelationships } from "@/app/_actions/relationships";
@@ -20,9 +19,5 @@ export default async function EntriesPage({ params }: EntriesPageProps) {
 		getRelationships(koudenId),
 	]);
 
-	return (
-		<Suspense fallback={<div>Loading...</div>}>
-			<EntryView koudenId={koudenId} entries={entries} relationships={relationships} />
-		</Suspense>
-	);
+	return <EntryView koudenId={koudenId} entries={entries} relationships={relationships} />;
 }

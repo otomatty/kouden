@@ -36,6 +36,7 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { permissionAtom } from "@/store/permission";
 
 // components
+import { Loading } from "@/components/custom/loading";
 import { DataTable as BaseDataTable } from "@/components/custom/data-table";
 import { DataTableToolbar } from "@/components/custom/data-table/toolbar";
 import { ReturnRecordDialog } from "../dialog/return-record-dialog";
@@ -254,7 +255,7 @@ export function ReturnRecordTable({
 
 	const renderContent = () => {
 		if (isLoading) {
-			return <div>データを読み込み中...</div>;
+			return <Loading message="データを読み込み中..." />;
 		}
 
 		if (error) {
