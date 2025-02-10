@@ -5,12 +5,13 @@ import type { KoudenMember } from "@/types/member";
 import type { KoudenRole } from "@/types/role";
 import { isKoudenOwner } from "./permissions";
 import { revalidatePath } from "next/cache";
+import { cache } from "react";
+import { KoudenError, withErrorHandling } from "@/lib/errors";
 
-// 香典帳のロール一覧を取得
-export async function getKoudenRoles(koudenId: string): Promise<KoudenRole[]> {
-	const supabase = await createClient();
-
-	try {
+// 香典帳のロール一覧を取得（キャッシュ対応）
+export const getKoudenRoles = cache(async (koudenId: string): Promise<KoudenRole[]> => {
+	return withErrorHandling(async () => {
+		const supabase = await createClient();
 		const { data: roles, error } = await supabase
 			.from("kouden_roles")
 			.select("id, name")
@@ -18,16 +19,12 @@ export async function getKoudenRoles(koudenId: string): Promise<KoudenRole[]> {
 			.order("name");
 
 		if (error) {
-			console.error("[ERROR] Failed to fetch kouden roles:", error);
-			throw new Error("ロール一覧の取得に失敗しました");
+			throw new KoudenError("ロール一覧の取得に失敗しました", "FETCH_ROLES_ERROR");
 		}
 
 		return roles;
-	} catch (error) {
-		console.error("[ERROR] Error in getKoudenRoles:", error);
-		throw error;
-	}
-}
+	}, "ロール一覧の取得");
+});
 
 // メンバーのロールを更新
 export async function updateMemberRole(koudenId: string, userId: string, roleId: string) {
@@ -72,94 +69,116 @@ export async function updateMemberRole(koudenId: string, userId: string, roleId:
 }
 
 /**
- * メンバー一覧を取得する
+ * メンバー一覧を取得する（最適化版）
  * @param koudenId 香典帳ID
  * @returns メンバー一覧
  */
-export async function getMembers(koudenId: string) {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+export const getMembers = cache(async (koudenId: string) => {
+	return withErrorHandling(async () => {
+		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 
-	if (!user) {
-		throw new Error("認証が必要です");
-	}
+		if (!user) {
+			throw new KoudenError("認証が必要です", "UNAUTHORIZED");
+		}
 
-	// まず、ユーザーの権限を確認
-	const { data: permission } = await supabase
-		.from("koudens")
-		.select("owner_id")
-		.eq("id", koudenId)
-		.single();
-
-	const isOwner = permission?.owner_id === user.id;
-
-	if (!isOwner) {
-		// オーナーでない場合、メンバーかどうかを確認
-		const { data: membership } = await supabase
-			.from("kouden_members")
-			.select("id")
-			.eq("kouden_id", koudenId)
-			.eq("user_id", user.id)
+		// まず、ユーザーの権限を確認
+		const { data: permission, error: permissionError } = await supabase
+			.from("koudens")
+			.select("owner_id")
+			.eq("id", koudenId)
 			.single();
 
-		if (!membership) {
-			throw new Error("アクセス権限がありません");
+		if (permissionError) {
+			console.error("[ERROR] Failed to fetch permission:", permissionError);
+			throw new KoudenError("権限の確認に失敗しました", "FETCH_PERMISSION_ERROR");
 		}
-	}
 
-	// メンバー一覧を取得
-	const { data: members, error } = await supabase
-		.from("kouden_members")
-		.select(`
-			id,
-			user_id,
-			role_id,
-			role:kouden_roles!role_id(
+		const isOwner = permission?.owner_id === user.id;
+
+		if (!isOwner) {
+			// オーナーでない場合、メンバーかどうかを確認
+			const { data: membership, error: membershipError } = await supabase
+				.from("kouden_members")
+				.select("id")
+				.eq("kouden_id", koudenId)
+				.eq("user_id", user.id)
+				.single();
+
+			if (membershipError) {
+				console.error("[ERROR] Failed to check membership:", membershipError);
+				throw new KoudenError("メンバー権限の確認に失敗しました", "FETCH_MEMBERSHIP_ERROR");
+			}
+
+			if (!membership) {
+				throw new KoudenError("アクセス権限がありません", "FORBIDDEN");
+			}
+		}
+
+		// メンバー一覧とロール情報を取得
+		const { data: members, error: membersError } = await supabase
+			.from("kouden_members")
+			.select(`
 				id,
-				name
-			)
-		`)
-		.eq("kouden_id", koudenId);
+				user_id,
+				role_id,
+				kouden_roles:kouden_roles (
+					id,
+					name
+				)
+			`)
+			.eq("kouden_id", koudenId);
 
-	if (error) {
-		console.error("[ERROR] Failed to fetch members:", error);
-		throw new Error("メンバー一覧の取得に失敗しました");
-	}
+		if (membersError) {
+			console.error("[ERROR] Failed to fetch members:", membersError);
+			throw new KoudenError("メンバー一覧の取得に失敗しました", "FETCH_MEMBERS_ERROR");
+		}
 
-	// プロフィール情報を別途取得
-	const userIds = members.map((member) => member.user_id);
-	const { data: profiles, error: profileError } = await supabase
-		.from("profiles")
-		.select("id, display_name, avatar_url")
-		.in("id", userIds);
+		if (!members) {
+			return [];
+		}
 
-	if (profileError) {
-		console.error("[ERROR] Failed to fetch profiles:", profileError);
-		throw new Error("プロフィール情報の取得に失敗しました");
-	}
+		// プロフィール情報を別途取得
+		const userIds = members.map((member) => member.user_id);
+		const { data: profiles, error: profilesError } = await supabase
+			.from("profiles")
+			.select("id, display_name, avatar_url")
+			.in("id", userIds);
 
-	// メンバー情報とプロフィール情報を結合
-	return members.map((member) => {
-		const isOwnerUser = member.user_id === permission?.owner_id;
-		return {
-			...member,
-			profile: profiles.find((p) => p.id === member.user_id),
-			isOwner: isOwnerUser,
-			// オーナーの場合、ロール名を"owner"に上書き
-			role: isOwnerUser
-				? {
-						id: member.role_id,
-						name: "owner",
-					}
-				: member.role,
-			// オーナーは自身のロールを変更できない、自身を削除できない
-			canUpdateRole: isOwner && !isOwnerUser,
-			canDelete: isOwner && !isOwnerUser,
-		};
-	});
-}
+		if (profilesError) {
+			console.error("[ERROR] Failed to fetch profiles:", profilesError);
+			throw new KoudenError("プロフィール情報の取得に失敗しました", "FETCH_PROFILES_ERROR");
+		}
+
+		// メンバー情報の整形
+		return members.map((member) => {
+			const isOwnerUser = member.user_id === permission?.owner_id;
+			const roleData = Array.isArray(member.kouden_roles) ? member.kouden_roles[0] : null;
+			const role = roleData || { id: member.role_id, name: "unknown" };
+			const profile = profiles?.find((p) => p.id === member.user_id) || {
+				id: member.user_id,
+				display_name: "Unknown User",
+				avatar_url: null,
+			};
+
+			return {
+				...member,
+				profile,
+				isOwner: isOwnerUser,
+				role: isOwnerUser
+					? {
+							id: member.role_id,
+							name: "owner",
+						}
+					: role,
+				canUpdateRole: isOwner && !isOwnerUser,
+				canDelete: isOwner && !isOwnerUser,
+			};
+		});
+	}, "メンバー一覧の取得");
+});
 
 // メンバーを削除
 export async function deleteMember(koudenId: string, userId: string) {

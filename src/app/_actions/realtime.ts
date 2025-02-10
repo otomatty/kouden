@@ -33,15 +33,4 @@ export async function getRealtimeToken() {
 	if (userError || !user) {
 		throw new Error("認証が必要です");
 	}
-
-	// リアルタイム更新用のトークンを取得
-	const { data: token, error: tokenError } = await supabase.rpc(
-		"initialize_default_relationships",
-	);
-
-	if (tokenError) {
-		throw new Error("リアルタイムトークンの取得に失敗しました");
-	}
-
-	return token;
 }

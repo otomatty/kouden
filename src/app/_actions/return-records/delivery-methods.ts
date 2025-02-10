@@ -1,3 +1,5 @@
+"use server";
+
 /**
  * 配送方法に関するServer Actions
  * @module delivery-methods

@@ -1,3 +1,5 @@
+"use server";
+
 /**
  * 返礼情報に関するServer Actions
  * @module return-records

@@ -51,7 +51,7 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
 				<TourGuide>
 					<div className="min-h-screen bg-gray-50">
 						<Header user={user} isAdmin={isAdminUser} />
-						<div className="app-body container mx-auto px-4 py-8 my-12">
+						<div className="app-body container mx-auto px-4 py-8 md:my-12">
 							<main>{children}</main>
 						</div>
 						{/* デスクトップのみ表示 */}

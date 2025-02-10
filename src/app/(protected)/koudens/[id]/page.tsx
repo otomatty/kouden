@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
-export default function KoudenPage({ params }: { params: { id: string } }) {
+export default async function KoudenPage({ params }: { params: Promise<{ id: string }> }) {
+	const { id: koudenId } = await params;
 	// デフォルトでentriesタブにリダイレクト
-	redirect(`/koudens/${params.id}/entries`);
+	redirect(`/koudens/${koudenId}/entries`);
 }

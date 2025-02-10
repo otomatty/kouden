@@ -669,7 +669,7 @@ export type Database = {
           },
         ]
       }
-      return_item_masters: {
+      return_items: {
         Row: {
           created_at: string
           created_by: string
@@ -749,7 +749,7 @@ export type Database = {
             foreignKeyName: "return_record_items_return_item_master_id_fkey"
             columns: ["return_item_master_id"]
             isOneToOne: false
-            referencedRelation: "return_item_masters"
+            referencedRelation: "return_items"
             referencedColumns: ["id"]
           },
           {

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Table2, Gift, Mail, BarChart3, Settings } from "lucide-react";
+import { Table2, Gift, Mail, BarChart3, Settings, Box } from "lucide-react";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useMemo } from "react";
 import React from "react";
@@ -32,6 +32,7 @@ export const TabNavigation = React.memo(function TabNavigation({ id }: TabNaviga
 			{ id: "entries", label: "ご香典", icon: <Table2 className="h-5 w-5" /> },
 			{ id: "offerings", label: "お供物", icon: <Gift className="h-5 w-5" /> },
 			{ id: "telegrams", label: "弔電", icon: <Mail className="h-4 w-4" /> },
+			{ id: "return_records", label: "返礼品", icon: <Box className="h-4 w-4" /> },
 			{ id: "statistics", label: "統計", icon: <BarChart3 className="h-4 w-4" /> },
 			{ id: "settings", label: "設定", icon: <Settings className="h-4 w-4" /> },
 		],

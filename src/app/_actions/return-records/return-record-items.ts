@@ -1,3 +1,5 @@
+"use server";
+
 /**
  * 返礼品詳細情報に関するServer Actions
  * @module return-record-items

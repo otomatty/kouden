@@ -31,7 +31,7 @@ export function SettingsMenu({ koudenId }: SettingsMenuProps) {
 	const pathname = usePathname();
 
 	return (
-		<nav className="space-y-1 py-6">
+		<nav className="space-y-2 px-2 py-6">
 			{menuItems.map((item) => {
 				const href = `/koudens/${koudenId}/settings/${item.href}`;
 				const isActive = pathname === href;

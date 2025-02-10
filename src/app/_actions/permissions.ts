@@ -2,89 +2,99 @@
 
 import { createClient } from "@/lib/supabase/server";
 import type { KoudenPermission, KoudenRole } from "@/types/role";
+import { cache } from "react";
+import { KoudenError } from "@/lib/errors";
 
-// 権限チェック関数
-export async function checkKoudenPermission(koudenId: string): Promise<KoudenPermission> {
+// 権限チェックのユーティリティ関数
+export const withPermissionCheck = async <T>(
+	koudenId: string,
+	requiredPermission: KoudenPermission,
+	action: () => Promise<T>,
+): Promise<T> => {
+	const permission = await checkKoudenPermission(koudenId);
+	const hasPermission =
+		permission === requiredPermission ||
+		permission === "owner" ||
+		(permission === "editor" && requiredPermission === "viewer");
+
+	if (!hasPermission) {
+		throw new KoudenError("権限がありません", "INSUFFICIENT_PERMISSION");
+	}
+	return action();
+};
+
+// 権限チェック関数（キャッシュ対応）
+export const checkKoudenPermission = cache(async (koudenId: string): Promise<KoudenPermission> => {
 	const supabase = await createClient();
 	const {
 		data: { user },
 	} = await supabase.auth.getUser();
 
 	if (!user) {
-		throw new Error("認証が必要です");
+		throw new KoudenError("認証が必要です", "UNAUTHORIZED");
+	}
+
+	// オーナーチェックとメンバーロールチェックを1回のクエリで実行
+	const { data, error } = await supabase
+		.from("koudens")
+		.select(`
+			owner_id,
+			created_by,
+			members:kouden_members!inner(
+				role_id,
+				roles:kouden_roles!inner(
+					name
+				)
+			)
+		`)
+		.eq("id", koudenId)
+		.eq("kouden_members.user_id", user.id)
+		.single();
+
+	if (error) {
+		throw new KoudenError("権限の取得に失敗しました", "FETCH_PERMISSION_ERROR");
+	}
+
+	if (!data) {
+		throw new KoudenError("アクセス権限がありません", "FORBIDDEN");
 	}
 
 	// オーナーチェック
-	const { data: kouden, error: koudenError } = await supabase
-		.from("koudens")
-		.select("owner_id, created_by")
-		.eq("id", koudenId)
-		.single();
-
-	if (koudenError || !kouden) {
-		throw new Error("香典帳が見つかりません");
+	if (data.owner_id === user.id || data.created_by === user.id) {
+		return "owner";
 	}
 
-	if (kouden.owner_id === user.id || kouden.created_by === user.id) {
-		return "owner" as const;
-	}
+	// ロール名の変換
+	const roleName = data.members[0]?.roles?.name;
+	if (roleName === "editor") return "editor";
+	if (roleName === "viewer") return "viewer";
 
-	// メンバーロールチェック
-	const { data: member, error: memberError } = await supabase
-		.from("kouden_members")
-		.select("role_id, kouden_roles!inner(name)")
-		.eq("kouden_id", koudenId)
-		.eq("user_id", user.id)
-		.single();
+	throw new KoudenError("不明な権限です", "UNKNOWN_PERMISSION");
+});
 
-	if (memberError) {
-		throw new Error("権限の取得に失敗しました");
-	}
-
-	if (!member) {
-		throw new Error("アクセス権限がありません");
-	}
-
-	// 権限名の変換
-	if (member.kouden_roles.name === "editor") {
-		return "editor" as const;
-	}
-	if (member.kouden_roles.name === "viewer") {
-		return "viewer" as const;
-	}
-
-	throw new Error("不明な権限です");
-}
-
-// 管理者権限チェック関数
-export async function isKoudenOwner(koudenId: string): Promise<boolean> {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-
-	if (!user) {
+// 管理者権限チェック関数（キャッシュ対応）
+export const isKoudenOwner = cache(async (koudenId: string): Promise<boolean> => {
+	try {
+		const permission = await checkKoudenPermission(koudenId);
+		return permission === "owner";
+	} catch {
 		return false;
 	}
+});
 
-	const { data: kouden } = await supabase
-		.from("koudens")
-		.select("owner_id, created_by")
-		.eq("id", koudenId)
-		.single();
-
-	return kouden?.owner_id === user.id || kouden?.created_by === user.id;
-}
-
-// 編集権限チェック関数
-export async function hasEditPermission(koudenId: string): Promise<boolean> {
+/**
+ * 編集権限チェック関数（キャッシュ対応）
+ * @param koudenId 香典帳ID
+ * @returns 編集権限がある場合はtrue
+ */
+export const hasEditPermission = cache(async (koudenId: string): Promise<boolean> => {
 	try {
 		const permission = await checkKoudenPermission(koudenId);
 		return permission === "owner" || permission === "editor";
 	} catch {
 		return false;
 	}
-}
+});
 
 /**
  * ユーザーが香典帳にアクセスできるか確認

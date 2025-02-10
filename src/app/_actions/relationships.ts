@@ -111,14 +111,13 @@ export async function createRelationship(input: {
 // 関係性を更新
 export async function updateRelationship(
 	id: string,
-	input: { name: string; description?: string },
+	input: { name?: string; description?: string; is_default?: boolean },
 ) {
 	const supabase = await createClient();
 	const { data, error } = await supabase
 		.from("relationships")
 		.update({
-			name: input.name,
-			description: input.description,
+			...input,
 		})
 		.eq("id", id)
 		.select()
