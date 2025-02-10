@@ -14,6 +14,7 @@ const menuItems: MenuItem[] = [
 	{ label: "一般設定", href: "general" },
 	{ label: "メンバー", href: "members" },
 	{ label: "関係性", href: "relationships" },
+	{ label: "配送方法", href: "delivery-methods" },
 	{ label: "返礼品", href: "return-items" },
 ];
 

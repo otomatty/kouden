@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { GeneralSettingsForm } from "./_components/general-settings-form";
 
 interface GeneralSettingsPageProps {
-	params: { id: string };
+	params: Promise<{ id: string }>;
 }
 
 /**
@@ -10,8 +10,8 @@ interface GeneralSettingsPageProps {
  * - 香典帳の基本情報の表示・編集
  * - タイトル、説明、その他の一般設定の管理
  */
-export default function GeneralSettingsPage({ params }: GeneralSettingsPageProps) {
-	const { id: koudenId } = params;
+export default async function GeneralSettingsPage({ params }: GeneralSettingsPageProps) {
+	const { id: koudenId } = await params;
 
 	return (
 		<div className="container mx-auto py-6 space-y-6">
