@@ -55,9 +55,9 @@ export default async function KoudenLayout({ params, tabs }: KoudenLayoutProps) 
 				<PermissionProvider permission={permission}>
 					<div className="flex h-full flex-col">
 						<div className="flex-1 overflow-hidden">
-							<div className="space-y-4">
+							<div>
 								{/* ヘッダー */}
-								<div className="space-y-4 py-4">
+								<div className="space-y-4 py-4 mb-4">
 									<Button variant="ghost" className="flex items-center gap-2 w-fit" asChild>
 										<Link href="/koudens">
 											<ArrowLeft className="h-4 w-4" />
@@ -73,8 +73,7 @@ export default async function KoudenLayout({ params, tabs }: KoudenLayoutProps) 
 										<KoudenActionsMenu koudenId={kouden.id} koudenTitle={kouden.title} />
 									</div>
 								</div>
-
-								{tabs}
+								<div className="mb-4 min-h-[calc(100vh-10rem)]">{tabs}</div>
 
 								{/* モバイルメニュー */}
 								<MobileMenuWrapper

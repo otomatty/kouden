@@ -2,6 +2,7 @@
 import { getKouden } from "@/app/_actions/koudens";
 // components
 import { TabNavigation } from "./_components/tab-navigation";
+import { BottomNavigation } from "@/components/ui/bottom-navigation";
 import { Suspense } from "react";
 import { KoudenRealtimeProvider } from "@/providers/kouden-realtime-provider";
 
@@ -26,10 +27,14 @@ export default async function TabsLayout({ params, children }: TabsLayoutProps) 
 
 	return (
 		<KoudenRealtimeProvider koudenId={kouden.id}>
-			{/* タブナビゲーション */}
-			<TabNavigation id={kouden.id} />
+			{/* タブナビゲーション（デスクトップのみ） */}
+			<div className="hidden md:block">
+				<TabNavigation id={kouden.id} />
+			</div>
 			{/* タブコンテンツ */}
-			{children}
+			<div className="mt-4 min-h-[calc(100vh-10rem)]">{children}</div>
+			{/* ボトムナビゲーション（モバイルのみ） */}
+			<BottomNavigation id={kouden.id} />
 		</KoudenRealtimeProvider>
 	);
 }

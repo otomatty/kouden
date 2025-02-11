@@ -57,7 +57,7 @@ export default async function RootLayout({
 				<meta name="theme-color" content="#000000" />
 				<link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
 			</head>
-			<body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+			<body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-muted`}>
 				<TooltipProvider>
 					<Providers>{children}</Providers>
 				</TooltipProvider>

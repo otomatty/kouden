@@ -49,7 +49,7 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
 			<Toaster />
 			<InitializeGuideMode initialValue={guideMode}>
 				<TourGuide>
-					<div className="min-h-screen bg-gray-50">
+					<div className="min-h-screen bg-muted">
 						<Header user={user} isAdmin={isAdminUser} />
 						<div className="app-body container mx-auto px-4 py-8 md:my-12">
 							<main>{children}</main>

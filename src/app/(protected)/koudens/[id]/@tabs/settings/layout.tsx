@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { SidebarProvider, SidebarInset, SidebarTrigger, Sidebar } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
+
 import { cn } from "@/lib/utils";
 
 interface SettingsLayoutProps {
@@ -17,19 +18,23 @@ interface SettingsLayoutProps {
  */
 export default function SettingsLayout({ children, menu, contents }: SettingsLayoutProps) {
 	return (
-		<SidebarProvider>
-			{/* デスクトップ表示: menuとcontentsを表示、モバイルではhidden */}
-			<div className="hidden md:flex relative w-full h-full">
-				<Sidebar className={cn("w-60 py-6 border-r absolute")}>{menu}</Sidebar>
-				<SidebarInset className="flex-1 p-6">
-					<SidebarTrigger />
-					<Separator className="mt-4" />
-					{contents}
-				</SidebarInset>
-			</div>
-
+		<>
+			<SidebarProvider>
+				{/* デスクトップ表示: menuとcontentsを表示、モバイルではhidden */}
+				<div className="hidden md:flex relative w-full h-full">
+					<Sidebar className={cn("py-12 border-r absolute")}>{menu}</Sidebar>
+					<SidebarInset>
+						<div className="flex items-center gap-2 ml-4">
+							<SidebarTrigger />
+							<Separator orientation="vertical" className="h-full" />
+						</div>
+						<Separator className="mt-4" />
+						{contents}
+					</SidebarInset>
+				</div>
+			</SidebarProvider>
 			{/* モバイル表示: menu, contentsはhidden、childrenのみ表示 */}
-			<div className="md:hidden">{children}</div>
-		</SidebarProvider>
+			<div className="md:hidden mt-0">{children}</div>
+		</>
 	);
 }
