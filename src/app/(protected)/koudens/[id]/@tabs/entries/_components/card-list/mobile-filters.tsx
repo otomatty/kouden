@@ -1,4 +1,6 @@
 import { MobileDataTableToolbar } from "@/components/custom/data-table/mobile-toolbar";
+import { useScrollPosition } from "@/hooks/use-scroll-position";
+import { cn } from "@/lib/utils";
 import {
 	User,
 	Building2,
@@ -100,18 +102,30 @@ export function MobileFilters({
 	sortOrder,
 	onSortOrderChange,
 }: MobileFiltersProps) {
+	const { scrollY, isScrollingUp } = useScrollPosition();
+	const shouldStick = scrollY > 180; // ヘッダーの高さを考慮して調整
+
 	return (
-		<MobileDataTableToolbar
-			searchOptions={searchOptions}
-			sortOptions={sortOptions}
-			filterOptions={filterOptions}
-			showFilter={true}
-			showSort={true}
-			searchValue={searchQuery}
-			onSearchChange={onSearchChange}
-			searchPlaceholder={`${searchOptions.map((opt) => opt.label).join("・")}から検索...`}
-			sortOrder={sortOrder}
-			onSortOrderChange={onSortOrderChange}
-		/>
+		<div
+			className={cn(
+				"transition-all duration-200 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50",
+				shouldStick && !isScrollingUp
+					? "sticky top-16 border-b" // top-0 から top-16 に変更してヘッダー下に固定
+					: "relative",
+			)}
+		>
+			<MobileDataTableToolbar
+				searchOptions={searchOptions}
+				sortOptions={sortOptions}
+				filterOptions={filterOptions}
+				showFilter={true}
+				showSort={true}
+				searchValue={searchQuery}
+				onSearchChange={onSearchChange}
+				searchPlaceholder={`${searchOptions.map((opt) => opt.label).join("・")}から検索...`}
+				sortOrder={sortOrder}
+				onSortOrderChange={onSortOrderChange}
+			/>
+		</div>
 	);
 }

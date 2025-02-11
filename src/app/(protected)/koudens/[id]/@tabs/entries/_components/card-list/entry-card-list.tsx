@@ -76,7 +76,7 @@ export function EntryCardList({
 	}, [entries, searchQuery, sortOrder]);
 
 	return (
-		<div className="flex flex-col h-[100vh]">
+		<div className="flex flex-col">
 			<MobileFilters
 				searchQuery={searchQuery}
 				searchField={searchField}
@@ -85,7 +85,7 @@ export function EntryCardList({
 				sortOrder={sortOrder}
 				onSortOrderChange={setSortOrder}
 			/>
-			<div className="flex-1 overflow-auto">
+			<div className="flex-1">
 				<div className="space-y-2 py-4">
 					{filteredAndSortedData.map((entry) => (
 						<EntryCard

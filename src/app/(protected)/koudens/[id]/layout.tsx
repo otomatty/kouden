@@ -57,7 +57,7 @@ export default async function KoudenLayout({ params, tabs }: KoudenLayoutProps) 
 						<div className="flex-1 overflow-hidden">
 							<div>
 								{/* ヘッダー */}
-								<div className="space-y-4 py-4 mb-4">
+								<div className="space-y-4 py-4">
 									<Button variant="ghost" className="flex items-center gap-2 w-fit" asChild>
 										<Link href="/koudens">
 											<ArrowLeft className="h-4 w-4" />
