@@ -29,14 +29,12 @@ export default async function MembersPage({ params }: MembersPageProps) {
 				<h2 className="text-2xl font-bold tracking-tight">メンバー管理</h2>
 				<p className="text-sm text-muted-foreground">香典帳のメンバーを管理します</p>
 			</div>
-			<Suspense fallback={<div>Loading...</div>}>
-				<MemberView
-					koudenId={koudenId}
-					members={members as unknown as KoudenMember[]}
-					roles={roles}
-					permission={permission}
-				/>
-			</Suspense>
+			<MemberView
+				koudenId={koudenId}
+				members={members as unknown as KoudenMember[]}
+				roles={roles}
+				permission={permission}
+			/>
 		</div>
 	);
 }

@@ -15,9 +15,7 @@ export default async function ReturnItemsPage({ params }: Props) {
 				<h2 className="text-lg font-semibold">返礼品</h2>
 				<ReturnItemDialog koudenId={id} />
 			</div>
-			<Suspense fallback={<div>Loading...</div>}>
-				<ReturnItemCardList koudenId={id} />
-			</Suspense>
+			<ReturnItemCardList koudenId={id} />
 		</div>
 	);
 }

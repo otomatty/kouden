@@ -29,7 +29,7 @@ export default async function TabsLayout({ params, children }: TabsLayoutProps) 
 			{/* タブナビゲーション */}
 			<TabNavigation id={kouden.id} />
 			{/* タブコンテンツ */}
-			<Suspense fallback={<div>Loading...</div>}>{children}</Suspense>
+			{children}
 		</KoudenRealtimeProvider>
 	);
 }
