@@ -32,7 +32,7 @@ export default async function TabsLayout({ params, children }: TabsLayoutProps) 
 				<TabNavigation id={kouden.id} />
 			</div>
 			{/* タブコンテンツ */}
-			<div className="mt-4 min-h-[calc(100vh-10rem)]">{children}</div>
+			<div className="min-h-[calc(100vh-10rem)] mt-4">{children}</div>
 			{/* ボトムナビゲーション（モバイルのみ） */}
 			<BottomNavigation id={kouden.id} />
 		</KoudenRealtimeProvider>
