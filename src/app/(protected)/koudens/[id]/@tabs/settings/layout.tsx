@@ -22,7 +22,7 @@ export default function SettingsLayout({ children, menu, contents }: SettingsLay
 			<SidebarProvider>
 				{/* デスクトップ表示: menuとcontentsを表示、モバイルではhidden */}
 				<div className="hidden md:flex relative w-full h-full">
-					<Sidebar className={cn("py-12 border-r absolute")}>{menu}</Sidebar>
+					<Sidebar className={cn("py-12 border-r absolute bg-sidebar")}>{menu}</Sidebar>
 					<SidebarInset>
 						<div className="flex items-center gap-2 ml-4">
 							<SidebarTrigger />

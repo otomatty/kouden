@@ -1,6 +1,5 @@
 import { MobileDataTableToolbar } from "@/components/custom/data-table/mobile-toolbar";
-import { useScrollPosition } from "@/hooks/use-scroll-position";
-import { cn } from "@/lib/utils";
+import { StickySearchHeader } from "./sticky-search-header";
 import {
 	User,
 	Building2,
@@ -12,6 +11,7 @@ import {
 	Coins,
 	ArrowDownAZ,
 } from "lucide-react";
+import { useRef, useEffect, useState } from "react";
 
 interface MobileFiltersProps {
 	searchQuery: string;
@@ -102,30 +102,59 @@ export function MobileFilters({
 	sortOrder,
 	onSortOrderChange,
 }: MobileFiltersProps) {
-	const { scrollY, isScrollingUp } = useScrollPosition();
-	const shouldStick = scrollY > 180; // ヘッダーの高さを考慮して調整
+	const [isIntersecting, setIsIntersecting] = useState(true);
+	const searchBarRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0]) {
+					setIsIntersecting(entries[0].isIntersecting);
+				}
+			},
+			{
+				threshold: 0,
+				rootMargin: "-80px 0px 0px 0px", // ヘッダーの高さを考慮したマージン
+			},
+		);
+
+		if (searchBarRef.current) {
+			observer.observe(searchBarRef.current);
+		}
+
+		return () => {
+			observer.disconnect();
+		};
+	}, []);
 
 	return (
-		<div
-			className={cn(
-				"transition-all duration-200 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50",
-				shouldStick && !isScrollingUp
-					? "sticky top-16 border-b" // top-0 から top-16 に変更してヘッダー下に固定
-					: "relative",
-			)}
-		>
-			<MobileDataTableToolbar
+		<>
+			<StickySearchHeader
+				searchQuery={searchQuery}
+				onSearchChange={onSearchChange}
+				searchField=""
+				onSearchFieldChange={() => {}}
+				sortOrder={sortOrder}
+				onSortOrderChange={onSortOrderChange}
+				isIntersecting={isIntersecting}
 				searchOptions={searchOptions}
 				sortOptions={sortOptions}
 				filterOptions={filterOptions}
-				showFilter={true}
-				showSort={true}
-				searchValue={searchQuery}
-				onSearchChange={onSearchChange}
-				searchPlaceholder={`${searchOptions.map((opt) => opt.label).join("・")}から検索...`}
-				sortOrder={sortOrder}
-				onSortOrderChange={onSortOrderChange}
 			/>
-		</div>
+			<div ref={searchBarRef}>
+				<MobileDataTableToolbar
+					searchOptions={searchOptions}
+					sortOptions={sortOptions}
+					filterOptions={filterOptions}
+					showFilter={true}
+					showSort={true}
+					searchValue={searchQuery}
+					onSearchChange={onSearchChange}
+					searchPlaceholder={`${searchOptions.map((opt) => opt.label).join("・")}から検索...`}
+					sortOrder={sortOrder}
+					onSortOrderChange={onSortOrderChange}
+				/>
+			</div>
+		</>
 	);
 }

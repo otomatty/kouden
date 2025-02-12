@@ -85,7 +85,7 @@ export function EntryCardList({
 				sortOrder={sortOrder}
 				onSortOrderChange={setSortOrder}
 			/>
-			<div className="flex-1">
+			<div className="flex-1 overflow-auto">
 				<div className="space-y-2 py-4">
 					{filteredAndSortedData.map((entry) => (
 						<EntryCard

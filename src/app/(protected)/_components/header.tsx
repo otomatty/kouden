@@ -16,13 +16,7 @@ import {
 	PlayCircle,
 	Settings,
 } from "lucide-react";
-import {
-	Sheet,
-	SheetContent,
-	SheetHeader,
-	SheetTitle,
-	SheetTrigger,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
 import { UserMenu } from "./user-menu";
 import { NotificationsPopover } from "./notifications-popover";
@@ -79,9 +73,7 @@ export function Header({ user, isAdmin }: HeaderProps) {
 											<Avatar>
 												<AvatarImage src={user.user_metadata.avatar_url} />
 												<AvatarFallback>
-													{user.user_metadata.full_name
-														?.charAt(0)
-														.toUpperCase() ||
+													{user.user_metadata.full_name?.charAt(0).toUpperCase() ||
 														user.email?.charAt(0).toUpperCase()}
 												</AvatarFallback>
 											</Avatar>
@@ -109,7 +101,7 @@ export function Header({ user, isAdmin }: HeaderProps) {
 											}}
 										>
 											<Settings className="mr-2 h-4 w-4" />
-											設定
+											ユーザー設定
 										</Button>
 										{isAdmin && (
 											<Button
@@ -150,11 +142,7 @@ export function Header({ user, isAdmin }: HeaderProps) {
 									<div className="mt-auto flex flex-col gap-2">
 										<FeedbackButton />
 										<Separator />
-										<Button
-											variant="outline"
-											className="justify-start"
-											onClick={handleSignOut}
-										>
+										<Button variant="outline" className="justify-start" onClick={handleSignOut}>
 											<LogOut className="mr-2 h-4 w-4" />
 											ログアウト
 										</Button>

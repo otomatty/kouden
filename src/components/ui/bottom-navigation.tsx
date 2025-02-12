@@ -3,14 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Table2, Box, BarChart3, MoreHorizontal, Gift, Mail, Settings, Plus } from "lucide-react";
 import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+	Table2,
+	Box,
+	BarChart3,
+	Gift,
+	Mail,
+	Settings,
+	Plus,
+	ChevronUp,
+	ChevronDown,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface BottomNavigationProps {
 	id: string;
@@ -20,20 +26,19 @@ interface BottomNavigationProps {
  * モバイル用のボトムナビゲーションコンポーネント
  * - 香典帳詳細画面のナビゲーションを提供
  * - モバイル時のみ表示される
- * - 主要な4つの項目（ご香典、香典返し、統計、その他）を表示
+ * - メインメニューと追加メニューを縦方向のスライドで切り替え可能
  * - 中央に新規作成ボタンを配置
- * - その他タブはドロップアップメニューで追加の項目を表示
  * - 現在のパスに基づいてアクティブな項目を強調表示
  */
 export function BottomNavigation({ id }: BottomNavigationProps) {
 	const pathname = usePathname();
+	const [showMoreMenu, setShowMoreMenu] = useState(false);
 
-	const leftTabs = [
+	const mainTabs = [
 		{ id: "entries", label: "ご香典", icon: <Table2 className="h-5 w-5" /> },
 		{ id: "return_records", label: "香典返し", icon: <Box className="h-5 w-5" /> },
+		{ id: "statistics", label: "統計", icon: <BarChart3 className="h-5 w-5" /> },
 	];
-
-	const rightTabs = [{ id: "statistics", label: "統計", icon: <BarChart3 className="h-5 w-5" /> }];
 
 	const moreTabs = [
 		{ id: "offerings", label: "お供物", icon: <Gift className="h-5 w-5" /> },
@@ -41,17 +46,16 @@ export function BottomNavigation({ id }: BottomNavigationProps) {
 		{ id: "settings", label: "設定", icon: <Settings className="h-5 w-5" /> },
 	];
 
-	// その他タブに含める項目のパス
-	const morePaths = moreTabs.map((tab) => tab.id);
-
-	const NavLink = ({ tab }: { tab: (typeof leftTabs)[0] }) => {
+	const NavLink = ({ tab }: { tab: (typeof mainTabs)[0] }) => {
 		const isActive = pathname.includes(`/${tab.id}`);
 		return (
 			<Link
 				href={`/koudens/${id}/${tab.id}`}
 				className={cn(
-					"flex flex-col items-center justify-center gap-1 py-2",
-					isActive ? "text-primary" : "text-muted-foreground",
+					"flex-1 flex flex-col items-center justify-center gap-1 rounded-lg transition-colors p-1",
+					isActive
+						? "text-primary bg-primary/10 font-medium [&_svg]:text-primary"
+						: "text-muted-foreground hover:text-primary hover:bg-muted [&_svg]:text-muted-foreground",
 				)}
 			>
 				{tab.icon}
@@ -62,65 +66,97 @@ export function BottomNavigation({ id }: BottomNavigationProps) {
 
 	return (
 		<nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-muted bg-background md:hidden">
-			<div className="flex h-16 items-center">
-				{/* 左側のタブ */}
-				<div className="flex flex-1 items-center justify-evenly">
-					{leftTabs.map((tab) => (
-						<NavLink key={tab.id} tab={tab} />
-					))}
-				</div>
-
-				{/* 中央の新規作成ボタン */}
-				<div className="relative flex h-full w-20 items-center justify-center ">
-					{/* 下部の半円くり抜き */}
-					<div className="absolute top-0 left-1/2 h-12 w-full overflow-hidden -translate-x-1/2">
-						<div className="absolute bottom-0 h-20 w-full rounded-full bg-muted " />
-					</div>
-					{/* 新規作成ボタン */}
-					<div className="absolute -top-6">
-						<Button
-							className="flex h-16 w-16 items-center justify-center rounded-full bg-primary p-0 text-primary-foreground hover:bg-primary/90 [&_svg]:!h-6 [&_svg]:!w-6"
-							onClick={() => {
-								// TODO: 新規作成のハンドラーを実装
-								console.log("新規作成");
-							}}
-						>
-							<Plus />
-						</Button>
+			<div className="relative h-16">
+				{/* 中央の新規作成ボタン - アニメーションの外に配置 */}
+				<div className="absolute left-1/2 -translate-x-1/2 z-10">
+					<div className="relative flex h-16 w-16 items-center justify-center">
+						<div className="absolute top-0 left-1/2 h-16 w-full overflow-hidden -translate-x-1/2">
+							<div className="absolute bottom-3 h-16 w-full rounded-full bg-muted" />
+						</div>
+						<div className="absolute -top-2">
+							<Button
+								className="flex h-14 w-14 items-center justify-center rounded-full bg-primary p-0 text-primary-foreground hover:bg-primary/90 [&_svg]:!h-6 [&_svg]:!w-6 shadow-lg"
+								onClick={() => {
+									console.log("新規作成");
+								}}
+							>
+								<Plus />
+							</Button>
+						</div>
 					</div>
 				</div>
 
-				{/* 右側のタブ */}
-				<div className="flex flex-1 items-center justify-evenly">
-					{rightTabs.map((tab) => (
-						<NavLink key={tab.id} tab={tab} />
-					))}
+				<AnimatePresence initial={false}>
+					<motion.div
+						key={showMoreMenu ? "more" : "main"}
+						initial={{ opacity: 0, y: showMoreMenu ? -20 : 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						exit={{ opacity: 0, y: showMoreMenu ? 20 : -20 }}
+						transition={{ duration: 0.2 }}
+						className="absolute inset-0 flex items-center"
+					>
+						{showMoreMenu ? (
+							// 追加メニュー
+							<>
+								<div className="flex flex-1 items-center justify-between gap-1 py-2 px-1 h-full">
+									{moreTabs.slice(0, 2).map((tab) => (
+										<NavLink key={tab.id} tab={tab} />
+									))}
+								</div>
 
-					{/* その他メニュー */}
-					<DropdownMenu>
-						<DropdownMenuTrigger
-							className={cn(
-								"flex flex-col items-center justify-center gap-1 py-2",
-								morePaths.some((path) => pathname.includes(`/${path}`))
-									? "text-primary"
-									: "text-muted-foreground",
-							)}
-						>
-							<MoreHorizontal className="h-5 w-5" />
-							<span className="text-xs">その他</span>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent side="top" align="end" className="w-56">
-							{moreTabs.map((tab) => (
-								<DropdownMenuItem key={tab.id} asChild>
-									<Link href={`/koudens/${id}/${tab.id}`} className="flex items-center gap-2">
-										{tab.icon}
-										<span>{tab.label}</span>
-									</Link>
-								</DropdownMenuItem>
-							))}
-						</DropdownMenuContent>
-					</DropdownMenu>
-				</div>
+								{/* 中央のスペース確保 */}
+								<div className="w-16" />
+
+								<div className="flex flex-1 items-center justify-between gap-1 py-2 px-1 h-full">
+									{moreTabs.slice(-1).map((tab) => (
+										<NavLink key={tab.id} tab={tab} />
+									))}
+									<button
+										type="button"
+										onClick={() => setShowMoreMenu(false)}
+										className={cn(
+											"flex-1 flex flex-col items-center justify-between gap-1 p-1",
+											"text-muted-foreground hover:text-primary transition-colors",
+										)}
+									>
+										<ChevronDown className="h-5 w-5" />
+										<span className="text-xs">戻る</span>
+									</button>
+								</div>
+							</>
+						) : (
+							// メインメニュー
+							<>
+								<div className="flex flex-1 items-center justify-between gap-1 py-2 px-1 h-full">
+									{mainTabs.slice(0, 2).map((tab) => (
+										<NavLink key={tab.id} tab={tab} />
+									))}
+								</div>
+
+								{/* 中央のスペース確保 */}
+								<div className="w-16" />
+
+								<div className="flex flex-1 items-center justify-between gap-1 py-2 px-1 h-full">
+									{mainTabs.slice(2).map((tab) => (
+										<NavLink key={tab.id} tab={tab} />
+									))}
+									{/* メニュー切り替えボタン */}
+									<button
+										type="button"
+										onClick={() => setShowMoreMenu(!showMoreMenu)}
+										className={cn(
+											"flex-1 flex flex-col items-center justify-center gap-1 p-1",
+											"text-muted-foreground hover:text-primary transition-colors",
+										)}
+									>
+										<ChevronUp className="h-5 w-5" />
+										<span className="text-xs">その他</span>
+									</button>
+								</div>
+							</>
+						)}
+					</motion.div>
+				</AnimatePresence>
 			</div>
 		</nav>
 	);
