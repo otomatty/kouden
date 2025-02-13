@@ -1,17 +1,18 @@
 import { useEffect, useState } from "react";
 
 export function useMediaQuery(query: string): boolean {
-	// 初期値をfalseに設定 (モバイルファースト)
-	const [matches, setMatches] = useState<boolean | null>(false);
+	// 初期値をクライアントサイドとサーバーサイドで条件分岐
+	const [matches, setMatches] = useState<boolean>(() => {
+		if (typeof window !== "undefined") {
+			return window.matchMedia(query).matches;
+		}
+		return false;
+	});
 
 	useEffect(() => {
 		// クライアントサイドでのみメディアクエリを評価 (SSR対策)
 		if (typeof window !== "undefined") {
 			const mediaQuery = window.matchMedia(query);
-			if (mediaQuery.matches !== matches) {
-				setMatches(mediaQuery.matches);
-			}
-
 			const handler = (event: MediaQueryListEvent) => {
 				setMatches(event.matches);
 			};
@@ -22,12 +23,8 @@ export function useMediaQuery(query: string): boolean {
 				mediaQuery.removeEventListener("change", handler);
 			};
 		}
-	}, [query, matches]);
-
-	// SSRまたは初期レンダリング時はnullを返す
-	if (matches === null) {
-		return false; // デフォルト値
-	}
+		return () => {}; // サーバーサイドで実行された場合もクリーンアップ関数を返す
+	}, [query]);
 
 	return matches;
 }
