@@ -15,5 +15,9 @@ export default async function OfferingsPage({ params }: OfferingsPageProps) {
 	const { id: koudenId } = await params;
 	const [offerings, entries] = await Promise.all([getOfferings(koudenId), getEntries(koudenId)]);
 
-	return <OfferingView koudenId={koudenId} offerings={offerings} entries={entries} />;
+	return (
+		<div className="mt-4">
+			<OfferingView koudenId={koudenId} offerings={offerings} entries={entries} />
+		</div>
+	);
 }

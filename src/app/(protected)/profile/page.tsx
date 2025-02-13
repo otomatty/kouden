@@ -21,7 +21,7 @@ export default async function ProfilePage() {
 	} = await supabase.auth.getUser();
 
 	if (!user) {
-		redirect("/login");
+		redirect("/auth/login");
 	}
 
 	const [profileResult, statsResult] = await Promise.all([

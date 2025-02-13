@@ -24,11 +24,11 @@ export default function SettingsLayout({ children, menu, contents }: SettingsLay
 				<div className="hidden md:flex relative w-full h-full">
 					<Sidebar className={cn("py-12 border-r absolute bg-sidebar")}>{menu}</Sidebar>
 					<SidebarInset>
-						<div className="flex items-center gap-2 ml-4">
+						<div className="flex items-center gap-2 ml-4 mt-4">
 							<SidebarTrigger />
 							<Separator orientation="vertical" className="h-full" />
 						</div>
-						<Separator className="mt-4" />
+						<Separator className="m-4" />
 						{contents}
 					</SidebarInset>
 				</div>

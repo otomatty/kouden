@@ -19,5 +19,9 @@ export default async function EntriesPage({ params }: EntriesPageProps) {
 		getRelationships(koudenId),
 	]);
 
-	return <EntryView koudenId={koudenId} entries={entries} relationships={relationships} />;
+	return (
+		<div className="mt-4">
+			<EntryView koudenId={koudenId} entries={entries} relationships={relationships} />
+		</div>
+	);
 }

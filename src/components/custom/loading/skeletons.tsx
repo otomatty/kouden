@@ -81,12 +81,13 @@ export function ResponsiveSkeleton({
 	gridColumns = { sm: 2, lg: 3 },
 }: ResponsiveSkeletonProps) {
 	return (
-		<div className="space-y-4">
+		<div className="space-y-4 mt-4">
 			{/* 検索バーのスケルトン */}
 			{showSearchBar && (
-				<div className="flex items-center justify-between">
-					<Skeleton className="h-10 w-[250px]" />
-					<Skeleton className="h-10 w-[100px]" />
+				<div className="flex items-center justify-between gap-4">
+					<Skeleton className="h-16 flex-1" />
+					<Skeleton className="h-16 w-[300px]" />
+					<Skeleton className="h-16 w-[150px]" />
 				</div>
 			)}
 
@@ -146,7 +147,7 @@ export function CardListSkeleton({ rows = 5 }: SkeletonProps) {
 	const rowIds = Array.from({ length: rows }, (_, i) => i.toString());
 
 	return (
-		<div className="space-y-4">
+		<div className="space-y-4 mt-4">
 			{rowIds.map((row) => (
 				<div key={`card-${row}`} className="rounded-lg border p-4 space-y-4">
 					{/* カードヘッダー */}
@@ -232,7 +233,7 @@ export function StatsSummarySkeleton({ cards = 3 }: StatsSummaryCardProps) {
 	const cardIds = Array.from({ length: cards }, (_, i) => i.toString());
 
 	return (
-		<div className="space-y-8">
+		<div className="space-y-8 mt-4">
 			{/* サマリーカードのスケルトン */}
 			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 				{cardIds.map((card) => (

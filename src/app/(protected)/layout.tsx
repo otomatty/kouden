@@ -21,7 +21,7 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
 	} = await supabase.auth.getUser();
 
 	if (!user) {
-		redirect("/login");
+		redirect("/auth/login");
 	}
 
 	// プロフィールの確認

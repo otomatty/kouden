@@ -73,6 +73,12 @@ export interface CrudDialogProps<T = void> {
 	buttonClassName?: string;
 
 	/**
+	 * カスタムトリガー要素
+	 * 指定された場合、デフォルトのトリガーボタンの代わりに使用されます
+	 */
+	trigger?: React.ReactNode;
+
+	/**
 	 * ダイアログコンテンツのクラス名
 	 * @default "max-w-2xl"
 	 */
@@ -110,6 +116,7 @@ export function CrudDialog<T = void>({
 	contentClassName = "max-w-2xl",
 	createButtonLabel = "新規登録",
 	editButtonLabel = "編集",
+	trigger: customTrigger,
 	children,
 	onSuccess,
 }: CrudDialogProps<T>) {
@@ -148,19 +155,20 @@ export function CrudDialog<T = void>({
 				? "flex items-center gap-2" // 作成ボタン
 				: "w-full relative flex cursor-default select-none justify-start items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:size-4 [&>svg]:shrink-0"; // 編集ボタン
 
+	// デフォルトのトリガーボタン
+	const defaultTrigger = variant ? (
+		<Button
+			size={buttonSize}
+			variant={isMobile ? "default" : variant === "create" ? "default" : "ghost"}
+			className={buttonClassName || defaultButtonClassName}
+		>
+			{buttonContent}
+		</Button>
+	) : null;
+
 	return (
 		<ResponsiveDialog
-			trigger={
-				variant ? (
-					<Button
-						size={buttonSize}
-						variant={isMobile ? "default" : variant === "create" ? "default" : "ghost"}
-						className={buttonClassName || defaultButtonClassName}
-					>
-						{buttonContent}
-					</Button>
-				) : null
-			}
+			trigger={customTrigger || defaultTrigger}
 			title={title}
 			contentClassName={contentClassName}
 			onSuccess={onSuccess ? () => onSuccess({} as T) : undefined}

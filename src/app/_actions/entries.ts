@@ -10,6 +10,10 @@ import type {
 	Entry,
 	AttendanceType,
 } from "@/types/entries";
+import { camelToSnake, snakeToCamel } from "@/utils/case-converter";
+import type { Database } from "@/types/supabase";
+
+type KoudenEntry = Database["public"]["Tables"]["kouden_entries"]["Insert"];
 
 export async function createEntry(input: CreateEntryInput): Promise<EntryResponse> {
 	const supabase = await createClient();
@@ -22,29 +26,23 @@ export async function createEntry(input: CreateEntryInput): Promise<EntryRespons
 	}
 
 	try {
-		// フロントエンドのキーをデータベースのカラム名に変換
-		const {
-			koudenId,
-			attendanceType,
-			relationshipId,
-			postalCode,
-			phoneNumber,
-			hasOffering,
-			isReturnCompleted,
-			...rest
-		} = input;
+		// デバッグ: 入力データのログ
+		console.log("[DEBUG] Create Entry Input:", {
+			input,
+			userId: user.id,
+		});
 
-		const createData = {
-			...rest,
-			kouden_id: koudenId,
-			attendance_type: attendanceType ?? "ABSENT",
-			relationship_id: relationshipId,
-			postal_code: postalCode,
-			phone_number: phoneNumber,
-			has_offering: hasOffering,
-			is_return_completed: isReturnCompleted,
+		// キャメルケースからスネークケースへの変換
+		const snakeCaseData = camelToSnake(input) as KoudenEntry;
+
+		// created_by の追加
+		const createData: KoudenEntry = {
+			...snakeCaseData,
 			created_by: user.id,
 		};
+
+		// デバッグ: 変換後のデータをログ
+		console.log("[DEBUG] Transformed Data:", createData);
 
 		const { data, error } = await supabase
 			.from("kouden_entries")
@@ -53,25 +51,40 @@ export async function createEntry(input: CreateEntryInput): Promise<EntryRespons
 			.single();
 
 		if (error) {
-			console.error("[ERROR] Create failed:", {
+			// デバッグ: エラーの詳細情報をログ
+			console.error("[ERROR] Create Entry Failed:", {
 				error,
 				errorCode: error.code,
 				errorMessage: error.message,
 				errorDetails: error.details,
+				createData,
 				input,
+				userId: user.id,
 			});
+
+			// エラーメッセージの改善
+			if (error.code === "42501") {
+				throw new Error("香典帳へのアクセス権限がありません");
+			}
 			throw new Error("香典情報の作成に失敗しました");
 		}
 
 		Promise.resolve().then(() => {
-			revalidatePath(`/koudens/${input.kouden_id}`);
+			revalidatePath(`/koudens/${input.koudenId}`);
 		});
 
-		const response = {
-			...data,
+		// スネークケースからキャメルケースへの変換
+		const response: EntryResponse = {
+			...data, // 元のスネークケースデータを使用
 			attendanceType: data.attendance_type as AttendanceType,
 			relationshipId: data.relationship_id,
 		};
+
+		// デバッグ: 成功時のレスポンスをログ
+		console.log("[DEBUG] Create Entry Success:", {
+			response,
+			userId: user.id,
+		});
 
 		return response;
 	} catch (error) {
@@ -79,8 +92,9 @@ export async function createEntry(input: CreateEntryInput): Promise<EntryRespons
 			error,
 			input,
 			errorMessage: error instanceof Error ? error.message : "Unknown error",
+			userId: user.id,
 		});
-		throw new Error("香典情報の作成に失敗しました");
+		throw error instanceof Error ? error : new Error("香典情報の作成に失敗しました");
 	}
 }
 
@@ -136,7 +150,7 @@ export async function getEntries(koudenId: string): Promise<Entry[]> {
 			relationship: relationships.find((r) => r.id === entry.relationship_id) || null,
 		}));
 
-		return entriesWithRelationships;
+		return entriesWithRelationships as Entry[];
 	} catch (error) {
 		console.error("[ERROR] Unexpected error in getEntries:", error);
 		throw error;
@@ -175,7 +189,6 @@ export async function updateEntry(id: string, input: UpdateEntryInput): Promise<
 		// フロントエンドのキーをデータベースのカラム名に変換
 		const {
 			id: _id,
-			offering_entries,
 			koudenId,
 			attendanceType,
 			hasOffering,

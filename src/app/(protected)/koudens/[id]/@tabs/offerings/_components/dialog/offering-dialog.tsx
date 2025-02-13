@@ -15,6 +15,7 @@ export interface OfferingDialogProps {
 	variant?: "create" | "edit" | undefined; // undefinedはボタンが表示されないことを表す
 	buttonClassName?: string;
 	onSuccess?: (offering: Offering) => void;
+	trigger?: React.ReactNode;
 }
 
 export function OfferingDialog({
@@ -24,23 +25,29 @@ export function OfferingDialog({
 	variant,
 	buttonClassName,
 	onSuccess,
+	trigger,
 }: OfferingDialogProps) {
 	return (
-		<CrudDialog
+		<CrudDialog<Offering>
 			title={variant === "create" ? "お供え物を追加" : "お供え物の編集"}
 			variant={variant}
 			buttonClassName={buttonClassName}
 			createButtonLabel="お供え物を追加"
+			editButtonLabel="編集する"
+			onSuccess={onSuccess}
+			trigger={trigger}
 		>
-			<OfferingForm
-				koudenId={koudenId}
-				entries={entries}
-				defaultValues={defaultValues}
-				onSuccess={(offering) => {
-					onSuccess?.(offering);
-					close();
-				}}
-			/>
+			{({ close }) => (
+				<OfferingForm
+					koudenId={koudenId}
+					entries={entries}
+					defaultValues={defaultValues}
+					onSuccess={(offering) => {
+						onSuccess?.(offering);
+						close();
+					}}
+				/>
+			)}
 		</CrudDialog>
 	);
 }

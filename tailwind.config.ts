@@ -16,6 +16,9 @@ const config: Config = {
 			},
 		},
 		extend: {
+			fontFamily: {
+				zen: ["var(--font-zen-old-mincho)"],
+			},
 			colors: {
 				border: "hsl(var(--border))",
 				input: "hsl(var(--input))",

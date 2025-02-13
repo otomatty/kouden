@@ -52,12 +52,20 @@ export function EntryForm({ koudenId, relationships, defaultValues, onSuccess }:
 		resolver: zodResolver(entryFormSchema),
 		defaultValues: defaultValues
 			? {
-					...defaultValues,
+					name: defaultValues.name || "",
+					organization: defaultValues.organization,
+					position: defaultValues.position,
+					amount: defaultValues.amount,
+					postalCode: defaultValues.postal_code,
+					address: defaultValues.address,
+					phoneNumber: defaultValues.phone_number,
+					relationshipId: defaultValues.relationship_id,
 					attendanceType: defaultValues.attendance_type as AttendanceType,
-					relationshipId: defaultValues.relationship_id ?? null,
+					notes: defaultValues.notes,
+					koudenId,
 				}
 			: {
-					name: null,
+					name: "",
 					organization: null,
 					position: null,
 					amount: 0,
@@ -65,33 +73,35 @@ export function EntryForm({ koudenId, relationships, defaultValues, onSuccess }:
 					address: null,
 					phoneNumber: null,
 					relationshipId: null,
-					hasOffering: false,
-					isReturnCompleted: false,
 					attendanceType: "FUNERAL",
 					notes: null,
+					koudenId,
 				},
 	});
 
 	const onSubmit = async (values: EntryFormValues) => {
 		try {
+			console.log("[DEBUG] Form submission started:", { values });
 			setSubmissionState({ isSubmitting: true, error: null });
 
 			if (values.relationshipId === undefined) {
 				values.relationshipId = null;
 			}
 
+			console.log("[DEBUG] Calling handleEntrySubmission with:", {
+				values,
+				koudenId,
+				defaultValues,
+			});
 			const result = await handleEntrySubmission(values, koudenId, defaultValues);
+			console.log("[DEBUG] handleEntrySubmission result:", { result });
 
 			if (!result) {
+				console.error("[DEBUG] No result from handleEntrySubmission");
 				throw new Error("エントリーの保存に失敗しました");
 			}
 
-			if (defaultValues?.id) {
-				await updateEntry(values.id, result);
-			} else {
-				await createEntry(result);
-			}
-
+			// 成功時の処理
 			onSuccess?.(result);
 			toast({
 				title: defaultValues ? "更新しました" : "登録しました",
@@ -102,7 +112,14 @@ export function EntryForm({ koudenId, relationships, defaultValues, onSuccess }:
 				form.reset();
 			}
 		} catch (error) {
-			console.error("[ERROR] Entry submission failed:", error);
+			console.error("[DEBUG] Entry submission failed:", {
+				error,
+				errorMessage: error instanceof Error ? error.message : "Unknown error",
+				errorStack: error instanceof Error ? error.stack : undefined,
+				values,
+				koudenId,
+				defaultValues,
+			});
 			setSubmissionState({
 				isSubmitting: false,
 				error: error instanceof Error ? error.message : "保存に失敗しました",
@@ -113,13 +130,23 @@ export function EntryForm({ koudenId, relationships, defaultValues, onSuccess }:
 				variant: "destructive",
 			});
 		} finally {
+			console.log("[DEBUG] Form submission completed");
 			setSubmissionState((prev) => ({ ...prev, isSubmitting: false }));
 		}
 	};
 
 	return (
 		<Form {...form}>
-			<form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
+			<form
+				onSubmit={form.handleSubmit(onSubmit, (errors) => {
+					console.error("[DEBUG] Form validation errors:", {
+						errors,
+						formValues: form.getValues(),
+						formState: form.formState,
+					});
+				})}
+				className="grid gap-4 py-4"
+			>
 				<Tabs defaultValue="basic" className="w-full">
 					<TabsList className="grid w-full grid-cols-2">
 						<TabsTrigger value="basic">基本情報</TabsTrigger>

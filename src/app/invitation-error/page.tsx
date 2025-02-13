@@ -8,7 +8,7 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { AlertCircle, ArrowLeft } from "lucide-react";
-import { Header } from "@/app/_components/header";
+import { Header } from "@/app/(public)/_components/header";
 import Link from "next/link";
 
 interface PageProps {
@@ -39,23 +39,17 @@ export default async function InvitationErrorPage({ searchParams }: PageProps) {
 								<AlertCircle className="h-6 w-6 text-destructive" />
 								<CardTitle>招待エラー</CardTitle>
 							</div>
-							<CardDescription>
-								招待の処理中にエラーが発生しました
-							</CardDescription>
+							<CardDescription>招待の処理中にエラーが発生しました</CardDescription>
 						</CardHeader>
 						<CardContent>
 							{errorMessage && (
 								<div className="mb-6 rounded-md bg-destructive/10 p-4">
-									<p className="text-sm text-destructive">
-										{decodeURIComponent(errorMessage)}
-									</p>
+									<p className="text-sm text-destructive">{decodeURIComponent(errorMessage)}</p>
 								</div>
 							)}
 							<div className="space-y-6">
 								<div>
-									<h3 className="font-semibold text-lg mb-3">
-										考えられる原因：
-									</h3>
+									<h3 className="font-semibold text-lg mb-3">考えられる原因：</h3>
 									<ul className="list-disc pl-6 text-sm text-muted-foreground space-y-2">
 										<li>招待リンクの有効期限が切れている</li>
 										<li>招待リンクが既に使用されている</li>
@@ -68,9 +62,7 @@ export default async function InvitationErrorPage({ searchParams }: PageProps) {
 									<ul className="list-disc pl-6 text-sm text-muted-foreground space-y-2">
 										<li>招待者に新しい招待リンクを発行してもらう</li>
 										<li>招待者に連絡して状況を確認する</li>
-										<li>
-											既にメンバーの場合は、直接香典帳一覧からアクセスする
-										</li>
+										<li>既にメンバーの場合は、直接香典帳一覧からアクセスする</li>
 									</ul>
 								</div>
 							</div>

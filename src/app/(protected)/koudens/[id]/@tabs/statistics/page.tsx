@@ -14,5 +14,9 @@ export default async function StatisticsPage({ params }: StatisticsPageProps) {
 	const { id: koudenId } = await params;
 	const entries = await getEntries(koudenId);
 
-	return <KoudenStatistics entries={entries} />;
+	return (
+		<div className="mt-4">
+			<KoudenStatistics entries={entries} />
+		</div>
+	);
 }

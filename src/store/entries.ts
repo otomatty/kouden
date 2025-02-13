@@ -125,18 +125,16 @@ export const errorAtom = atom<Error | null>(null);
 
 // フォームの状態を管理するatom
 export const entryFormAtom = atom<EntryForm>({
-	name: null,
-	organization: null,
-	position: null,
+	name: "",
+	organization: "",
+	position: "",
 	amount: 0,
-	postalCode: null,
-	address: null,
+	postalCode: "",
+	address: "",
 	phoneNumber: null,
 	relationshipId: null,
 	attendanceType: "FUNERAL",
-	hasOffering: false,
-	isReturnCompleted: false,
-	notes: null,
+	notes: "",
 });
 
 // フォームの初期値をセットするatom
@@ -170,18 +168,16 @@ export const updateEntryFormAtom = atom(
 // フォームをリセットするatom
 export const resetEntryFormAtom = atom(null, (_get, set) => {
 	set(entryFormAtom, {
-		name: null,
-		organization: null,
-		position: null,
+		name: "",
+		organization: "",
+		position: "",
 		amount: 0,
-		postalCode: null,
-		address: null,
+		postalCode: "",
+		address: "",
 		phoneNumber: null,
 		relationshipId: null,
 		attendanceType: "FUNERAL",
-		hasOffering: false,
-		isReturnCompleted: false,
-		notes: null,
+		notes: "",
 	});
 });
 

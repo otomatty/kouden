@@ -24,10 +24,12 @@ export const handleEntrySubmission = async (
 		koudenId,
 		// relationshipIdが未設定の場合はnullを設定
 		relationshipId: values.relationshipId ?? null,
+		hasOffering: false,
+		isReturnCompleted: false,
 	};
 
 	const response = existingEntry?.id
-		? await updateEntry(existingEntry.id, input)
+		? await updateEntry(existingEntry.id, { ...input, id: existingEntry.id })
 		: await createEntry(input);
 
 	return convertToEntry(response);

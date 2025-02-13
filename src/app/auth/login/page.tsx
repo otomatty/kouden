@@ -1,4 +1,4 @@
-import { Header } from "@/app/_components/header";
+import { Header } from "@/app/(public)/_components/header";
 import { LoginForm } from "./_components/login-form";
 
 export default function LoginPage() {

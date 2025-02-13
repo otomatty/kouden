@@ -9,7 +9,7 @@ import { Construction } from "lucide-react";
  */
 export default function ReturnRecordsPage() {
 	return (
-		<div className="container mx-auto p-4 space-y-6">
+		<div className="container mx-auto p-4 space-y-6 mt-4">
 			<Card>
 				<CardHeader>
 					<CardTitle>返礼品管理</CardTitle>

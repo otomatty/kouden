@@ -17,6 +17,7 @@ interface TelegramDialogProps {
 	onSuccess?: (telegram: Telegram) => void;
 	open?: boolean;
 	onOpenChange?: (open: boolean) => void;
+	trigger?: React.ReactNode;
 }
 
 export function TelegramDialog({
@@ -26,25 +27,30 @@ export function TelegramDialog({
 	variant,
 	buttonClassName,
 	onSuccess,
-	onOpenChange,
+	trigger,
 }: TelegramDialogProps) {
 	return (
-		<CrudDialog
+		<CrudDialog<Telegram>
 			title={variant === "create" ? "弔電を登録する" : "弔電を編集する"}
 			variant={variant}
 			buttonClassName={buttonClassName}
 			createButtonLabel="弔電を登録する"
+			editButtonLabel="編集する"
+			onSuccess={onSuccess}
+			trigger={trigger}
 		>
-			<TelegramForm
-				koudenId={koudenId}
-				entries={entries}
-				defaultValues={defaultValues}
-				onSuccess={(telegram) => {
-					onSuccess?.(telegram);
-					onOpenChange?.(false);
-				}}
-				onCancel={() => onOpenChange?.(false)}
-			/>
+			{({ close }) => (
+				<TelegramForm
+					koudenId={koudenId}
+					entries={entries}
+					defaultValues={defaultValues}
+					onSuccess={(telegram) => {
+						onSuccess?.(telegram);
+						close();
+					}}
+					onCancel={close}
+				/>
+			)}
 		</CrudDialog>
 	);
 }

@@ -1,4 +1,4 @@
-import { Header } from "../_components/header";
+import { PageHero } from "../_components/page-hero";
 import {
 	BookOpen,
 	Gift,
@@ -41,8 +41,7 @@ const features = [
 		id: "route-optimization",
 		icon: MapIcon,
 		title: "配達ルートの最適化",
-		description:
-			"返礼品の配達ルートを自動で最適化。効率的な配達計画を立てることができます。",
+		description: "返礼品の配達ルートを自動で最適化。効率的な配達計画を立てることができます。",
 		details: [
 			{ id: "ai-route", text: "AIによる最適な配達ルートの提案" },
 			{ id: "schedule", text: "配達スケジュールの自動作成" },
@@ -102,8 +101,7 @@ const features = [
 		id: "notifications",
 		icon: Bell,
 		title: "通知機能",
-		description:
-			"重要な更新や期限を自動で通知し、必要なアクションを見逃しません。",
+		description: "重要な更新や期限を自動で通知し、必要なアクションを見逃しません。",
 		details: [
 			{ id: "settings", text: "カスタマイズ可能な通知設定" },
 			{ id: "sync", text: "複数のデバイスでの同期" },
@@ -115,53 +113,41 @@ const features = [
 
 export default function FeaturesPage() {
 	return (
-		<>
-			<Header />
-			<main className="min-h-screen pt-16">
-				<section className="py-24 bg-gray-50 dark:bg-gray-900">
-					<div className="container px-4 md:px-6 mx-auto">
-						<div className="text-center space-y-4 mb-16">
-							<h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl">
-								機能詳細
-							</h1>
-							<p className="mx-auto max-w-[700px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed dark:text-gray-400">
-								香典帳アプリの全機能をご紹介します
-							</p>
-						</div>
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-							{features.map((feature) => (
-								<div
-									key={feature.id}
-									className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 space-y-4"
-								>
-									<div className="flex items-center space-x-4">
-										<div className="p-3 bg-primary/10 rounded-full">
-											<feature.icon className="w-6 h-6 text-primary" />
-										</div>
-										<h2 className="text-2xl font-bold">{feature.title}</h2>
+		<div className="space-y-24">
+			<PageHero
+				title="機能詳細"
+				subtitle="香典帳アプリの全機能をご紹介します"
+				className="bg-gray-50 dark:bg-gray-900"
+			/>
+
+			<section className="bg-gray-50 dark:bg-gray-900">
+				<div className="container px-4 md:px-6 mx-auto">
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+						{features.map((feature) => (
+							<div
+								key={feature.id}
+								className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 space-y-4"
+							>
+								<div className="flex items-center space-x-4">
+									<div className="p-3 bg-primary/10 rounded-full">
+										<feature.icon className="w-6 h-6 text-primary" />
 									</div>
-									<p className="text-gray-500 dark:text-gray-400">
-										{feature.description}
-									</p>
-									<ul className="space-y-2">
-										{feature.details.map((detail) => (
-											<li
-												key={detail.id}
-												className="flex items-center space-x-2"
-											>
-												<div className="w-1.5 h-1.5 rounded-full bg-primary" />
-												<span className="text-gray-600 dark:text-gray-300">
-													{detail.text}
-												</span>
-											</li>
-										))}
-									</ul>
+									<h2 className="text-2xl font-bold">{feature.title}</h2>
 								</div>
-							))}
-						</div>
+								<p className="text-gray-500 dark:text-gray-400">{feature.description}</p>
+								<ul className="space-y-2">
+									{feature.details.map((detail) => (
+										<li key={detail.id} className="flex items-center space-x-2">
+											<div className="w-1.5 h-1.5 rounded-full bg-primary" />
+											<span className="text-gray-600 dark:text-gray-300">{detail.text}</span>
+										</li>
+									))}
+								</ul>
+							</div>
+						))}
 					</div>
-				</section>
-			</main>
-		</>
+				</div>
+			</section>
+		</div>
 	);
 }

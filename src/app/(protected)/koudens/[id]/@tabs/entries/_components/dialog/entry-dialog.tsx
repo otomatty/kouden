@@ -11,6 +11,7 @@ export interface EntryDialogProps {
 	defaultValues?: Entry;
 	variant?: "create" | "edit" | undefined; // undefinedはボタンが表示されないことを表す
 	onSuccess?: (entry: Entry) => void;
+	trigger?: React.ReactNode;
 }
 
 export function EntryDialog({
@@ -19,6 +20,7 @@ export function EntryDialog({
 	defaultValues,
 	variant,
 	onSuccess,
+	trigger,
 }: EntryDialogProps) {
 	return (
 		<CrudDialog<Entry>
@@ -27,6 +29,7 @@ export function EntryDialog({
 			createButtonLabel="香典を登録する"
 			editButtonLabel="編集する"
 			onSuccess={onSuccess}
+			trigger={trigger}
 		>
 			{({ close }) => (
 				<EntryForm

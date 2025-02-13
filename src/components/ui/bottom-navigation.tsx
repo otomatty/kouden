@@ -14,12 +14,17 @@ import {
 	ChevronUp,
 	ChevronDown,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { CreateButtonContainer } from "@/app/(protected)/koudens/[id]/_components/_common/create-button-container";
+import type { Entry } from "@/types/entries";
+import type { Relationship } from "@/types/relationships";
 
 interface BottomNavigationProps {
 	id: string;
+	entries: Entry[];
+	relationships: Relationship[];
+	onEntryCreated?: (entry: Entry) => void;
 }
 
 /**
@@ -30,7 +35,12 @@ interface BottomNavigationProps {
  * - 中央に新規作成ボタンを配置
  * - 現在のパスに基づいてアクティブな項目を強調表示
  */
-export function BottomNavigation({ id }: BottomNavigationProps) {
+export function BottomNavigation({
+	id,
+	entries,
+	relationships,
+	onEntryCreated,
+}: BottomNavigationProps) {
 	const pathname = usePathname();
 	const [showMoreMenu, setShowMoreMenu] = useState(false);
 
@@ -74,14 +84,12 @@ export function BottomNavigation({ id }: BottomNavigationProps) {
 							<div className="absolute bottom-3 h-16 w-full rounded-full bg-muted" />
 						</div>
 						<div className="absolute -top-2">
-							<Button
-								className="flex h-14 w-14 items-center justify-center rounded-full bg-primary p-0 text-primary-foreground hover:bg-primary/90 [&_svg]:!h-6 [&_svg]:!w-6 shadow-lg"
-								onClick={() => {
-									console.log("新規作成");
-								}}
-							>
-								<Plus />
-							</Button>
+							<CreateButtonContainer
+								koudenId={id}
+								entries={entries}
+								relationships={relationships}
+								onEntryCreated={onEntryCreated}
+							/>
 						</div>
 					</div>
 				</div>

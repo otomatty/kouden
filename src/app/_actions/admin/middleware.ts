@@ -9,7 +9,7 @@ export async function withAdmin<T>(action: () => Promise<T>): Promise<T> {
 	} = await supabase.auth.getUser();
 
 	if (!user?.id) {
-		redirect("/login");
+		redirect("/auth/login");
 	}
 
 	const { data: isAdmin } = await supabase.rpc("is_admin", {
@@ -47,7 +47,7 @@ export async function withSuperAdmin<T>(action: () => Promise<T>): Promise<T> {
 	} = await supabase.auth.getUser();
 
 	if (!user?.id) {
-		redirect("/login");
+		redirect("/auth/login");
 	}
 
 	const { data: adminUser } = await supabase

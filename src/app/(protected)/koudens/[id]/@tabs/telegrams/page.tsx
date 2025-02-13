@@ -15,5 +15,9 @@ export default async function TelegramsPage({ params }: TelegramsPageProps) {
 	const { id: koudenId } = await params;
 	const [telegrams, entries] = await Promise.all([getTelegrams(koudenId), getEntries(koudenId)]);
 
-	return <TelegramsView koudenId={koudenId} telegrams={telegrams} entries={entries} />;
+	return (
+		<div className="mt-4">
+			<TelegramsView koudenId={koudenId} telegrams={telegrams} entries={entries} />
+		</div>
+	);
 }

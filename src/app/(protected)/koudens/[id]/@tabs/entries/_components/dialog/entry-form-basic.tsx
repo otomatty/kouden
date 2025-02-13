@@ -5,24 +5,10 @@ import { useFormContext } from "react-hook-form";
 import { useSetAtom } from "jotai";
 import { FormControl, FormField, FormItem, FormMessage, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import type { AttendanceType } from "@/types/entries";
 import { formatCurrency, formatInputCurrency } from "@/utils/currency";
 import { formatPostalCode, searchAddress } from "./entry-form";
 import { addressSearchStateAtom } from "@/store/entries";
-
-const attendanceTypeMap: Record<AttendanceType, string> = {
-	FUNERAL: "葬儀",
-	CONDOLENCE_VISIT: "弔問",
-	ABSENT: "香典のみ",
-} as const;
 
 export function EntryFormBasic() {
 	const form = useFormContext();
@@ -113,17 +99,26 @@ export function EntryFormBasic() {
 			</div>
 			<FormField
 				control={form.control}
-				name="postal_code"
+				name="postalCode"
 				render={({ field }) => (
 					<FormItem>
 						<FormLabel optional>郵便番号</FormLabel>
 						<FormControl>
 							<Input
 								placeholder="000-0000"
-								maxLength={8}
 								{...field}
 								value={field.value || ""}
-								onChange={(e) => field.onChange(formatPostalCode(e.target.value))}
+								onChange={async (e) => {
+									const formatted = formatPostalCode(e.target.value);
+									field.onChange(formatted);
+
+									if (formatted.length === 8) {
+										const address = await searchAddress(formatted);
+										if (address) {
+											form.setValue("address", address);
+										}
+									}
+								}}
 							/>
 						</FormControl>
 						<FormMessage />
@@ -172,33 +167,6 @@ export function EntryFormBasic() {
 								{formatCurrency(field.value)}
 							</div>
 						)}
-						<FormMessage />
-					</FormItem>
-				)}
-			/>
-			<FormField
-				control={form.control}
-				name="attendanceType"
-				render={({ field }) => (
-					<FormItem>
-						<FormLabel required>参列</FormLabel>
-						<FormControl>
-							<Select
-								value={field.value || "FUNERAL"}
-								onValueChange={(value: AttendanceType) => field.onChange(value)}
-							>
-								<SelectTrigger>
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{Object.entries(attendanceTypeMap).map(([value, label]) => (
-										<SelectItem key={value} value={value}>
-											{label}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</FormControl>
 						<FormMessage />
 					</FormItem>
 				)}

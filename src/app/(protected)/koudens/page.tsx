@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/supabase/server";
 import { KoudenList } from "./_components/kouden-list";
 import { CreateKoudenForm } from "./_components/create-kouden-form";
@@ -12,36 +11,8 @@ export const metadata: Metadata = {
 };
 
 /**
- * 香典帳一覧ページのスケルトンコンポーネント
+ * 香典帳一覧ページのコンテンツコンポーネント
  */
-function KoudensPageSkeleton() {
-	return (
-		<div className="space-y-12">
-			{/* ヘッダーのスケルトン */}
-			<div className="flex justify-between items-center">
-				<Skeleton className="h-8 w-[150px]" />
-				<Skeleton className="h-10 w-[120px]" />
-			</div>
-
-			{/* リストのスケルトン */}
-			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-				{Array.from({ length: 6 }, () => (
-					<div key={crypto.randomUUID()} className="rounded-lg border p-4">
-						<div className="space-y-3">
-							<Skeleton className="h-6 w-[200px]" />
-							<Skeleton className="h-4 w-[150px]" />
-							<div className="space-y-2">
-								<Skeleton className="h-4 w-full" />
-								<Skeleton className="h-4 w-[80%]" />
-							</div>
-						</div>
-					</div>
-				))}
-			</div>
-		</div>
-	);
-}
-
 async function KoudensPageContent() {
 	const supabase = await createClient();
 	const {
@@ -73,7 +44,7 @@ async function KoudensPageContent() {
 
 export default function KoudensPage() {
 	return (
-		<Suspense fallback={<KoudensPageSkeleton />}>
+		<Suspense>
 			<KoudensPageContent />
 		</Suspense>
 	);

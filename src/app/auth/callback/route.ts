@@ -13,20 +13,19 @@ export async function GET(request: Request) {
 		const supabase = await createClient();
 
 		if (code) {
-			const { error: authError } =
-				await supabase.auth.exchangeCodeForSession(code);
+			const { error: authError } = await supabase.auth.exchangeCodeForSession(code);
 			if (authError) {
-				console.error("[DEBUG] Auth error during exchange:", authError);
-				return redirect("/login");
+				console.error("Auth error during exchange:", authError);
+				return Response.redirect(new URL("/auth/login", requestUrl.origin));
 			}
 		}
 
 		const {
-			data: { session },
-		} = await supabase.auth.getSession();
+			data: { user },
+		} = await supabase.auth.getUser();
 
-		if (!session?.user) {
-			return redirect("/login");
+		if (!user) {
+			return Response.redirect(new URL("/auth/login", requestUrl.origin));
 		}
 
 		if (invitationToken) {
@@ -34,17 +33,17 @@ export async function GET(request: Request) {
 				await acceptInvitation(invitationToken);
 				cookieStore.delete("invitation_token");
 			} catch (error) {
-				console.error("[DEBUG] Error accepting invitation:", error);
-				const errorMessage =
-					error instanceof Error ? error.message : "不明なエラー";
-				return redirect(
-					`/invitation-error?error=${encodeURIComponent(errorMessage)}`,
+				console.error("Error accepting invitation:", error);
+				const errorMessage = error instanceof Error ? error.message : "不明なエラー";
+				return Response.redirect(
+					new URL(`/invitation-error?error=${encodeURIComponent(errorMessage)}`, requestUrl.origin),
 				);
 			}
 		}
 
-		return redirect("/koudens");
+		return Response.redirect(new URL("/koudens", requestUrl.origin));
 	} catch (error) {
-		return redirect("/login");
+		console.error("Error in auth callback:", error);
+		return Response.redirect(new URL("/auth/login", requestUrl.origin));
 	}
 }

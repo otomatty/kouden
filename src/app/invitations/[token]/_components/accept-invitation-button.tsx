@@ -35,7 +35,7 @@ export function AcceptInvitationButton({ token }: AcceptInvitationButtonProps) {
 			if (error instanceof Error) {
 				switch (error.message) {
 					case "認証が必要です":
-						router.push(`/login?invitation_token=${token}`);
+						router.push(`/auth/login?invitation_token=${token}`);
 						return;
 					case "招待が見つかりません":
 					case "招待の有効期限が切れています":

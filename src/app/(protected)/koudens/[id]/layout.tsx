@@ -10,12 +10,9 @@ import { ArrowLeft } from "lucide-react";
 
 // Server Actions
 import { getKouden } from "@/app/_actions/koudens";
-import { getEntries } from "@/app/_actions/entries";
-import { getRelationships } from "@/app/_actions/relationships";
 // components
 import { KoudenTitle } from "./_components/_common/kouden-title";
 import { KoudenActionsMenu } from "./_components/actions/kouden-actions-menu";
-import { MobileMenuWrapper } from "./_components/_common/mobile-menu-wrapper";
 import { notFound } from "next/navigation";
 
 export const metadata: Metadata = {
@@ -39,11 +36,7 @@ export default async function KoudenLayout({ params, tabs }: KoudenLayoutProps) 
 	try {
 		const permission = await checkKoudenPermission(koudenId);
 		// 共通で使用するデータを取得
-		const [kouden, entriesData, relationshipsData] = await Promise.all([
-			getKouden(koudenId),
-			getEntries(koudenId),
-			getRelationships(koudenId),
-		]);
+		const [kouden] = await Promise.all([getKouden(koudenId)]);
 
 		// koudenが見つからない場合は404エラーを投げる
 		if (!kouden) {
@@ -74,13 +67,6 @@ export default async function KoudenLayout({ params, tabs }: KoudenLayoutProps) 
 									</div>
 								</div>
 								<div className="mb-4 min-h-[calc(100vh-10rem)]">{tabs}</div>
-
-								{/* モバイルメニュー */}
-								<MobileMenuWrapper
-									koudenId={kouden.id}
-									entries={entriesData}
-									relationships={relationshipsData}
-								/>
 							</div>
 						</div>
 					</div>

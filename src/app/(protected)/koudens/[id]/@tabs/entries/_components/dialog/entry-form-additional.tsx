@@ -11,6 +11,13 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import type { Relationship } from "@/types/relationships";
+import type { AttendanceType } from "@/types/entries";
+
+const attendanceTypeMap: Record<AttendanceType, string> = {
+	FUNERAL: "葬儀",
+	CONDOLENCE_VISIT: "弔問",
+	ABSENT: "香典のみ",
+} as const;
 
 interface EntryFormAdditionalProps {
 	relationships: Relationship[];
@@ -23,7 +30,34 @@ export function EntryFormAdditional({ relationships }: EntryFormAdditionalProps)
 		<div className="grid gap-4">
 			<FormField
 				control={form.control}
-				name="phone_number"
+				name="attendanceType"
+				render={({ field }) => (
+					<FormItem>
+						<FormLabel required>参列</FormLabel>
+						<FormControl>
+							<Select
+								value={field.value || "FUNERAL"}
+								onValueChange={(value: AttendanceType) => field.onChange(value)}
+							>
+								<SelectTrigger>
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{Object.entries(attendanceTypeMap).map(([value, label]) => (
+										<SelectItem key={value} value={value}>
+											{label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</FormControl>
+						<FormMessage />
+					</FormItem>
+				)}
+			/>
+			<FormField
+				control={form.control}
+				name="phoneNumber"
 				render={({ field }) => (
 					<FormItem>
 						<FormLabel optional>電話番号</FormLabel>
@@ -36,7 +70,7 @@ export function EntryFormAdditional({ relationships }: EntryFormAdditionalProps)
 			/>
 			<FormField
 				control={form.control}
-				name="relationship_id"
+				name="relationshipId"
 				render={({ field }) => (
 					<FormItem>
 						<FormLabel optional>ご関係</FormLabel>
@@ -56,54 +90,6 @@ export function EntryFormAdditional({ relationships }: EntryFormAdditionalProps)
 										{relationship.name}
 									</SelectItem>
 								))}
-							</SelectContent>
-						</Select>
-						<FormMessage />
-					</FormItem>
-				)}
-			/>
-			<FormField
-				control={form.control}
-				name="has_offering"
-				render={({ field }) => (
-					<FormItem>
-						<FormLabel required>供物</FormLabel>
-						<Select
-							onValueChange={(value) => field.onChange(value === "true")}
-							value={String(field.value)}
-						>
-							<FormControl>
-								<SelectTrigger>
-									<SelectValue />
-								</SelectTrigger>
-							</FormControl>
-							<SelectContent>
-								<SelectItem value="true">あり</SelectItem>
-								<SelectItem value="false">なし</SelectItem>
-							</SelectContent>
-						</Select>
-						<FormMessage />
-					</FormItem>
-				)}
-			/>
-			<FormField
-				control={form.control}
-				name="is_return_completed"
-				render={({ field }) => (
-					<FormItem>
-						<FormLabel required>返礼</FormLabel>
-						<Select
-							onValueChange={(value) => field.onChange(value === "true")}
-							value={String(field.value)}
-						>
-							<FormControl>
-								<SelectTrigger>
-									<SelectValue />
-								</SelectTrigger>
-							</FormControl>
-							<SelectContent>
-								<SelectItem value="true">完了</SelectItem>
-								<SelectItem value="false">未完了</SelectItem>
 							</SelectContent>
 						</Select>
 						<FormMessage />
