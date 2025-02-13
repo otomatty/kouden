@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 export function useMediaQuery(query: string): boolean {
 	// 初期値をfalseに設定 (モバイルファースト)
-	const [matches, setMatches] = useState<boolean | null>(false);
+	const [matches, setMatches] = useState<boolean>(false);
 
 	useEffect(() => {
 		// クライアントサイドでのみメディアクエリを評価 (SSR対策)
@@ -22,12 +22,11 @@ export function useMediaQuery(query: string): boolean {
 				mediaQuery.removeEventListener("change", handler);
 			};
 		}
-	}, [query, matches]);
 
-	// SSRまたは初期レンダリング時はnullを返す
-	if (matches === null) {
-		return false; // デフォルト値
-	}
+		// サーバーサイドでは常にfalseを設定
+		setMatches(false);
+		return () => {}; // 空のクリーンアップ関数を返す
+	}, [query, matches]);
 
 	return matches;
 }
