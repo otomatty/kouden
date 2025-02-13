@@ -13,14 +13,14 @@ export function HeroSection() {
 							<h1
 								className={`text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none ${zenOldMincho.className}`}
 							>
-								大切な方への感謝の気持ちを
+								香典の記録から、香典返しまで
 								<br />
-								もっと簡単に
+								シンプルに管理
 							</h1>
 							<p className="max-w-[600px] text-gray-500 md:text-xl dark:text-gray-400">
 								突然の出来事で戸惑う方も多い香典の管理。
 								<br />
-								エクセルでの管理に不安を感じていませんか？
+								どのように管理したら良いかに不安を感じていませんか？
 							</p>
 							<p className="max-w-[600px] text-gray-500 md:text-xl dark:text-gray-400">
 								専用アプリで簡単・安心な香典管理を。
