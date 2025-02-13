@@ -8,6 +8,10 @@ const footerLinks = {
 		{ name: "活用事例", href: "/use-cases" },
 		{ name: "料金プラン", href: "/pricing" },
 	],
+	info: [
+		{ name: "ブログ", href: "/blog" },
+		{ name: "更新情報", href: "/updates" },
+	],
 	support: [
 		{ name: "よくある質問", href: "/faq" },
 		{ name: "お問い合わせ", href: "/contact" },
@@ -43,6 +47,22 @@ export function Footer() {
 						<h3 className="font-semibold mb-4">サービス</h3>
 						<ul className="space-y-3">
 							{footerLinks.product.map((link) => (
+								<li key={link.href}>
+									<Link
+										href={link.href}
+										className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+									>
+										{link.name}
+									</Link>
+								</li>
+							))}
+						</ul>
+					</div>
+
+					<div>
+						<h3 className="font-semibold mb-4">情報</h3>
+						<ul className="space-y-3">
+							{footerLinks.info.map((link) => (
 								<li key={link.href}>
 									<Link
 										href={link.href}

@@ -3,6 +3,7 @@
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { useState } from "react";
 // ui
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
@@ -20,7 +21,6 @@ import { OfferingFormAdditional } from "./offering-form-additional";
 import { offeringsAtom, formSubmissionStateAtom } from "@/store/offerings";
 // Server Actions
 import { createOffering, updateOffering } from "@/app/_actions/offerings";
-import { handleOfferingSubmission } from "@/app/_actions/offering-form";
 // hooks
 interface OfferingFormProps {
 	koudenId: string;
@@ -32,6 +32,7 @@ interface OfferingFormProps {
 export function OfferingForm({ koudenId, entries, defaultValues, onSuccess }: OfferingFormProps) {
 	const [submissionState, setSubmissionState] = useAtom(formSubmissionStateAtom);
 	const { toast } = useToast();
+	const [, setPhotos] = useState<File[]>([]);
 
 	const form = useForm<OfferingFormValues>({
 		resolver: zodResolver(offeringFormSchema),
@@ -63,24 +64,37 @@ export function OfferingForm({ koudenId, entries, defaultValues, onSuccess }: Of
 	const onSubmit = async (values: OfferingFormValues) => {
 		try {
 			setSubmissionState({ isSubmitting: true, error: null });
+			console.log("[DEBUG] Form submission started:", values);
 
-			if (values.relationshipId === undefined) {
-				values.relationshipId = null;
-			}
+			// データベースに送信するデータを準備
+			const input = {
+				type: values.type,
+				description: values.description,
+				quantity: values.quantity,
+				price: values.price,
+				provider_name: values.provider_name,
+				notes: values.notes,
+				kouden_id: koudenId,
+				kouden_entry_ids: values.kouden_entry_ids || [],
+				photos: [],
+			};
 
-			const result = await handleOfferingSubmission(values, koudenId, defaultValues);
+			const result = defaultValues
+				? await updateOffering(defaultValues.id, input)
+				: await createOffering(input);
 
 			if (!result) {
 				throw new Error("保存に失敗しました");
 			}
 
-			if (defaultValues?.id) {
-				await updateOffering(values.id, result);
-			} else {
-				await createOffering(result);
-			}
+			// Offering型に必要なプロパティを追加
+			const offering: Offering = {
+				...result,
+				offeringPhotos: [],
+				offeringEntries: [],
+			};
 
-			onSuccess?.(result);
+			onSuccess?.(offering);
 			toast({
 				title: defaultValues ? "更新しました" : "登録しました",
 				description: `${result.description || "説明未設定"}を${defaultValues ? "更新" : "登録"}しました`,
@@ -91,6 +105,13 @@ export function OfferingForm({ koudenId, entries, defaultValues, onSuccess }: Of
 			}
 		} catch (error) {
 			console.error("[ERROR] Offering submission failed:", error);
+			toast({
+				variant: "destructive",
+				title: "エラーが発生しました",
+				description: error instanceof Error ? error.message : "予期せぬエラーが発生しました",
+			});
+		} finally {
+			setSubmissionState({ isSubmitting: false, error: null });
 		}
 	};
 
@@ -106,7 +127,10 @@ export function OfferingForm({ koudenId, entries, defaultValues, onSuccess }: Of
 						<OfferingFormBasic entries={entries} />
 					</TabsContent>
 					<TabsContent value="additional" className="mt-4">
-						<OfferingFormAdditional defaultValues={!!defaultValues} />
+						<OfferingFormAdditional
+							defaultValues={!!defaultValues}
+							onPhotosChange={(newPhotos) => setPhotos(newPhotos)}
+						/>
 					</TabsContent>
 				</Tabs>
 				<div className="flex justify-end gap-2">

@@ -1,9 +1,6 @@
 "use client";
 
 import { OfferingForm } from "./offering-form";
-import { useAtomValue } from "jotai";
-import { permissionAtom } from "@/store/permission";
-import { canCreateData, canUpdateData } from "@/store/permission";
 import { CrudDialog } from "@/components/custom/crud-dialog";
 import type { Entry } from "@//types/entries";
 import type { Offering } from "@/types/offerings";

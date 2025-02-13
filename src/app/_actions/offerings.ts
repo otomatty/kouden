@@ -11,223 +11,140 @@ import type {
 	OfferingWithKoudenEntries,
 } from "@/types/offerings";
 import { snakeToCamel } from "@/utils/case-converter";
+import type { Database } from "@/types/supabase";
 
 //お供物情報を作成する
-export async function createOffering(input: CreateOfferingInput) {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+export async function createOffering(input: Omit<CreateOfferingInput, "created_by">) {
+	try {
+		// デバッグ: 入力データの確認
+		console.log("[DEBUG] createOffering input:", input);
 
-	if (!user) {
-		throw new Error("認証が必要です");
-	}
+		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 
-	// 空文字列をnullに変換
-	const description = input.description === "" ? null : input.description;
+		if (!user) {
+			console.error("[ERROR] Authentication required");
+			throw new Error("認証が必要です");
+		}
 
-	// 1. お供物を作成
-	const { kouden_entry_ids, photos, ...offeringData } = input;
-	const insertData = {
-		...offeringData,
-		description,
-		created_by: user.id,
-	};
+		// デバッグ: 認証ユーザー情報
+		console.log("[DEBUG] Authenticated user:", { id: user.id });
 
-	const { data: offering, error: offeringError } = await supabase
-		.from("offerings")
-		.insert(insertData)
-		.select()
-		.single();
+		const { kouden_entry_ids, photos, ...offeringData } = input;
 
-	if (offeringError) {
-		console.error("[ERROR] Failed to insert offering:", {
-			error: offeringError,
-			insertData: insertData,
-			stack: new Error().stack,
-		});
-		throw new Error(`お供え物の登録に失敗しました: ${offeringError.message}`);
-	}
-
-	if (!offering) {
-		console.error("[ERROR] No offering returned after insert");
-		throw new Error("お供え物の登録に失敗しました: データが返されませんでした");
-	}
-
-	// 香典の更新日時を更新
-	const { error: updateError } = await supabase
-		.from("koudens")
-		.update({ updated_at: new Date().toISOString() })
-		.eq("id", input.kouden_id);
-
-	if (updateError) {
-		console.error("[ERROR] Failed to update kouden:", {
-			error: updateError,
-			code: updateError.code,
-			details: updateError.details,
-			hint: updateError.hint,
-			message: updateError.message,
-		});
-		// 更新エラーは致命的ではないのでログのみ
-	}
-
-	// 2. 香典エントリーとの関連付け
-	if (kouden_entry_ids && kouden_entry_ids.length > 0) {
-		const offeringEntries = kouden_entry_ids.map((entryId) => ({
-			offering_id: offering.id,
-			kouden_entry_id: entryId,
+		// データベースに挿入するデータ
+		const offeringDataToInsert: Database["public"]["Tables"]["offerings"]["Insert"] = {
+			...offeringData,
 			created_by: user.id,
-		}));
+		};
 
-		// 関連する香典エントリーの存在確認
-		const { data: existingEntries, error: checkError } = await supabase
-			.from("kouden_entries")
-			.select("id")
-			.in("id", kouden_entry_ids);
+		// データベースに新しいお供え物を挿入
+		const { data, error } = await supabase
+			.from("offerings")
+			.insert([offeringDataToInsert])
+			.select()
+			.single();
 
-		if (checkError) {
-			console.error("[ERROR] Failed to check existing entries:", {
-				error: checkError,
-				code: checkError.code,
-				details: checkError.details,
-				hint: checkError.hint,
-				message: checkError.message,
-			});
-			throw new Error(`香典エントリーの確認に失敗しました: ${checkError.message}`);
+		if (error) {
+			console.error("お供え物の作成に失敗しました:", error);
+			throw new Error("お供え物の作成に失敗しました。");
 		}
 
-		if (!existingEntries || existingEntries.length !== kouden_entry_ids.length) {
-			console.error("[ERROR] Some kouden entries not found:", {
-				requested: kouden_entry_ids,
-				found: existingEntries?.map((e) => e.id),
-			});
-			throw new Error("指定された香典エントリーの一部が見つかりません");
-		}
+		// 関連する香典エントリーを offering_entries テーブルに挿入
+		if (kouden_entry_ids && kouden_entry_ids.length > 0) {
+			const offeringEntries = kouden_entry_ids.map((koudenEntryId) => ({
+				offering_id: data.id,
+				kouden_entry_id: koudenEntryId,
+				created_by: user.id,
+			}));
 
-		const { error: entryError } = await supabase.from("offering_entries").insert(offeringEntries);
+			const { error: offeringEntriesError } = await supabase
+				.from("offering_entries")
+				.insert(offeringEntries);
 
-		if (entryError) {
-			console.error("[ERROR] Failed to insert offering entries:", {
-				error: entryError,
-				insertData: offeringEntries,
-			});
-
-			// エラーが発生した場合は作成したofferingを削除
-			const { error: deleteError } = await supabase
-				.from("offerings")
-				.delete()
-				.eq("id", offering.id);
-
-			if (deleteError) {
-				console.error("[ERROR] Failed to delete offering during rollback:", {
-					error: deleteError,
-					code: deleteError.code,
-					details: deleteError.details,
-					hint: deleteError.hint,
-					message: deleteError.message,
-				});
+			if (offeringEntriesError) {
+				console.error("香典エントリーの関連付けに失敗しました:", offeringEntriesError);
+				throw new Error("香典エントリーの関連付けに失敗しました。");
 			}
-			throw new Error(`お供え物の登録に失敗しました: ${entryError.message}`);
 		}
 
-		// has_offering フラグはトリガーで自動的に更新されるため、手動更新は不要
-	}
+		// 香典の更新日時を更新
+		const { error: updateError } = await supabase
+			.from("koudens")
+			.update({ updated_at: new Date().toISOString() })
+			.eq("id", input.kouden_id as string);
 
-	// 3. 写真の登録（もし存在すれば）
-	if (photos && photos.length > 0) {
-		const offeringPhotos = photos.map((photo) => ({
-			offering_id: offering.id,
-			storage_key: photo.storage_key,
-			caption: photo.caption || null,
-			created_by: user.id,
-		}));
-
-		const { error: photoError } = await supabase.from("offering_photos").insert(offeringPhotos);
-
-		if (photoError) {
-			console.error("[ERROR] Failed to insert offering photos:", {
-				error: photoError,
-				code: photoError.code,
-				details: photoError.details,
-				hint: photoError.hint,
-				message: photoError.message,
+		if (updateError) {
+			console.error("[ERROR] Failed to update kouden:", {
+				error: updateError,
+				code: updateError.code,
+				details: updateError.details,
+				hint: updateError.hint,
+				message: updateError.message,
 			});
-
-			// エラーが発生した場合は作成したofferingを削除
-			const { error: deleteError } = await supabase
-				.from("offerings")
-				.delete()
-				.eq("id", offering.id);
-
-			if (deleteError) {
-				console.error("[ERROR] Failed to delete offering during rollback:", {
-					error: deleteError,
-					code: deleteError.code,
-					details: deleteError.details,
-					hint: deleteError.hint,
-					message: deleteError.message,
-				});
-			}
-			throw new Error(`写真の登録に失敗しました: ${photoError.message}`);
+			// 更新エラーは致命的ではないのでログのみ
 		}
-	}
 
-	revalidatePath(`/koudens/${input.kouden_id}`);
-	return offering;
+		revalidatePath(`/koudens/${input.kouden_id}`);
+		return data;
+	} catch (error) {
+		console.error("お供え物の作成処理中にエラーが発生しました:", error);
+		throw error;
+	}
 }
 
 // お供物情報を更新する
 export async function updateOffering(id: string, input: UpdateOfferingInput) {
 	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
 
-	if (!user) {
-		throw new Error("認証が必要です");
+	try {
+		// 認証済みのユーザーを取得
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
+
+		if (!user) {
+			throw new Error("ユーザーが見つかりませんでした。");
+		}
+
+		// データベースを更新
+		const { data, error } = await supabase
+			.from("offerings")
+			.update(input)
+			.eq("id", id)
+			.select()
+			.single();
+
+		if (error) {
+			console.error("お供え物の更新に失敗しました:", error);
+			throw new Error("お供え物の更新に失敗しました。");
+		}
+
+		// 香典の更新日時を更新
+		const { error: updateError } = await supabase
+			.from("koudens")
+			.update({ updated_at: new Date().toISOString() })
+			.eq("id", input.kouden_id as string);
+
+		if (updateError) {
+			console.error("[ERROR] Failed to update kouden:", {
+				error: updateError,
+				code: updateError.code,
+				details: updateError.details,
+				hint: updateError.hint,
+				message: updateError.message,
+			});
+			// 更新エラーは致命的ではないのでログのみ
+		}
+
+		revalidatePath(`/koudens/${input.kouden_id}`);
+		return data;
+	} catch (error) {
+		console.error("お供え物の更新処理中にエラーが発生しました:", error);
+		throw error;
 	}
-
-	// お供物情報を取得
-	const { data: offering } = await supabase
-		.from("offerings")
-		.select("kouden_id")
-		.eq("id", id)
-		.single();
-
-	if (!offering) {
-		throw new Error("お供え物が見つかりません");
-	}
-
-	const { data, error } = await supabase
-		.from("offerings")
-		.update(input)
-		.eq("id", id)
-		.select()
-		.single();
-
-	if (error) {
-		throw new Error("お供え物の更新に失敗しました");
-	}
-
-	// 香典の更新日時を更新
-	const { error: updateError } = await supabase
-		.from("koudens")
-		.update({ updated_at: new Date().toISOString() })
-		.eq("id", offering.kouden_id);
-
-	if (updateError) {
-		console.error("[ERROR] Failed to update kouden:", {
-			error: updateError,
-			code: updateError.code,
-			details: updateError.details,
-			hint: updateError.hint,
-			message: updateError.message,
-		});
-		// 更新エラーは致命的ではないのでログのみ
-	}
-
-	revalidatePath(`/koudens/${offering.kouden_id}`);
-	return data;
 }
 
 // お供物情報を削除する
@@ -306,7 +223,9 @@ export async function getOfferings(koudenId: string) {
 }
 
 // 写真関連の機能
-export async function addOfferingPhoto(input: CreateOfferingPhotoInput) {
+export async function addOfferingPhoto(
+	input: Omit<CreateOfferingPhotoInput, "created_by"> & { photos?: File[] },
+) {
 	const supabase = await createClient();
 	const {
 		data: { user },
@@ -326,16 +245,35 @@ export async function addOfferingPhoto(input: CreateOfferingPhotoInput) {
 		throw new Error("お供え物が見つかりません");
 	}
 
+	const uploadedPhotos = await Promise.all(
+		input.photos?.map(async (photo) => {
+			const { data, error } = await supabase.storage
+				.from("offerings")
+				.upload(`${user.id}/${Date.now()}-${photo.name}`, photo, {
+					cacheControl: "3600",
+					upsert: false,
+				});
+
+			if (error) {
+				throw new Error("写真の登録に失敗しました");
+			}
+
+			return { storage_key: data.path, caption: input.caption ?? "" };
+		}) || [],
+	);
+
+	// データベースに登録
 	const { data, error } = await supabase
 		.from("offering_photos")
-		.insert({
-			offering_id: input.offering_id,
-			storage_key: input.storage_key,
-			caption: input.caption,
-			created_by: user.id,
-		})
-		.select()
-		.single();
+		.insert(
+			uploadedPhotos.map((photo) => ({
+				offering_id: input.offering_id,
+				storage_key: photo.storage_key,
+				caption: photo.caption,
+				created_by: user.id,
+			})),
+		)
+		.select();
 
 	if (error) {
 		throw new Error("写真の登録に失敗しました");

@@ -27,16 +27,14 @@ export function UserMenu({ user, isAdmin }: UserMenuProps) {
 
 	const handleSignOut = async () => {
 		await supabase.auth.signOut();
+		router.push("/");
 		router.refresh();
 	};
 
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<Button
-					variant="outline"
-					className="relative flex items-center gap-3 h-auto px-4 py-2"
-				>
+				<Button variant="outline" className="relative flex items-center gap-3 h-auto px-4 py-2">
 					<Avatar>
 						<AvatarImage src={user.user_metadata.avatar_url} />
 						<AvatarFallback>
@@ -72,10 +70,7 @@ export function UserMenu({ user, isAdmin }: UserMenuProps) {
 						<DropdownMenuSeparator />
 					</>
 				)}
-				<DropdownMenuItem
-					onClick={handleSignOut}
-					className="text-red-600 focus:text-red-600"
-				>
+				<DropdownMenuItem onClick={handleSignOut} className="text-red-600 focus:text-red-600">
 					<LogOut className="mr-2 h-4 w-4" />
 					ログアウト
 				</DropdownMenuItem>
