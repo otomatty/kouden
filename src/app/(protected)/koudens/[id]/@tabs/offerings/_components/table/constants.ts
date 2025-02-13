@@ -47,9 +47,11 @@ export const sortOptions = [
 ];
 
 export const filterOptions = [
-	{ value: "FLOWER", label: "供花" },
-	{ value: "FOOD", label: "供物" },
-	{ value: "OTHER", label: "その他" },
+	{ value: "FLOWER", label: "生花・供花" },
+	{ value: "FOOD", label: "供物・飲食物" },
+	{ value: "INCENSE", label: "線香・ローソク" },
+	{ value: "MONEY", label: "御供物料" },
+	{ value: "OTHER", label: "その他の供物" },
 ];
 
 export const defaultColumnVisibility = {

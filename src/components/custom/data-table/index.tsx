@@ -26,6 +26,8 @@ import { SearchableSelectorDialog } from "@/components/custom/searchable-selecto
 import { Button } from "@/components/ui/button";
 import type { CellValue, DataTableProperties } from "@/types/table";
 import type { SelectOption } from "@/types/additional-select";
+import type { OfferingType } from "@/types/offerings";
+import { typeLabels } from "@/app/(protected)/koudens/[id]/@tabs/offerings/_components/table/constants";
 
 /**
  * カスタマイズ可能なデータテーブルコンポーネント
@@ -146,7 +148,10 @@ export function DataTable<Data>({
 					return (
 						<SelectCell
 							value={value}
-							options={config.options.map((opt) => ({ value: opt, label: opt }))}
+							options={config.options.map((opt) => ({
+								value: opt,
+								label: columnId === "type" ? typeLabels[opt as OfferingType] : opt,
+							}))}
 							onSave={handleSave}
 						/>
 					);
