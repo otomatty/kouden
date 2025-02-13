@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { FileSpreadsheet } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { exportKoudenToExcel } from "@/app/_actions/export";
 import { useMediaQuery } from "@/hooks/use-media-query";
@@ -15,7 +15,22 @@ interface ExportExcelButtonProps {
 export function ExportExcelButton({ koudenId }: ExportExcelButtonProps) {
 	const [isExporting, setIsExporting] = useState(false);
 	const { toast } = useToast();
+	// クライアントサイドでのみレンダリングするかどうかを管理 (SSR対策)
+	const [isClient, setIsClient] = useState(false);
+	// コンポーネントがマウントされたかどうかを管理 (マウント遅延対策)
+	const [isMounted, setIsMounted] = useState(false);
 	const isDesktop = useMediaQuery("(min-width: 768px)");
+
+	useEffect(() => {
+		setIsClient(true);
+
+		// 少し遅延させてからマウント (レンダリングタイミング調整)
+		const timer = setTimeout(() => {
+			setIsMounted(true);
+		}, 50); // 50ms
+
+		return () => clearTimeout(timer);
+	}, []);
 
 	const handleExport = async () => {
 		try {
@@ -49,16 +64,23 @@ export function ExportExcelButton({ koudenId }: ExportExcelButtonProps) {
 		} catch (error) {
 			toast({
 				title: "エラーが発生しました",
-				description:
-					error instanceof Error
-						? error.message
-						: "Excelファイルの出力に失敗しました",
+				description: error instanceof Error ? error.message : "Excelファイルの出力に失敗しました",
 				variant: "destructive",
 			});
 		} finally {
 			setIsExporting(false);
 		}
 	};
+
+	if (!isClient) {
+		// SSR対策
+		return null;
+	}
+
+	if (!isMounted) {
+		// マウント遅延対策
+		return null;
+	}
 
 	if (isDesktop) {
 		return (

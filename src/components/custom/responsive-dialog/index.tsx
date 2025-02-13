@@ -41,6 +41,10 @@ export function ResponsiveDialog({
 	onSuccess,
 }: ResponsiveDialogProps) {
 	const [open, setOpen] = useState(false);
+	// クライアントサイドでのみレンダリングするかどうかを管理 (SSR対策)
+	const [isClient, setIsClient] = useState(false);
+	// コンポーネントがマウントされたかどうかを管理 (マウント遅延対策)
+	const [isMounted, setIsMounted] = useState(false);
 	const isDesktop = useMediaQuery("(min-width: 768px)");
 	const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -62,6 +66,25 @@ export function ResponsiveDialog({
 		}
 		return children;
 	};
+
+	useEffect(() => {
+		setIsClient(true); // コンポーネントがマウントされたらクライアントサイドとみなす
+
+		// 少し遅延させてからマウント (レンダリングタイミング調整)
+		const timer = setTimeout(() => {
+			setIsMounted(true);
+		}, 50); // 50ms
+
+		return () => clearTimeout(timer);
+	}, []);
+
+	if (!isClient) {
+		return null; // SSR では何もレンダリングしない
+	}
+
+	if (!isMounted) {
+		return null; // マウントされていない場合は何もレンダリングしない
+	}
 
 	if (isDesktop) {
 		return (
