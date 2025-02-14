@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useAtomValue } from "jotai";
+import { useState, useMemo, useEffect } from "react";
+import { useAtom } from "jotai";
 import type { Offering } from "@/types/offerings";
-import type { Entry } from "@//types/entries";
+import type { Entry } from "@/types/entries";
 import { MobileFilters } from "./mobile-filters";
 import { OfferingCard } from "./offering-card";
 import { offeringsAtom } from "@/store/offerings";
@@ -20,30 +20,41 @@ export function OfferingCardList({
 	entries,
 }: OfferingCardListProps) {
 	const [searchQuery, setSearchQuery] = useState("");
-	const [searchField, setSearchField] = useState("name");
+	const [searchField, setSearchField] = useState("providerName");
 	const [sortOrder, setSortOrder] = useState("created_at_desc");
 
 	// Jotaiのatomから最新のofferingsを取得
-	const currentOfferings = useAtomValue(offeringsAtom);
-	const offerings = currentOfferings.length > 0 ? currentOfferings : initialOfferings;
+	const [offerings, setOfferings] = useAtom(offeringsAtom);
+
+	// 初期表示時にinitialOfferingsをatomに設定
+	useEffect(() => {
+		if (offerings.length === 0 && initialOfferings.length > 0) {
+			setOfferings(initialOfferings);
+		}
+	}, [initialOfferings, offerings.length, setOfferings]);
+
 	// フィルタリングとソートを適用したデータ
 	const filteredAndSortedData = useMemo(() => {
 		let result = [...offerings];
 
 		// 検索を適用
 		if (searchQuery) {
+			console.log("検索クエリ:", searchQuery);
 			result = result.filter((offering) => {
 				// お供物の検索可能なフィールドに対して検索を実行
-				const searchFields = ["name", "note"];
+				const searchFields = ["providerName", "description", "notes"];
 				return searchFields.some((field) => {
 					const value = offering[field as keyof typeof offering];
+					console.log(`検索対象 [${field}]:`, value);
 					if (typeof value === "string") {
 						const matches = value.toLowerCase().includes(searchQuery.toLowerCase());
+						console.log(`検索結果 [${field}]:`, matches);
 						return matches;
 					}
 					return false;
 				});
 			});
+			console.log("フィルター後のデータ:", result);
 		}
 
 		// ソートを適用
@@ -54,10 +65,19 @@ export function OfferingCardList({
 					? new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
 					: new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
 			}
-			if (field === "name") {
+			if (field === "price") {
+				const priceA = a.price || 0;
+				const priceB = b.price || 0;
+				return order === "desc" ? priceB - priceA : priceA - priceB;
+			}
+			if (field === "provider_name") {
 				return order === "desc"
-					? (b.description || "").localeCompare(a.description || "")
-					: (a.description || "").localeCompare(b.description || "");
+					? (b.providerName || b.provider_name || "").localeCompare(
+							a.providerName || a.provider_name || "",
+						)
+					: (a.providerName || a.provider_name || "").localeCompare(
+							b.providerName || b.provider_name || "",
+						);
 			}
 			return 0;
 		});
@@ -66,7 +86,7 @@ export function OfferingCardList({
 	}, [offerings, searchQuery, sortOrder]);
 
 	return (
-		<div className="flex flex-col h-[100vh]">
+		<div className="flex flex-col">
 			<MobileFilters
 				searchQuery={searchQuery}
 				searchField={searchField}

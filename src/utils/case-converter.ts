@@ -1,5 +1,6 @@
 import snakecaseKeys from "snakecase-keys";
 import camelcaseKeys from "camelcase-keys";
+import type { BaseOffering } from "@/types/offerings";
 
 /**
  * <<使い方>>
@@ -48,3 +49,35 @@ export const snakeToCamel = <
 	data: T,
 ): SnakeToCamelCaseNested<T> =>
 	camelcaseKeys(data, { deep: true }) as unknown as SnakeToCamelCaseNested<T>;
+
+export type CamelCase<S extends string> = S extends `${infer P1}_${infer P2}${infer P3}`
+	? `${Lowercase<P1>}${Uppercase<P2>}${CamelCase<P3>}`
+	: Lowercase<S>;
+
+export type KeysToCamelCase<T> = {
+	[K in keyof T as CamelCase<string & K>]: T[K];
+};
+
+export type OfferingWithCamelCase = KeysToCamelCase<BaseOffering>;
+
+/**
+ * スネークケースのオブジェクトをキャメルケースに変換する
+ * @param obj スネークケースのオブジェクト
+ * @returns キャメルケースのオブジェクト
+ */
+export function toCamelCase<T extends Record<string, any>>(obj: T): KeysToCamelCase<T> {
+	if (Array.isArray(obj)) {
+		return obj.map((item) => toCamelCase(item)) as any;
+	}
+
+	if (obj !== null && typeof obj === "object") {
+		return Object.fromEntries(
+			Object.entries(obj).map(([key, value]) => [
+				key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase()),
+				toCamelCase(value),
+			]),
+		) as KeysToCamelCase<T>;
+	}
+
+	return obj as any;
+}

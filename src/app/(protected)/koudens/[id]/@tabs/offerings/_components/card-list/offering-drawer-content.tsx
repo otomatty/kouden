@@ -29,7 +29,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { X, Trash2 } from "lucide-react";
 // types
-import type { Offering, OptimisticOffering } from "@/types/offerings";
+import type { Offering, OptimisticOffering, OfferingType } from "@/types/offerings";
 import type { Entry } from "@/types/entries";
 // stores
 import { permissionAtom, canUpdateData, canDeleteData } from "@/store/permission";
@@ -39,7 +39,7 @@ import { updateOfferingField, deleteOffering } from "@/app/_actions/offerings";
 // components
 import { EditableField } from "@/components/custom/editable-field";
 import { formatCurrency } from "@/utils/currency";
-import { formatPostalCode } from "@/utils/postal-code";
+import { typeLabels } from "../table/constants";
 
 interface OfferingDrawerContentProps {
 	offering: Offering;
@@ -175,7 +175,9 @@ export function OfferingDrawerContent({ offering, koudenId, onClose }: OfferingD
 					<DrawerHeader className="border-b">
 						<div className="flex justify-between items-start">
 							<div className="space-y-2 text-left">
-								<DrawerTitle className="text-xl">{offering.type || "提供物未設定"}</DrawerTitle>
+								<DrawerTitle className="text-xl">
+									{typeLabels[offering.type as OfferingType] || "提供物未設定"}
+								</DrawerTitle>
 								<p className="text-2xl font-bold">{formatCurrency(offering.price || 0)}</p>
 							</div>
 							<div className="space-y-2 flex flex-col items-end">
@@ -208,7 +210,9 @@ export function OfferingDrawerContent({ offering, koudenId, onClose }: OfferingD
 											disabled={!canEdit}
 										>
 											<SelectTrigger>
-												<SelectValue />
+												<SelectValue placeholder="種類を選択">
+													{typeLabels[offering.type as OfferingType]}
+												</SelectValue>
 											</SelectTrigger>
 											<SelectContent>
 												<SelectItem value="FLOWER">供花</SelectItem>
@@ -247,7 +251,9 @@ export function OfferingDrawerContent({ offering, koudenId, onClose }: OfferingD
 									/>
 								</div>
 							</div>
+						</TabsContent>
 
+						<TabsContent value="additional" className="mt-4 space-y-4">
 							{/* 関連する香典情報 */}
 							<div className="rounded-lg border p-4">
 								<h4 className="text-sm font-medium mb-3 text-muted-foreground">関連する香典情報</h4>
@@ -263,9 +269,7 @@ export function OfferingDrawerContent({ offering, koudenId, onClose }: OfferingD
 									)}
 								</div>
 							</div>
-						</TabsContent>
 
-						<TabsContent value="additional" className="mt-4 space-y-4">
 							{/* 備考 */}
 							<div className="rounded-lg border p-4">
 								<h4 className="text-sm font-medium mb-3 text-muted-foreground">備考</h4>

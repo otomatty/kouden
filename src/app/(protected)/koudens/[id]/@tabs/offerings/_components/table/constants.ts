@@ -66,7 +66,7 @@ export const tabletColumnVisibility = {
 } as const;
 
 export const editableColumns: Record<string, EditableColumnConfig> = {
-	provider_name: { type: "text" },
+	providerName: { type: "text" },
 	description: { type: "text" },
 	price: { type: "number", format: "currency" },
 	quantity: { type: "number" },

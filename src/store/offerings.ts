@@ -7,6 +7,7 @@ export const offeringsAtom = atom<Offering[]>([]);
 // 楽観的更新用のデータ型
 export interface OptimisticOffering extends Offering {
 	isOptimistic: boolean;
+	isDeleted?: boolean;
 }
 
 // 楽観的更新用のデータを管理するatom
@@ -17,8 +18,22 @@ export const mergedOfferingsAtom = atom((get) => {
 	const realOfferings = get(offeringsAtom);
 	const optimisticOfferings = get(optimisticOfferingsAtom);
 
-	// 楽観的更新データを優先して表示
-	return [...optimisticOfferings, ...realOfferings];
+	// 実際のデータをIDでマップ化
+	const realOfferingsMap = new Map(realOfferings.map((o) => [o.id, o]));
+
+	// 楽観的更新データを処理
+	for (const optimisticOffering of optimisticOfferings) {
+		if (optimisticOffering.isDeleted) {
+			// 削除された場合は実際のデータから削除
+			realOfferingsMap.delete(optimisticOffering.id);
+		} else {
+			// 追加または更新の場合は上書き
+			realOfferingsMap.set(optimisticOffering.id, optimisticOffering);
+		}
+	}
+
+	// Mapから配列に戻す
+	return Array.from(realOfferingsMap.values());
 });
 
 // 選択されたお供物を管理するatom

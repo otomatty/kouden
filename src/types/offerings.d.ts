@@ -1,7 +1,8 @@
 import type { Database } from "@/types/supabase";
 import type { SnakeToCamelCaseNested } from "@/utils/case-converter";
+import type { KeysToCamelCase } from "@/utils/case-converter";
 
-export type OfferingType = SnakeToCamelCaseNested<Database["public"]["Enums"]["offering_type"]>;
+export type OfferingType = Database["public"]["Enums"]["offering_type"];
 
 // データベースのレスポンス型
 export type OfferingPhoto = Database["public"]["Tables"]["offering_photos"]["Row"];
@@ -15,7 +16,7 @@ export interface DatabaseOffering extends BaseOffering {
 }
 
 // アプリケーション内で使用する型
-export interface Offering extends BaseOffering {
+export interface Offering extends BaseOffering, Partial<KeysToCamelCase<BaseOffering>> {
 	offeringPhotos: OfferingPhoto[];
 	offeringEntries: OfferingEntryWithKoudenEntry[];
 }

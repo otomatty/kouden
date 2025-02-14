@@ -209,28 +209,61 @@ export function MobileDataTableToolbar({
 	sortOrder,
 	onSortOrderChange,
 	searchPlaceholder,
+	searchValue,
 }: MobileDataTableToolbarProps) {
-	const [globalFilter, setGlobalFilter] = React.useState("");
+	const [globalFilter, setGlobalFilter] = React.useState(searchValue || "");
+	const searchTimeoutRef = React.useRef<NodeJS.Timeout | undefined>(undefined);
+
+	// 外部からの searchValue の変更を同期
+	React.useEffect(() => {
+		if (searchValue !== undefined) {
+			setGlobalFilter(searchValue);
+		}
+	}, [searchValue]);
 
 	/**
 	 * グローバル検索の処理を行うコールバック関数
 	 *
-	 * 検索値を更新し、親コンポーネントに変更を通知します。
-	 * onSearchChangeが提供されていない場合は、内部のグローバルフィルター状態のみを更新します。
+	 * デバウンス処理を実装し、パフォーマンスを最適化します。
+	 * また、スクロール位置を保持します。
 	 *
 	 * @param value - 新しい検索値
 	 */
 	const handleSearch = React.useCallback(
 		(value: string) => {
+			// 現在のスクロール位置を保存
+			const currentScroll = window.scrollY;
+
+			// 内部の状態を即時更新
 			setGlobalFilter(value);
-			if (onSearchChange) {
-				onSearchChange(value);
-			} else {
-				setGlobalFilter(value);
+
+			// 既存のタイムアウトをクリア
+			if (searchTimeoutRef.current) {
+				clearTimeout(searchTimeoutRef.current);
 			}
+
+			// 新しい検索処理をスケジュール
+			searchTimeoutRef.current = setTimeout(() => {
+				if (onSearchChange) {
+					onSearchChange(value);
+					// スクロール位置を復元
+					requestAnimationFrame(() => {
+						window.scrollTo(0, currentScroll);
+					});
+				}
+			}, 300); // 300ms のデバウンス
 		},
 		[onSearchChange],
 	);
+
+	// コンポーネントのアンマウント時にタイムアウトをクリア
+	React.useEffect(() => {
+		return () => {
+			if (searchTimeoutRef.current) {
+				clearTimeout(searchTimeoutRef.current);
+			}
+		};
+	}, []);
 
 	// 現在選択されている検索オプションを取得
 	const currentSearch = searchOptions.find((option) => option.value === searchField);

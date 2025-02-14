@@ -85,9 +85,15 @@ export function ResponsiveSkeleton({
 			{/* 検索バーのスケルトン */}
 			{showSearchBar && (
 				<div className="flex items-center justify-between gap-4">
-					<Skeleton className="h-16 flex-1" />
-					<Skeleton className="h-16 w-[300px]" />
-					<Skeleton className="h-16 w-[150px]" />
+					<div className="border rounded-md p-4 flex-1">
+						<Skeleton className="h-8 " />
+					</div>
+					<div className="border rounded-md p-4 w-[300px]">
+						<Skeleton className="h-8 " />
+					</div>
+					<div className="border rounded-md p-4 w-[150px]">
+						<Skeleton className="h-8 " />
+					</div>
 				</div>
 			)}
 
@@ -118,19 +124,21 @@ export function TableSkeleton({ rows = 5, columns = [] }: SkeletonProps) {
 
 	return (
 		<div className="rounded-md border">
+			{/* ヘッダー */}
 			<div className="border-b bg-muted/50 p-4">
 				<div className="flex items-center gap-4">
 					{columnIds.map((col) => (
-						<Skeleton key={`header-${col}`} className="h-4 w-[100px]" />
+						<Skeleton key={`header-${col}`} className="h-4 flex-1" />
 					))}
 				</div>
 			</div>
+			{/* ボディ */}
 			<div className="divide-y">
 				{rowIds.map((row) => (
 					<div key={`row-${row}`} className="p-4">
 						<div className="flex items-center gap-4">
 							{columnIds.map((col) => (
-								<Skeleton key={`cell-${row}-${col}`} className="h-4 w-[100px]" />
+								<Skeleton key={`cell-${row}-${col}`} className="h-4 flex-1" />
 							))}
 						</div>
 					</div>

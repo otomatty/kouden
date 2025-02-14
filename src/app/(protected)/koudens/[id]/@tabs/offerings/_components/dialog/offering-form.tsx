@@ -18,7 +18,7 @@ import { offeringFormSchema } from "@/schemas/offerings";
 import { OfferingFormBasic } from "./offering-form-basic";
 import { OfferingFormAdditional } from "./offering-form-additional";
 // stores
-import { offeringsAtom, formSubmissionStateAtom } from "@/store/offerings";
+import { offeringsAtom, formSubmissionStateAtom, optimisticOfferingsAtom } from "@/store/offerings";
 // Server Actions
 import { createOffering, updateOffering } from "@/app/_actions/offerings";
 // hooks
@@ -31,6 +31,8 @@ interface OfferingFormProps {
 
 export function OfferingForm({ koudenId, entries, defaultValues, onSuccess }: OfferingFormProps) {
 	const [submissionState, setSubmissionState] = useAtom(formSubmissionStateAtom);
+	const [offerings, setOfferings] = useAtom(offeringsAtom);
+	const [optimisticOfferings, setOptimisticOfferings] = useAtom(optimisticOfferingsAtom);
 	const { toast } = useToast();
 	const [, setPhotos] = useState<File[]>([]);
 
@@ -93,6 +95,16 @@ export function OfferingForm({ koudenId, entries, defaultValues, onSuccess }: Of
 				offeringPhotos: [],
 				offeringEntries: [],
 			};
+
+			// 新規作成時は配列に追加、更新時は既存のデータを更新
+			if (!defaultValues) {
+				setOfferings([...offerings, offering]);
+			} else {
+				setOfferings(offerings.map((o) => (o.id === offering.id ? offering : o)));
+			}
+
+			// 楽観的更新データをクリア
+			setOptimisticOfferings(optimisticOfferings.filter((o) => o.id !== offering.id));
 
 			onSuccess?.(offering);
 			toast({

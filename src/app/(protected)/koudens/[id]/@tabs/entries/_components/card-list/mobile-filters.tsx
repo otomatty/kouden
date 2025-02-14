@@ -102,41 +102,30 @@ export function MobileFilters({
 	sortOrder,
 	onSortOrderChange,
 }: MobileFiltersProps) {
-	const [isIntersecting, setIsIntersecting] = useState(true);
 	const searchBarRef = useRef<HTMLDivElement>(null);
+	const [lastSearchQuery, setLastSearchQuery] = useState(searchQuery);
 
+	// 検索クエリが変更された時の処理
 	useEffect(() => {
-		const observer = new IntersectionObserver(
-			(entries) => {
-				if (entries[0]) {
-					setIsIntersecting(entries[0].isIntersecting);
-				}
-			},
-			{
-				threshold: 0,
-				rootMargin: "-80px 0px 0px 0px", // ヘッダーの高さを考慮したマージン
-			},
-		);
+		setLastSearchQuery(searchQuery);
+	}, [searchQuery]);
 
-		if (searchBarRef.current) {
-			observer.observe(searchBarRef.current);
-		}
-
-		return () => {
-			observer.disconnect();
-		};
-	}, []);
+	// 検索処理のハンドラー
+	const handleSearch = (value: string) => {
+		setLastSearchQuery(value);
+		onSearchChange(value);
+	};
 
 	return (
 		<>
 			<StickySearchHeader
-				searchQuery={searchQuery}
-				onSearchChange={onSearchChange}
+				searchQuery={lastSearchQuery}
+				onSearchChange={handleSearch}
 				searchField=""
 				onSearchFieldChange={() => {}}
 				sortOrder={sortOrder}
 				onSortOrderChange={onSortOrderChange}
-				isIntersecting={isIntersecting}
+				initialSearchBarRef={searchBarRef}
 				searchOptions={searchOptions}
 				sortOptions={sortOptions}
 				filterOptions={filterOptions}
@@ -148,8 +137,8 @@ export function MobileFilters({
 					filterOptions={filterOptions}
 					showFilter={true}
 					showSort={true}
-					searchValue={searchQuery}
-					onSearchChange={onSearchChange}
+					searchValue={lastSearchQuery}
+					onSearchChange={handleSearch}
 					searchPlaceholder={`${searchOptions.map((opt) => opt.label).join("・")}から検索...`}
 					sortOrder={sortOrder}
 					onSortOrderChange={onSortOrderChange}

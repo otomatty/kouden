@@ -81,15 +81,18 @@ export function BottomNavigation({
 				<div className="absolute left-1/2 -translate-x-1/2 z-10">
 					<div className="relative flex h-16 w-16 items-center justify-center">
 						<div className="absolute top-0 left-1/2 h-16 w-full overflow-hidden -translate-x-1/2">
-							<div className="absolute bottom-3 h-16 w-full rounded-full bg-muted" />
+							<div className="absolute bottom-6 h-16 w-full rounded-full bg-muted" />
 						</div>
-						<div className="absolute -top-2">
-							<CreateButtonContainer
-								koudenId={id}
-								entries={entries}
-								relationships={relationships}
-								onEntryCreated={onEntryCreated}
-							/>
+						<div className="absolute -top-5">
+							<div className="flex flex-col items-center gap-1">
+								<CreateButtonContainer
+									koudenId={id}
+									entries={entries}
+									relationships={relationships}
+									onEntryCreated={onEntryCreated}
+								/>
+								<span className="text-xs">新規追加</span>
+							</div>
 						</div>
 					</div>
 				</div>

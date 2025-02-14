@@ -47,14 +47,14 @@ export function OfferingCard({ offering: initialOffering, koudenId }: OfferingCa
 							<div className="space-y-1.5 flex-1 min-w-0">
 								<div className="flex items-center gap-2 flex-wrap">
 									<h3 className="font-medium text-lg truncate">
-										{offering.description || "品名未設定"}
+										{offering.providerName || offering.provider_name || "提供者名未設定"}
 									</h3>
 									<Badge variant="outline" className="font-normal">
 										{typeLabels[offering.type as OfferingType]}
 									</Badge>
 								</div>
-								{offering.provider_name && (
-									<p className="text-sm text-muted-foreground truncate">{offering.provider_name}</p>
+								{offering.description && (
+									<p className="text-sm text-muted-foreground truncate">{offering.description}</p>
 								)}
 								{offering.price && (
 									<p className="text-2xl font-bold">{formatCurrency(offering.price)}</p>
