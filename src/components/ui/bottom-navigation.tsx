@@ -10,15 +10,18 @@ import {
 	Gift,
 	Mail,
 	Settings,
-	Plus,
 	ChevronUp,
 	ChevronDown,
+	FileDown,
+	HelpCircle,
+	PackageCheck,
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CreateButtonContainer } from "@/app/(protected)/koudens/[id]/_components/_common/create-button-container";
 import type { Entry } from "@/types/entries";
 import type { Relationship } from "@/types/relationships";
+import { Button } from "@/components/ui/button";
 
 interface BottomNavigationProps {
 	id: string;
@@ -43,6 +46,104 @@ export function BottomNavigation({
 }: BottomNavigationProps) {
 	const pathname = usePathname();
 	const [showMoreMenu, setShowMoreMenu] = useState(false);
+
+	const getActionButton = (path: string) => {
+		// 新規作成が必要なページ
+		if (path.includes("/entries")) {
+			return {
+				component: (
+					<CreateButtonContainer
+						koudenId={id}
+						entries={entries}
+						relationships={relationships}
+						onEntryCreated={onEntryCreated}
+					/>
+				),
+				label: "香典を追加",
+			};
+		}
+		if (path.includes("/offerings")) {
+			return {
+				component: (
+					<CreateButtonContainer
+						koudenId={id}
+						entries={entries}
+						relationships={relationships}
+						onEntryCreated={onEntryCreated}
+					/>
+				),
+				label: "供物を追加",
+			};
+		}
+		if (path.includes("/telegrams")) {
+			return {
+				component: (
+					<CreateButtonContainer
+						koudenId={id}
+						entries={entries}
+						relationships={relationships}
+						onEntryCreated={onEntryCreated}
+					/>
+				),
+				label: "弔電を追加",
+			};
+		}
+
+		// 代替アクションが必要なページ
+		if (path.includes("/return_records")) {
+			return {
+				component: (
+					<Button
+						size="icon"
+						className="h-14 w-14 rounded-full shadow-lg"
+						onClick={() => {
+							// TODO: 発送状況の確認機能の実装
+							console.log("発送状況の確認");
+						}}
+					>
+						<PackageCheck className="h-6 w-6" />
+					</Button>
+				),
+				label: "発送状況",
+			};
+		}
+		if (path.includes("/statistics")) {
+			return {
+				component: (
+					<Button
+						size="icon"
+						className="h-14 w-14 rounded-full shadow-lg"
+						onClick={() => {
+							// TODO: PDF出力機能の実装
+							console.log("PDF出力");
+						}}
+					>
+						<FileDown className="h-6 w-6" />
+					</Button>
+				),
+				label: "PDF出力",
+			};
+		}
+		if (path.includes("/settings")) {
+			return {
+				component: (
+					<Button
+						size="icon"
+						className="h-14 w-14 rounded-full shadow-lg"
+						onClick={() => {
+							// TODO: ヘルプ表示機能の実装
+							console.log("ヘルプ表示");
+						}}
+					>
+						<HelpCircle className="h-6 w-6" />
+					</Button>
+				),
+				label: "ヘルプ",
+			};
+		}
+
+		return null;
+	};
 
 	const mainTabs = [
 		{ id: "entries", label: "ご香典", icon: <Table2 className="h-5 w-5" /> },
@@ -85,13 +186,8 @@ export function BottomNavigation({
 						</div>
 						<div className="absolute -top-5">
 							<div className="flex flex-col items-center gap-1">
-								<CreateButtonContainer
-									koudenId={id}
-									entries={entries}
-									relationships={relationships}
-									onEntryCreated={onEntryCreated}
-								/>
-								<span className="text-xs">新規追加</span>
+								{getActionButton(pathname)?.component}
+								<span className="text-xs">{getActionButton(pathname)?.label}</span>
 							</div>
 						</div>
 					</div>

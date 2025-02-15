@@ -17,6 +17,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { updateKouden } from "@/app/_actions/koudens";
+import { useTransition } from "react";
 
 // バリデーションスキーマ
 const formSchema = z.object({
@@ -29,42 +31,49 @@ const formSchema = z.object({
 
 interface GeneralSettingsFormProps {
 	koudenId: string;
+	initialData?: {
+		title: string;
+		description?: string | null;
+	};
 }
 
 /**
  * 一般設定フォームコンポーネント
  * - 香典帳のタイトルと説明文を編集するフォーム
+ * - Server Actionsを使用して更新処理を実行
  */
-export function GeneralSettingsForm({ koudenId }: GeneralSettingsFormProps) {
+export function GeneralSettingsForm({ koudenId, initialData }: GeneralSettingsFormProps) {
 	const { toast } = useToast();
+	const [isPending, startTransition] = useTransition();
 
 	// フォームの初期化
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
-			title: "",
-			description: "",
+			title: initialData?.title ?? "",
+			description: initialData?.description ?? "",
 		},
 	});
 
 	// フォーム送信時の処理
 	async function onSubmit(values: z.infer<typeof formSchema>) {
-		try {
-			// TODO: 香典帳の基本情報を更新するAPIを呼び出す
-			console.log({ ...values, koudenId });
+		startTransition(async () => {
+			try {
+				await updateKouden(koudenId, values);
 
-			toast({
-				title: "設定を保存しました",
-				description: "香典帳の基本情報が更新されました",
-			});
-		} catch (error) {
-			console.error("エラーが発生しました", error);
-			toast({
-				title: "エラーが発生しました",
-				description: "設定の保存に失敗しました",
-				variant: "destructive",
-			});
-		}
+				toast({
+					title: "設定を保存しました",
+					description: "香典帳の基本情報が更新されました",
+				});
+			} catch (error) {
+				console.error("エラーが発生しました", error);
+				toast({
+					title: "エラーが発生しました",
+					description: error instanceof Error ? error.message : "設定の保存に失敗しました",
+					variant: "destructive",
+				});
+			}
+		});
 	}
 
 	return (
@@ -100,7 +109,9 @@ export function GeneralSettingsForm({ koudenId }: GeneralSettingsFormProps) {
 					)}
 				/>
 
-				<Button type="submit">保存</Button>
+				<Button type="submit" disabled={isPending}>
+					{isPending ? "保存中..." : "保存"}
+				</Button>
 			</form>
 		</Form>
 	);

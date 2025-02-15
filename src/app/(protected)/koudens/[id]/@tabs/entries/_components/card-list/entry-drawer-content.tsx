@@ -1,6 +1,7 @@
 // library
 import { useState } from "react";
 import { useAtom, useAtomValue } from "jotai";
+import { useRouter } from "next/navigation";
 
 // ui
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +41,7 @@ import { entriesAtom, optimisticEntriesAtom } from "@/store/entries";
 import { updateEntryField, deleteEntry } from "@/app/_actions/entries";
 // components
 import { EditableField } from "@/components/custom/editable-field";
+import { EditableTextArea } from "@/components/custom/editable-textarea";
 
 interface EntryDrawerContentProps {
 	entry: Entry;
@@ -54,6 +56,7 @@ export function EntryDrawerContent({
 	relationships,
 	onClose,
 }: EntryDrawerContentProps) {
+	const router = useRouter();
 	const permission = useAtomValue(permissionAtom);
 	const canEdit = canUpdateData(permission);
 	const canDelete = canDeleteData(permission);
@@ -139,6 +142,16 @@ export function EntryDrawerContent({
 		}
 	};
 
+	const handleNavigateToOfferings = () => {
+		onClose(); // ドロワーを閉じる
+		router.push(`/koudens/${koudenId}/offerings?entry_id=${entry.id}`);
+	};
+
+	const handleNavigateToReturns = () => {
+		onClose(); // ドロワーを閉じる
+		router.push(`/koudens/${koudenId}/returns?entry_id=${entry.id}`);
+	};
+
 	// 関係性の名前を取得
 	const relationshipName = relationships.find((r) => r.id === entry.relationship_id)?.name;
 
@@ -169,7 +182,7 @@ export function EntryDrawerContent({
 			{/* ドロワー */}
 			<DrawerContent>
 				<div className="mx-auto w-full max-w-sm">
-					<DrawerHeader className="border-b">
+					<DrawerHeader className="px-4">
 						<div className="flex justify-between items-start">
 							<div className="space-y-2 text-left">
 								{relationshipName && (
@@ -195,11 +208,11 @@ export function EntryDrawerContent({
 						</div>
 					</DrawerHeader>
 
-					<Tabs defaultValue="basic" className="w-full">
+					<Tabs defaultValue="basic" className="w-full px-2">
 						<TabsList className="grid w-full grid-cols-3">
 							<TabsTrigger value="basic">基本情報</TabsTrigger>
-							<TabsTrigger value="contact">連絡先</TabsTrigger>
-							<TabsTrigger value="additional">追加情報</TabsTrigger>
+							<TabsTrigger value="contact">追加情報</TabsTrigger>
+							<TabsTrigger value="additional">備考</TabsTrigger>
 						</TabsList>
 
 						<TabsContent value="basic" className="mt-4 space-y-4">
@@ -273,9 +286,7 @@ export function EntryDrawerContent({
 								<div className="space-y-2">
 									<EditableField
 										label="郵便番号"
-										value={
-											entry.postal_code ? `〒${formatPostalCode(entry.postal_code)}` : "未設定"
-										}
+										value={entry.postal_code ? `${formatPostalCode(entry.postal_code)}` : ""}
 										onSave={(value) =>
 											handleUpdateField("postal_code", value.replace(/[〒\s-]/g, ""))
 										}
@@ -283,38 +294,31 @@ export function EntryDrawerContent({
 									/>
 									<EditableField
 										label="住所"
-										value={entry.address || "未設定"}
+										value={entry.address || ""}
 										onSave={(value) => handleUpdateField("address", value)}
 										canEdit={canEdit}
 									/>
 									<EditableField
 										label="電話番号"
-										value={entry.phone_number || "未設定"}
+										value={entry.phone_number || ""}
 										onSave={(value) => handleUpdateField("phone_number", value)}
 										canEdit={canEdit}
 									/>
 								</div>
 							</div>
-						</TabsContent>
-
-						<TabsContent value="additional" className="mt-4 space-y-4">
 							{/* 供物情報 */}
 							<div className="rounded-lg border p-4">
-								<h4 className="text-sm font-medium mb-3 text-muted-foreground">供物</h4>
+								<h4 className="text-sm font-medium mb-3 text-muted-foreground">供物と返礼</h4>
 								<div className="space-y-2">
 									<div className="flex justify-between items-center">
 										<span className="text-sm text-muted-foreground">供物の有無</span>
 										<div className="flex items-center gap-2">
-											<span className="text-sm font-medium">
+											<Badge variant={entry.has_offering ? "default" : "secondary"}>
 												{entry.has_offering ? "あり" : "なし"}
-											</span>
+											</Badge>
 											{canEdit && (
-												<Button
-													variant="ghost"
-													size="sm"
-													onClick={() => handleUpdateField("has_offering", !entry.has_offering)}
-												>
-													{entry.has_offering ? "なしに変更" : "ありに変更"}
+												<Button variant="ghost" size="sm" onClick={handleNavigateToOfferings}>
+													お供物を管理
 												</Button>
 											)}
 										</div>
@@ -322,41 +326,37 @@ export function EntryDrawerContent({
 									<div className="flex justify-between items-center">
 										<span className="text-sm text-muted-foreground">返礼状況</span>
 										<div className="flex items-center gap-2">
-											<span className="text-sm font-medium">
+											<Badge variant={entry.is_return_completed ? "default" : "secondary"}>
 												{entry.is_return_completed ? "返礼済" : "未返礼"}
-											</span>
+											</Badge>
 											{canEdit && (
-												<Button
-													variant="ghost"
-													size="sm"
-													onClick={() =>
-														handleUpdateField("is_return_completed", !entry.is_return_completed)
-													}
-												>
-													{entry.is_return_completed ? "未返礼に変更" : "返礼済に変更"}
+												<Button variant="ghost" size="sm" onClick={handleNavigateToReturns}>
+													返礼を管理
 												</Button>
 											)}
 										</div>
 									</div>
 								</div>
 							</div>
+						</TabsContent>
 
+						<TabsContent value="additional" className="mt-4 space-y-4">
 							{/* 備考 */}
 							{(entry.notes || canEdit) && (
 								<div className="rounded-lg border p-4">
-									<h4 className="text-sm font-medium mb-3 text-muted-foreground">備考</h4>
-									<EditableField
+									<EditableTextArea
 										label="備考"
-										value={entry.notes || "未設定"}
+										value={entry.notes || ""}
 										onSave={(value) => handleUpdateField("notes", value)}
 										canEdit={canEdit}
+										minHeight="200px"
 									/>
 								</div>
 							)}
 						</TabsContent>
 					</Tabs>
 
-					<DrawerFooter className="px-0 space-y-2">
+					<DrawerFooter className="space-y-2 px-2">
 						<div className="flex justify-between items-center gap-2 w-full">
 							{canDelete && (
 								<Button

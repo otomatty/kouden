@@ -1,7 +1,6 @@
 "use client";
 
 import {
-	Card,
 	CardContent,
 	CardDescription,
 	CardFooter,
@@ -12,7 +11,7 @@ import { formatDistanceToNow } from "date-fns";
 import { ja } from "date-fns/locale";
 import type { Database } from "@/types/supabase";
 import Link from "next/link";
-import { Loader2, ArrowRight } from "lucide-react";
+import { Loader2, ArrowRight, ChevronRight } from "lucide-react";
 import { useSetAtom } from "jotai";
 import { loadingStateAtom } from "@/store/loading-hints";
 import { motion } from "framer-motion";
@@ -53,32 +52,35 @@ export function KoudenList({ koudens }: KoudenListProps) {
 						onClick={() => setLoadingState({ isLoading: true, title: "詳細を読み込み中..." })}
 					>
 						<motion.div
-							className="flex flex-col h-full hover:shadow-lg transition-colors rounded-lg border border-gray-200 bg-background"
+							className="flex flex-col h-full hover:shadow-lg transition-colors rounded-lg shadow-md border border-gray-200 bg-background md:justify-between"
 							whileHover={{ scale: 1.05 }}
 							transition={{ type: "spring", stiffness: 100, damping: 20 }}
 						>
-							<div className="flex-1">
-								<CardHeader>
-									<CardTitle className="text-base md:text-lg font-semibold">
-										{kouden.title}
-									</CardTitle>
-									<CardDescription className="text-sm text-gray-500 truncate">
-										{formatDistanceToNow(new Date(kouden.updated_at || kouden.created_at), {
-											addSuffix: true,
-											locale: ja,
-										})}
-									</CardDescription>
-								</CardHeader>
-								{kouden.description && (
-									<CardContent>
+							<div className="p-4 lg:p-6 flex md:flex-col">
+								<div className="flex-1 space-y-2">
+									<div className="flex justify-between items-center">
+										<div className="flex-1 flex items-center justify-between">
+											<h3 className="text-md md:text-lg font-semibold">{kouden.title}</h3>
+											<p className="text-sm text-gray-500 truncate">
+												{formatDistanceToNow(new Date(kouden.updated_at || kouden.created_at), {
+													addSuffix: true,
+													locale: ja,
+												})}
+											</p>
+										</div>
+									</div>
+									{kouden.description && (
 										<p className="text-sm text-gray-500">{kouden.description}</p>
-									</CardContent>
-								)}
+									)}
+								</div>
+								<div className="w-10 flex items-center justify-center">
+									<ChevronRight className="h-5 w-5 text-gray-400 md:hidden shrink-0" />
+								</div>
 							</div>
-							<CardFooter className="mt-auto pt-6 flex items-center text-foreground overflow-hidden opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+							<div className="mt-auto pt-6 m-4 md:m-6 lg:items-center text-foreground overflow-hidden opacity-0 group-hover:opacity-100 transition-opacity duration-300 hidden md:flex">
 								詳細を見る
 								<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-							</CardFooter>
+							</div>
 						</motion.div>
 					</Link>
 				))}
