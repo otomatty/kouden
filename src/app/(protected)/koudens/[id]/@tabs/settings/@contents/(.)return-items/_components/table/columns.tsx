@@ -2,7 +2,7 @@
 
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import { ArrowUpDown, MoreHorizontal, Trash2 } from "lucide-react";
+import { ArrowUpDown, MoreHorizontal, Trash2, Pencil } from "lucide-react";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -18,8 +18,9 @@ import { columnLabels } from "./constants";
 
 interface ColumnProps {
 	koudenId: string;
-	onDelete?: (id: string) => void;
-	permission?: KoudenPermission;
+	onDelete: (returnItem: ReturnItem) => void;
+	onEdit: (returnItem: ReturnItem) => void;
+	permission: KoudenPermission;
 }
 
 /**
@@ -29,6 +30,7 @@ interface ColumnProps {
  */
 export function createColumns({
 	onDelete,
+	onEdit,
 	permission,
 }: ColumnProps): ColumnDef<ReturnItem, CellValue>[] {
 	const columnHelper = createColumnHelper<ReturnItem>();
@@ -86,19 +88,18 @@ export function createColumns({
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
 							<Button variant="ghost" className="h-8 w-8 p-0">
+								<span className="sr-only">メニューを開く</span>
 								<MoreHorizontal className="h-4 w-4" />
 							</Button>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="end">
-							<DropdownMenuItem asChild>
-								<button
-									type="button"
-									onClick={() => onDelete?.(item.id)}
-									className="text-destructive w-full justify-start"
-								>
-									<Trash2 className="h-4 w-4 mr-2" />
-									削除する
-								</button>
+							<DropdownMenuItem onClick={() => onEdit(item)}>
+								<Pencil className="mr-2 h-4 w-4" />
+								編集
+							</DropdownMenuItem>
+							<DropdownMenuItem onClick={() => onDelete(item)} className="text-destructive">
+								<Trash2 className="mr-2 h-4 w-4" />
+								削除
 							</DropdownMenuItem>
 						</DropdownMenuContent>
 					</DropdownMenu>

@@ -1,18 +1,9 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Settings, Users, HeartHandshake, Truck, Gift } from "lucide-react";
-import {
-	SidebarContent,
-	SidebarGroup,
-	SidebarGroupLabel,
-	SidebarMenu,
-	SidebarMenuItem,
-	SidebarMenuButton,
-} from "@/components/ui/sidebar";
 
 interface MenuItem {
 	icon: React.ReactNode;
@@ -52,31 +43,40 @@ export function SettingsMenu({ koudenId }: SettingsMenuProps) {
 			const isActive = pathname === href;
 
 			return (
-				<SidebarMenuItem key={item.href}>
-					<SidebarMenuButton asChild isActive={isActive} className="w-full justify-start">
-						<Link href={href}>
-							<div className="flex items-center gap-2">
-								{item.icon}
-								{item.label}
-							</div>
-						</Link>
-					</SidebarMenuButton>
-				</SidebarMenuItem>
+				<li key={item.href}>
+					<Link
+						href={href}
+						className={cn(
+							"flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-colors",
+							"hover:bg-gray-100 dark:hover:bg-gray-800",
+							isActive
+								? "bg-gray-100 dark:bg-gray-800 text-primary font-medium"
+								: "text-gray-700 dark:text-gray-300",
+						)}
+					>
+						<span className="w-5 h-5">{item.icon}</span>
+						<span>{item.label}</span>
+					</Link>
+				</li>
 			);
 		});
 	};
 
 	return (
-		<SidebarContent>
-			<SidebarGroup>
-				<SidebarGroupLabel>基本設定</SidebarGroupLabel>
-				<SidebarMenu>{renderMenuItems(basicMenuItems)}</SidebarMenu>
-			</SidebarGroup>
+		<nav className="w-64 h-full py-4 border-r border-border">
+			<div className="space-y-6">
+				<div>
+					<h3 className="px-4 text-sm font-medium text-gray-500 dark:text-gray-400">基本設定</h3>
+					<ul className="mt-2 space-y-1">{renderMenuItems(basicMenuItems)}</ul>
+				</div>
 
-			<SidebarGroup>
-				<SidebarGroupLabel>カスタマイズ設定</SidebarGroupLabel>
-				<SidebarMenu>{renderMenuItems(customizableMenuItems)}</SidebarMenu>
-			</SidebarGroup>
-		</SidebarContent>
+				<div>
+					<h3 className="px-4 text-sm font-medium text-gray-500 dark:text-gray-400">
+						カスタマイズ設定
+					</h3>
+					<ul className="mt-2 space-y-1">{renderMenuItems(customizableMenuItems)}</ul>
+				</div>
+			</div>
+		</nav>
 	);
 }

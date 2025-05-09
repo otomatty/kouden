@@ -3,6 +3,7 @@ import { MemberView } from "./_components/member-view";
 import { getMembers, getKoudenRoles } from "@/app/_actions/members";
 import type { KoudenMember } from "@/types/member";
 import { checkKoudenPermission } from "@/app/_actions/permissions";
+import { SettingsHeader } from "../../_components/settings-header";
 
 interface MembersPageProps {
 	params: Promise<{ id: string }>;
@@ -24,11 +25,8 @@ export default async function MembersPage({ params }: MembersPageProps) {
 	]);
 
 	return (
-		<div className="container mx-auto py-6 space-y-6">
-			<div className="space-y-4">
-				<h2 className="text-2xl font-bold tracking-tight">メンバー管理</h2>
-				<p className="text-sm text-muted-foreground">香典帳のメンバーを管理します</p>
-			</div>
+		<div className="space-y-6">
+			<SettingsHeader title="メンバー管理" description="香典帳のメンバーを管理します" />
 			<MemberView
 				koudenId={koudenId}
 				members={members as unknown as KoudenMember[]}

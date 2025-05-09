@@ -4,11 +4,14 @@ import { useState } from "react";
 import { useAtomValue } from "jotai";
 import { DataTable } from "@/components/custom/data-table";
 import { permissionAtom } from "@/store/permission";
+import { useToast } from "@/hooks/use-toast";
 // components
 import { ReturnItemToolbar } from "./toolbar";
 import { createColumns } from "./columns";
+import { DeleteReturnItemDialog } from "../dialogs/delete-return-item-dialog";
+import { EditReturnItemDialog } from "../dialogs/edit-return-item-dialog";
 // types
-import type { ReturnItem } from "@/types/return-records/return-items";
+import type { ReturnItem } from "@/types/return-records";
 
 interface ReturnItemTableProps {
 	koudenId: string;
@@ -23,22 +26,28 @@ interface ReturnItemTableProps {
 export function ReturnItemTable({ koudenId, returnItems }: ReturnItemTableProps) {
 	const permission = useAtomValue(permissionAtom);
 	const [sorting, setSorting] = useState([{ id: "name", desc: false }]);
+	const [deletingItem, setDeletingItem] = useState<ReturnItem | null>(null);
+	const [editingItem, setEditingItem] = useState<ReturnItem | null>(null);
 
-	const handleDelete = async (id: string) => {
-		// TODO: 削除処理の実装
-		console.log("Delete return item", id);
+	const handleDelete = (returnItem: ReturnItem) => {
+		setDeletingItem(returnItem);
+	};
+
+	const handleEdit = (returnItem: ReturnItem) => {
+		setEditingItem(returnItem);
 	};
 
 	const columns = createColumns({
 		koudenId,
 		onDelete: handleDelete,
+		onEdit: handleEdit,
 		permission,
 	});
 
 	return (
 		<div className="space-y-4">
 			{/* ツールバー */}
-			<ReturnItemToolbar />
+			<ReturnItemToolbar koudenId={koudenId} />
 
 			{/* テーブル */}
 			<DataTable<ReturnItem>
@@ -49,6 +58,23 @@ export function ReturnItemTable({ koudenId, returnItems }: ReturnItemTableProps)
 				onSortingChange={setSorting}
 				emptyMessage="返礼品が登録されていません"
 			/>
+
+			{/* 編集ダイアログ */}
+			<EditReturnItemDialog
+				koudenId={koudenId}
+				returnItem={editingItem}
+				onClose={() => setEditingItem(null)}
+			/>
+
+			{/* 削除ダイアログ */}
+			<DeleteReturnItemDialog
+				koudenId={koudenId}
+				returnItem={deletingItem}
+				onClose={() => setDeletingItem(null)}
+			/>
 		</div>
 	);
 }
+
+// 型定義のエクスポート
+export type { ReturnItemTableProps };

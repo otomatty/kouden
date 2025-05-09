@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeliveryMethodsTable } from "./_components/table/table";
 import { DeliveryMethodsToolbar } from "./_components/table/toolbar";
+import { SettingsHeader } from "../../_components/settings-header";
 
 interface DeliveryMethodsPageProps {
 	params: Promise<{ id: string }>;
@@ -15,12 +16,8 @@ export default async function DeliveryMethodsPage({ params }: DeliveryMethodsPag
 	const { id: koudenId } = await params;
 
 	return (
-		<div className="container mx-auto py-6 space-y-6">
-			<div className="space-y-4">
-				<h2 className="text-2xl font-bold tracking-tight">配送方法設定</h2>
-				<p className="text-sm text-muted-foreground">香典帳の配送方法を管理します</p>
-			</div>
-
+		<div className="space-y-6">
+			<SettingsHeader title="配送方法" description="返礼品の配送方法を管理します" />
 			<Card>
 				<CardHeader>
 					<CardTitle>配送方法一覧</CardTitle>

@@ -1,8 +1,10 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useTransition } from "react";
 import { useForm } from "react-hook-form";
-import * as z from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useToast } from "@/hooks/use-toast";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -16,103 +18,103 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
-import { updateKouden } from "@/app/_actions/koudens";
-import { useTransition } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-// バリデーションスキーマ
+import { updateKouden } from "@/app/_actions/koudens";
+
 const formSchema = z.object({
-	title: z
-		.string()
-		.min(1, "タイトルを入力してください")
-		.max(100, "タイトルは100文字以内で入力してください"),
-	description: z.string().max(500, "説明文は500文字以内で入力してください").optional(),
+	title: z.string().min(1, "香典帳のタイトルを入力してください"),
+	description: z.string().optional(),
 });
+
+type FormValues = z.infer<typeof formSchema>;
 
 interface GeneralSettingsFormProps {
 	koudenId: string;
-	initialData?: {
-		title: string;
-		description?: string | null;
-	};
+	defaultValues: FormValues;
 }
 
 /**
  * 一般設定フォームコンポーネント
- * - 香典帳のタイトルと説明文を編集するフォーム
- * - Server Actionsを使用して更新処理を実行
+ * - 香典帳のタイトルと説明を編集するフォーム
+ * - フォームの状態管理とバリデーションを担当
  */
-export function GeneralSettingsForm({ koudenId, initialData }: GeneralSettingsFormProps) {
-	const { toast } = useToast();
+export function GeneralSettingsForm({ koudenId, defaultValues }: GeneralSettingsFormProps) {
 	const [isPending, startTransition] = useTransition();
-
-	// フォームの初期化
-	const form = useForm<z.infer<typeof formSchema>>({
+	const { toast } = useToast();
+	const form = useForm<FormValues>({
 		resolver: zodResolver(formSchema),
-		defaultValues: {
-			title: initialData?.title ?? "",
-			description: initialData?.description ?? "",
-		},
+		defaultValues,
 	});
 
-	// フォーム送信時の処理
-	async function onSubmit(values: z.infer<typeof formSchema>) {
+	const onSubmit = (values: FormValues) => {
 		startTransition(async () => {
 			try {
 				await updateKouden(koudenId, values);
-
 				toast({
 					title: "設定を保存しました",
-					description: "香典帳の基本情報が更新されました",
 				});
 			} catch (error) {
-				console.error("エラーが発生しました", error);
+				console.error(error);
 				toast({
-					title: "エラーが発生しました",
-					description: error instanceof Error ? error.message : "設定の保存に失敗しました",
-					variant: "destructive",
+					title: "設定の保存に失敗しました",
+					description: "もう一度試してください",
 				});
 			}
 		});
-	}
+	};
 
 	return (
-		<Form {...form}>
-			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-				<FormField
-					control={form.control}
-					name="title"
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>タイトル</FormLabel>
-							<FormControl>
-								<Input placeholder="香典帳のタイトル" {...field} />
-							</FormControl>
-							<FormDescription>香典帳を識別するためのタイトルです</FormDescription>
-							<FormMessage />
-						</FormItem>
-					)}
-				/>
+		<Card>
+			<CardHeader>
+				<CardTitle>基本情報</CardTitle>
+				<CardDescription>香典帳のタイトルや説明文を設定します</CardDescription>
+			</CardHeader>
+			<CardContent>
+				<Form {...form}>
+					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+						<FormField
+							control={form.control}
+							name="title"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>タイトル</FormLabel>
+									<FormControl>
+										<Input placeholder="香典帳のタイトル" {...field} />
+									</FormControl>
+									<FormDescription>香典帳を識別するためのタイトルです</FormDescription>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
 
-				<FormField
-					control={form.control}
-					name="description"
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>説明</FormLabel>
-							<FormControl>
-								<Textarea placeholder="香典帳の説明（任意）" {...field} />
-							</FormControl>
-							<FormDescription>香典帳の補足情報や備考を記入できます</FormDescription>
-							<FormMessage />
-						</FormItem>
-					)}
-				/>
+						<FormField
+							control={form.control}
+							name="description"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>説明</FormLabel>
+									<FormControl>
+										<Textarea
+											placeholder="香典帳の説明（任意）"
+											className="resize-none"
+											{...field}
+										/>
+									</FormControl>
+									<FormDescription>香典帳の補足情報や備考を記入できます</FormDescription>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
 
-				<Button type="submit" disabled={isPending}>
-					{isPending ? "保存中..." : "保存"}
-				</Button>
-			</form>
-		</Form>
+						<div className="flex justify-end">
+							<Button type="submit" disabled={isPending}>
+								{isPending ? "保存中..." : "保存"}
+							</Button>
+						</div>
+					</form>
+				</Form>
+			</CardContent>
+		</Card>
 	);
 }

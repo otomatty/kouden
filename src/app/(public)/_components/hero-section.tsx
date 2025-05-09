@@ -7,13 +7,15 @@ export function HeroSection() {
 	return (
 		<section className="relative h-screen flex items-center justify-center bg-gradient-to-b from-primary/10 to-background">
 			<div className="container px-4 md:px-6 mx-auto">
-				<div className="grid gap-6 lg:grid-cols-[1fr_300px] lg:gap-12 xl:grid-cols-[1fr_500px]">
+				<div className="grid gap-6 lg:grid-cols-[1fr_400px] lg:gap-12 xl:grid-cols-[1fr_800px]">
 					<div className="flex flex-col justify-center space-y-4">
 						<div className="space-y-4">
 							<h1
 								className={`text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none ${zenOldMincho.className}`}
 							>
-								香典の記録から、香典返しまで
+								香典の記録から
+								<br />
+								香典返しまで
 								<br />
 								シンプルに管理
 							</h1>
@@ -44,7 +46,7 @@ export function HeroSection() {
 					<div className="flex items-center justify-center">
 						<div className="relative aspect-square w-full">
 							<Image
-								src="/hero-image.png"
+								src="/images/kouden-sample.webp"
 								alt="香典帳アプリのイメージ"
 								fill
 								className="object-contain"

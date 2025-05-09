@@ -6,17 +6,17 @@
 
 返礼品管理システムは以下の4つのテーブルで構成されています：
 
-1. `return_item_masters` - 返礼品のマスターデータを管理
+1. `return_items` - 返礼品のマスターデータを管理
 2. `delivery_methods` - 配送方法を管理
 3. `return_records` - 返礼情報を管理
 4. `return_record_items` - 返礼品の詳細情報を管理
 
 ## テーブル定義
 
-### 1. return_item_masters（返礼品マスターテーブル）
+### 1. return_items（返礼品マスターテーブル）
 
 ```sql
-CREATE TABLE public.return_item_masters (
+CREATE TABLE public.return_items (
 id uuid DEFAULT uuid_generate_v4() NOT NULL,
 name text NOT NULL,
 description text,
