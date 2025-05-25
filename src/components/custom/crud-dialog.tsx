@@ -59,6 +59,11 @@ export interface CrudDialogProps<T = void> {
 	title: string;
 
 	/**
+	 * Shortcut key to open the dialog (with Ctrl/Cmd + key).
+	 */
+	shortcutKey?: string;
+
+	/**
 	 * ダイアログの表示モード
 	 * - "create": 作成モード（プラスアイコンのボタンが表示されます）
 	 * - "edit": 編集モード（編集アイコンのボタンが表示されます）
@@ -119,6 +124,7 @@ export function CrudDialog<T = void>({
 	trigger: customTrigger,
 	children,
 	onSuccess,
+	shortcutKey,
 }: CrudDialogProps<T>) {
 	const isMobile = useMediaQuery("(max-width: 768px)");
 
@@ -161,8 +167,14 @@ export function CrudDialog<T = void>({
 			size={buttonSize}
 			variant={isMobile ? "default" : variant === "create" ? "default" : "ghost"}
 			className={buttonClassName || defaultButtonClassName}
+			aria-keyshortcuts={shortcutKey ? `ctrl+${shortcutKey}` : undefined}
 		>
 			{buttonContent}
+			{!isMobile && shortcutKey && (
+				<span className="ml-2 text-xs text-muted-foreground">
+					{`Ctrl+${shortcutKey.toUpperCase()}`}
+				</span>
+			)}
 		</Button>
 	) : null;
 
@@ -172,6 +184,7 @@ export function CrudDialog<T = void>({
 			title={title}
 			contentClassName={contentClassName}
 			onSuccess={onSuccess ? () => onSuccess({} as T) : undefined}
+			shortcutKey={shortcutKey}
 		>
 			{children}
 		</ResponsiveDialog>

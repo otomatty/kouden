@@ -8,13 +8,13 @@ import { cn } from "@/lib/utils";
 const Tabs = TabsPrimitive.Root;
 
 const TabsList = React.forwardRef<
-	React.ElementRef<typeof TabsPrimitive.List>,
+	HTMLDivElement,
 	React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
 >(({ className, ...props }, ref) => (
 	<TabsPrimitive.List
 		ref={ref}
 		className={cn(
-			"inline-flex w-full h-12 items-center justify-center rounded-lg bg-muted p-1.5 text-muted-foreground",
+			"inline-flex w-full h-12 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground",
 			className,
 		)}
 		{...props}
@@ -23,7 +23,7 @@ const TabsList = React.forwardRef<
 TabsList.displayName = TabsPrimitive.List.displayName;
 
 const TabsTrigger = React.forwardRef<
-	React.ElementRef<typeof TabsPrimitive.Trigger>,
+	HTMLButtonElement,
 	React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
 >(({ className, ...props }, ref) => (
 	<TabsPrimitive.Trigger
@@ -38,7 +38,7 @@ const TabsTrigger = React.forwardRef<
 TabsTrigger.displayName = TabsPrimitive.Trigger.displayName;
 
 const TabsContent = React.forwardRef<
-	React.ElementRef<typeof TabsPrimitive.Content>,
+	HTMLDivElement,
 	React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
 >(({ className, ...props }, ref) => (
 	<TabsPrimitive.Content

@@ -12,6 +12,10 @@ export interface EntryDialogProps {
 	variant?: "create" | "edit" | undefined; // undefinedはボタンが表示されないことを表す
 	onSuccess?: (entry: Entry) => void;
 	trigger?: React.ReactNode;
+	/**
+	 * Shortcut key to open the dialog (with Ctrl/Cmd + key).
+	 */
+	shortcutKey?: string;
 }
 
 export function EntryDialog({
@@ -21,11 +25,13 @@ export function EntryDialog({
 	variant,
 	onSuccess,
 	trigger,
+	shortcutKey,
 }: EntryDialogProps) {
 	return (
 		<CrudDialog<Entry>
 			title={variant === "create" ? "香典を登録する" : "編集する"}
 			variant={variant}
+			shortcutKey={shortcutKey}
 			createButtonLabel="香典を登録する"
 			editButtonLabel="編集する"
 			onSuccess={onSuccess}

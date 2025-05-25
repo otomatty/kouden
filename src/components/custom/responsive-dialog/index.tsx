@@ -9,7 +9,6 @@ import {
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger,
-	DialogClose,
 } from "@/components/ui/dialog";
 import {
 	Drawer,
@@ -29,6 +28,10 @@ interface ResponsiveDialogProps {
 	className?: string;
 	contentClassName?: string;
 	onSuccess?: () => void;
+	/**
+	 * Shortcut key to open the dialog (with Ctrl/Cmd + key).
+	 */
+	shortcutKey?: string;
 }
 
 export function ResponsiveDialog({
@@ -39,6 +42,7 @@ export function ResponsiveDialog({
 	className,
 	contentClassName,
 	onSuccess,
+	shortcutKey,
 }: ResponsiveDialogProps) {
 	const [open, setOpen] = useState(false);
 	// クライアントサイドでのみレンダリングするかどうかを管理 (SSR対策)
@@ -78,6 +82,21 @@ export function ResponsiveDialog({
 		return () => clearTimeout(timer);
 	}, []);
 
+	// Handle keyboard shortcut to open the dialog
+	useEffect(() => {
+		if (!shortcutKey) return;
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === shortcutKey.toLowerCase()) {
+				e.preventDefault();
+				setOpen(true);
+			}
+		};
+		window.addEventListener("keydown", handleKeyDown);
+		return () => {
+			window.removeEventListener("keydown", handleKeyDown);
+		};
+	}, [shortcutKey]);
+
 	if (!isClient) {
 		return null; // SSR では何もレンダリングしない
 	}
@@ -115,7 +134,9 @@ export function ResponsiveDialog({
 						{description && <DrawerDescription>{description}</DrawerDescription>}
 					</DrawerHeader>
 				)}
-				<div className={cn("px-4", className)}>{renderChildren()}</div>
+				<div className="overflow-y-auto max-h-[calc(100dvh-1rem)] px-4">
+					<div className={className}>{renderChildren()}</div>
+				</div>
 			</DrawerContent>
 		</Drawer>
 	);

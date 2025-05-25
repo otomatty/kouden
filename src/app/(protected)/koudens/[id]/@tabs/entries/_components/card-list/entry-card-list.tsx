@@ -7,6 +7,7 @@ import { MobileFilters } from "./mobile-filters";
 import { EntryCard } from "./entry-card";
 import { entriesAtom } from "@/store/entries";
 import type { Relationship } from "@/types/relationships";
+import { ArrowDown } from "lucide-react";
 
 interface EntryCardListProps {
 	entries: Entry[];
@@ -96,7 +97,14 @@ export function EntryCardList({
 						/>
 					))}
 					{filteredAndSortedData.length === 0 && (
-						<div className="text-center py-8 text-muted-foreground">データがありません</div>
+						<div className="text-center py-8 text-muted-foreground h-[40vh] flex flex-col justify-between items-center">
+							<span className="font-semibold">
+								データがありません。
+								<br />
+								「香典を追加」ボタンをクリックして追加してください。
+							</span>
+							<ArrowDown className="h-8 w-8 mx-auto" />
+						</div>
 					)}
 				</div>
 			</div>

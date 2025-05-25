@@ -8,5 +8,7 @@ const COLUMNS = ["name", "relationship", "amount", "note", "created_at"] as cons
  * - モバイル：カードリストのスケルトンを表示
  */
 export default function EntriesLoading() {
-	return <ResponsiveSkeleton columns={COLUMNS} rows={5} />;
+	return (
+		<ResponsiveSkeleton columns={COLUMNS} rows={5} showSearchBar={false} mobileStyle="card-list" />
+	);
 }

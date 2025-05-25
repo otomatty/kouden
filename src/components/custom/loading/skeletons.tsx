@@ -103,7 +103,7 @@ export function ResponsiveSkeleton({
 			</div>
 
 			{/* モバイル表示（md未満） */}
-			<div className="md:hidden">
+			<div className="block md:hidden">
 				{mobileStyle === "grid" ? (
 					<GridCardSkeleton cards={rows} columns={gridColumns} />
 				) : (

@@ -323,7 +323,12 @@ export function DataTable({
 						>
 							<div className="flex items-center justify-end">
 								{!isMobile && (
-									<EntryDialog koudenId={koudenId} relationships={relationships} variant="create" />
+									<EntryDialog
+										koudenId={koudenId}
+										relationships={relationships}
+										variant="create"
+										shortcutKey="e"
+									/>
 								)}
 							</div>
 						</DataTableToolbar>
