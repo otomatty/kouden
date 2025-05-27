@@ -109,7 +109,7 @@ export function ResponsiveDialog({
 		return (
 			<Dialog open={open} onOpenChange={setOpen}>
 				<DialogTrigger asChild>{trigger}</DialogTrigger>
-				<DialogContent {...dialogContentProps}>
+				<DialogContent forceMount {...dialogContentProps}>
 					{(title || description) && (
 						<DialogHeader>
 							{title && <DialogTitle>{title}</DialogTitle>}
@@ -127,7 +127,7 @@ export function ResponsiveDialog({
 	return (
 		<Drawer open={open} onOpenChange={setOpen}>
 			<DrawerTrigger asChild>{trigger}</DrawerTrigger>
-			<DrawerContent>
+			<DrawerContent forceMount>
 				{(title || description) && (
 					<DrawerHeader className="text-left">
 						{title && <DrawerTitle>{title}</DrawerTitle>}

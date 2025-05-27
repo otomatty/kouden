@@ -51,12 +51,8 @@ export function FeedbackForm() {
 	}
 
 	return (
-		<Card className="w-full max-w-2xl mx-auto">
-			<CardHeader>
-				<CardTitle>不具合・ご要望はこちら</CardTitle>
-				<CardDescription>アプリについてのご意見・ご要望をお聞かせください</CardDescription>
-			</CardHeader>
-			<CardContent>
+		<>
+			<div className="space-y-4">
 				<form onSubmit={onSubmit} className="space-y-4">
 					<div className="space-y-2">
 						<Label htmlFor="email">メールアドレス</Label>
@@ -80,7 +76,7 @@ export function FeedbackForm() {
 						{isLoading ? "送信中..." : "送信する"}
 					</Button>
 				</form>
-			</CardContent>
-		</Card>
+			</div>
+		</>
 	);
 }

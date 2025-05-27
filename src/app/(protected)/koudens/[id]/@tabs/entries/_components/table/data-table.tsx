@@ -327,7 +327,7 @@ export function DataTable({
 										koudenId={koudenId}
 										relationships={relationships}
 										variant="create"
-										shortcutKey="e"
+										shortcutKey="k"
 									/>
 								)}
 							</div>

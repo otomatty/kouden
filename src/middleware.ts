@@ -15,12 +15,12 @@ export async function middleware(request: NextRequest) {
 		request.nextUrl.pathname.startsWith("/koudens")
 	) {
 		if (!user) {
-			return NextResponse.redirect(new URL("/login", request.url));
+			return NextResponse.redirect(new URL("/auth/login", request.url));
 		}
 	}
 
 	// ログイン済みユーザーがログインページにアクセスした場合はリダイレクト
-	if (request.nextUrl.pathname.startsWith("/login") && user) {
+	if (request.nextUrl.pathname.startsWith("/auth/login") && user) {
 		return NextResponse.redirect(new URL("/koudens", request.url));
 	}
 

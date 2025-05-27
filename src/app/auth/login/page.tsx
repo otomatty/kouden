@@ -1,10 +1,13 @@
 import { Header } from "@/app/(public)/_components/header";
 import { LoginForm } from "./_components/login-form";
+import pkg from "../../../../package.json";
+
+const version = pkg.version;
 
 export default function LoginPage() {
 	return (
 		<>
-			<Header />
+			<Header version={version} />
 			<main className="min-h-screen pt-16">
 				<section className="py-24">
 					<div className="container px-4 md:px-6 mx-auto">

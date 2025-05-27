@@ -14,7 +14,7 @@ import type { AdditionalSelectCellProps } from "@/types/additional-select";
 export function AdditionalSelectCell({
 	options,
 	value,
-	placeholder = "選択してください",
+	placeholder = "---",
 	disabled = false,
 	onValueChange,
 	onAddOption,
@@ -25,7 +25,7 @@ export function AdditionalSelectCell({
 	return (
 		<div className="flex flex-col gap-1">
 			<Select value={value ?? undefined} onValueChange={onValueChange} disabled={disabled}>
-				<SelectTrigger className="h-8 w-full">
+				<SelectTrigger className="h-8 w-full border-none shadow-none bg-transparent hover:bg-accent hover:text-accent-foreground">
 					<SelectValue placeholder={placeholder} />
 				</SelectTrigger>
 				<SelectContent>

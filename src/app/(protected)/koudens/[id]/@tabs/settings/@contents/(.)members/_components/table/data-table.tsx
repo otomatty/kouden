@@ -18,6 +18,7 @@ import {
 } from "@tanstack/react-table";
 import { DataTableToolbar } from "@/components/custom/data-table/toolbar";
 import { ShareLinkForm } from "../share-link-dialog";
+import { InviteByEmailDialog } from "../invite-by-email-dialog";
 import type { KoudenRole } from "@/types/role";
 import {
 	columnLabels,
@@ -119,8 +120,9 @@ export function MembersTable({
 				table={table}
 			>
 				{permission === "owner" && (
-					<div className="flex items-center justify-end">
+					<div className="flex items-center justify-end space-x-2">
 						<ShareLinkForm koudenId={koudenId} roles={roles} />
+						<InviteByEmailDialog koudenId={koudenId} roles={roles} />
 					</div>
 				)}
 			</DataTableToolbar>

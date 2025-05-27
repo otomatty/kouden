@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import ms from "ms";
+import type { Database } from "@/types/supabase";
+import type { PostgrestError } from "@supabase/supabase-js";
 
 const createInvitationSchema = z.object({
 	koudenId: z.string().uuid(),
@@ -14,7 +16,16 @@ const createInvitationSchema = z.object({
 
 export type CreateInvitationInput = z.infer<typeof createInvitationSchema>;
 
-export async function createShareInvitation(input: CreateInvitationInput) {
+// kouden_invitations テーブルの行型に kouden_data の具体的な型をマージする
+// JSONB カラムの型は Supabase 生成型だと Json とかになるから、ここで上書きするの
+type KoudenInvitationRowWithKoudenData =
+	Database["public"]["Tables"]["kouden_invitations"]["Row"] & {
+		kouden_data: { id: string; title: string; description?: string } | null;
+	};
+
+export async function createShareInvitation(
+	input: CreateInvitationInput,
+): Promise<KoudenInvitationRowWithKoudenData> {
 	try {
 		const supabase = await createClient();
 		const {
@@ -25,8 +36,7 @@ export async function createShareInvitation(input: CreateInvitationInput) {
 			throw new Error("認証が必要です");
 		}
 
-		const { koudenId, roleId, maxUses, expiresIn } =
-			createInvitationSchema.parse(input);
+		const { koudenId, roleId, maxUses, expiresIn } = createInvitationSchema.parse(input);
 
 		// 香典帳の情報を取得
 		const { data: kouden, error: koudenError } = await supabase
@@ -46,14 +56,12 @@ export async function createShareInvitation(input: CreateInvitationInput) {
 				kouden_id: koudenId,
 				role_id: roleId,
 				max_uses: maxUses,
-				expires_at: new Date(
-					Date.now() + (ms(expiresIn) as number),
-				).toISOString(),
+				expires_at: new Date(Date.now() + (ms(expiresIn) as number)).toISOString(),
 				created_by: user.id,
 				kouden_data: kouden,
 			})
 			.select()
-			.single();
+			.single<KoudenInvitationRowWithKoudenData>();
 
 		if (error) {
 			throw new Error("招待リンクの作成に失敗しました");
@@ -65,12 +73,6 @@ export async function createShareInvitation(input: CreateInvitationInput) {
 		console.error("[ERROR] Error in createShareInvitation:", error);
 		throw error;
 	}
-}
-
-interface KoudenData {
-	id: string;
-	title: string;
-	description?: string;
 }
 
 export async function getInvitation(token: string) {
@@ -95,7 +97,11 @@ export async function getInvitation(token: string) {
 			.gt("expires_at", new Date().toISOString())
 			.single();
 
-		const { data: invitation, error: invitationError } = await query;
+		// NOTE: getInvitation の返り値も型を厳密にするなら修正が必要
+		const { data: invitation, error: invitationError } = (await query) as {
+			data: KoudenInvitationRowWithKoudenData | null;
+			error: PostgrestError;
+		};
 
 		if (invitationError) {
 			throw new Error("招待情報の取得に失敗しました");
@@ -105,8 +111,8 @@ export async function getInvitation(token: string) {
 			throw new Error("招待情報が見つかりません");
 		}
 
-		// kouden_dataの型を保証
-		const kouden_data = invitation.kouden_data as KoudenData | null;
+		// kouden_dataの型を保証 (ジェネリクスで指定済みなので不要になるはずだが、念のため残すか確認)
+		// const kouden_data = invitation.kouden_data as KoudenData | null;
 
 		// 作成者の情報を取得
 		const { data: creatorProfile, error: creatorError } = await supabase
@@ -133,7 +139,7 @@ export async function getInvitation(token: string) {
 			return {
 				...invitation,
 				creator: null,
-				kouden_data,
+				kouden_data: invitation.kouden_data,
 				isExistingMember,
 			};
 		}
@@ -142,7 +148,7 @@ export async function getInvitation(token: string) {
 		const result = {
 			...invitation,
 			creator: creatorProfile,
-			kouden_data,
+			kouden_data: invitation.kouden_data,
 			isExistingMember,
 		};
 
@@ -201,15 +207,13 @@ export async function acceptInvitation(token: string) {
 		}
 
 		// 4. メンバー追加
-		const { error: memberError } = await supabase
-			.from("kouden_members")
-			.insert({
-				kouden_id: invitation.kouden_id,
-				user_id: user.id,
-				role_id: invitation.role_id,
-				invitation_id: invitation.id,
-				added_by: user.id,
-			});
+		const { error: memberError } = await supabase.from("kouden_members").insert({
+			kouden_id: invitation.kouden_id,
+			user_id: user.id,
+			role_id: invitation.role_id,
+			invitation_id: invitation.id,
+			added_by: user.id,
+		});
 
 		if (memberError) {
 			throw new Error("メンバーの追加に失敗しました");

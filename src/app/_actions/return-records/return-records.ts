@@ -36,7 +36,10 @@ export async function createReturnRecord(input: CreateReturnRecordInput): Promis
 		const { data, error } = await supabase
 			.from("return_records")
 			.insert({
-				...input,
+				koden_info_id: input.koden_info_id,
+				arrangement_date: input.arrangement_date,
+				remarks: input.remarks,
+				status: input.status,
 				total_amount: 0, // 初期値は0、後で返礼品詳細が追加された時に更新
 				created_by: session.user.id,
 			})
@@ -52,7 +55,7 @@ export async function createReturnRecord(input: CreateReturnRecordInput): Promis
 		}
 
 		// キャッシュの再検証
-		revalidatePath(`/koudens/${input.kouden_id}`);
+		revalidatePath(`/koudens/${input.koden_info_id}`);
 
 		return data as ReturnRecord;
 	} catch (error) {
@@ -134,9 +137,13 @@ export async function updateReturnRecord(
 
 		const { id, kouden_id, ...updateData } = input;
 
+		if (!id) {
+			throw new Error("返礼情報IDが指定されていません");
+		}
+
 		// 完了日の自動設定
-		if (updateData.status === "completed" && !updateData.completed_date) {
-			updateData.completed_date = new Date().toISOString().split("T")[0];
+		if (updateData.status === "completed" && !updateData.arrangement_date) {
+			updateData.arrangement_date = new Date().toISOString().split("T")[0];
 		}
 
 		const { data, error } = await supabase

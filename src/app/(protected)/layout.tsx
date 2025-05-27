@@ -9,6 +9,9 @@ import { TourGuide } from "@/components/custom/TourGuide/TourGuide";
 import { FeedbackButton } from "@/components/custom/feedback-button";
 import { LoadingProvider } from "@/components/custom/loading-provider";
 import { Toaster } from "@/components/ui/toaster";
+import pkg from "../../../package.json";
+
+const version = pkg.version;
 
 interface ProtectedLayoutProps {
 	children: React.ReactNode;
@@ -50,7 +53,7 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
 			<InitializeGuideMode initialValue={guideMode}>
 				<TourGuide>
 					<div className="min-h-screen bg-muted">
-						<Header user={user} isAdmin={isAdminUser} />
+						<Header user={user} isAdmin={isAdminUser} version={version} />
 						<div className="app-body container mx-auto px-4 py-8 md:my-12">
 							<main>{children}</main>
 						</div>

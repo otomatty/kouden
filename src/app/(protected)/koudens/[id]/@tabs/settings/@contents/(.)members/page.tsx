@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { MemberView } from "./_components/member-view";
 import { getMembers, getKoudenRoles } from "@/app/_actions/members";
 import type { KoudenMember } from "@/types/member";

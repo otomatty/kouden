@@ -234,7 +234,9 @@ export function DataTable<Data>({
 									<TableHead
 										key={header.id}
 										className={cn(
-											"bg-background border-r last:border-r-0 whitespace-nowrap overflow-hidden text-ellipsis",
+											header.column.id === "select"
+												? "w-8 px-2 bg-background border-r last:border-r-0"
+												: "bg-background border-r last:border-r-0 whitespace-nowrap overflow-hidden text-ellipsis",
 											cellClassName,
 										)}
 									>

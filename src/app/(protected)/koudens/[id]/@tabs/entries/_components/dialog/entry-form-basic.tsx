@@ -56,19 +56,6 @@ export function EntryFormBasic() {
 
 	return (
 		<div className="grid gap-4">
-			<FormField
-				control={form.control}
-				name="name"
-				render={({ field }) => (
-					<FormItem>
-						<FormLabel optional>ご芳名</FormLabel>
-						<FormControl>
-							<Input placeholder="例：山田太郎" {...field} value={field.value || ""} />
-						</FormControl>
-						<FormMessage />
-					</FormItem>
-				)}
-			/>
 			<div className="grid grid-cols-2 gap-4">
 				<FormField
 					control={form.control}
@@ -97,6 +84,19 @@ export function EntryFormBasic() {
 					)}
 				/>
 			</div>
+			<FormField
+				control={form.control}
+				name="name"
+				render={({ field }) => (
+					<FormItem>
+						<FormLabel required>ご芳名</FormLabel>
+						<FormControl>
+							<Input placeholder="例：山田太郎" {...field} value={field.value || ""} />
+						</FormControl>
+						<FormMessage />
+					</FormItem>
+				)}
+			/>
 			<FormField
 				control={form.control}
 				name="postalCode"

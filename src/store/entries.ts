@@ -1,5 +1,5 @@
 import { atom } from "jotai";
-import type { Entry, EntryForm, AttendanceType } from "@/types/entries";
+import type { Entry, EntryForm, AttendanceType, EntryFormValues } from "@/types/entries";
 import type { KoudenPermission } from "@/types/role";
 
 // 香典データを管理するatom
@@ -192,3 +192,6 @@ export const addressSearchStateAtom = atom({
 	isSearching: false,
 	error: null as string | null,
 });
+
+// ドラフトのフォーム値を保持するatom
+export const entryFormDraftAtom = atom<Partial<EntryFormValues> | undefined>(undefined);

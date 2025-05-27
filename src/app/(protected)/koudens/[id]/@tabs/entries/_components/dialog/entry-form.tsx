@@ -3,6 +3,8 @@
 import { useAtom } from "jotai";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { entryFormDraftAtom } from "@/store/entries";
+import { useEffect } from "react";
 // ui
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -47,57 +49,58 @@ export interface EntryFormProps {
 export function EntryForm({ koudenId, relationships, defaultValues, onSuccess }: EntryFormProps) {
 	const [submissionState, setSubmissionState] = useAtom(formSubmissionStateAtom);
 	const { toast } = useToast();
+	const [draftValues, setDraftValues] = useAtom(entryFormDraftAtom);
+	const isCreate = defaultValues == null;
 
+	const initialValues = defaultValues
+		? {
+				name: defaultValues.name || "",
+				organization: defaultValues.organization,
+				position: defaultValues.position,
+				amount: defaultValues.amount,
+				postalCode: defaultValues.postal_code,
+				address: defaultValues.address,
+				phoneNumber: defaultValues.phone_number,
+				relationshipId: defaultValues.relationship_id,
+				attendanceType: defaultValues.attendance_type as AttendanceType,
+				notes: defaultValues.notes,
+				koudenId,
+			}
+		: (draftValues ?? {
+				name: "",
+				organization: null,
+				position: null,
+				amount: 0,
+				postalCode: null,
+				address: null,
+				phoneNumber: null,
+				relationshipId: null,
+				attendanceType: "FUNERAL",
+				notes: null,
+				koudenId,
+			});
 	const form = useForm<EntryFormValues>({
 		resolver: zodResolver(entryFormSchema),
-		defaultValues: defaultValues
-			? {
-					name: defaultValues.name || "",
-					organization: defaultValues.organization,
-					position: defaultValues.position,
-					amount: defaultValues.amount,
-					postalCode: defaultValues.postal_code,
-					address: defaultValues.address,
-					phoneNumber: defaultValues.phone_number,
-					relationshipId: defaultValues.relationship_id,
-					attendanceType: defaultValues.attendance_type as AttendanceType,
-					notes: defaultValues.notes,
-					koudenId,
-				}
-			: {
-					name: "",
-					organization: null,
-					position: null,
-					amount: 0,
-					postalCode: null,
-					address: null,
-					phoneNumber: null,
-					relationshipId: null,
-					attendanceType: "FUNERAL",
-					notes: null,
-					koudenId,
-				},
+		defaultValues: initialValues,
 	});
+	useEffect(() => {
+		if (!isCreate) return;
+		const subscription = form.watch((values) => {
+			setDraftValues(values);
+		});
+		return () => subscription.unsubscribe();
+	}, [form, isCreate, setDraftValues]);
 
 	const onSubmit = async (values: EntryFormValues) => {
 		try {
-			console.log("[DEBUG] Form submission started:", { values });
 			setSubmissionState({ isSubmitting: true, error: null });
 
 			if (values.relationshipId === undefined) {
 				values.relationshipId = null;
 			}
-
-			console.log("[DEBUG] Calling handleEntrySubmission with:", {
-				values,
-				koudenId,
-				defaultValues,
-			});
 			const result = await handleEntrySubmission(values, koudenId, defaultValues);
-			console.log("[DEBUG] handleEntrySubmission result:", { result });
 
 			if (!result) {
-				console.error("[DEBUG] No result from handleEntrySubmission");
 				throw new Error("エントリーの保存に失敗しました");
 			}
 
@@ -110,6 +113,7 @@ export function EntryForm({ koudenId, relationships, defaultValues, onSuccess }:
 
 			if (!defaultValues) {
 				form.reset();
+				setDraftValues(undefined);
 			}
 		} catch (error) {
 			console.error("[DEBUG] Entry submission failed:", {
@@ -130,7 +134,6 @@ export function EntryForm({ koudenId, relationships, defaultValues, onSuccess }:
 				variant: "destructive",
 			});
 		} finally {
-			console.log("[DEBUG] Form submission completed");
 			setSubmissionState((prev) => ({ ...prev, isSubmitting: false }));
 		}
 	};

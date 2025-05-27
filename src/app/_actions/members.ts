@@ -1,7 +1,6 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import type { KoudenMember } from "@/types/member";
 import type { KoudenRole } from "@/types/role";
 import { isKoudenOwner } from "./permissions";
 import { revalidatePath } from "next/cache";
@@ -122,6 +121,7 @@ export const getMembers = cache(async (koudenId: string) => {
 			.from("kouden_members")
 			.select(`
 				id,
+				kouden_id,
 				user_id,
 				role_id,
 				kouden_roles:kouden_roles (
