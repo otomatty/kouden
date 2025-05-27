@@ -67,7 +67,6 @@ export async function createShareInvitation(
 			throw new Error("招待リンクの作成に失敗しました");
 		}
 
-		revalidatePath(`/koudens/${koudenId}`);
 		return invitation;
 	} catch (error) {
 		console.error("[ERROR] Error in createShareInvitation:", error);
