@@ -10,6 +10,9 @@ import {
 import { AlertCircle, ArrowLeft } from "lucide-react";
 import { Header } from "@/app/(public)/_components/header";
 import Link from "next/link";
+import pkg from "../../../package.json";
+
+const version = pkg.version;
 
 interface PageProps {
 	params: Promise<Record<string, never>>;
@@ -22,7 +25,7 @@ export default async function InvitationErrorPage({ searchParams }: PageProps) {
 
 	return (
 		<>
-			<Header />
+			<Header version={version} />
 			<main className="min-h-screen pt-16">
 				<div className="container max-w-2xl py-8">
 					<div className="mb-6">

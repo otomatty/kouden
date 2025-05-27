@@ -36,7 +36,7 @@ export async function createReturnRecord(input: CreateReturnRecordInput): Promis
 		const { data, error } = await supabase
 			.from("return_records")
 			.insert({
-				koden_info_id: input.koden_info_id,
+				koden_id: input.koden_id,
 				arrangement_date: input.arrangement_date,
 				remarks: input.remarks,
 				status: input.status,
@@ -55,7 +55,7 @@ export async function createReturnRecord(input: CreateReturnRecordInput): Promis
 		}
 
 		// キャッシュの再検証
-		revalidatePath(`/koudens/${input.koden_info_id}`);
+		revalidatePath(`/koudens/${input.koden_id}`);
 
 		return data as ReturnRecord;
 	} catch (error) {

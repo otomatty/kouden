@@ -33,7 +33,10 @@ export default async function GeneralSettingsPage({ params }: GeneralSettingsPag
 				</div>
 
 				<div className="bg-white rounded-lg border p-6">
-					<GeneralSettingsForm koudenId={id} initialData={kouden} />
+					<GeneralSettingsForm
+						koudenId={id}
+						defaultValues={{ title: kouden.title, description: kouden.description ?? "" }}
+					/>
 				</div>
 			</div>
 		</div>

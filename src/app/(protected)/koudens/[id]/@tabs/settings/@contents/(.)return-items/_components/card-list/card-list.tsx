@@ -1,6 +1,5 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { ReturnItemCard } from "./return-item-card";
@@ -49,7 +48,6 @@ export function ReturnItemCardList({ koudenId, returnItems }: ReturnItemCardList
 				{returnItems.map((item) => (
 					<ReturnItemCard
 						key={item.id}
-						koudenId={koudenId}
 						returnItem={item}
 						onEdit={handleEdit}
 						onDelete={handleDelete}

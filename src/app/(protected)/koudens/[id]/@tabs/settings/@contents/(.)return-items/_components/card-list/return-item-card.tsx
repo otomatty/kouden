@@ -12,7 +12,6 @@ import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import type { ReturnItem } from "@/types/return-records";
 
 interface ReturnItemCardProps {
-	koudenId: string;
 	returnItem: ReturnItem;
 	onEdit: (returnItem: ReturnItem) => void;
 	onDelete: (returnItem: ReturnItem) => void;
@@ -23,7 +22,7 @@ interface ReturnItemCardProps {
  * - 個別の返礼品情報を表示
  * - 編集・削除機能を提供
  */
-export function ReturnItemCard({ koudenId, returnItem, onEdit, onDelete }: ReturnItemCardProps) {
+export function ReturnItemCard({ returnItem, onEdit, onDelete }: ReturnItemCardProps) {
 	return (
 		<Card>
 			<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
