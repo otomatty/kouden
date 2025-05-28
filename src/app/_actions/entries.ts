@@ -87,6 +87,7 @@ export async function getEntries(
 	koudenId: string,
 	page = 1,
 	pageSize = 100,
+	memberIds?: string[],
 ): Promise<{ entries: Entry[]; count: number }> {
 	const supabase = await createClient();
 	const {
@@ -101,16 +102,20 @@ export async function getEntries(
 		// エントリー情報の取得
 		const from = (page - 1) * pageSize;
 		const to = from + pageSize - 1;
+		// Build base query and apply optional user filter
+		let query = supabase
+			.from("kouden_entries")
+			.select("*", { count: "exact" })
+			.eq("kouden_id", koudenId);
+		if (memberIds && memberIds.length > 0) {
+			// Filter entries by selected creator user IDs
+			query = query.in("created_by", memberIds);
+		}
 		const {
 			data: rawEntries,
 			count,
 			error: entriesError,
-		} = await supabase
-			.from("kouden_entries")
-			.select("*", { count: "exact" })
-			.eq("kouden_id", koudenId)
-			.order("created_at", { ascending: false })
-			.range(from, to);
+		} = await query.order("created_at", { ascending: false }).range(from, to);
 		const entries = rawEntries ?? [];
 
 		if (entriesError) {

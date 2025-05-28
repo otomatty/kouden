@@ -2,8 +2,8 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import type { Entry } from "@//types/entries";
 import { formatCurrency } from "@/utils/currency";
+import { memo } from "react";
 import {
 	PieChart,
 	Pie,
@@ -17,69 +17,23 @@ import {
 } from "recharts";
 
 interface KoudenStatisticsProps {
-	entries: Entry[];
+	totalAmount: number;
+	attendanceCounts: Record<"FUNERAL" | "CONDOLENCE_VISIT" | "ABSENT", number>;
+	returnProgress: { completed: number; pending: number };
+	returnProgressPercentage: number;
+	amountDistribution: { name: string; count: number }[];
+	attendanceData: { name: string; value: number; color: string }[];
 }
 
-const ATTENDANCE_COLORS = {
-	FUNERAL: "#2563eb", // blue-600
-	CONDOLENCE_VISIT: "#16a34a", // green-600
-	ABSENT: "#dc2626", // red-600
-};
-
-const ATTENDANCE_LABELS = {
-	FUNERAL: "葬儀",
-	CONDOLENCE_VISIT: "弔問",
-	ABSENT: "欠席",
-};
-
-export function KoudenStatistics({ entries }: KoudenStatisticsProps) {
-	// 統計データの計算
-	const totalAmount = entries.reduce((sum, entry) => sum + entry.amount, 0);
-
-	const attendanceCounts = entries.reduce(
-		(acc, entry) => {
-			acc[entry.attendanceType] = (acc[entry.attendanceType] || 0) + 1;
-			return acc;
-		},
-		{ FUNERAL: 0, CONDOLENCE_VISIT: 0, ABSENT: 0 } as Record<Entry["attendance_type"], number>,
-	);
-
-	const returnProgress = entries.reduce(
-		(acc, entry) => {
-			entry.is_return_completed ? acc.completed++ : acc.pending++;
-			return acc;
-		},
-		{ completed: 0, pending: 0 },
-	);
-
-	const returnProgressPercentage = (returnProgress.completed / entries.length) * 100;
-
-	// 金額帯別の分布データ
-	const amountRanges = [
-		{ range: "〜5千円", min: 0, max: 5000 },
-		{ range: "5千円〜1万円", min: 5000, max: 10000 },
-		{ range: "1〜2万円", min: 10000, max: 20000 },
-		{ range: "2〜3万円", min: 20000, max: 30000 },
-		{ range: "3〜5万円", min: 30000, max: 50000 },
-		{ range: "5〜7万円", min: 50000, max: 70000 },
-		{ range: "7〜10万円", min: 70000, max: 100000 },
-		{ range: "10万円〜", min: 100000, max: Number.POSITIVE_INFINITY },
-	];
-
-	const amountDistribution = amountRanges
-		.map((range) => ({
-			name: range.range,
-			count: entries.filter((entry) => entry.amount >= range.min && entry.amount < range.max)
-				.length,
-		}))
-		.reverse();
-
-	// 参列種別の円グラフデータ
-	const attendanceData = Object.entries(attendanceCounts).map(([key, value]) => ({
-		name: ATTENDANCE_LABELS[key as keyof typeof ATTENDANCE_LABELS],
-		value,
-		color: ATTENDANCE_COLORS[key as keyof typeof ATTENDANCE_COLORS],
-	}));
+export const KoudenStatistics = memo(function KoudenStatistics({
+	totalAmount,
+	attendanceCounts,
+	returnProgress,
+	returnProgressPercentage,
+	amountDistribution,
+	attendanceData,
+}: KoudenStatisticsProps) {
+	const totalCount = returnProgress.completed + returnProgress.pending;
 
 	return (
 		<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -99,7 +53,7 @@ export function KoudenStatistics({ entries }: KoudenStatisticsProps) {
 					<CardTitle className="text-sm font-medium">参列者数</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<div className="text-2xl font-bold">{entries.length}名</div>
+					<div className="text-2xl font-bold">{totalCount}名</div>
 					<div className="text-xs text-muted-foreground">
 						葬儀: {attendanceCounts.FUNERAL}名 / 弔問: {attendanceCounts.CONDOLENCE_VISIT}名 / 欠席:{" "}
 						{attendanceCounts.ABSENT}名
@@ -116,7 +70,7 @@ export function KoudenStatistics({ entries }: KoudenStatisticsProps) {
 					<div className="flex items-center justify-between">
 						<div className="text-2xl font-bold">{Math.round(returnProgressPercentage)}%</div>
 						<div className="text-xs text-muted-foreground">
-							{returnProgress.completed} / {entries.length}
+							{returnProgress.completed} / {totalCount}
 						</div>
 					</div>
 					<Progress value={returnProgressPercentage} className="mt-2" />
@@ -174,4 +128,4 @@ export function KoudenStatistics({ entries }: KoudenStatisticsProps) {
 			</div>
 		</div>
 	);
-}
+});

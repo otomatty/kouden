@@ -13,7 +13,11 @@ interface OfferingsPageProps {
  */
 export default async function OfferingsPage({ params }: OfferingsPageProps) {
 	const { id: koudenId } = await params;
-	const [offerings, entries] = await Promise.all([getOfferings(koudenId), getEntries(koudenId)]);
+	const [offerings, entriesResult] = await Promise.all([
+		getOfferings(koudenId),
+		getEntries(koudenId, 1, Number.MAX_SAFE_INTEGER),
+	]);
+	const { entries } = entriesResult;
 
 	return (
 		<div className="mt-4">

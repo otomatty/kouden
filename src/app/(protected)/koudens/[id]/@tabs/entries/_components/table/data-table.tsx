@@ -13,6 +13,7 @@ import {
 	type ColumnDef,
 } from "@tanstack/react-table";
 import { useAtomValue } from "jotai";
+import { useSearchParams } from "next/navigation";
 
 // ui
 import { Trash2 } from "lucide-react";
@@ -33,7 +34,7 @@ import { permissionAtom } from "@/store/permission";
 import { userAtom } from "@/store/auth";
 // components
 import { DataTable as BaseDataTable } from "@/components/custom/data-table";
-import { Loading } from "@/components/custom/loading";
+import { TableSkeleton } from "@/components/custom/loading/skeletons";
 import { DataTableToolbar } from "@/components/custom/data-table/toolbar";
 import { EntryDialog } from "../dialog/entry-dialog";
 import { createColumns } from "./columns";
@@ -89,9 +90,24 @@ export function DataTable({
 	);
 	const [rowSelection, setRowSelection] = useState({});
 	const [globalFilter, setGlobalFilter] = useState("");
-	const [viewScope, setViewScope] = useState<"own" | "all" | "others">("all");
+	// Initialize viewScope and selectedMemberIds from URL search params for consistency with server filtering
+	const searchParams = useSearchParams();
+	const memberIdsParam = searchParams.get("memberIds") ?? "";
+	const parsedMemberIds = memberIdsParam
+		? memberIdsParam
+				.split(",")
+				.map((id) => id.trim())
+				.filter(Boolean)
+		: [];
+	// Safely derive initial viewScope without non-null assertion
+	const viewScopeParam = searchParams.get("viewScope");
+	const initialViewScope: "own" | "all" | "others" =
+		viewScopeParam === "own" || viewScopeParam === "all" || viewScopeParam === "others"
+			? viewScopeParam
+			: "all";
+	const [viewScope, setViewScope] = useState<"own" | "all" | "others">(initialViewScope);
 	const [members, setMembers] = useState<{ value: string; label: string }[]>([]);
-	const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+	const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>(parsedMemberIds);
 	const [, setSelectedRows] = useState<string[]>([]);
 	const { toast } = useToast();
 
@@ -357,7 +373,8 @@ export function DataTable({
 
 	const renderContent = () => {
 		if (isLoading) {
-			return <Loading message="データを読み込み中..." />;
+			// ローディング中はテーブルスケルトンを表示
+			return <TableSkeleton columns={Object.values(columnLabels)} />;
 		}
 
 		if (error) {

@@ -13,7 +13,11 @@ interface TelegramsPageProps {
  */
 export default async function TelegramsPage({ params }: TelegramsPageProps) {
 	const { id: koudenId } = await params;
-	const [telegrams, entries] = await Promise.all([getTelegrams(koudenId), getEntries(koudenId)]);
+	const [telegrams, entriesResult] = await Promise.all([
+		getTelegrams(koudenId),
+		getEntries(koudenId),
+	]);
+	const entries = entriesResult.entries;
 
 	return (
 		<div className="mt-4">

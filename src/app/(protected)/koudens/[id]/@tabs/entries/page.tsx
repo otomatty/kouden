@@ -12,14 +12,20 @@ export default async function EntriesPage({
 	searchParams,
 }: {
 	params: Promise<{ id: string }>;
-	searchParams: Promise<{ page?: string; pageSize?: string }>;
+	searchParams: Promise<{ page?: string; pageSize?: string; memberIds?: string }>;
 }) {
 	const { id: koudenId } = await params;
-	const { page: pageStr, pageSize: pageSizeStr } = await searchParams;
+	const { page: pageStr, pageSize: pageSizeStr, memberIds: memberIdsStr } = await searchParams;
 	const page = pageStr ? Number.parseInt(pageStr, 10) : 1;
 	const pageSize = pageSizeStr ? Number.parseInt(pageSizeStr, 10) : 50;
+	const memberIds = memberIdsStr
+		? memberIdsStr
+				.split(",")
+				.map((id) => id.trim())
+				.filter(Boolean)
+		: undefined;
 	const [{ entries, count }, relationships] = await Promise.all([
-		getEntries(koudenId, page, pageSize),
+		getEntries(koudenId, page, pageSize, memberIds),
 		getRelationships(koudenId),
 	]);
 

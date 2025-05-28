@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useAtomValue } from "jotai";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { userAtom } from "@/store/auth";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -31,6 +32,9 @@ export function DisplaySettings({
 }: DisplaySettingsProps) {
 	const currentUser = useAtomValue(userAtom);
 	const currentUserId = currentUser?.id ?? "";
+	const router = useRouter();
+	const searchParams = useSearchParams();
+	const pathname = usePathname();
 	const [isOpen, setIsOpen] = React.useState(false);
 	const dropdownRef = React.useRef<HTMLDivElement>(null);
 
@@ -47,19 +51,30 @@ export function DisplaySettings({
 
 	const handleScopeChange = (scope: "own" | "all" | "others") => {
 		onViewScopeChange(scope);
+		let newSelected: string[] = [];
 		switch (scope) {
 			case "all":
-				onMemberSelectionChange(members.map((m) => m.value));
+				newSelected = members.map((m) => m.value);
 				break;
 			case "own":
-				onMemberSelectionChange(currentUserId ? [currentUserId] : []);
+				newSelected = currentUserId ? [currentUserId] : [];
 				break;
 			case "others":
-				onMemberSelectionChange(
-					members.filter((m) => m.value !== currentUserId).map((m) => m.value),
-				);
+				newSelected = members.filter((m) => m.value !== currentUserId).map((m) => m.value);
 				break;
 		}
+		onMemberSelectionChange(newSelected);
+		// Update URL query for server-side filtering and preserve view scope
+		const params = new URLSearchParams(searchParams.toString());
+		params.set("viewScope", scope);
+		if (newSelected.length > 0) {
+			params.set("memberIds", newSelected.join(","));
+		} else {
+			params.delete("memberIds");
+		}
+		// Reset to first page when filters change
+		params.set("page", "1");
+		router.push(`${pathname}?${params.toString()}`);
 	};
 
 	return (
@@ -104,6 +119,16 @@ export function DisplaySettings({
 												? [...selectedMemberIds, member.value]
 												: selectedMemberIds.filter((id) => id !== member.value);
 											onMemberSelectionChange(newSelected);
+											// Update URL query for server-side filtering
+											const params = new URLSearchParams(searchParams.toString());
+											if (newSelected.length > 0) {
+												params.set("memberIds", newSelected.join(","));
+											} else {
+												params.delete("memberIds");
+											}
+											// Reset to first page when filters change
+											params.set("page", "1");
+											router.push(`${pathname}?${params.toString()}`);
 										}}
 									/>
 									<span className="text-sm">{member.label}</span>
