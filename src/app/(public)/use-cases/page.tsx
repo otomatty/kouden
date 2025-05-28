@@ -80,8 +80,8 @@ export default function UseCasesPage() {
 	return (
 		<div className="space-y-24">
 			<PageHero
-				title="ユースケース"
-				subtitle="実際の使用シーンをご紹介します"
+				title="使用例"
+				subtitle="実際の使用例をご紹介します"
 				className="bg-gray-50 dark:bg-gray-900"
 			/>
 

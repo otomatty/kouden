@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, MailPlus, SendIcon } from "lucide-react";
+import { Plus, MailPlus, SendIcon, MailPlusIcon } from "lucide-react";
 import { sendBatchInvitationEmails } from "@/app/_actions/batch-invitations";
 import Link from "next/link";
 
@@ -66,6 +66,7 @@ export function InviteByEmailDialog({ koudenId, roles }: InviteByEmailDialogProp
 					size={isMobile ? "lg" : "default"}
 					className={isMobile ? "w-full mx-4 flex items-center" : "flex items-center"}
 				>
+					<MailPlusIcon className="h-4 w-4" />
 					メールで招待
 				</Button>
 			}

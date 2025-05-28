@@ -30,9 +30,12 @@ import {
 	UserRound,
 	LayoutGrid,
 	Table2,
+	ArrowUpDown,
 } from "lucide-react";
 import { permissionAtom, canUpdateKouden } from "@/store/permission";
 import { useAtomValue } from "jotai";
+import { DisplaySettings } from "@/components/custom/data-table/display-settings";
+import { FloatingPagination } from "@/components/ui/floating-pagination";
 
 interface SearchOption {
 	value: string;
@@ -45,6 +48,12 @@ interface FilterOption {
 }
 
 interface SortOption {
+	value: string;
+	label: string;
+}
+
+// 追加: メンバーオプション定義
+interface MemberOption {
 	value: string;
 	label: string;
 }
@@ -68,6 +77,27 @@ export interface DataTableToolbarProps<TData> {
 	onSearchChange?: (value: string) => void;
 	sortValue?: string;
 	onSortChange?: (value: string) => void;
+
+	// 追加: 表示対象切り替え
+	/** 表示対象を切り替え */
+	showScopeSelection?: boolean;
+	/** 表示対象モード */
+	viewScope?: "own" | "all" | "others";
+	/** 表示対象が変更されたとき */
+	onViewScopeChange?: (scope: "own" | "all" | "others") => void;
+	/** メンバー一覧 */
+	members?: MemberOption[];
+	/** 選択されたメンバーのID */
+	selectedMemberIds?: string[];
+	/** メンバー選択が変更されたとき */
+	onMemberSelectionChange?: (selectedIds: string[]) => void;
+	// 追加: ページネーション
+	showPagination?: boolean;
+	currentPage?: number;
+	totalCount?: number;
+	pageSize?: number;
+	onPageChange?: (page: number) => void;
+	onPageSizeChange?: (size: number) => void;
 }
 
 export function DataTableToolbar<TData>({
@@ -89,6 +119,22 @@ export function DataTableToolbar<TData>({
 	onSearchChange,
 	sortValue,
 	onSortChange,
+
+	// 追加: 表示対象切り替え
+	showScopeSelection = false,
+	viewScope = "all",
+	onViewScopeChange,
+	// 追加: メンバー選択
+	members = [],
+	selectedMemberIds = [],
+	onMemberSelectionChange,
+	// 追加: ページネーション
+	showPagination = false,
+	currentPage,
+	totalCount,
+	pageSize,
+	onPageChange,
+	onPageSizeChange,
 }: DataTableToolbarProps<TData>) {
 	const [globalFilter, setGlobalFilter] = React.useState(searchValue || "");
 	const permission = useAtomValue(permissionAtom);
@@ -211,7 +257,6 @@ export function DataTableToolbar<TData>({
 								</div>
 							</GuideCard>
 						)}
-
 						{/* 並び替え機能 */}
 						{showSort && sortOptions.length > 0 && (
 							<GuideCard
@@ -276,7 +321,12 @@ export function DataTableToolbar<TData>({
 											<SelectValue placeholder="並び替え" />
 										</SelectTrigger>
 										<SelectContent>
-											<SelectItem value="default">並び替え</SelectItem>
+											<SelectItem value="default">
+												<div className="flex items-center gap-2">
+													<ArrowUpDown className="h-4 w-4" />
+													<div>並び替え</div>
+												</div>
+											</SelectItem>
 											{sortOptions
 												.filter((option) => {
 													const columnId = option.value.split("_")[0];
@@ -291,9 +341,21 @@ export function DataTableToolbar<TData>({
 										</SelectContent>
 									</Select>
 								</div>
+								{/* タグによる表示対象切り替えとメンバー選択 */}
+								{showScopeSelection &&
+									onViewScopeChange &&
+									onMemberSelectionChange &&
+									members.length > 0 && (
+										<DisplaySettings
+											viewScope={viewScope}
+											onViewScopeChange={(scope) => onViewScopeChange?.(scope)}
+											members={members}
+											selectedMemberIds={selectedMemberIds}
+											onMemberSelectionChange={onMemberSelectionChange}
+										/>
+									)}
 							</GuideCard>
 						)}
-
 						{/* 表示列のカスタマイズ */}
 						{showColumnVisibility && (
 							<GuideCard
@@ -389,6 +451,23 @@ export function DataTableToolbar<TData>({
 				</div>
 				{/* 編集権限のあるユーザーにのみchildrenを表示 */}
 				{canUpdateKouden(permission) && children}
+				{showPagination &&
+					currentPage != null &&
+					totalCount != null &&
+					pageSize != null &&
+					onPageChange &&
+					onPageSizeChange && (
+						<div className="mt-4 flex justify-center lg:justify-end lg:flex-auto">
+							<FloatingPagination
+								currentPage={currentPage}
+								totalPages={Math.ceil(totalCount / pageSize)}
+								totalCount={totalCount}
+								pageSize={pageSize}
+								onPageChange={onPageChange}
+								onPageSizeChange={onPageSizeChange}
+							/>
+						</div>
+					)}
 			</div>
 		</div>
 	);

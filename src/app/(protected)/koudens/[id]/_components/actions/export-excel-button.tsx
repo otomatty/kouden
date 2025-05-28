@@ -86,7 +86,6 @@ export function ExportExcelButton({ koudenId }: ExportExcelButtonProps) {
 		return (
 			<Button
 				variant="outline"
-				size="sm"
 				onClick={handleExport}
 				disabled={isExporting}
 				className={cn(
@@ -95,7 +94,7 @@ export function ExportExcelButton({ koudenId }: ExportExcelButtonProps) {
 					isExporting && "opacity-50 cursor-not-allowed",
 				)}
 			>
-				<FileSpreadsheet className="mr-2 h-4 w-4" />
+				<FileSpreadsheet className="h-4 w-4" />
 				{isExporting ? "出力中..." : "Excelをダウンロード"}
 			</Button>
 		);

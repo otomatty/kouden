@@ -7,7 +7,10 @@ export const entrySchema = z
 		name: z.string().min(1, "名前を入力してください"),
 		organization: z.string().nullable(),
 		position: z.string().nullable(),
-		amount: z.number().min(1, "金額を入力してください"),
+		amount: z
+			.number()
+			.min(1, "金額を入力してください")
+			.refine((val) => val % 1000 === 0, "金額は1000円単位で入力してください"),
 		postalCode: z
 			.string()
 			.nullable()
@@ -34,7 +37,10 @@ export const entryFormSchema = z
 		name: z.string().min(1, "名前を入力してください"),
 		organization: z.string().nullable(),
 		position: z.string().nullable(),
-		amount: z.number().min(1, "金額を入力してください"),
+		amount: z
+			.number()
+			.min(1, "金額を入力してください")
+			.refine((val) => val % 1000 === 0, "金額は1000円単位で入力してください"),
 		postalCode: z
 			.string()
 			.nullable()

@@ -2,8 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { GoogleIcon } from "./icons/google";
 
 interface LoginButtonProps {
 	invitationToken?: string;
@@ -42,6 +42,7 @@ export function LoginButton({ invitationToken }: LoginButtonProps) {
 
 	return (
 		<Button onClick={handleLogin} disabled={loading} className="w-full" variant="outline">
+			<GoogleIcon />
 			{loading ? "ログイン中..." : "Googleでログイン"}
 		</Button>
 	);

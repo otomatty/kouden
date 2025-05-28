@@ -25,10 +25,12 @@ import type { AttendanceType } from "@/types/entries";
 import type { CellValue } from "@/types/table";
 // Server Actions
 import { deleteEntries, updateEntryField } from "@/app/_actions/entries";
+import { getMembers } from "@/app/_actions/members";
 // hooks
 import { useMediaQuery } from "@/hooks/use-media-query";
 // stores
 import { permissionAtom } from "@/store/permission";
+import { userAtom } from "@/store/auth";
 // components
 import { DataTable as BaseDataTable } from "@/components/custom/data-table";
 import { Loading } from "@/components/custom/loading";
@@ -49,6 +51,15 @@ interface EntryTableProps {
 	entries: Entry[];
 	relationships: Relationship[];
 	onDataChange: (entries: Entry[]) => void;
+	currentPage: number;
+	pageSize: number;
+	totalCount: number;
+	onPageChange: (page: number) => void;
+	onPageSizeChange: (size: number) => void;
+	searchValue?: string;
+	onSearchChange?: (value: string) => void;
+	sortValue?: string;
+	onSortChange?: (value: string) => void;
 }
 
 export function DataTable({
@@ -56,8 +67,18 @@ export function DataTable({
 	entries = [],
 	relationships = [],
 	onDataChange,
+	currentPage,
+	pageSize,
+	totalCount,
+	onPageChange,
+	onPageSizeChange,
+	searchValue,
+	onSearchChange,
+	sortValue,
+	onSortChange,
 }: EntryTableProps) {
 	const permission = useAtomValue(permissionAtom);
+	const user = useAtomValue(userAtom);
 	const isMobile = useMediaQuery("(max-width: 767px)");
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<Error | null>(null);
@@ -68,6 +89,9 @@ export function DataTable({
 	);
 	const [rowSelection, setRowSelection] = useState({});
 	const [globalFilter, setGlobalFilter] = useState("");
+	const [viewScope, setViewScope] = useState<"own" | "all" | "others">("all");
+	const [members, setMembers] = useState<{ value: string; label: string }[]>([]);
+	const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
 	const [, setSelectedRows] = useState<string[]>([]);
 	const { toast } = useToast();
 
@@ -151,6 +175,7 @@ export function DataTable({
 	useEffect(() => {
 		setColumnVisibility(isMobile ? tabletColumnVisibility : defaultColumnVisibility);
 	}, [isMobile]);
+
 	// 選択された行のIDを取得
 	const selectedRowsIds = useMemo(() => {
 		return Object.keys(rowSelection);
@@ -184,14 +209,12 @@ export function DataTable({
 	// セルの編集
 	const handleCellEdit = useCallback(
 		async (columnId: string, rowId: string, value: CellValue) => {
-			// インデックスからエントリーを取得
-			const index = Number.parseInt(rowId, 10);
-			const targetEntry = normalizedEntries[index];
+			// エントリIDからエントリーを取得
+			const targetEntry = normalizedEntries.find((e) => e.id === rowId);
 
 			if (!targetEntry) {
 				console.error("[ERROR] Entry not found:", {
 					rowId,
-					index,
 					entriesCount: normalizedEntries.length,
 				});
 				toast({
@@ -262,8 +285,40 @@ export function DataTable({
 		[handleDeleteRows, selectedRowsIds, relationships, permission, koudenId],
 	);
 
+	// 追加: 表示対象に基づくエントリフィルタリング
+	const filteredEntries = useMemo(() => {
+		let result = normalizedEntries;
+		if (viewScope === "own") {
+			result = result.filter((e) => e.createdBy === user?.id);
+		} else if (viewScope === "others") {
+			result = result.filter((e) => e.createdBy !== user?.id);
+		}
+		// メンバー選択によるフィルタ
+		if (selectedMemberIds.length > 0) {
+			result = result.filter((e) => selectedMemberIds.includes(e.createdBy));
+		}
+		return result;
+	}, [normalizedEntries, viewScope, user, selectedMemberIds]);
+
+	// メンバーをサーバーから取得
+	useEffect(() => {
+		(async () => {
+			try {
+				const mems = await getMembers(koudenId);
+				setMembers(
+					mems.map((m) => ({
+						value: m.user_id,
+						label: m.profile?.display_name || m.user_id,
+					})),
+				);
+			} catch (error) {
+				console.error("[ERROR] Failed to fetch members:", error);
+			}
+		})();
+	}, [koudenId]);
+
 	const table = useReactTable({
-		data: Array.isArray(normalizedEntries) ? normalizedEntries : [],
+		data: Array.isArray(filteredEntries) ? filteredEntries : [],
 		columns: columns as ColumnDef<Entry, CellValue>[],
 		getCoreRowModel: getCoreRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
@@ -320,6 +375,22 @@ export function DataTable({
 							searchOptions={searchOptions}
 							sortOptions={sortOptions}
 							columnLabels={columnLabels}
+							showScopeSelection={true}
+							viewScope={viewScope}
+							onViewScopeChange={setViewScope}
+							members={members}
+							selectedMemberIds={selectedMemberIds}
+							onMemberSelectionChange={setSelectedMemberIds}
+							showPagination
+							currentPage={currentPage}
+							pageSize={pageSize}
+							totalCount={totalCount}
+							onPageChange={onPageChange}
+							onPageSizeChange={onPageSizeChange}
+							searchValue={searchValue}
+							onSearchChange={onSearchChange}
+							sortValue={sortValue}
+							onSortChange={onSortChange}
 						>
 							<div className="flex items-center justify-end">
 								{!isMobile && (

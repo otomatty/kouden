@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { checkKoudenPermission } from "@/app/_actions/permissions";
 import { PermissionProvider } from "@/components/providers/permission-provider";
-import { Provider } from "jotai";
 
 // ui
 import { Button } from "@/components/ui/button";
@@ -44,34 +43,32 @@ export default async function KoudenLayout({ params, tabs }: KoudenLayoutProps) 
 		}
 
 		return (
-			<Provider>
-				<PermissionProvider permission={permission}>
-					<div className="flex h-full flex-col">
-						<div className="flex-1 overflow-hidden">
-							<div>
-								{/* ヘッダー */}
-								<div className="space-y-4 py-4">
-									<Button variant="ghost" className="flex items-center gap-2 w-fit p-2" asChild>
-										<Link href="/koudens">
-											<ArrowLeft className="h-4 w-4" />
-											<span>一覧に戻る</span>
-										</Link>
-									</Button>
-									<div className="flex items-center justify-between">
-										<KoudenTitle
-											koudenId={kouden.id}
-											title={kouden.title}
-											description={kouden.description}
-										/>
-										<KoudenActionsMenu koudenId={kouden.id} koudenTitle={kouden.title} />
-									</div>
+			<PermissionProvider permission={permission}>
+				<div className="flex h-full flex-col">
+					<div className="flex-1 overflow-hidden">
+						<div>
+							{/* ヘッダー */}
+							<div className="space-y-4 py-4">
+								<Button variant="ghost" className="flex items-center gap-2 w-fit p-2" asChild>
+									<Link href="/koudens">
+										<ArrowLeft className="h-4 w-4" />
+										<span>一覧に戻る</span>
+									</Link>
+								</Button>
+								<div className="flex items-center justify-between">
+									<KoudenTitle
+										koudenId={kouden.id}
+										title={kouden.title}
+										description={kouden.description}
+									/>
+									<KoudenActionsMenu koudenId={kouden.id} koudenTitle={kouden.title} />
 								</div>
-								<div className="mb-4 min-h-[calc(100vh-10rem)]">{tabs}</div>
 							</div>
+							<div className="mb-4 min-h-[calc(100vh-10rem)]">{tabs}</div>
 						</div>
 					</div>
-				</PermissionProvider>
-			</Provider>
+				</div>
+			</PermissionProvider>
 		);
 	} catch (error) {
 		if (error instanceof Error) {

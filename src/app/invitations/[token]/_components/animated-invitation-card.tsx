@@ -13,9 +13,9 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { CalendarDays, Users, Info } from "lucide-react";
 import { AcceptInvitationButton } from "./accept-invitation-button";
-import { LoginButton } from "@/components/custom/login-button";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { AuthForm } from "@/components/custom/AuthForm";
 
 interface AnimatedInvitationCardProps {
 	title: string;
@@ -48,18 +48,6 @@ export function AnimatedInvitationCard({
 	errorDescription,
 	isExistingMember,
 }: AnimatedInvitationCardProps) {
-	const containerVariants = {
-		hidden: { opacity: 0, y: 20 },
-		visible: {
-			opacity: 1,
-			y: 0,
-			transition: {
-				duration: 0.6,
-				ease: "easeOut",
-			},
-		},
-	};
-
 	const itemVariants = {
 		hidden: { opacity: 0, x: -20 },
 		visible: {
@@ -88,9 +76,7 @@ export function AnimatedInvitationCard({
 						<CardTitle className="text-2xl sm:text-3xl font-bold text-destructive">
 							{errorTitle}
 						</CardTitle>
-						<CardDescription className="text-base">
-							{errorDescription}
-						</CardDescription>
+						<CardDescription className="text-base">{errorDescription}</CardDescription>
 					</CardHeader>
 				</Card>
 			</motion.div>
@@ -132,11 +118,7 @@ export function AnimatedInvitationCard({
 							香典帳情報
 						</h3>
 						<p className="text-lg font-medium">{title}</p>
-						{description && (
-							<p className="text-sm text-muted-foreground mt-2">
-								{description}
-							</p>
-						)}
+						{description && <p className="text-sm text-muted-foreground mt-2">{description}</p>}
 					</motion.div>
 
 					<Separator />
@@ -158,9 +140,7 @@ export function AnimatedInvitationCard({
 								{maxUses && (
 									<p className="text-sm text-muted-foreground mt-1">
 										残り利用回数:{" "}
-										<span className="font-medium">
-											{maxUses - (usedCount ?? 0)}回
-										</span>
+										<span className="font-medium">{maxUses - (usedCount ?? 0)}回</span>
 									</p>
 								)}
 							</div>
@@ -190,12 +170,7 @@ export function AnimatedInvitationCard({
 						) : isLoggedIn ? (
 							<AcceptInvitationButton token={token} />
 						) : (
-							<>
-								<p className="text-sm text-center text-muted-foreground mb-3">
-									招待を受け入れるにはログインが必要です
-								</p>
-								<LoginButton invitationToken={token} />
-							</>
+							<AuthForm invitationToken={token} />
 						)}
 					</motion.div>
 				</CardFooter>

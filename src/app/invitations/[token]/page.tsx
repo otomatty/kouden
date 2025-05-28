@@ -53,7 +53,7 @@ export default async function InvitationPage({ params }: InvitationPageProps) {
 				/>
 			</div>
 		);
-	} catch (error) {
+	} catch {
 		return (
 			<div className="min-h-screen bg-gradient-to-b from-background to-muted/50 py-8 px-4 sm:px-6 lg:px-8">
 				<AnimatedInvitationCard

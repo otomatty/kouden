@@ -26,12 +26,6 @@ export async function createEntry(input: CreateEntryInput): Promise<EntryRespons
 	}
 
 	try {
-		// デバッグ: 入力データのログ
-		console.log("[DEBUG] Create Entry Input:", {
-			input,
-			userId: user.id,
-		});
-
 		// キャメルケースからスネークケースへの変換
 		const snakeCaseData = camelToSnake(input) as KoudenEntry;
 
@@ -40,9 +34,6 @@ export async function createEntry(input: CreateEntryInput): Promise<EntryRespons
 			...snakeCaseData,
 			created_by: user.id,
 		};
-
-		// デバッグ: 変換後のデータをログ
-		console.log("[DEBUG] Transformed Data:", createData);
 
 		const { data, error } = await supabase
 			.from("kouden_entries")
@@ -80,12 +71,6 @@ export async function createEntry(input: CreateEntryInput): Promise<EntryRespons
 			relationshipId: data.relationship_id,
 		};
 
-		// デバッグ: 成功時のレスポンスをログ
-		console.log("[DEBUG] Create Entry Success:", {
-			response,
-			userId: user.id,
-		});
-
 		return response;
 	} catch (error) {
 		console.error("[ERROR] Unexpected error in createEntry:", {
@@ -98,7 +83,11 @@ export async function createEntry(input: CreateEntryInput): Promise<EntryRespons
 	}
 }
 
-export async function getEntries(koudenId: string): Promise<Entry[]> {
+export async function getEntries(
+	koudenId: string,
+	page = 1,
+	pageSize = 100,
+): Promise<{ entries: Entry[]; count: number }> {
 	const supabase = await createClient();
 	const {
 		data: { user },
@@ -110,11 +99,19 @@ export async function getEntries(koudenId: string): Promise<Entry[]> {
 
 	try {
 		// エントリー情報の取得
-		const { data: entries, error: entriesError } = await supabase
+		const from = (page - 1) * pageSize;
+		const to = from + pageSize - 1;
+		const {
+			data: rawEntries,
+			count,
+			error: entriesError,
+		} = await supabase
 			.from("kouden_entries")
-			.select("*")
+			.select("*", { count: "exact" })
 			.eq("kouden_id", koudenId)
-			.order("created_at", { ascending: false });
+			.order("created_at", { ascending: false })
+			.range(from, to);
+		const entries = rawEntries ?? [];
 
 		if (entriesError) {
 			console.error("[ERROR] Failed to fetch entries:", {
@@ -150,7 +147,7 @@ export async function getEntries(koudenId: string): Promise<Entry[]> {
 			relationship: relationships.find((r) => r.id === entry.relationship_id) || null,
 		}));
 
-		return entriesWithRelationships as Entry[];
+		return { entries: entriesWithRelationships as Entry[], count: count ?? 0 };
 	} catch (error) {
 		console.error("[ERROR] Unexpected error in getEntries:", error);
 		throw error;

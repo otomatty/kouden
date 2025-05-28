@@ -20,7 +20,6 @@ const basicMenuItems: MenuItem[] = [
 // カスタマイズ可能なメニュー項目
 const customizableMenuItems: MenuItem[] = [
 	{ label: "関係性", href: "relationships", icon: <HeartHandshake /> },
-	{ label: "配送方法", href: "delivery-methods", icon: <Truck /> },
 	{ label: "返礼品", href: "return-items", icon: <Gift /> },
 ];
 

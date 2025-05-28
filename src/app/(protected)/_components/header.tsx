@@ -47,7 +47,7 @@ export function Header({ user, isAdmin, version }: HeaderProps) {
 				<div className="flex items-center justify-between">
 					<Link href="/koudens" className="hover:opacity-80 transition-opacity">
 						<h1 className="text-xl font-semibold flex items-center gap-2">
-							香典帳アプリ
+							香典帳
 							<Badge className="text-xs">β版</Badge>
 							<span className="text-xs">v{version}</span>
 						</h1>

@@ -24,12 +24,6 @@ export default function SettingsMobilePage() {
 			description: "参列者との関係性を管理します",
 		},
 		{
-			href: "settings/delivery-methods",
-			label: "配送方法",
-			icon: <TruckIcon />,
-			description: "返礼品の配送方法を設定します",
-		},
-		{
 			href: "settings/return-items",
 			label: "返礼品",
 			icon: <GiftIcon />,

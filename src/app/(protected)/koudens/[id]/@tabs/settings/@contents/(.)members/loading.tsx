@@ -9,8 +9,8 @@ export default function MembersLoading() {
 			</div>
 
 			<div className="space-y-2">
-				{Array.from({ length: 5 }).map((_, index) => (
-					<Skeleton key={`member-skeleton-${index}`} className="h-16 w-full" />
+				{["s1", "s2", "s3", "s4", "s5"].map((key) => (
+					<Skeleton key={key} className="h-16 w-full" />
 				))}
 			</div>
 		</div>

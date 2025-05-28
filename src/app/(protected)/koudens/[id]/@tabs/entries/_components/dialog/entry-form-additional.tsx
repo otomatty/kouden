@@ -3,6 +3,7 @@
 import { useFormContext } from "react-hook-form";
 import { FormControl, FormField, FormItem, FormMessage, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
 	Select,
 	SelectContent,
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import type { Relationship } from "@/types/relationships";
 import type { AttendanceType } from "@/types/entries";
+import { normalizeNumericInput } from "@/utils/normalize";
 
 const attendanceTypeMap: Record<AttendanceType, string> = {
 	FUNERAL: "葬儀",
@@ -62,7 +64,15 @@ export function EntryFormAdditional({ relationships }: EntryFormAdditionalProps)
 					<FormItem>
 						<FormLabel optional>電話番号</FormLabel>
 						<FormControl>
-							<Input placeholder="000-0000-0000" {...field} value={field.value || ""} />
+							<Input
+								placeholder="000-0000-0000"
+								{...field}
+								value={field.value || ""}
+								onChange={(e) => {
+									const half = normalizeNumericInput(e.target.value);
+									field.onChange(half);
+								}}
+							/>
 						</FormControl>
 						<FormMessage />
 					</FormItem>
@@ -103,7 +113,7 @@ export function EntryFormAdditional({ relationships }: EntryFormAdditionalProps)
 					<FormItem>
 						<FormLabel optional>備考</FormLabel>
 						<FormControl>
-							<Input {...field} value={field.value || ""} />
+							<Textarea {...field} value={field.value || ""} />
 						</FormControl>
 						<FormMessage />
 					</FormItem>

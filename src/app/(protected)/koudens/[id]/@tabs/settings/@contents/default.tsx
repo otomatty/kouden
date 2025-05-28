@@ -36,13 +36,6 @@ const settingCards: SettingCard[] = [
 		category: "customizable",
 	},
 	{
-		title: "配送方法",
-		description: "返礼品の配送方法を管理します",
-		href: "delivery-methods",
-		icon: <Truck className="w-6 h-6" />,
-		category: "customizable",
-	},
-	{
 		title: "返礼品",
 		description: "返礼品の種類と在庫を管理します",
 		href: "return-items",

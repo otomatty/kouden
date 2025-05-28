@@ -13,20 +13,6 @@ export interface ReturnItem {
 }
 
 /**
- * 配送方法
- */
-export interface DeliveryMethod {
-	id: string;
-	name: string;
-	description: string | null;
-	is_system: boolean;
-	kouden_id: string;
-	created_at: string;
-	updated_at: string;
-	created_by: string;
-}
-
-/**
  * 返礼情報のステータス
  */
 export type ReturnRecordStatus = "preparing" | "pending" | "completed";

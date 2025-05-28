@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import { formatCurrency, formatInputCurrency } from "@/utils/currency";
 import { formatPostalCode, searchAddress } from "./entry-form";
 import { addressSearchStateAtom } from "@/store/entries";
+import { normalizeNumericInput } from "@/utils/normalize";
 
 export function EntryFormBasic() {
 	const form = useFormContext();
@@ -109,7 +110,8 @@ export function EntryFormBasic() {
 								{...field}
 								value={field.value || ""}
 								onChange={async (e) => {
-									const formatted = formatPostalCode(e.target.value);
+									const half = normalizeNumericInput(e.target.value);
+									const formatted = formatPostalCode(half);
 									field.onChange(formatted);
 
 									if (formatted.length === 8) {

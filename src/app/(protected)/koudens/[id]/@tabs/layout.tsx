@@ -3,7 +3,6 @@ import { getKouden } from "@/app/_actions/koudens";
 // components
 import { TabNavigation } from "./_components/tab-navigation";
 import { BottomNavigation } from "@/components/ui/bottom-navigation";
-import { Suspense } from "react";
 import { KoudenRealtimeProvider } from "@/providers/kouden-realtime-provider";
 
 import { getEntries } from "@/app/_actions/entries";
@@ -26,11 +25,12 @@ interface TabsLayoutProps {
 export default async function TabsLayout({ params, children }: TabsLayoutProps) {
 	const { id: koudenId } = await params;
 	// 共通で使用するデータを取得（キャッシュを有効化）
-	const [kouden, entries, relationships] = await Promise.all([
+	const [kouden, entriesResult, relationships] = await Promise.all([
 		getKouden(koudenId),
 		getEntries(koudenId),
 		getRelationships(koudenId),
 	]);
+	const entries = entriesResult.entries;
 
 	return (
 		<KoudenRealtimeProvider koudenId={kouden.id}>

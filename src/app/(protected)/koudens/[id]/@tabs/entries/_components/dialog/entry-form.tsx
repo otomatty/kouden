@@ -111,9 +111,10 @@ export function EntryForm({ koudenId, relationships, defaultValues, onSuccess }:
 				description: `${result.name || "名称未設定"}を${defaultValues ? "更新" : "登録"}しました`,
 			});
 
+			// フォーム送信後にドラフトをリセット
+			setDraftValues(undefined);
 			if (!defaultValues) {
 				form.reset();
-				setDraftValues(undefined);
 			}
 		} catch (error) {
 			console.error("[DEBUG] Entry submission failed:", {
