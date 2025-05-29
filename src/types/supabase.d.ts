@@ -132,6 +132,7 @@ export type Database = {
           created_by: string
           has_offering: boolean
           id: string
+          is_duplicate: boolean
           is_return_completed: boolean
           kouden_id: string
           last_modified_at: string | null
@@ -154,6 +155,7 @@ export type Database = {
           created_by: string
           has_offering?: boolean
           id?: string
+          is_duplicate?: boolean
           is_return_completed?: boolean
           kouden_id: string
           last_modified_at?: string | null
@@ -176,6 +178,7 @@ export type Database = {
           created_by?: string
           has_offering?: boolean
           id?: string
+          is_duplicate?: boolean
           is_return_completed?: boolean
           kouden_id?: string
           last_modified_at?: string | null
@@ -740,6 +743,96 @@ export type Database = {
         }
         Relationships: []
       }
+      return_record_entries: {
+        Row: {
+          assigned_amount: number
+          created_at: string
+          created_by: string
+          kouden_entry_id: string
+          return_record_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_amount?: number
+          created_at?: string
+          created_by: string
+          kouden_entry_id: string
+          return_record_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_amount?: number
+          created_at?: string
+          created_by?: string
+          kouden_entry_id?: string
+          return_record_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "return_record_entries_kouden_entry_id_fkey"
+            columns: ["kouden_entry_id"]
+            isOneToOne: false
+            referencedRelation: "kouden_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "return_record_entries_return_record_id_fkey"
+            columns: ["return_record_id"]
+            isOneToOne: false
+            referencedRelation: "return_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      return_record_item_entries: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          kouden_entry_id: string
+          notes: string | null
+          quantity: number
+          return_record_item_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          kouden_entry_id: string
+          notes?: string | null
+          quantity?: number
+          return_record_item_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          kouden_entry_id?: string
+          notes?: string | null
+          quantity?: number
+          return_record_item_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rrient_kouden_entry_fkey"
+            columns: ["kouden_entry_id"]
+            isOneToOne: false
+            referencedRelation: "kouden_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rrient_return_record_item_fkey"
+            columns: ["return_record_item_id"]
+            isOneToOne: false
+            referencedRelation: "return_record_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       return_record_items: {
         Row: {
           created_at: string
@@ -780,6 +873,48 @@ export type Database = {
             columns: ["return_item_master_id"]
             isOneToOne: false
             referencedRelation: "return_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      return_record_offerings: {
+        Row: {
+          assigned_quantity: number
+          created_at: string
+          created_by: string
+          offering_id: string
+          return_record_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_quantity?: number
+          created_at?: string
+          created_by: string
+          offering_id: string
+          return_record_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_quantity?: number
+          created_at?: string
+          created_by?: string
+          offering_id?: string
+          return_record_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "return_record_offerings_offering_id_fkey"
+            columns: ["offering_id"]
+            isOneToOne: false
+            referencedRelation: "offerings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "return_record_offerings_return_record_id_fkey"
+            columns: ["return_record_id"]
+            isOneToOne: false
+            referencedRelation: "return_records"
             referencedColumns: ["id"]
           },
         ]
@@ -832,7 +967,6 @@ export type Database = {
           koden_id: string
           remarks: string | null
           status: string
-          total_amount: number
           updated_at: string
         }
         Insert: {
@@ -843,7 +977,6 @@ export type Database = {
           koden_id: string
           remarks?: string | null
           status: string
-          total_amount?: number
           updated_at?: string
         }
         Update: {
@@ -854,7 +987,6 @@ export type Database = {
           koden_id?: string
           remarks?: string | null
           status?: string
-          total_amount?: number
           updated_at?: string
         }
         Relationships: [

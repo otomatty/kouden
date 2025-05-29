@@ -85,17 +85,16 @@ export function ExportExcelButton({ koudenId }: ExportExcelButtonProps) {
 	if (isDesktop) {
 		return (
 			<Button
-				variant="outline"
+				variant="ghost"
 				onClick={handleExport}
 				disabled={isExporting}
 				className={cn(
-					"bg-[#217346] text-white hover:bg-[#1e6b41] border-[#217346]",
-					"hover:text-white",
+					"text-[#217346] hover:text-[#1e6b41] hover:bg-[#217346]/10",
 					isExporting && "opacity-50 cursor-not-allowed",
 				)}
 			>
 				<FileSpreadsheet className="h-4 w-4" />
-				{isExporting ? "出力中..." : "Excelをダウンロード"}
+				{isExporting ? "出力中..." : "Excel(.xlsx)"}
 			</Button>
 		);
 	}
@@ -112,9 +111,7 @@ export function ExportExcelButton({ koudenId }: ExportExcelButtonProps) {
 			)}
 		>
 			<FileSpreadsheet className="h-5 w-5" />
-			<span className="text-xs font-medium">
-				{isExporting ? "出力中..." : "Excelをダウンロード"}
-			</span>
+			<span className="text-xs font-medium">{isExporting ? "出力中..." : "Excel(.xlsx)"}</span>
 		</button>
 	);
 }

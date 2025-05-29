@@ -20,9 +20,11 @@ export default async function EntriesPage({
 		sort?: string;
 		dateFrom?: string;
 		dateTo?: string;
+		isDuplicate?: string;
 	}>;
 }) {
 	const { id: koudenId } = await params;
+	const rawSearchParams = await searchParams;
 	const {
 		page: pageStr,
 		pageSize: pageSizeStr,
@@ -31,7 +33,7 @@ export default async function EntriesPage({
 		sort: sortValue,
 		dateFrom,
 		dateTo,
-	} = await searchParams;
+	} = rawSearchParams;
 	const page = pageStr ? Number.parseInt(pageStr, 10) : 1;
 	const pageSize = pageSizeStr ? Number.parseInt(pageSizeStr, 10) : 50;
 	const memberIds = memberIdsStr
@@ -42,6 +44,7 @@ export default async function EntriesPage({
 		: undefined;
 	const dateFromValue = dateFrom ?? undefined;
 	const dateToValue = dateTo ?? undefined;
+	const showDuplicates = rawSearchParams.isDuplicate === "true";
 	const [{ entries, count }, relationships] = await Promise.all([
 		getEntries(
 			koudenId,
@@ -52,6 +55,7 @@ export default async function EntriesPage({
 			sortValue,
 			dateFromValue,
 			dateToValue,
+			showDuplicates,
 		),
 		getRelationships(koudenId),
 	]);

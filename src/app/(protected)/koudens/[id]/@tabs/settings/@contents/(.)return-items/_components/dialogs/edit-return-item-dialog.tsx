@@ -60,10 +60,6 @@ export function EditReturnItemDialog({
 
 	const onSubmit = async (data: ReturnItemFormData) => {
 		try {
-			// 送信データのサイズをログ
-			console.log("[Client] Form data size:", JSON.stringify(data).length, "bytes");
-			console.log("[Client] Form data:", data);
-
 			// 送信中の状態を管理
 			form.reset({}, { keepValues: true });
 			const submitData = {
@@ -74,7 +70,6 @@ export function EditReturnItemDialog({
 			};
 
 			if (returnItem) {
-				console.log("[Client] Updating return item:", { submitData, returnItem });
 				// 更新
 				await updateReturnItem({
 					id: returnItem.id,
@@ -88,7 +83,6 @@ export function EditReturnItemDialog({
 					description: `${submitData.name}の情報を更新しました。`,
 				});
 			} else {
-				console.log("[Client] Creating new return item:", { submitData, koudenId });
 				// 新規作成
 				await createReturnItem({
 					...submitData,
@@ -99,7 +93,6 @@ export function EditReturnItemDialog({
 					description: `${submitData.name}を追加しました。`,
 				});
 			}
-			console.log("[Client] Operation completed successfully");
 			form.reset(); // フォームをリセット
 			onClose();
 		} catch (error) {

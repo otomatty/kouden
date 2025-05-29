@@ -52,7 +52,7 @@ export function DuplicateKoudenButton({ koudenId }: DuplicateKoudenButtonProps) 
 	if (isDesktop) {
 		return (
 			<Button
-				variant="outline"
+				variant="ghost"
 				onClick={handleDuplicate}
 				disabled={loading}
 				className="flex items-center gap-2 text-sm"

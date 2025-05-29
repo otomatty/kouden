@@ -92,6 +92,7 @@ export async function getEntries(
 	sortValue?: string,
 	dateFrom?: string,
 	dateTo?: string,
+	showDuplicates?: boolean,
 ): Promise<{ entries: Entry[]; count: number }> {
 	const supabase = await createClient();
 	const {
@@ -111,6 +112,10 @@ export async function getEntries(
 			.from("kouden_entries")
 			.select("*", { count: "exact" })
 			.eq("kouden_id", koudenId);
+		// Filter by duplicate flag if requested
+		if (showDuplicates) {
+			query = query.eq("is_duplicate", true);
+		}
 		if (memberIds && memberIds.length > 0) {
 			// Filter entries by selected creator user IDs
 			query = query.in("created_by", memberIds);

@@ -14,12 +14,12 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-	title: "香典帳",
-	description: "香典帳の管理を行えるアプリです。",
+	title: "香典帳アプリ",
+	description: "香典帳をデジタル化し、効率的に記録・管理できるアプリケーション",
 	appleWebApp: {
 		capable: true,
 		statusBarStyle: "default",
-		title: "香典帳",
+		title: "香典帳アプリ",
 	},
 	formatDetection: {
 		telephone: false,
@@ -37,10 +37,10 @@ export default async function RootLayout({
 				<meta name="application-name" content="香典帳アプリ" />
 				<meta name="apple-mobile-web-app-capable" content="yes" />
 				<meta name="apple-mobile-web-app-status-bar-style" content="default" />
-				<meta name="apple-mobile-web-app-title" content="香典帳" />
+				<meta name="apple-mobile-web-app-title" content="香典帳アプリ" />
 				<meta
 					name="description"
-					content="香典帳の管理をデジタル化し、効率的に記録・管理できるアプリケーション"
+					content="香典帳をデジタル化し、効率的に記録・管理できるアプリケーション"
 				/>
 				<meta name="format-detection" content="telephone=no" />
 				<meta name="mobile-web-app-capable" content="yes" />

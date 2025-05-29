@@ -45,8 +45,12 @@
 
 import { Plus, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import type React from "react";
+import { useState, useEffect } from "react";
+import "@/types/navigator";
 
 export interface CrudDialogProps<T = void> {
 	/**
@@ -127,6 +131,11 @@ export function CrudDialog<T = void>({
 	shortcutKey,
 }: CrudDialogProps<T>) {
 	const isMobile = useMediaQuery("(max-width: 768px)");
+	const [isMac, setIsMac] = useState(false);
+	useEffect(() => {
+		const platform = navigator.userAgentData?.platform || navigator.userAgent;
+		setIsMac(/Mac|iPhone|iPod|iPad/i.test(platform));
+	}, []);
 
 	// ボタンのスタイルとコンテンツを設定
 	const buttonSize = isMobile ? "lg" : "default";
@@ -161,19 +170,25 @@ export function CrudDialog<T = void>({
 				? "flex items-center gap-2" // 作成ボタン
 				: "w-full relative flex cursor-default select-none justify-start items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:size-4 [&>svg]:shrink-0"; // 編集ボタン
 
+	const shortcutLabel = shortcutKey
+		? isMac
+			? `⌘+${shortcutKey.toUpperCase()}`
+			: `Ctrl+${shortcutKey.toUpperCase()}`
+		: "";
+
 	// デフォルトのトリガーボタン
 	const defaultTrigger = variant ? (
 		<Button
 			size={buttonSize}
 			variant={isMobile ? "default" : variant === "create" ? "default" : "ghost"}
 			className={buttonClassName || defaultButtonClassName}
-			aria-keyshortcuts={shortcutKey ? `ctrl+${shortcutKey}` : undefined}
+			aria-keyshortcuts={shortcutKey ? `${isMac ? "meta" : "ctrl"}+${shortcutKey}` : undefined}
 		>
 			{buttonContent}
 			{!isMobile && shortcutKey && (
-				<span className="ml-2 text-xs text-muted-foreground">
-					{`Ctrl+${shortcutKey.toUpperCase()}`}
-				</span>
+				<Badge variant="outline" className="bg-muted text-muted-foreground">
+					{shortcutLabel}
+				</Badge>
 			)}
 		</Button>
 	) : null;

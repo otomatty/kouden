@@ -32,6 +32,7 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 // stores
 import { permissionAtom } from "@/store/permission";
 import { userAtom } from "@/store/auth";
+import { duplicateEntriesAtom } from "@/store/duplicateEntries";
 // components
 import { DataTable as BaseDataTable } from "@/components/custom/data-table";
 import { TableSkeleton } from "@/components/custom/loading/skeletons";
@@ -86,6 +87,7 @@ export function DataTable({
 	onDateRangeChange,
 }: EntryTableProps) {
 	const permission = useAtomValue(permissionAtom);
+	const duplicateResults = useAtomValue(duplicateEntriesAtom);
 	const user = useAtomValue(userAtom);
 	const isMobile = useMediaQuery("(max-width: 767px)");
 	const [isLoading, setIsLoading] = useState(true);
@@ -323,6 +325,25 @@ export function DataTable({
 		return result;
 	}, [normalizedEntries, viewScope, user, selectedMemberIds]);
 
+	// 重複結果がある場合は重複エントリのみ表示
+	const displayEntries = useMemo(() => {
+		if (duplicateResults === null) return filteredEntries;
+		const idsSet = new Set<string>(duplicateResults.flatMap((r) => r.ids));
+		return filteredEntries.filter((entry) => idsSet.has(entry.id));
+	}, [filteredEntries, duplicateResults]);
+
+	// 重複結果がある場合にページネーション適用
+	const [dupPage, setDupPage] = useState(1);
+	const [dupPageSize, setDupPageSize] = useState(pageSize);
+	useEffect(() => {
+		setDupPage(1);
+	}, []);
+	const paginatedEntries = useMemo(() => {
+		if (duplicateResults === null) return displayEntries;
+		const start = (dupPage - 1) * dupPageSize;
+		return displayEntries.slice(start, start + dupPageSize);
+	}, [displayEntries, dupPage, dupPageSize, duplicateResults]);
+
 	// メンバーをサーバーから取得
 	useEffect(() => {
 		(async () => {
@@ -340,8 +361,10 @@ export function DataTable({
 		})();
 	}, [koudenId]);
 
+	// Determine data source: use paginated entries normally, but show all duplicates when duplicateResults exist
+	const dataForTable = duplicateResults === null ? paginatedEntries : displayEntries;
 	const table = useReactTable({
-		data: Array.isArray(filteredEntries) ? filteredEntries : [],
+		data: Array.isArray(dataForTable) ? dataForTable : [],
 		columns: columns as ColumnDef<Entry, CellValue>[],
 		getCoreRowModel: getCoreRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
@@ -408,12 +431,19 @@ export function DataTable({
 							showDateFilter={showDateFilter}
 							dateRange={dateRange}
 							onDateRangeChange={onDateRangeChange}
-							showPagination
-							currentPage={currentPage}
-							pageSize={pageSize}
-							totalCount={totalCount}
-							onPageChange={onPageChange}
-							onPageSizeChange={onPageSizeChange}
+							showPagination={duplicateResults === null}
+							currentPage={duplicateResults === null ? currentPage : dupPage}
+							pageSize={duplicateResults === null ? pageSize : dupPageSize}
+							totalCount={duplicateResults === null ? totalCount : displayEntries.length}
+							onPageChange={duplicateResults === null ? onPageChange : setDupPage}
+							onPageSizeChange={
+								duplicateResults === null
+									? onPageSizeChange
+									: (size) => {
+											setDupPageSize(size);
+											setDupPage(1);
+										}
+							}
 							searchValue={searchValue}
 							onSearchChange={onSearchChange}
 							sortValue={sortValue}

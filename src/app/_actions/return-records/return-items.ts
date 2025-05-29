@@ -47,7 +47,6 @@ type UpdateReturnItemInput = {
  */
 export async function createReturnItem(input: CreateReturnItemInput): Promise<void> {
 	try {
-		console.log("[Server] Creating return item with input:", input);
 		const supabase = await createClient();
 
 		// より安全なユーザー認証の取得
@@ -56,7 +55,6 @@ export async function createReturnItem(input: CreateReturnItemInput): Promise<vo
 			error: userError,
 		} = await supabase.auth.getUser();
 		if (userError || !user) {
-			console.log("[Server] Authentication error:", userError);
 			throw new Error("認証されていません");
 		}
 
@@ -87,7 +85,6 @@ export async function createReturnItem(input: CreateReturnItemInput): Promise<vo
 			.single();
 
 		if (permissionError || !permission) {
-			console.log("[Server] Permission error:", permissionError);
 			throw new Error("この香典帳に対する権限がありません");
 		}
 
@@ -97,11 +94,9 @@ export async function createReturnItem(input: CreateReturnItemInput): Promise<vo
 			throw new Error("返礼品の作成権限がありません");
 		}
 
-		console.log("[Server] Inserting return item:", returnItemData);
 		const { error } = await supabase.from("return_items").insert(returnItemData);
 
 		if (error) {
-			console.log("[Server] Database error:", error);
 			// エラーメッセージを具体的に
 			if (error.code === "23505") {
 				throw new Error("同じ名前の返礼品が既に存在します");
@@ -109,7 +104,6 @@ export async function createReturnItem(input: CreateReturnItemInput): Promise<vo
 			throw new Error(error.message || "返礼品の作成に失敗しました");
 		}
 
-		console.log("[Server] Successfully created return item");
 		// キャッシュの再検証
 		revalidatePath(`/koudens/${input.kouden_id}/settings/return-items`);
 	} catch (error) {

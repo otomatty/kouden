@@ -16,9 +16,6 @@ import type { Database } from "@/types/supabase";
 //お供物情報を作成する
 export async function createOffering(input: Omit<CreateOfferingInput, "created_by">) {
 	try {
-		// デバッグ: 入力データの確認
-		console.log("[DEBUG] createOffering input:", input);
-
 		const supabase = await createClient();
 		const {
 			data: { user },
@@ -29,12 +26,8 @@ export async function createOffering(input: Omit<CreateOfferingInput, "created_b
 			throw new Error("認証が必要です");
 		}
 
-		// デバッグ: 認証ユーザー情報
-		console.log("[DEBUG] Authenticated user:", { id: user.id });
-
 		const { kouden_entry_ids, photos, ...offeringData } = input;
 
-		// データベースに挿入するデータ
 		const offeringDataToInsert: Database["public"]["Tables"]["offerings"]["Insert"] = {
 			...offeringData,
 			created_by: user.id,

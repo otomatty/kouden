@@ -39,22 +39,18 @@ export function OfferingCardList({
 
 		// 検索を適用
 		if (searchQuery) {
-			console.log("検索クエリ:", searchQuery);
 			result = result.filter((offering) => {
 				// お供物の検索可能なフィールドに対して検索を実行
 				const searchFields = ["providerName", "description", "notes"];
 				return searchFields.some((field) => {
 					const value = offering[field as keyof typeof offering];
-					console.log(`検索対象 [${field}]:`, value);
 					if (typeof value === "string") {
 						const matches = value.toLowerCase().includes(searchQuery.toLowerCase());
-						console.log(`検索結果 [${field}]:`, matches);
 						return matches;
 					}
 					return false;
 				});
 			});
-			console.log("フィルター後のデータ:", result);
 		}
 
 		// ソートを適用

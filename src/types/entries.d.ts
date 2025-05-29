@@ -63,3 +63,21 @@ export interface OptimisticEntry extends Entry {
 	isOptimistic: boolean;
 	isDeleted?: boolean;
 }
+
+// PDF 用型定義
+export interface KoudenEntry {
+	id: string;
+	name: string;
+	organization: string;
+	postalCode: string;
+	address: string;
+	relationship: string;
+	amount: string;
+	note?: string;
+}
+
+export interface KoudenData {
+	title: string;
+	entries: KoudenEntry[];
+	total: string;
+}

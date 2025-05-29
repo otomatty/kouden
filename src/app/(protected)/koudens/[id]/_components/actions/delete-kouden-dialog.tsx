@@ -52,7 +52,10 @@ export function DeleteKoudenDialog({ koudenId, koudenTitle }: DeleteKoudenDialog
 	const isDeleteDisabled = confirmTitle !== koudenTitle || isDeleting;
 
 	const trigger = isDesktop ? (
-		<Button variant="destructive" className="flex items-center gap-2">
+		<Button
+			variant="ghost"
+			className="flex items-center gap-2 text-destructive hover:text-destructive"
+		>
 			<Trash2 className="h-4 w-4" />
 			<span>香典帳を削除する</span>
 		</Button>

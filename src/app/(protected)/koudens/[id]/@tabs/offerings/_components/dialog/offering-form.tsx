@@ -66,7 +66,6 @@ export function OfferingForm({ koudenId, entries, defaultValues, onSuccess }: Of
 	const onSubmit = async (values: OfferingFormValues) => {
 		try {
 			setSubmissionState({ isSubmitting: true, error: null });
-			console.log("[DEBUG] Form submission started:", values);
 
 			// データベースに送信するデータを準備
 			const input = {
