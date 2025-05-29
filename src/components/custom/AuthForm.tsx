@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { GoogleIcon } from "@/components/custom/icons/google";
@@ -12,10 +12,14 @@ interface AuthFormProps {
 export function AuthForm({ invitationToken }: AuthFormProps) {
 	const [email, setEmail] = useState("");
 	const [message, setMessage] = useState<string | null>(null);
+	const [redirectTo, setRedirectTo] = useState<string>("");
 	const supabase = createClient();
 
-	const baseRedirect = `${window.location.origin}/auth/callback`;
-	const redirectTo = invitationToken ? `${baseRedirect}?token=${invitationToken}` : baseRedirect;
+	useEffect(() => {
+		const origin = window.location.origin;
+		const baseUrl = `${origin}/auth/callback`;
+		setRedirectTo(invitationToken ? `${baseUrl}?token=${invitationToken}` : baseUrl);
+	}, [invitationToken]);
 
 	const handleMagicLinkLogin = async () => {
 		try {
