@@ -5,6 +5,7 @@ import { userAtom } from "@/store/auth";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ListFilter } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 export interface MemberOption {
 	value: string;
@@ -17,6 +18,10 @@ interface DisplaySettingsProps {
 	members: MemberOption[];
 	selectedMemberIds: string[];
 	onMemberSelectionChange: (selectedIds: string[]) => void;
+	// 作成日フィルター
+	showDateFilter?: boolean;
+	dateRange?: { from?: Date; to?: Date };
+	onDateRangeChange?: (range: { from?: Date; to?: Date }) => void;
 }
 
 /**
@@ -29,6 +34,9 @@ export function DisplaySettings({
 	members,
 	selectedMemberIds,
 	onMemberSelectionChange,
+	showDateFilter,
+	dateRange,
+	onDateRangeChange,
 }: DisplaySettingsProps) {
 	const currentUser = useAtomValue(userAtom);
 	const currentUserId = currentUser?.id ?? "";
@@ -84,7 +92,7 @@ export function DisplaySettings({
 				表示設定
 			</Button>
 			{isOpen && (
-				<div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-md shadow-lg z-50 p-4">
+				<div className="absolute right-0 mt-2 w-96 bg-white border border-gray-200 rounded-md shadow-lg z-50 p-4">
 					<div>
 						<div className="mb-2 text-sm font-semibold">表示対象</div>
 						<div className="flex flex-wrap gap-2">
@@ -136,6 +144,41 @@ export function DisplaySettings({
 							))}
 						</div>
 					</div>
+					{/* 作成日フィルター */}
+					{showDateFilter && onDateRangeChange && (
+						<div className="mt-4">
+							<div className="mb-2 text-sm font-semibold">作成日</div>
+							<div className="flex items-center gap-2">
+								<Input
+									type="date"
+									value={dateRange?.from ? dateRange.from.toISOString().split("T")[0] : ""}
+									onChange={(e) =>
+										onDateRangeChange({
+											...dateRange,
+											from: e.target.value ? new Date(e.target.value) : undefined,
+											to: dateRange?.to,
+										})
+									}
+								/>
+								<span>〜</span>
+								<Input
+									type="date"
+									value={dateRange?.to ? dateRange.to.toISOString().split("T")[0] : ""}
+									onChange={(e) =>
+										onDateRangeChange({
+											from: dateRange?.from,
+											to: e.target.value ? new Date(e.target.value) : undefined,
+										})
+									}
+								/>
+							</div>
+							<div className="flex justify-end mt-2">
+								<Button variant="outline" size="sm" onClick={() => onDateRangeChange({})}>
+									クリア
+								</Button>
+							</div>
+						</div>
+					)}
 				</div>
 			)}
 		</div>

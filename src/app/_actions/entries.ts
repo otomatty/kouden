@@ -88,6 +88,10 @@ export async function getEntries(
 	page = 1,
 	pageSize = 100,
 	memberIds?: string[],
+	searchValue?: string,
+	sortValue?: string,
+	dateFrom?: string,
+	dateTo?: string,
 ): Promise<{ entries: Entry[]; count: number }> {
 	const supabase = await createClient();
 	const {
@@ -111,11 +115,30 @@ export async function getEntries(
 			// Filter entries by selected creator user IDs
 			query = query.in("created_by", memberIds);
 		}
-		const {
-			data: rawEntries,
-			count,
-			error: entriesError,
-		} = await query.order("created_at", { ascending: false }).range(from, to);
+		// Apply global search filter
+		if (searchValue) {
+			const search = `%${searchValue}%`;
+			query = query.or(
+				`name.ilike.${search},address.ilike.${search},organization.ilike.${search},position.ilike.${search}`,
+			);
+		}
+		// Apply date range filter
+		if (dateFrom) {
+			query = query.gte("created_at", dateFrom);
+		}
+		if (dateTo) {
+			query = query.lte("created_at", dateTo);
+		}
+		// Apply sorting
+		if (sortValue && sortValue !== "default") {
+			const [field = "created_at", direction = "desc"] = sortValue.split("_");
+			const ascending = direction === "asc";
+			query = query.order(field, { ascending });
+		} else {
+			// Default sorting by created_at desc
+			query = query.order("created_at", { ascending: false });
+		}
+		const { data: rawEntries, count, error: entriesError } = await query.range(from, to);
 		const entries = rawEntries ?? [];
 
 		if (entriesError) {

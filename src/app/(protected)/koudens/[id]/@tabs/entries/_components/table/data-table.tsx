@@ -61,6 +61,10 @@ interface EntryTableProps {
 	onSearchChange?: (value: string) => void;
 	sortValue?: string;
 	onSortChange?: (value: string) => void;
+	// 作成日フィルター
+	showDateFilter?: boolean;
+	dateRange?: { from?: Date; to?: Date };
+	onDateRangeChange?: (range: { from?: Date; to?: Date }) => void;
 }
 
 export function DataTable({
@@ -77,6 +81,9 @@ export function DataTable({
 	onSearchChange,
 	sortValue,
 	onSortChange,
+	showDateFilter,
+	dateRange,
+	onDateRangeChange,
 }: EntryTableProps) {
 	const permission = useAtomValue(permissionAtom);
 	const user = useAtomValue(userAtom);
@@ -398,6 +405,9 @@ export function DataTable({
 							members={members}
 							selectedMemberIds={selectedMemberIds}
 							onMemberSelectionChange={setSelectedMemberIds}
+							showDateFilter={showDateFilter}
+							dateRange={dateRange}
+							onDateRangeChange={onDateRangeChange}
 							showPagination
 							currentPage={currentPage}
 							pageSize={pageSize}

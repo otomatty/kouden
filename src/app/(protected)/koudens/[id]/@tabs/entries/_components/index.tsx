@@ -2,6 +2,7 @@
 // library
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useDebounce } from "@/hooks/use-debounce";
 
 // types
 import type { Entry } from "@/types/entries";
@@ -43,6 +44,51 @@ export function EntryView({
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const pathname = usePathname();
+	const urlSearch = searchParams.get("search") || "";
+	const sortValue = searchParams.get("sort") || "";
+	const urlDateFrom = searchParams.get("dateFrom") || "";
+	const urlDateTo = searchParams.get("dateTo") || "";
+	// Local state for input and its debounced value
+	const [searchInput, setSearchInput] = useState<string>(urlSearch);
+	const debouncedSearch = useDebounce(searchInput, 300);
+	// Local state for date range filter
+	const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({
+		from: urlDateFrom ? new Date(urlDateFrom) : undefined,
+		to: urlDateTo ? new Date(urlDateTo) : undefined,
+	});
+	// Sync local input when URL param changes (e.g. back/forward)
+	useEffect(() => {
+		setSearchInput(urlSearch);
+		// sync dateRange when URL param changes
+		setDateRange({
+			from: urlDateFrom ? new Date(urlDateFrom) : undefined,
+			to: urlDateTo ? new Date(urlDateTo) : undefined,
+		});
+	}, [urlSearch, urlDateFrom, urlDateTo]);
+	// Effect to update URL when debounced value changes
+	useEffect(() => {
+		const params = new URLSearchParams(searchParams.toString());
+		if (debouncedSearch) {
+			params.set("search", debouncedSearch);
+		} else {
+			params.delete("search");
+		}
+		params.set("page", "1");
+		router.replace(`${pathname}?${params.toString()}`);
+	}, [debouncedSearch, searchParams, pathname, router]);
+	const handleSearchChange = (value: string) => {
+		setSearchInput(value);
+	};
+	const handleSortChange = (value: string) => {
+		const params = new URLSearchParams(searchParams.toString());
+		if (value && value !== "default") {
+			params.set("sort", value);
+		} else {
+			params.delete("sort");
+		}
+		params.set("page", "1");
+		router.push(`${pathname}?${params.toString()}`);
+	};
 	const totalPages = Math.ceil(totalCount / pageSize);
 	const handlePageChange = (newPage: number) => {
 		const params = new URLSearchParams(searchParams.toString());
@@ -53,6 +99,23 @@ export function EntryView({
 	const handlePageSizeChange = (newSize: number) => {
 		const params = new URLSearchParams(searchParams.toString());
 		params.set("pageSize", String(newSize));
+		params.set("page", "1");
+		router.push(`${pathname}?${params.toString()}`);
+	};
+	// handle date range change
+	const handleDateRangeChange = (range: { from?: Date; to?: Date }) => {
+		setDateRange(range);
+		const params = new URLSearchParams(searchParams.toString());
+		if (range.from) {
+			params.set("dateFrom", range.from.toISOString().slice(0, 10));
+		} else {
+			params.delete("dateFrom");
+		}
+		if (range.to) {
+			params.set("dateTo", range.to.toISOString().slice(0, 10));
+		} else {
+			params.delete("dateTo");
+		}
 		params.set("page", "1");
 		router.push(`${pathname}?${params.toString()}`);
 	};
@@ -105,6 +168,14 @@ export function EntryView({
 					totalCount={totalCount}
 					onPageChange={handlePageChange}
 					onPageSizeChange={handlePageSizeChange}
+					searchValue={searchInput}
+					onSearchChange={handleSearchChange}
+					sortValue={sortValue}
+					onSortChange={handleSortChange}
+					// date filter props
+					showDateFilter={true}
+					dateRange={dateRange}
+					onDateRangeChange={handleDateRangeChange}
 				/>
 			)}
 		</>

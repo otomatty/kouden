@@ -109,10 +109,10 @@ export const KoudenStatistics = memo(function KoudenStatistics({
 					</CardContent>
 				</Card>
 
-				{/* 金額帯別分布 */}
+				{/* 金額別分布 */}
 				<Card>
 					<CardHeader>
-						<CardTitle>金額帯別分布</CardTitle>
+						<CardTitle>金額別分布</CardTitle>
 					</CardHeader>
 					<CardContent className="h-[400px]">
 						<ResponsiveContainer width="100%" height="100%">

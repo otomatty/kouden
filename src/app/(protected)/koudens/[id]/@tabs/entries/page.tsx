@@ -12,10 +12,26 @@ export default async function EntriesPage({
 	searchParams,
 }: {
 	params: Promise<{ id: string }>;
-	searchParams: Promise<{ page?: string; pageSize?: string; memberIds?: string }>;
+	searchParams: Promise<{
+		page?: string;
+		pageSize?: string;
+		memberIds?: string;
+		search?: string;
+		sort?: string;
+		dateFrom?: string;
+		dateTo?: string;
+	}>;
 }) {
 	const { id: koudenId } = await params;
-	const { page: pageStr, pageSize: pageSizeStr, memberIds: memberIdsStr } = await searchParams;
+	const {
+		page: pageStr,
+		pageSize: pageSizeStr,
+		memberIds: memberIdsStr,
+		search: searchValue,
+		sort: sortValue,
+		dateFrom,
+		dateTo,
+	} = await searchParams;
 	const page = pageStr ? Number.parseInt(pageStr, 10) : 1;
 	const pageSize = pageSizeStr ? Number.parseInt(pageSizeStr, 10) : 50;
 	const memberIds = memberIdsStr
@@ -24,8 +40,19 @@ export default async function EntriesPage({
 				.map((id) => id.trim())
 				.filter(Boolean)
 		: undefined;
+	const dateFromValue = dateFrom ?? undefined;
+	const dateToValue = dateTo ?? undefined;
 	const [{ entries, count }, relationships] = await Promise.all([
-		getEntries(koudenId, page, pageSize, memberIds),
+		getEntries(
+			koudenId,
+			page,
+			pageSize,
+			memberIds,
+			searchValue,
+			sortValue,
+			dateFromValue,
+			dateToValue,
+		),
 		getRelationships(koudenId),
 	]);
 

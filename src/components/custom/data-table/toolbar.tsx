@@ -98,6 +98,13 @@ export interface DataTableToolbarProps<TData> {
 	pageSize?: number;
 	onPageChange?: (page: number) => void;
 	onPageSizeChange?: (size: number) => void;
+	// 追加: 作成日フィルター
+	/** 作成日フィルターを表示するか */
+	showDateFilter?: boolean;
+	/** 選択された日付範囲 */
+	dateRange?: { from?: Date; to?: Date };
+	/** 日付範囲変更時 */
+	onDateRangeChange?: (range: { from?: Date; to?: Date }) => void;
 }
 
 export function DataTableToolbar<TData>({
@@ -135,6 +142,10 @@ export function DataTableToolbar<TData>({
 	pageSize,
 	onPageChange,
 	onPageSizeChange,
+	// 追加: 作成日フィルター
+	showDateFilter = false,
+	dateRange,
+	onDateRangeChange,
 }: DataTableToolbarProps<TData>) {
 	const [globalFilter, setGlobalFilter] = React.useState(searchValue || "");
 	const permission = useAtomValue(permissionAtom);
@@ -352,6 +363,10 @@ export function DataTableToolbar<TData>({
 											members={members}
 											selectedMemberIds={selectedMemberIds}
 											onMemberSelectionChange={onMemberSelectionChange}
+											// 作成日フィルター
+											showDateFilter={showDateFilter}
+											dateRange={dateRange}
+											onDateRangeChange={onDateRangeChange}
 										/>
 									)}
 							</GuideCard>
