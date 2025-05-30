@@ -23,9 +23,9 @@ export default function LoginPage() {
 							<div className="w-full max-w-sm space-y-4">
 								<LoginForm />
 								<p className="text-sm text-gray-500 dark:text-gray-400">
-									※ ご利用にはGoogleアカウントが必要です
+									※ ご利用にはメールアドレスまたはGoogleアカウントでのログインが必要です
 									<br />
-									アカウントをお持ちでない方は
+									Googleアカウントをお持ちでない方は
 									<a
 										href="https://accounts.google.com/signup"
 										target="_blank"

@@ -40,7 +40,7 @@ const painPoints: PainPoint[] = [
 		title: "家族と情報共有できない",
 		stories: [
 			{
-				text: "家族で分担して記録したいけど、エクセルだと同時に編集できない",
+				text: "家族で分担して記録したいけど、Excelだと同時に編集できない",
 				emphasizedWords: ["同時に編集"],
 			},
 			{

@@ -53,9 +53,11 @@ export function Header({ user, isAdmin, version }: HeaderProps) {
 						</h1>
 					</Link>
 					{/* デスクトップ表示 */}
-					<div className="hidden md:flex items-center gap-2">
-						<NotificationsPopover />
-						<GuideMenu />
+					<div className="hidden md:flex items-center space-x-6">
+						<div className="flex items-center space-x-2">
+							<NotificationsPopover />
+							<GuideMenu />
+						</div>
 						<UserMenu user={user} isAdmin={isAdmin} />
 					</div>
 					{/* モバイル表示 */}

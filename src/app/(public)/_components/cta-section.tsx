@@ -13,7 +13,7 @@ export function CTASection() {
 						className="text-primary-foreground [&_p]:text-primary-foreground/80"
 					/>
 					<p className="text-sm text-primary-foreground/60">
-						※ ご利用にはGoogleアカウントが必要です
+						※ ご利用にはメールアドレスまたはGoogleアカウントでのログインが必要です
 					</p>
 					<div className="flex flex-col gap-2 min-[400px]:flex-row">
 						<Link href="/auth/login">

@@ -2,14 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
 import { GoogleIcon } from "@/components/custom/icons/google";
+import { useRouter } from "next/navigation";
 
 interface AuthFormProps {
 	invitationToken?: string;
 }
 
 export function AuthForm({ invitationToken }: AuthFormProps) {
+	const router = useRouter();
 	const [email, setEmail] = useState("");
 	const [message, setMessage] = useState<string | null>(null);
 	const [redirectTo, setRedirectTo] = useState<string>("");
@@ -28,7 +31,8 @@ export function AuthForm({ invitationToken }: AuthFormProps) {
 				options: { emailRedirectTo: redirectTo },
 			});
 			if (error) throw error;
-			setMessage("メールに送信しました。リンクをクリックしてログインしてください。");
+			router.push(`/auth/sent?email=${encodeURIComponent(email)}`);
+			return;
 		} catch (error) {
 			if (error instanceof Error) {
 				console.error("Magic Link エラー:", error.message);
@@ -56,7 +60,7 @@ export function AuthForm({ invitationToken }: AuthFormProps) {
 		<div className="flex flex-col space-y-4">
 			{/* Magic Link Login Section */}
 			<div className="flex flex-col space-y-2">
-				<input
+				<Input
 					type="email"
 					value={email}
 					onChange={(e) => setEmail(e.target.value)}

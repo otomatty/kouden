@@ -67,6 +67,11 @@ export function EntryView({
 	}, [urlSearch, urlDateFrom, urlDateTo]);
 	// Effect to update URL when debounced value changes
 	useEffect(() => {
+		// Only update when debouncedSearch differs from current URL search param
+		const currentSearch = searchParams.get("search") || "";
+		if (currentSearch === debouncedSearch) {
+			return;
+		}
 		const params = new URLSearchParams(searchParams.toString());
 		if (debouncedSearch) {
 			params.set("search", debouncedSearch);
@@ -75,7 +80,7 @@ export function EntryView({
 		}
 		params.set("page", "1");
 		router.replace(`${pathname}?${params.toString()}`);
-	}, [debouncedSearch, searchParams, pathname, router]);
+	}, [debouncedSearch, pathname, router, searchParams]);
 	const handleSearchChange = (value: string) => {
 		setSearchInput(value);
 	};

@@ -9,7 +9,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { SelectionColumn } from "@/components/custom/data-table/selection-column";
 
 // types
@@ -176,18 +176,16 @@ export function createColumns({ onDeleteRows, permission, koudenId, entries }: C
 								.join("\n");
 
 							return (
-								<TooltipProvider key={entry.id}>
-									<Tooltip>
-										<TooltipTrigger asChild>
-											<Badge variant="secondary" className="cursor-help">
-												{displayName}
-											</Badge>
-										</TooltipTrigger>
-										<TooltipContent>
-											<p className="whitespace-pre-line text-sm">{tooltipContent}</p>
-										</TooltipContent>
-									</Tooltip>
-								</TooltipProvider>
+								<Tooltip key={entry.id}>
+									<TooltipTrigger asChild>
+										<Badge variant="secondary" className="cursor-help">
+											{displayName}
+										</Badge>
+									</TooltipTrigger>
+									<TooltipContent>
+										<p className="whitespace-pre-line text-sm">{tooltipContent}</p>
+									</TooltipContent>
+								</Tooltip>
 							);
 						})}
 					</div>

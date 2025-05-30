@@ -10,6 +10,7 @@ import type { Announcement } from "@/types/admin";
 import { formatDate } from "@/lib/utils";
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 const categoryColors = {
 	system: "bg-purple-500",
@@ -178,79 +179,89 @@ export function NotificationsPopover() {
 
 	return (
 		<>
-			<Popover open={isOpen} onOpenChange={setIsOpen}>
-				<PopoverTrigger asChild>
-					<Button variant="ghost" size="icon" className="relative">
-						<Bell className="h-5 w-5" />
-						{unreadCount > 0 && (
-							<Badge
-								variant="destructive"
-								className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
-							>
-								{unreadCount}
-							</Badge>
-						)}
-					</Button>
-				</PopoverTrigger>
-				<PopoverContent className="w-80 p-0" align="end">
-					<div className="p-4 border-b flex items-center justify-between">
-						<h4 className="font-semibold">お知らせ</h4>
-						<div className="flex items-center gap-2">
-							{unreadCount > 0 && (
-								<>
-									<Badge variant="secondary" className="text-xs">
-										未読 {unreadCount}件
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<Popover open={isOpen} onOpenChange={setIsOpen}>
+						<PopoverTrigger asChild>
+							<Button variant="ghost" size="icon" className="relative">
+								<Bell className="h-5 w-5" />
+								{unreadCount > 0 && (
+									<Badge
+										variant="destructive"
+										className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
+									>
+										{unreadCount}
 									</Badge>
-									<Button
-										variant="ghost"
-										size="sm"
-										className="text-xs h-7 px-2"
-										onClick={markAllAsRead}
-									>
-										すべて既読
-									</Button>
-								</>
-							)}
-						</div>
-					</div>
-					<ScrollArea className="h-[400px]">
-						{announcements.length === 0 ? (
-							<div className="p-4 text-center text-sm text-gray-500">お知らせはありません</div>
-						) : (
-							<div className="divide-y">
-								{announcements.map((announcement) => (
-									<button
-										key={announcement.id}
-										className={`w-full text-left p-4 ${
-											readAnnouncementIds.has(announcement.id)
-												? "bg-gray-50"
-												: "bg-white hover:bg-blue-50"
-										} relative transition-colors duration-200`}
-										onClick={() => handleAnnouncementClick(announcement)}
-										onMouseEnter={() => handleAnnouncementHover(announcement)}
-										onMouseLeave={handleAnnouncementHoverEnd}
-										type="button"
-									>
-										{!readAnnouncementIds.has(announcement.id) && (
-											<div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-blue-500" />
-										)}
-										<div className="flex items-center gap-2 mb-2">
-											<Badge variant="secondary" className={categoryColors[announcement.category]}>
-												{categoryLabels[announcement.category]}
+								)}
+							</Button>
+						</PopoverTrigger>
+						<PopoverContent className="w-80 p-0" align="end">
+							<div className="p-4 border-b flex items-center justify-between">
+								<h4 className="font-semibold">お知らせ</h4>
+								<div className="flex items-center gap-2">
+									{unreadCount > 0 && (
+										<>
+											<Badge variant="secondary" className="text-xs">
+												未読 {unreadCount}件
 											</Badge>
-											<span className="text-xs text-gray-500">
-												{announcement.publishedAt ? formatDate(announcement.publishedAt) : "-"}
-											</span>
-										</div>
-										<h5 className="font-medium mb-1">{announcement.title}</h5>
-										<p className="text-sm text-gray-600 line-clamp-2">{announcement.content}</p>
-									</button>
-								))}
+											<Button
+												variant="ghost"
+												size="sm"
+												className="text-xs h-7 px-2"
+												onClick={markAllAsRead}
+											>
+												すべて既読
+											</Button>
+										</>
+									)}
+								</div>
 							</div>
-						)}
-					</ScrollArea>
-				</PopoverContent>
-			</Popover>
+							<ScrollArea className="h-[400px]">
+								{announcements.length === 0 ? (
+									<div className="p-4 text-center text-sm text-gray-500">お知らせはありません</div>
+								) : (
+									<div className="divide-y">
+										{announcements.map((announcement) => (
+											<button
+												key={announcement.id}
+												className={`w-full text-left p-4 ${
+													readAnnouncementIds.has(announcement.id)
+														? "bg-gray-50"
+														: "bg-white hover:bg-blue-50"
+												} relative transition-colors duration-200`}
+												onClick={() => handleAnnouncementClick(announcement)}
+												onMouseEnter={() => handleAnnouncementHover(announcement)}
+												onMouseLeave={handleAnnouncementHoverEnd}
+												type="button"
+											>
+												{!readAnnouncementIds.has(announcement.id) && (
+													<div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-blue-500" />
+												)}
+												<div className="flex items-center gap-2 mb-2">
+													<Badge
+														variant="secondary"
+														className={categoryColors[announcement.category]}
+													>
+														{categoryLabels[announcement.category]}
+													</Badge>
+													<span className="text-xs text-gray-500">
+														{announcement.publishedAt ? formatDate(announcement.publishedAt) : "-"}
+													</span>
+												</div>
+												<h5 className="font-medium mb-1">{announcement.title}</h5>
+												<p className="text-sm text-gray-600 line-clamp-2">{announcement.content}</p>
+											</button>
+										))}
+									</div>
+								)}
+							</ScrollArea>
+						</PopoverContent>
+					</Popover>
+				</TooltipTrigger>
+				<TooltipContent>
+					<p>お知らせ</p>
+				</TooltipContent>
+			</Tooltip>
 
 			<ResponsiveDialog
 				trigger={<div />}

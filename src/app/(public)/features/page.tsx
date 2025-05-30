@@ -1,152 +1,149 @@
-import { PageHero } from "../_components/page-hero";
+import type { Metadata } from "next";
+import Link from "next/link";
 import {
-	BookOpen,
+	ChevronRight,
+	Cloud,
+	BarChart2,
+	FileText,
+	Monitor,
 	Gift,
-	Map as MapIcon,
-	Users,
-	Share2,
-	History,
-	FileSpreadsheet,
-	Bell,
+	Lock,
+	LayoutDashboard,
+	Timer,
 } from "lucide-react";
+import { SectionTitle } from "@/components/ui/section-title";
+import { Button } from "@/components/ui/button";
+import { PageHero } from "../_components/page-hero";
 
-const features = [
-	{
-		id: "digital-management",
-		icon: BookOpen,
-		title: "香典帳のデジタル管理",
-		description:
-			"香典帳の記帳をデジタル化し、簡単に記録・管理が可能。過去の記録も瞬時に検索できます。",
-		details: [
-			{ id: "input", text: "直感的な入力フォームで簡単記帳" },
-			{ id: "search", text: "過去の記録をすぐに検索可能" },
-			{ id: "calc", text: "自動計算機能で集計ミスを防止" },
-			{ id: "backup", text: "データのバックアップで安全に保管" },
-		],
-	},
-	{
-		id: "gift-management",
-		icon: Gift,
-		title: "返礼品の効率的な管理",
-		description:
-			"返礼品の在庫管理から配送状況まで、すべてを一元管理。適切な返礼品の選定もサポートします。",
-		details: [
-			{ id: "inventory", text: "返礼品の在庫をリアルタイムに管理" },
-			{ id: "selection", text: "適切な返礼品の選定をサポート" },
-			{ id: "tracking", text: "配送状況のトラッキング" },
-			{ id: "budget", text: "予算管理と経費の可視化" },
-		],
-	},
-	{
-		id: "route-optimization",
-		icon: MapIcon,
-		title: "配達ルートの最適化",
-		description: "返礼品の配達ルートを自動で最適化。効率的な配達計画を立てることができます。",
-		details: [
-			{ id: "ai-route", text: "AIによる最適な配達ルートの提案" },
-			{ id: "schedule", text: "配達スケジュールの自動作成" },
-			{ id: "progress", text: "リアルタイムの進捗管理" },
-			{ id: "completion", text: "配達完了の自動記録" },
-		],
-	},
-	{
-		id: "relationship-management",
-		icon: Users,
-		title: "関係性の管理",
-		description: "贈答履歴や関係性を記録し、適切な返礼品の選定に活用できます。",
-		details: [
-			{ id: "history", text: "贈答履歴の一元管理" },
-			{ id: "visualization", text: "関係性の可視化" },
-			{ id: "suggestion", text: "適切な返礼品の提案" },
-			{ id: "dates", text: "重要な記念日の管理" },
-		],
-	},
-	{
-		id: "collaboration",
-		icon: Share2,
-		title: "共同編集機能",
-		description: "家族や関係者と情報を共有し、共同で香典帳を管理できます。",
-		details: [
-			{ id: "realtime", text: "リアルタイムの共同編集" },
-			{ id: "permissions", text: "権限管理で安全な共有" },
-			{ id: "history", text: "変更履歴の記録" },
-			{ id: "comments", text: "コメント機能でコミュニケーション" },
-		],
-	},
-	{
-		id: "history",
-		icon: History,
-		title: "履歴管理",
-		description: "すべての変更履歴を記録し、いつでも過去の記録を確認できます。",
-		details: [
-			{ id: "auto-record", text: "変更履歴の自動記録" },
-			{ id: "restore", text: "過去のバージョンの復元" },
-			{ id: "audit", text: "監査ログの出力" },
-			{ id: "integrity", text: "データの完全性保証" },
-		],
-	},
-	{
-		id: "reporting",
-		icon: FileSpreadsheet,
-		title: "レポート機能",
-		description: "様々な形式でデータを出力し、必要な情報を簡単に共有できます。",
-		details: [
-			{ id: "custom", text: "カスタマイズ可能なレポート" },
-			{ id: "formats", text: "複数のファイル形式に対応" },
-			{ id: "charts", text: "グラフや図表での可視化" },
-			{ id: "auto-gen", text: "定期的なレポート自動生成" },
-		],
-	},
-	{
-		id: "notifications",
-		icon: Bell,
-		title: "通知機能",
-		description: "重要な更新や期限を自動で通知し、必要なアクションを見逃しません。",
-		details: [
-			{ id: "settings", text: "カスタマイズ可能な通知設定" },
-			{ id: "sync", text: "複数のデバイスでの同期" },
-			{ id: "alerts", text: "重要なイベントの事前通知" },
-			{ id: "deadlines", text: "タスクの期限管理" },
-		],
-	},
-];
+export const metadata: Metadata = {
+	title: "機能紹介 | 香典帳",
+	description:
+		"香典帳アプリの主要機能を詳しく紹介します。手書き管理の手間を解消し、いつでもどこでも安心して利用できます。",
+};
 
 export default function FeaturesPage() {
+	const features = [
+		{
+			id: "cloud-sync",
+			icon: Cloud,
+			title: "クラウド同期",
+			description: "出先でも最新データを確認・共有できる",
+		},
+		{
+			id: "auto-calc-graph",
+			icon: BarChart2,
+			title: "自動計算＆グラフ表示",
+			description: "金額ミスを防ぎ、視覚的にデータを把握",
+		},
+		{
+			id: "export",
+			icon: FileText,
+			title: "Excel/PDF出力",
+			description: "帳簿をエクセルやPDFで即エクスポート",
+		},
+		{
+			id: "multi-device",
+			icon: Monitor,
+			title: "マルチデバイス対応",
+			description: "スマホ・PCで共同編集が可能",
+		},
+		{
+			id: "return-management",
+			icon: Gift,
+			title: "香典返し管理",
+			description: "返礼品の情報も一緒に一括管理",
+		},
+		{
+			id: "invite-security",
+			icon: Lock,
+			title: "招待制セキュリティ",
+			description: "招待制で安心のプライバシー保護",
+		},
+		{
+			id: "dedicated-ui",
+			icon: LayoutDashboard,
+			title: "使いやすいUI",
+			description: "香典管理専用のシンプルな操作性",
+		},
+		{
+			id: "free-plan",
+			icon: Timer,
+			title: "基本利用無料",
+			description: "香典情報は何件でも登録可能",
+		},
+	];
+
+	const testimonials = [
+		{
+			id: "t1",
+			name: "田中様",
+			comment: "外出先でも簡単に香典管理ができて助かりました。",
+		},
+		{
+			id: "t2",
+			name: "鈴木様",
+			comment: "家族とデータ共有できるのが便利！",
+		},
+	];
+
 	return (
 		<div className="space-y-24">
 			<PageHero
-				title="機能詳細"
-				subtitle="香典帳アプリの全機能をご紹介します"
-				className="bg-gray-50 dark:bg-gray-900"
+				title="機能紹介"
+				subtitle="香典帳アプリの主要機能を詳しく紹介します"
+				cta={{ label: "今すぐ登録", href: "/auth/login", icon: ChevronRight }}
+				className="bg-background"
 			/>
 
-			<section className="bg-gray-50 dark:bg-gray-900">
-				<div className="container px-4 md:px-6 mx-auto">
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-						{features.map((feature) => (
-							<div
-								key={feature.id}
-								className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 space-y-4"
-							>
-								<div className="flex items-center space-x-4">
-									<div className="p-3 bg-primary/10 rounded-full">
-										<feature.icon className="w-6 h-6 text-primary" />
-									</div>
-									<h2 className="text-2xl font-bold">{feature.title}</h2>
-								</div>
-								<p className="text-gray-500 dark:text-gray-400">{feature.description}</p>
-								<ul className="space-y-2">
-									{feature.details.map((detail) => (
-										<li key={detail.id} className="flex items-center space-x-2">
-											<div className="w-1.5 h-1.5 rounded-full bg-primary" />
-											<span className="text-gray-600 dark:text-gray-300">{detail.text}</span>
-										</li>
-									))}
-								</ul>
+			<section className="container">
+				<SectionTitle
+					title="主要な機能"
+					subtitle="香典管理の困りごとを一気に解消"
+					className="mb-12"
+				/>
+				<div className="grid sm:grid-cols-2 md:grid-cols-4 gap-8">
+					{features.map((feature) => (
+						<Link
+							key={feature.id}
+							href={`/features/${feature.id}`}
+							className="block p-6 rounded-lg border bg-card hover:bg-accent transition-colors"
+						>
+							<feature.icon className="h-8 w-8 text-primary mb-4" />
+							<h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
+							<p className="text-muted-foreground">{feature.description}</p>
+						</Link>
+					))}
+				</div>
+			</section>
+
+			<section className="container">
+				<SectionTitle title="利用シーン" subtitle="動画で見る使い方" className="mb-12" />
+				<div className="flex flex-col md:flex-row gap-8">
+					<div className="md:w-1/2">
+						{/* TODO: 動画パスを設定 */}
+						<div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
+							動画デモ
+						</div>
+					</div>
+					<div className="space-y-6 md:w-1/2">
+						{testimonials.map((t) => (
+							<div key={t.id} className="p-6 rounded-lg border bg-card">
+								<p className="text-muted-foreground mb-2">"{t.comment}"</p>
+								<p className="text-sm font-medium text-primary">— {t.name}</p>
 							</div>
 						))}
 					</div>
 				</div>
+			</section>
+
+			<section className="text-center container h-[40vh] flex flex-col justify-center">
+				<SectionTitle title="さあ、始めましょう" subtitle="" className="mb-8" />
+				<Button asChild className="w-fit mx-auto">
+					<Link href="/auth/login">
+						無料で登録する
+						<ChevronRight className="ml-2 h-4 w-4" />
+					</Link>
+				</Button>
 			</section>
 		</div>
 	);

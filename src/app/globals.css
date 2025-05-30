@@ -86,3 +86,14 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  /* 横スクロールバーを非表示にするユーティリティ */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}

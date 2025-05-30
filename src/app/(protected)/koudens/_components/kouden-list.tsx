@@ -1,20 +1,13 @@
 "use client";
-
-import {
-	CardContent,
-	CardDescription,
-	CardFooter,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
 import { formatDistanceToNow } from "date-fns";
 import { ja } from "date-fns/locale";
 import type { Database } from "@/types/supabase";
 import Link from "next/link";
-import { Loader2, ArrowRight, ChevronRight } from "lucide-react";
+import { ArrowRight, ChevronRight } from "lucide-react";
 import { useSetAtom } from "jotai";
 import { loadingStateAtom } from "@/store/loading-hints";
 import { motion } from "framer-motion";
+import { CreateKoudenForm } from "./create-kouden-form";
 
 type Kouden = Database["public"]["Tables"]["koudens"]["Row"];
 
@@ -35,7 +28,10 @@ export function KoudenList({ koudens }: KoudenListProps) {
 	if (koudens.length === 0) {
 		return (
 			<div className="text-center py-12">
-				<p className="text-gray-500">香典帳がありません</p>
+				<p className="text-gray-500 mb-4">香典帳がありません</p>
+				<div className="flex justify-center">
+					<CreateKoudenForm />
+				</div>
 			</div>
 		);
 	}
