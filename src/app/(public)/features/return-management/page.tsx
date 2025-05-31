@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Gift, List, Bell, FileText } from "lucide-react";
 import { SectionTitle } from "@/components/ui/section-title";
 import { FeaturePointCard } from "../_components/FeaturePointCard";
-import { ScenarioCard } from "../_components/ScenarioCard";
+import ScenarioVideoWrapper from "./_components/scenario-video-wrapper";
 import { TestimonialsSection } from "../_components/TestimonialsSection";
 import { testimonials } from "./testimonials";
 import { CTASection } from "../_components/CTASection";
@@ -32,21 +32,6 @@ export default function ReturnManagementPage() {
 		},
 	];
 
-	const scenarios = [
-		{
-			id: "manage-gifts",
-			title: "返礼品準備",
-			description: "返し忘れを防ぎ効率的に手配。",
-			icon: Gift,
-		},
-		{
-			id: "export-history",
-			title: "履歴の出力",
-			description: "返礼履歴をレポート形式でまとめて共有。",
-			icon: FileText,
-		},
-	];
-
 	return (
 		<div className="space-y-24">
 			<section className="py-16 container">
@@ -71,11 +56,7 @@ export default function ReturnManagementPage() {
 
 			<section className="container">
 				<SectionTitle title="利用シーン" className="mb-8" />
-				<div className="space-y-6">
-					{scenarios.map((s) => (
-						<ScenarioCard key={s.id} {...s} />
-					))}
-				</div>
+				<ScenarioVideoWrapper />
 			</section>
 
 			<TestimonialsSection testimonials={testimonials} />

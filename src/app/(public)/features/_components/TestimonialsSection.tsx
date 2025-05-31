@@ -4,7 +4,7 @@ import { SectionTitle } from "@/components/ui/section-title";
 import { TestimonialCard } from "./TestimonialCard";
 
 /**
- * TestimonialsSection renders the お客様の声 section with horizontal scrolling testimonials.
+ * TestimonialsSection renders the 利用者の声 section with horizontal scrolling testimonials.
  */
 export function TestimonialsSection({
 	testimonials,
@@ -13,7 +13,7 @@ export function TestimonialsSection({
 }) {
 	return (
 		<section>
-			<SectionTitle title="お客様の声" className="mb-8" />
+			<SectionTitle title="利用者の声" className="mb-8" />
 			<div className="flex space-x-6 overflow-x-auto pb-4 px-48 scrollbar-hide">
 				{testimonials.map((t) => (
 					<TestimonialCard

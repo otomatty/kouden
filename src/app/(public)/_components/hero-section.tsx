@@ -36,7 +36,7 @@ export function HeroSection() {
 									まずは無料で始めてみる
 								</Button>
 							</Link>
-							<Link href="#features">
+							<Link href="/features">
 								<Button size="lg" variant="outline" className="w-full min-[400px]:w-auto">
 									詳しい機能を見る
 								</Button>

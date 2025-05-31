@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { BarChart2, Calculator, TrendingUp, AlertCircle, FileText } from "lucide-react";
+import { Calculator, TrendingUp, AlertCircle } from "lucide-react";
 import { SectionTitle } from "@/components/ui/section-title";
 import { FeaturePointCard } from "../_components/FeaturePointCard";
-import { ScenarioCard } from "../_components/ScenarioCard";
+import ScenarioVideoWrapper from "./_components/scenario-video-wrapper";
 import { TestimonialsSection } from "../_components/TestimonialsSection";
 import { testimonials } from "./testimonials";
 import { OtherFeaturesList } from "../_components/OtherFeaturesList";
@@ -30,21 +30,6 @@ export default function AutoCalcGraphPage() {
 			title: "ミス防止",
 			description: "グラフ表示で異常値を視覚的に検出します。",
 			icon: AlertCircle,
-		},
-	];
-
-	const scenarios = [
-		{
-			id: "trend-review",
-			title: "支出傾向の確認",
-			description: "過去データのグラフを見て香典支出の傾向を把握。",
-			icon: BarChart2,
-		},
-		{
-			id: "report-export",
-			title: "レポート作成",
-			description: "グラフをレポートに添付して共有できます。",
-			icon: FileText,
 		},
 	];
 
@@ -76,11 +61,7 @@ export default function AutoCalcGraphPage() {
 
 			<section className="container">
 				<SectionTitle title="利用シーン" className="mb-8" />
-				<div className="space-y-6">
-					{scenarios.map((s) => (
-						<ScenarioCard key={s.id} {...s} />
-					))}
-				</div>
+				<ScenarioVideoWrapper />
 			</section>
 
 			<TestimonialsSection testimonials={testimonials} />

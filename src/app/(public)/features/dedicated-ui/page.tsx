@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { LayoutDashboard, SlidersHorizontal, Moon, Sun } from "lucide-react";
+import { LayoutDashboard, SlidersHorizontal, Moon } from "lucide-react";
 import { SectionTitle } from "@/components/ui/section-title";
 import { FeaturePointCard } from "../_components/FeaturePointCard";
-import { ScenarioCard } from "../_components/ScenarioCard";
+import ScenarioVideoWrapper from "./_components/scenario-video-wrapper";
 import { TestimonialsSection } from "../_components/TestimonialsSection";
 import { testimonials } from "./testimonials";
 import { CTASection } from "../_components/CTASection";
@@ -29,21 +29,6 @@ export default function DedicatedUIPage() {
 			title: "ダークモード対応",
 			description: "目に優しいダークテーマに切り替え可能。",
 			icon: Moon,
-		},
-	];
-
-	const scenarios = [
-		{
-			id: "simple-operation",
-			title: "迷わない操作",
-			description: "誰でもすぐに使い始められるデザイン。",
-			icon: LayoutDashboard,
-		},
-		{
-			id: "theme-switch",
-			title: "テーマ切替",
-			description: "好みに合わせてライト/ダークを切り替え。",
-			icon: Sun,
 		},
 	];
 
@@ -75,11 +60,7 @@ export default function DedicatedUIPage() {
 
 			<section className="container">
 				<SectionTitle title="利用シーン" className="mb-8" />
-				<div className="space-y-6">
-					{scenarios.map((s) => (
-						<ScenarioCard key={s.id} {...s} />
-					))}
-				</div>
+				<ScenarioVideoWrapper />
 			</section>
 
 			<TestimonialsSection testimonials={testimonials} />

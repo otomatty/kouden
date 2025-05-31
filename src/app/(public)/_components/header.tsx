@@ -1,11 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-
-const navigation = [
-	{ name: "機能", href: "/features" },
-	{ name: "使い方", href: "/guide" },
-	{ name: "使用例", href: "/use-cases" },
-];
+import { HeaderNavigation } from "./HeaderNavigation";
 
 export function Header({ version }: { version: string }) {
 	return (
@@ -20,17 +15,7 @@ export function Header({ version }: { version: string }) {
 				</h1>
 
 				<div className="flex items-center space-x-8">
-					<nav className="hidden md:flex items-center space-x-6">
-						{navigation.map((item) => (
-							<Link
-								key={item.href}
-								href={item.href}
-								className="text-sm font-medium text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50"
-							>
-								{item.name}
-							</Link>
-						))}
-					</nav>
+					<HeaderNavigation />
 					<Button asChild>
 						<Link href="/auth/login">利用を開始する</Link>
 					</Button>

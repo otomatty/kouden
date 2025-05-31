@@ -75,7 +75,7 @@ const features = [
 	{
 		id: "mobile",
 		Icon: Smartphone,
-		name: "マルチデバイス対応",
+		name: "あらゆる端末で使える",
 		description:
 			"スマートフォンやタブレット、PCなど、どの端末からでもアクセス可能。外出先でも簡単に確認・記録できます。",
 		href: "#",

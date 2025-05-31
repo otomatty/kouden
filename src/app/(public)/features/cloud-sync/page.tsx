@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { Cloud, Users, Shield, MapPin, Home } from "lucide-react";
+import { Cloud, Users, Shield } from "lucide-react";
 import { SectionTitle } from "@/components/ui/section-title";
 import { FeaturePointCard } from "../_components/FeaturePointCard";
-import { ScenarioCard } from "../_components/ScenarioCard";
+import ScenarioVideoWrapper from "./_components/scenario-video-wrapper";
 import { TestimonialsSection } from "../_components/TestimonialsSection";
 import { OtherFeaturesList } from "../_components/OtherFeaturesList";
 import { CTASection } from "../_components/CTASection";
@@ -32,21 +32,6 @@ export default function CloudSyncPage() {
 		},
 	];
 
-	const scenarios = [
-		{
-			id: "venue-check",
-			title: "葬儀会場での確認",
-			description: "外出先の葬儀会場でスマホからすぐ金額を確認。",
-			icon: MapPin,
-		},
-		{
-			id: "home-sync",
-			title: "帰宅後の家族共有",
-			description: "帰宅後すぐに家族とデータを共有・更新。",
-			icon: Home,
-		},
-	];
-
 	return (
 		<div className="space-y-24">
 			<section className="py-16 container">
@@ -55,7 +40,7 @@ export default function CloudSyncPage() {
 					subtitle="いつでもどこでも最新の香典帳を手元に"
 					className="mb-8"
 				/>
-				<p className="text-muted-foreground mb-6">手書き帳簿を探し回る手間はもう不要です。</p>
+				<p className="text-muted-foreground mb-6">手書き香典帳を探し回る手間はもう不要です。</p>
 				<div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
 					{/* デモ動画またはスクリーンショット */}
 					動画/スクリーンショット
@@ -73,11 +58,7 @@ export default function CloudSyncPage() {
 
 			<section className="container">
 				<SectionTitle title="利用シーン" className="mb-8" />
-				<div className="space-y-6">
-					{scenarios.map((s) => (
-						<ScenarioCard key={s.id} {...s} />
-					))}
-				</div>
+				<ScenarioVideoWrapper />
 			</section>
 
 			<TestimonialsSection testimonials={testimonials} />

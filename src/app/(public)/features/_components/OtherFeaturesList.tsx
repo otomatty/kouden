@@ -25,8 +25,12 @@ const featuresList: FeatureItem[] = [
 		title: "自動計算＆グラフ表示",
 		description: "金額ミスを防ぎ、視覚的にデータを把握",
 	},
-	{ id: "export", title: "Excel/PDF出力", description: "帳簿をエクセルやPDFで即エクスポート" },
-	{ id: "multi-device", title: "マルチデバイス対応", description: "スマホ・PCで共同編集が可能" },
+	{ id: "export", title: "Excel/PDF出力", description: "香典帳をエクセルやPDFで即エクスポート" },
+	{
+		id: "multi-device",
+		title: "あらゆる端末で使える",
+		description: "スマホ・PC・タブレットで共同編集が可能",
+	},
 	{ id: "return-management", title: "香典返し管理", description: "返礼品の情報も一緒に一括管理" },
 	{
 		id: "invite-security",

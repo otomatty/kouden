@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Lock, UserPlus, Key } from "lucide-react";
 import { SectionTitle } from "@/components/ui/section-title";
 import { FeaturePointCard } from "../_components/FeaturePointCard";
-import { ScenarioCard } from "../_components/ScenarioCard";
+import ScenarioVideoWrapper from "./_components/scenario-video-wrapper";
 import { TestimonialsSection } from "../_components/TestimonialsSection";
 import { testimonials } from "./testimonials";
 import { CTASection } from "../_components/CTASection";
@@ -28,21 +28,6 @@ export default function InviteSecurityPage() {
 		{
 			title: "安全な認証",
 			description: "二要素認証対応でさらにセキュリティ強化。",
-			icon: Key,
-		},
-	];
-
-	const scenarios = [
-		{
-			id: "family-invite",
-			title: "家族招待",
-			description: "家族を招待してデータ共有を開始。",
-			icon: UserPlus,
-		},
-		{
-			id: "permission-settings",
-			title: "権限設定",
-			description: "メンバーごとに閲覧・編集権限を設定。",
 			icon: Key,
 		},
 	];
@@ -73,11 +58,7 @@ export default function InviteSecurityPage() {
 
 			<section className="container">
 				<SectionTitle title="利用シーン" className="mb-8" />
-				<div className="space-y-6">
-					{scenarios.map((s) => (
-						<ScenarioCard key={s.id} {...s} />
-					))}
-				</div>
+				<ScenarioVideoWrapper />
 			</section>
 
 			<TestimonialsSection testimonials={testimonials} />

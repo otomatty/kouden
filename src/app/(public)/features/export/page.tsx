@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { FileSpreadsheet, FileText, SlidersHorizontal } from "lucide-react";
 import { SectionTitle } from "@/components/ui/section-title";
 import { FeaturePointCard } from "../_components/FeaturePointCard";
-import { ScenarioCard } from "../_components/ScenarioCard";
+import ScenarioVideoWrapper from "./_components/scenario-video-wrapper";
 import { TestimonialsSection } from "../_components/TestimonialsSection";
 import { testimonials } from "./testimonials";
 import { CTASection } from "../_components/CTASection";
@@ -10,7 +10,7 @@ import { OtherFeaturesList } from "../_components/OtherFeaturesList";
 
 export const metadata: Metadata = {
 	title: "Excel/PDF出力 | 機能詳細 | 香典帳",
-	description: "ExcelおよびPDF出力機能の詳細ページです。帳簿を簡単にダウンロードできます。",
+	description: "ExcelおよびPDF出力機能の詳細ページです。香典帳を簡単にダウンロードできます。",
 };
 
 export default function ExportPage() {
@@ -32,26 +32,15 @@ export default function ExportPage() {
 		},
 	];
 
-	const scenarios = [
-		{
-			id: "download-excel",
-			title: "帳簿をExcelに",
-			description: "ワンクリックで全データをExcelファイルとして保存。",
-			icon: FileSpreadsheet,
-		},
-		{
-			id: "share-pdf",
-			title: "PDFで共有",
-			description: "PDFをメール添付などで簡単に共有できます。",
-			icon: FileText,
-		},
-	];
-
 	return (
 		<div className="space-y-24">
 			<section className="py-16 container">
-				<SectionTitle title="Excel/PDF出力" subtitle="帳簿を簡単にダウンロード" className="mb-8" />
-				<p className="text-muted-foreground mb-6">帳簿のバックアップや共有に最適です。</p>
+				<SectionTitle
+					title="Excel/PDF出力"
+					subtitle="香典帳を簡単にダウンロード"
+					className="mb-8"
+				/>
+				<p className="text-muted-foreground mb-6">香典帳のバックアップや共有に最適です。</p>
 				<div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
 					{/* デモ動画またはスクリーンショット */}
 					動画/スクリーンショット
@@ -69,11 +58,7 @@ export default function ExportPage() {
 
 			<section className="container">
 				<SectionTitle title="利用シーン" className="mb-8" />
-				<div className="space-y-6">
-					{scenarios.map((s) => (
-						<ScenarioCard key={s.id} {...s} />
-					))}
-				</div>
+				<ScenarioVideoWrapper />
 			</section>
 
 			<TestimonialsSection testimonials={testimonials} />

@@ -39,13 +39,13 @@ export default function FeaturesPage() {
 			id: "export",
 			icon: FileText,
 			title: "Excel/PDF出力",
-			description: "帳簿をエクセルやPDFで即エクスポート",
+			description: "香典帳をエクセルやPDFで即エクスポート",
 		},
 		{
 			id: "multi-device",
 			icon: Monitor,
-			title: "マルチデバイス対応",
-			description: "スマホ・PCで共同編集が可能",
+			title: "あらゆる端末で使える",
+			description: "スマホ・PC・タブレットで共同編集が可能",
 		},
 		{
 			id: "return-management",
@@ -64,12 +64,6 @@ export default function FeaturesPage() {
 			icon: LayoutDashboard,
 			title: "使いやすいUI",
 			description: "香典管理専用のシンプルな操作性",
-		},
-		{
-			id: "free-plan",
-			icon: Timer,
-			title: "基本利用無料",
-			description: "香典情報は何件でも登録可能",
 		},
 	];
 

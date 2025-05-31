@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
-import { Monitor, Smartphone, Users, CloudOff } from "lucide-react";
+import { Smartphone, Users, CloudOff } from "lucide-react";
 import { SectionTitle } from "@/components/ui/section-title";
 import { FeaturePointCard } from "../_components/FeaturePointCard";
-import { ScenarioCard } from "../_components/ScenarioCard";
+import ScenarioVideoWrapper from "./_components/scenario-video-wrapper";
 import { TestimonialsSection } from "../_components/TestimonialsSection";
 import { testimonials } from "./testimonials";
 import { CTASection } from "../_components/CTASection";
 import { OtherFeaturesList } from "../_components/OtherFeaturesList";
 
 export const metadata: Metadata = {
-	title: "マルチデバイス対応 | 機能詳細 | 香典帳",
-	description: "マルチデバイス対応機能の詳細ページです。スマホ・PCで共同編集が可能です。",
+	title: "あらゆる端末で使える | 機能詳細 | 香典帳",
+	description:
+		"あらゆる端末で使える機能の詳細ページです。スマホ・PC・タブレットで共同編集が可能です。",
 };
 
 export default function MultiDevicePage() {
@@ -29,21 +30,6 @@ export default function MultiDevicePage() {
 			title: "オフライン対応",
 			description: "ネットワーク切断時もローカルに保存します。",
 			icon: CloudOff,
-		},
-	];
-
-	const scenarios = [
-		{
-			id: "on-the-go",
-			title: "外出先で簡単入力",
-			description: "スマホから直接香典情報を記録。",
-			icon: Smartphone,
-		},
-		{
-			id: "home-edit",
-			title: "自宅でPC編集",
-			description: "大画面で快適に一括管理・出力。",
-			icon: Monitor,
 		},
 	];
 
@@ -73,11 +59,7 @@ export default function MultiDevicePage() {
 
 			<section className="container">
 				<SectionTitle title="利用シーン" className="mb-8" />
-				<div className="space-y-6">
-					{scenarios.map((s) => (
-						<ScenarioCard key={s.id} {...s} />
-					))}
-				</div>
+				<ScenarioVideoWrapper />
 			</section>
 
 			<TestimonialsSection testimonials={testimonials} />
