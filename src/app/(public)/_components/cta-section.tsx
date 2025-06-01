@@ -16,23 +16,21 @@ export function CTASection() {
 						※ ご利用にはメールアドレスまたはGoogleアカウントでのログインが必要です
 					</p>
 					<div className="flex flex-col gap-2 min-[400px]:flex-row">
-						<Link href="/auth/login">
-							<Button
-								size="lg"
-								className="w-full min-[400px]:w-auto bg-white text-primary hover:bg-white/90"
-							>
-								無料で始める
-							</Button>
-						</Link>
-						<Link href="#features">
-							<Button
-								size="lg"
-								variant="outline"
-								className="w-full min-[400px]:w-auto border-white text-white hover:bg-white/10"
-							>
-								詳しく見る
-							</Button>
-						</Link>
+						<Button
+							size="lg"
+							className="w-full min-[400px]:w-auto bg-white text-primary hover:bg-white/90"
+							asChild
+						>
+							<Link href="/auth/login">無料で始める</Link>
+						</Button>
+						<Button
+							size="lg"
+							variant="outline"
+							className="w-full min-[400px]:w-auto bg-primary border-white text-primary-foreground hover:bg-white/10 hover:text-primary-foreground"
+							asChild
+						>
+							<Link href="/features">機能を見る</Link>
+						</Button>
 					</div>
 				</div>
 			</div>

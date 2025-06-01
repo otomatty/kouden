@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { HeaderNavigation } from "./HeaderNavigation";
+import { HeaderNavigation } from "./header-navigation";
 
 export function Header({ version }: { version: string }) {
 	return (
@@ -13,13 +13,11 @@ export function Header({ version }: { version: string }) {
 						<span className="text-sm text-gray-500 ml-1">v{version}</span>
 					</Link>
 				</h1>
+				<HeaderNavigation />
 
-				<div className="flex items-center space-x-8">
-					<HeaderNavigation />
-					<Button asChild>
-						<Link href="/auth/login">利用を開始する</Link>
-					</Button>
-				</div>
+				<Button asChild>
+					<Link href="/auth/login">利用を開始する</Link>
+				</Button>
 			</div>
 		</header>
 	);

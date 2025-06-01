@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import HeroSection from "./_components/hero-section";
+import { PageHero } from "../../_components/page-hero";
 import IncludedFeaturesSection from "./_components/included-features-section";
 import TargetUsersSection from "./_components/target-users-section";
 import PricingSection from "./_components/pricing-section";
@@ -16,7 +16,10 @@ export const metadata: Metadata = {
 export default function FullSupportPage() {
 	return (
 		<main className="container mx-auto px-4 py-12 md:py-16">
-			<HeroSection />
+			<PageHero
+				title="フルサポートプラン"
+				subtitle="専門家がマンツーマンでサポート。香典管理を安心して、確実に完了したいあなたのためのフルサポートプランです。"
+			/>
 			<IncludedFeaturesSection />
 			<TargetUsersSection />
 			<PricingSection />

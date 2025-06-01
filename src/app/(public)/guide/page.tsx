@@ -1,23 +1,50 @@
 import type { Metadata } from "next";
 import { SectionTitle } from "@/components/ui/section-title";
 import { Button } from "@/components/ui/button";
-import {
-	ChevronRight,
-	BookOpen,
-	Search,
-	Gift,
-	Users,
-	Share2,
-	Calculator,
-	Bell,
-} from "lucide-react";
+import { ChevronRight, BookOpen, Search, Gift, Share2, Calculator, Bell } from "lucide-react";
 import Link from "next/link";
 import { PageHero } from "../_components/page-hero";
+import { FAQSection } from "../_components/faq-section";
 
 export const metadata: Metadata = {
 	title: "使い方ガイド | 香典帳",
 	description: "香典帳アプリの使い方を詳しく解説します。初めての方でも安心してご利用いただけます。",
 };
+
+const guideFaqs = [
+	{
+		id: "guide-1",
+		question: "家族と情報を共有できますか？",
+		answer:
+			"はい、可能です。家族や親族をメンバーとして招待することで、同じ香典帳の情報を共有できます。",
+	},
+	{
+		id: "guide-2",
+		question: "パスワードを忘れた場合、どうすればいいですか？",
+		answer: "ログイン画面の「パスワードをお忘れですか？」リンクからパスワードを再設定できます。",
+	},
+	{
+		id: "guide-3",
+		question: "アカウントを削除できますか？",
+		answer:
+			"はい、設定画面のアカウント設定から削除できます。削除すると全データが失われるのでご注意ください。",
+	},
+	{
+		id: "guide-4",
+		question: "データをCSVでエクスポートできますか？",
+		answer: "はい、設定画面のエクスポート機能からCSV形式でデータをダウンロードできます。",
+	},
+	{
+		id: "guide-5",
+		question: "返礼品の候補をカスタマイズできますか？",
+		answer: "設定画面の「ギフト設定」から好みの返礼品を選択し、カスタマイズ可能です。",
+	},
+	{
+		id: "guide-6",
+		question: "通知設定を変更できますか？",
+		answer: "プロフィール設定の通知セクションからリマインダーのオン/オフを切り替えられます。",
+	},
+];
 
 export default function GuidePage() {
 	return (
@@ -34,7 +61,7 @@ export default function GuidePage() {
 			/>
 
 			{/* 基本的な使い方セクション */}
-			<section>
+			<section className="container">
 				<SectionTitle
 					title="基本的な使い方"
 					subtitle="3ステップで簡単に始められます"
@@ -71,7 +98,7 @@ export default function GuidePage() {
 			</section>
 
 			{/* 詳細な機能説明セクション */}
-			<section>
+			<section className="container">
 				<SectionTitle
 					title="主要な機能"
 					subtitle="香典帳をより便利に使いこなすための機能"
@@ -121,40 +148,7 @@ export default function GuidePage() {
 			</section>
 
 			{/* よくある質問セクション */}
-			<section>
-				<SectionTitle
-					title="よくある質問"
-					subtitle="ご利用時の疑問にお答えします"
-					className="mb-12"
-				/>
-				<div className="space-y-6 max-w-3xl mx-auto">
-					{[
-						{
-							id: "share-faq",
-							question: "家族と情報を共有できますか？",
-							answer:
-								"はい、可能です。家族や親族をメンバーとして招待することで、同じ香典帳の情報を共有できます。",
-						},
-						{
-							id: "search-faq",
-							question: "過去のデータを検索できますか？",
-							answer:
-								"はい、名前、日付、金額など、様々な条件で過去の記録を検索できます。必要な情報を素早く見つけることができます。",
-						},
-						{
-							id: "price-faq",
-							question: "返礼品の相場がわかりません",
-							answer:
-								"金額に応じた返礼品の価格を自動で計算し、地域ごとの相場も考慮して最適な返礼品を提案します。",
-						},
-					].map((faq) => (
-						<div key={faq.id} className="p-6 rounded-lg border bg-card">
-							<h4 className="text-lg font-semibold mb-2">{faq.question}</h4>
-							<p className="text-muted-foreground">{faq.answer}</p>
-						</div>
-					))}
-				</div>
-			</section>
+			<FAQSection faqs={guideFaqs} />
 
 			{/* サポート情報セクション */}
 			<section className="text-center">

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { PageHero } from "../_components/page-hero";
 import {
 	Card,
 	CardContent,
@@ -9,6 +10,8 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { FAQSection } from "../_components/faq-section";
+import { ChevronRight } from "lucide-react";
 
 export const metadata: Metadata = {
 	title: "料金プラン - 香典帳アプリ",
@@ -16,21 +19,37 @@ export const metadata: Metadata = {
 		"香典帳アプリの料金プラン一覧です。あなたに最適なプランを選んで、香典管理をもっと楽にしましょう。",
 };
 
+// 料金表ページ固有のFAQデータ
+const pricingFaqs = [
+	{
+		id: "pricing-1",
+		question: "無料プランの制限はありますか？",
+		answer:
+			"無料プランでは、2週間で作成したデータが閲覧できなくなるため、PDFで保存する必要があります。",
+	},
+	{
+		id: "pricing-2",
+		question: "有料プランはどの期間利用可能ですか？",
+		answer: "買い切りプランは永続的にご利用いただけます。",
+	},
+	{
+		id: "pricing-3",
+		question: "支払い方法には何がありますか？",
+		answer: "クレジットカード、PayPalに対応しています。",
+	},
+];
+
 export default function PricingPage() {
 	return (
-		<div className="container mx-auto px-4 py-12 md:py-16">
-			{/* Hero Section */}
-			<section className="text-center mb-12 md:mb-16">
-				<h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight">
-					最適なプランで、香典管理をもっと楽に
-				</h1>
-				<p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-					大切な記録を確実に守り、面倒な作業から解放されるためのプランをご用意。あなたにぴったりのサポートを選んで、心と時間にゆとりを。
-				</p>
-			</section>
+		<div className="space-y-24">
+			<PageHero
+				title="料金プラン"
+				subtitle="香典帳アプリの料金プラン一覧です。あなたに最適なプランを選んで、香典管理をもっと楽にしましょう。"
+				cta={{ label: "今すぐ登録", href: "/auth/login", icon: ChevronRight }}
+			/>
 
 			{/* Plan Cards */}
-			<section className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-12 md:mb-16">
+			<section className="container grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-12 md:mb-16">
 				{/* Free Plan */}
 				<Card className="flex flex-col">
 					<CardHeader>
@@ -38,15 +57,15 @@ export default function PricingPage() {
 						<CardDescription className="text-3xl font-bold pt-2">無料</CardDescription>
 					</CardHeader>
 					<CardContent className="flex-grow">
-						<ul className="space-y-2 text-sm">
-							<li>✔︎ 端末内保存</li>
-							<li>✔︎ 広告表示あり</li>
-							<li className="text-muted-foreground">✘ CSV/Excelエクスポート (制限付き)</li>
-							<li className="text-muted-foreground">✘ クラウド同期 (制限付き)</li>
-						</ul>
-						<p className="text-xs text-muted-foreground mt-4">
-							まずは基本的な機能をお試しください。
+						<p className="text-sm text-muted-foreground mb-3">
+							香典の管理から香典返しまでを無料で管理できます。
 						</p>
+						<ul className="space-y-2 text-sm">
+							<li>✔︎ 広告表示あり</li>
+							<li>✔︎ PDFエクスポート機能</li>
+							<li>✔︎ クラウド同期</li>
+							<li>✔︎ 作成から2週間無料</li>
+						</ul>
 					</CardContent>
 					<CardFooter>
 						<Button type="button" variant="outline" className="w-full">
@@ -71,7 +90,7 @@ export default function PricingPage() {
 							大切な記録を安全・確実に管理し、自由に活用したいあなたへ。
 						</p>
 						<ul className="space-y-2 text-sm">
-							<li>✔︎ データの永続化 (クラウド同期)</li>
+							<li>✔︎ データの永続化</li>
 							<li>✔︎ 広告非表示</li>
 							<li>✔︎ CSV/Excelエクスポート機能</li>
 						</ul>
@@ -110,7 +129,7 @@ export default function PricingPage() {
 			</section>
 
 			{/* Full Support Plan */}
-			<section className="bg-muted rounded-lg">
+			<section className="container bg-muted rounded-lg">
 				<Card className="bg-background shadow-none border-none">
 					<div className="grid md:grid-cols-2 gap-6 items-center">
 						<div>
@@ -140,6 +159,7 @@ export default function PricingPage() {
 					</div>
 				</Card>
 			</section>
+			<FAQSection faqs={pricingFaqs} />
 		</div>
 	);
 }
