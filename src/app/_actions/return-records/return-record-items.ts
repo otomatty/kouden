@@ -232,7 +232,7 @@ async function updateReturnRecordTotalAmount(returnRecordId: string): Promise<vo
 		const supabase = await createClient();
 
 		// 返礼品詳細の合計金額を計算
-		const { data: items, error: itemsError } = await supabase
+		const { error: itemsError } = await supabase
 			.from("return_record_items")
 			.select("price, quantity")
 			.eq("return_record_id", returnRecordId);
@@ -241,17 +241,17 @@ async function updateReturnRecordTotalAmount(returnRecordId: string): Promise<vo
 			throw itemsError;
 		}
 
-		const totalAmount = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+		// const totalAmount = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
 		// 返礼情報の合計金額を更新
-		const { error: updateError } = await supabase
-			.from("return_records")
-			.update({ total_amount: totalAmount })
-			.eq("id", returnRecordId);
+		// const { error: updateError } = await supabase
+		//     .from("return_records")
+		//     .update({ total_amount: totalAmount })
+		//     .eq("id", returnRecordId);
 
-		if (updateError) {
-			throw updateError;
-		}
+		// if (updateError) {
+		//     throw updateError;
+		// }
 	} catch (error) {
 		console.error("返礼情報の合計金額更新エラー:", error);
 		throw error;

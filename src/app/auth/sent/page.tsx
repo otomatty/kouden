@@ -3,8 +3,10 @@ import pkg from "../../../../package.json";
 
 const version = pkg.version;
 
-export default function SentPage({ searchParams }: { searchParams: { email?: string } }) {
-	const email = searchParams.email ?? "";
+export default async function SentPage({
+	searchParams,
+}: { searchParams: Promise<{ email?: string }> }) {
+	const { email = "" } = await searchParams;
 
 	return (
 		<>
