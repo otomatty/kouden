@@ -8,11 +8,20 @@ import { useSetAtom } from "jotai";
 import { loadingStateAtom } from "@/store/loading-hints";
 import { motion } from "framer-motion";
 import { CreateKoudenForm } from "./create-kouden-form";
+import { Badge } from "@/components/ui/badge";
 
-type Kouden = Database["public"]["Tables"]["koudens"]["Row"];
+// 拡張した香典帳型
+type Plan = Database["public"]["Tables"]["plans"]["Row"];
+type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+type KoudenWithPlan = Database["public"]["Tables"]["koudens"]["Row"] & {
+	owner?: Profile;
+	plan: Plan;
+	expired: boolean;
+	remainingDays?: number;
+};
 
 interface KoudenListProps {
-	koudens: Kouden[];
+	koudens: KoudenWithPlan[];
 }
 
 export function KoudenList({ koudens }: KoudenListProps) {
@@ -42,14 +51,17 @@ export function KoudenList({ koudens }: KoudenListProps) {
 				{sortedKoudens.map((kouden) => (
 					<Link
 						key={kouden.id}
-						href={`/koudens/${kouden.id}/entries`}
+						href={
+							kouden.status === "archived"
+								? `/koudens/${kouden.id}/archived`
+								: `/koudens/${kouden.id}/entries`
+						}
 						className="kouden-card flex flex-col group"
 						aria-label={`${kouden.title}の詳細を見る`}
 						onClick={() => setLoadingState({ isLoading: true, title: "詳細を読み込み中..." })}
 					>
 						<motion.div
 							className="flex flex-col h-full hover:shadow-lg transition-colors rounded-lg shadow-md border border-gray-200 bg-background md:justify-between"
-							whileHover={{ scale: 1.05 }}
 							transition={{ type: "spring", stiffness: 100, damping: 20 }}
 						>
 							<div className="p-4 lg:p-6 flex md:flex-col">
@@ -68,6 +80,18 @@ export function KoudenList({ koudens }: KoudenListProps) {
 									{kouden.description && (
 										<p className="text-sm text-gray-500">{kouden.description}</p>
 									)}
+									{/* プランと期限表示 */}
+									<div className="flex items-center space-x-2">
+										<Badge variant={kouden.plan.code === "free" ? "outline" : "default"}>
+											{kouden.plan.name}プラン
+										</Badge>
+										{kouden.plan.code === "free" &&
+											(kouden.expired ? (
+												<Badge variant="destructive">期限切れ</Badge>
+											) : (
+												<Badge variant="secondary">残り {kouden.remainingDays} 日</Badge>
+											))}
+									</div>
 								</div>
 								<div className="w-10 flex items-center justify-center">
 									<ChevronRight className="h-5 w-5 text-gray-400 md:hidden shrink-0" />

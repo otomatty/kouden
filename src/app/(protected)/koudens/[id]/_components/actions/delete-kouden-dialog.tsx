@@ -36,6 +36,7 @@ export function DeleteKoudenDialog({ koudenId, koudenTitle }: DeleteKoudenDialog
 			});
 			router.push("/koudens");
 		} catch (error) {
+			console.error("[DeleteKoudenDialog] deleteKouden threw error:", error);
 			console.error("Failed to delete kouden:", error);
 			toast({
 				title: "エラー",

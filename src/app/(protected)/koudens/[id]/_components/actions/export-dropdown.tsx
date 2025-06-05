@@ -9,16 +9,18 @@ import {
 	DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+import { Download, FileSpreadsheet } from "lucide-react";
 import { ExportExcelButton } from "./export-excel-button";
 import PdfDownloadButton from "@/components/pdf/PdfDownloadButton";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 interface ExportDropdownProps {
 	koudenId: string;
+	/** Excel出力が有効かどうか */
+	enableExcel: boolean;
 }
 
-const ExportDropdown: React.FC<ExportDropdownProps> = ({ koudenId }) => {
+const ExportDropdown: React.FC<ExportDropdownProps> = ({ koudenId, enableExcel }) => {
 	return (
 		<DropdownMenu>
 			<Tooltip>
@@ -33,12 +35,28 @@ const ExportDropdown: React.FC<ExportDropdownProps> = ({ koudenId }) => {
 				<TooltipContent>ダウンロードオプションを表示</TooltipContent>
 			</Tooltip>
 			<DropdownMenuContent align="start">
-				<DropdownMenuItem asChild>
+				{/* Excelオプション: 無料プラン時は無効化してツールチップで購入を促す */}
+				<DropdownMenuItem>
 					<Tooltip>
 						<TooltipTrigger asChild>
-							<ExportExcelButton koudenId={koudenId} />
+							{enableExcel ? (
+								<ExportExcelButton koudenId={koudenId} />
+							) : (
+								<Button
+									variant="ghost"
+									disabled
+									className="flex items-center gap-1 text-[#217346] opacity-50 cursor-not-allowed"
+								>
+									<FileSpreadsheet className="w-4 h-4" />
+									Excel形式(.xlsx)
+								</Button>
+							)}
 						</TooltipTrigger>
-						<TooltipContent>Excel形式(.xlsx)でダウンロード</TooltipContent>
+						<TooltipContent>
+							{enableExcel
+								? "Excel形式(.xlsx)でダウンロード"
+								: "Excelをダウンロードするには有料プランを購入してください"}
+						</TooltipContent>
 					</Tooltip>
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />

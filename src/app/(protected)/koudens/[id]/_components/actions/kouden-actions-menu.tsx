@@ -4,13 +4,14 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { EllipsisVertical, UserPlus, XCircle } from "lucide-react";
+import { EllipsisVertical, UserPlus, XCircle, Download, Copy } from "lucide-react";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { DeleteKoudenDialog } from "./delete-kouden-dialog";
 import { DuplicateKoudenButton } from "./duplicate-kouden-button";
 import ExportDropdown from "./export-dropdown";
-import { useAtomValue, useAtom } from "jotai";
-import { permissionAtom, canUpdateKouden, canDeleteKouden } from "@/store/permission";
+import { useAtom, useAtomValue } from "jotai";
+import { canUpdateKouden, canDeleteKouden } from "@/store/permission";
+import type { KoudenPermission } from "@/types/role";
 import { useToast } from "@/hooks/use-toast";
 
 import { duplicateEntriesAtom } from "@/store/duplicateEntries";
@@ -21,17 +22,29 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 interface KoudenActionsMenuProps {
 	koudenId: string;
 	koudenTitle: string;
+	/** 全機能アクセス許可 */
+	fullAccess?: boolean;
+	/** ユーザーの香典帳に対する権限 */
+	permission: KoudenPermission;
+	/** Excel出力が有効かどうか */
+	enableExcel: boolean;
 }
 
-export function KoudenActionsMenu({ koudenId, koudenTitle }: KoudenActionsMenuProps) {
+export function KoudenActionsMenu({
+	koudenId,
+	koudenTitle,
+	fullAccess = true,
+	permission,
+	enableExcel,
+}: KoudenActionsMenuProps) {
 	const isDesktop = useMediaQuery("(min-width: 768px)");
-	const permission = useAtomValue(permissionAtom);
 	const [, setDupResults] = useAtom(duplicateEntriesAtom);
 	const duplicateResults = useAtomValue(duplicateEntriesAtom);
 	const { toast } = useToast();
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const pathname = usePathname();
+	const isRestricted = fullAccess === false;
 
 	const handleClearDuplicates = () => {
 		setDupResults(null);
@@ -44,12 +57,26 @@ export function KoudenActionsMenu({ koudenId, koudenTitle }: KoudenActionsMenuPr
 	if (isDesktop) {
 		return (
 			<div className="flex items-center gap-2">
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<ExportDropdown koudenId={koudenId} />
-					</TooltipTrigger>
-					<TooltipContent>ダウンロードオプションを表示</TooltipContent>
-				</Tooltip>
+				{isRestricted ? (
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<span>
+								<Button variant="outline" disabled className="flex items-center gap-1">
+									<Download className="w-4 h-4" />
+									<span>ダウンロード</span>
+								</Button>
+							</span>
+						</TooltipTrigger>
+						<TooltipContent>有料プランで利用できます</TooltipContent>
+					</Tooltip>
+				) : (
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<ExportDropdown koudenId={koudenId} enableExcel={enableExcel} />
+						</TooltipTrigger>
+						<TooltipContent>ダウンロードオプションを表示</TooltipContent>
+					</Tooltip>
+				)}
 
 				{canUpdateKouden(permission) && duplicateResults !== null && (
 					<Tooltip>
@@ -66,19 +93,32 @@ export function KoudenActionsMenu({ koudenId, koudenTitle }: KoudenActionsMenuPr
 						<TooltipContent>重複表示を解除</TooltipContent>
 					</Tooltip>
 				)}
-				{canUpdateKouden(permission) && (
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button variant="outline" asChild>
-								<Link href={`/koudens/${koudenId}/settings/members`}>
-									<UserPlus className="h-4 w-4" />
-									共有
-								</Link>
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent>共有設定を開く</TooltipContent>
-					</Tooltip>
-				)}
+				{canUpdateKouden(permission) &&
+					(isRestricted ? (
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<span>
+									<Button variant="outline" disabled className="flex items-center gap-2 text-sm">
+										<UserPlus className="h-4 w-4" />
+										<span>共有</span>
+									</Button>
+								</span>
+							</TooltipTrigger>
+							<TooltipContent>有料プランで利用できます</TooltipContent>
+						</Tooltip>
+					) : (
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button variant="outline" asChild>
+									<Link href={`/koudens/${koudenId}/settings/members`}>
+										<UserPlus className="h-4 w-4" />
+										共有
+									</Link>
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent>共有設定を開く</TooltipContent>
+						</Tooltip>
+					))}
 				{canUpdateKouden(permission) && (
 					<Popover>
 						<Tooltip>
@@ -91,10 +131,10 @@ export function KoudenActionsMenu({ koudenId, koudenTitle }: KoudenActionsMenuPr
 							</TooltipTrigger>
 							<TooltipContent>その他の操作</TooltipContent>
 						</Tooltip>
-						<PopoverContent align="end" className="w-[200px]">
+						<PopoverContent align="end" className="w-[200px] !p-1">
 							{canUpdateKouden(permission) && (
 								<div className="flex flex-col gap-1">
-									{duplicateResults === null && (
+									{!isRestricted && duplicateResults === null && (
 										<Tooltip>
 											<TooltipTrigger asChild>
 												<DuplicateCheckButton koudenId={koudenId} />
@@ -102,13 +142,27 @@ export function KoudenActionsMenu({ koudenId, koudenTitle }: KoudenActionsMenuPr
 											<TooltipContent>重複チェックを実行</TooltipContent>
 										</Tooltip>
 									)}
-									<Separator />
-									<Tooltip>
-										<TooltipTrigger asChild>
-											<DuplicateKoudenButton koudenId={koudenId} />
-										</TooltipTrigger>
-										<TooltipContent>香典帳を複製する</TooltipContent>
-									</Tooltip>
+									{!isRestricted && <Separator />}
+									{isRestricted ? (
+										<Tooltip>
+											<TooltipTrigger asChild>
+												<span className="mx-auto">
+													<Button variant="ghost" disabled className="flex items-center gap-2">
+														<Copy className="h-4 w-4" />
+														<span>香典帳を複製する</span>
+													</Button>
+												</span>
+											</TooltipTrigger>
+											<TooltipContent>有料プランで利用できます</TooltipContent>
+										</Tooltip>
+									) : (
+										<Tooltip>
+											<TooltipTrigger asChild>
+												<DuplicateKoudenButton koudenId={koudenId} />
+											</TooltipTrigger>
+											<TooltipContent>香典帳を複製する</TooltipContent>
+										</Tooltip>
+									)}
 									{canDeleteKouden(permission) && (
 										<DeleteKoudenDialog koudenId={koudenId} koudenTitle={koudenTitle} />
 									)}
@@ -136,15 +190,33 @@ export function KoudenActionsMenu({ koudenId, koudenTitle }: KoudenActionsMenuPr
 				</Tooltip>
 				<PopoverContent align="end" className="w-[200px]">
 					<div className="flex flex-col gap-1">
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<ExportDropdown koudenId={koudenId} />
-							</TooltipTrigger>
-							<TooltipContent>ダウンロードオプションを表示</TooltipContent>
-						</Tooltip>
+						{isRestricted ? (
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<span>
+										<Button
+											variant="ghost"
+											disabled
+											className="w-full flex items-center gap-2 text-sm"
+										>
+											<Download className="h-4 w-4" />
+											<span>ダウンロード</span>
+										</Button>
+									</span>
+								</TooltipTrigger>
+								<TooltipContent>有料プランで利用できます</TooltipContent>
+							</Tooltip>
+						) : (
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<ExportDropdown koudenId={koudenId} enableExcel={enableExcel} />
+								</TooltipTrigger>
+								<TooltipContent>ダウンロードオプションを表示</TooltipContent>
+							</Tooltip>
+						)}
 						{canUpdateKouden(permission) && (
 							<>
-								{duplicateResults === null && (
+								{!isRestricted && duplicateResults === null && (
 									<Tooltip>
 										<TooltipTrigger asChild>
 											<DuplicateCheckButton koudenId={koudenId} />
@@ -169,24 +241,62 @@ export function KoudenActionsMenu({ koudenId, koudenTitle }: KoudenActionsMenuPr
 								)}
 							</>
 						)}
-						<Separator />
+						{!isRestricted && <Separator />}
 						{canUpdateKouden(permission) && (
 							<>
-								<Tooltip>
-									<TooltipTrigger asChild>
-										<Button variant="ghost" asChild className="w-full">
-											<Link href={`/koudens/${koudenId}/settings/members`}>共有</Link>
-										</Button>
-									</TooltipTrigger>
-									<TooltipContent>共有設定を開く</TooltipContent>
-								</Tooltip>
-								<DuplicateKoudenButton koudenId={koudenId} />
-								<Tooltip>
-									<TooltipTrigger asChild>
-										<DuplicateKoudenButton koudenId={koudenId} />
-									</TooltipTrigger>
-									<TooltipContent>香典帳を複製する</TooltipContent>
-								</Tooltip>
+								{isRestricted ? (
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<span>
+												<Button
+													variant="outline"
+													disabled
+													className="flex items-center gap-2 text-sm"
+												>
+													<UserPlus className="h-4 w-4" />
+													<span>共有</span>
+												</Button>
+											</span>
+										</TooltipTrigger>
+										<TooltipContent>有料プランで利用できます</TooltipContent>
+									</Tooltip>
+								) : (
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<Button variant="outline" asChild>
+												<Link href={`/koudens/${koudenId}/settings/members`}>
+													<UserPlus className="h-4 w-4" />
+													共有
+												</Link>
+											</Button>
+										</TooltipTrigger>
+										<TooltipContent>共有設定を開く</TooltipContent>
+									</Tooltip>
+								)}
+								{isRestricted ? (
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<span>
+												<Button
+													variant="ghost"
+													disabled
+													className="w-full flex items-center gap-2 text-sm"
+												>
+													<Copy className="h-4 w-4" />
+													<span>香典帳を複製する</span>
+												</Button>
+											</span>
+										</TooltipTrigger>
+										<TooltipContent>プランを購入して有効化してください</TooltipContent>
+									</Tooltip>
+								) : (
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<DuplicateKoudenButton koudenId={koudenId} />
+										</TooltipTrigger>
+										<TooltipContent>香典帳を複製する</TooltipContent>
+									</Tooltip>
+								)}
 								{canDeleteKouden(permission) && (
 									<DeleteKoudenDialog koudenId={koudenId} koudenTitle={koudenTitle} />
 								)}

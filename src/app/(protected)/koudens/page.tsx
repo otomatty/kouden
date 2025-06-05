@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { KoudenList } from "./_components/kouden-list";
-import { CreateKoudenForm } from "./_components/create-kouden-form";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 import { getKoudens } from "@/app/_actions/koudens";
 
 export const metadata: Metadata = {
@@ -34,7 +36,12 @@ async function KoudensPageContent() {
 		<div className="space-y-12">
 			<div className="flex justify-between items-center">
 				<h2 className="text-2xl font-bold">香典帳一覧</h2>
-				<CreateKoudenForm />
+				<Link href="/koudens/new">
+					<Button className="flex items-center gap-2">
+						<Plus className="h-4 w-4" />
+						<span>香典帳を作成する</span>
+					</Button>
+				</Link>
 			</div>
 
 			<KoudenList koudens={koudens || []} />

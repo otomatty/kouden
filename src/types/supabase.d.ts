@@ -391,6 +391,54 @@ export type Database = {
           },
         ]
       }
+      kouden_purchases: {
+        Row: {
+          amount_paid: number
+          expected_count: number | null
+          id: string
+          kouden_id: string
+          plan_id: string
+          purchased_at: string
+          stripe_session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount_paid: number
+          expected_count?: number | null
+          id?: string
+          kouden_id: string
+          plan_id: string
+          purchased_at?: string
+          stripe_session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount_paid?: number
+          expected_count?: number | null
+          id?: string
+          kouden_id?: string
+          plan_id?: string
+          purchased_at?: string
+          stripe_session_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kouden_purchases_kouden_id_fkey"
+            columns: ["kouden_id"]
+            isOneToOne: false
+            referencedRelation: "koudens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kouden_purchases_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kouden_roles: {
         Row: {
           created_at: string
@@ -439,6 +487,7 @@ export type Database = {
           description: string | null
           id: string
           owner_id: string
+          plan_id: string
           status: string
           title: string
           updated_at: string
@@ -449,6 +498,7 @@ export type Database = {
           description?: string | null
           id?: string
           owner_id: string
+          plan_id: string
           status?: string
           title: string
           updated_at?: string
@@ -459,6 +509,7 @@ export type Database = {
           description?: string | null
           id?: string
           owner_id?: string
+          plan_id?: string
           status?: string
           title?: string
           updated_at?: string
@@ -476,6 +527,51 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "koudens_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          event_id: string
+          id: string
+          kouden_id: string
+          metadata: Json | null
+          notification_type: string
+          sent_at: string
+          user_id: string
+        }
+        Insert: {
+          event_id: string
+          id?: string
+          kouden_id: string
+          metadata?: Json | null
+          notification_type: string
+          sent_at?: string
+          user_id: string
+        }
+        Update: {
+          event_id?: string
+          id?: string
+          kouden_id?: string
+          metadata?: Json | null
+          notification_type?: string
+          sent_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_kouden_id_fkey"
+            columns: ["kouden_id"]
+            isOneToOne: false
+            referencedRelation: "koudens"
             referencedColumns: ["id"]
           },
         ]
@@ -606,6 +702,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      plans: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          features: string[] | null
+          id: string
+          name: string
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          features?: string[] | null
+          id?: string
+          name: string
+          price: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          features?: string[] | null
+          id?: string
+          name?: string
+          price?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -1258,6 +1387,10 @@ export type Database = {
           p_max_uses?: number
         }
         Returns: string
+      }
+      has_kouden_access: {
+        Args: { p_kouden_id: string }
+        Returns: boolean
       }
       is_admin: {
         Args: { user_uid: string }
