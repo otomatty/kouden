@@ -538,40 +538,67 @@ export type Database = {
           },
         ]
       }
+      notification_types: {
+        Row: {
+          created_at: string
+          default_icon: string | null
+          default_title: string
+          description: string | null
+          id: number
+          type_key: string
+        }
+        Insert: {
+          created_at?: string
+          default_icon?: string | null
+          default_title: string
+          description?: string | null
+          id?: number
+          type_key: string
+        }
+        Update: {
+          created_at?: string
+          default_icon?: string | null
+          default_title?: string
+          description?: string | null
+          id?: number
+          type_key?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
-          event_id: string
+          created_at: string
+          data: Json | null
           id: string
-          kouden_id: string
-          metadata: Json | null
-          notification_type: string
-          sent_at: string
+          is_read: boolean
+          link_path: string | null
+          notification_type_id: number
           user_id: string
         }
         Insert: {
-          event_id: string
+          created_at?: string
+          data?: Json | null
           id?: string
-          kouden_id: string
-          metadata?: Json | null
-          notification_type: string
-          sent_at?: string
+          is_read?: boolean
+          link_path?: string | null
+          notification_type_id: number
           user_id: string
         }
         Update: {
-          event_id?: string
+          created_at?: string
+          data?: Json | null
           id?: string
-          kouden_id?: string
-          metadata?: Json | null
-          notification_type?: string
-          sent_at?: string
+          is_read?: boolean
+          link_path?: string | null
+          notification_type_id?: number
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "notifications_kouden_id_fkey"
-            columns: ["kouden_id"]
+            foreignKeyName: "notifications_notification_type_id_fkey"
+            columns: ["notification_type_id"]
             isOneToOne: false
-            referencedRelation: "koudens"
+            referencedRelation: "notification_types"
             referencedColumns: ["id"]
           },
         ]

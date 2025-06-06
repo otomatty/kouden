@@ -2,9 +2,9 @@
 
 import { usePathname } from "next/navigation";
 import { CreateButton } from "./create-button";
-import { EntryDialog } from "../../@tabs/entries/_components/dialog/entry-dialog";
-import { OfferingDialog } from "../../@tabs/offerings/_components/dialog/offering-dialog";
-import { TelegramDialog } from "../../@tabs/telegrams/_components/dialog/telegram-dialog";
+import { EntryDialog } from "../../entries/_components/dialog/entry-dialog";
+import { OfferingDialog } from "../../offerings/_components/dialog/offering-dialog";
+import { TelegramDialog } from "../../telegrams/_components/dialog/telegram-dialog";
 
 import type { Entry } from "@/types/entries";
 import type { Relationship } from "@/types/relationships";

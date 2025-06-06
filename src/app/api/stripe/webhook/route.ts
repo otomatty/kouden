@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { Database } from "@/types/supabase";
+import { exportReceiptToPdf } from "@/app/_actions/exportReceipt";
 
 export const runtime = "nodejs";
 
@@ -94,15 +94,27 @@ export async function POST(req: Request) {
 			console.error("Session amount_total is missing");
 			return new NextResponse("Invalid session data", { status: 400 });
 		}
-		const { error: purchaseError } = await supabase.from("kouden_purchases").insert({
-			kouden_id: koudenId,
-			user_id: userId,
-			plan_id: planId2,
-			expected_count: metadata.expectedCount ? Number(metadata.expectedCount) : null,
-			amount_paid: amountTotal,
-			stripe_session_id: session.id,
-		});
-		if (purchaseError) console.error("Error inserting purchase:", purchaseError);
+		const { data: purchaseRow, error: purchaseError } = await supabase
+			.from("kouden_purchases")
+			.insert({
+				kouden_id: koudenId,
+				user_id: userId,
+				plan_id: planId2,
+				expected_count: metadata.expectedCount ? Number(metadata.expectedCount) : null,
+				amount_paid: amountTotal,
+				stripe_session_id: session.id,
+			})
+			.select("id")
+			.single();
+		if (purchaseError || !purchaseRow) {
+			console.error("Error inserting purchase:", purchaseError);
+		} else {
+			try {
+				await exportReceiptToPdf(purchaseRow.id);
+			} catch (err) {
+				console.error("Receipt export error:", err);
+			}
+		}
 
 		// Update kouden plan_id for upgrades
 		const { error: updateError } = await supabase

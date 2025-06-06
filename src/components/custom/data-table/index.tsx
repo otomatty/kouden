@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button";
 import type { CellValue, DataTableProperties } from "@/types/table";
 import type { SelectOption } from "@/types/additional-select";
 import type { OfferingType } from "@/types/offerings";
-import { typeLabels } from "@/app/(protected)/koudens/[id]/@tabs/offerings/_components/table/constants";
+import { typeLabels } from "@/app/(protected)/koudens/[id]/offerings/_components/table/constants";
 
 /**
  * カスタマイズ可能なデータテーブルコンポーネント

@@ -9,7 +9,7 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 // components
 import { DataTable } from "./table/data-table";
 import { TelegramCardList } from "./card-list/telegram-card-list";
-import { Loading } from "../../../../../../../components/custom/loading";
+import { Loading } from "@/components/custom/loading";
 // Props
 interface TelegramsViewProps {
 	telegrams: Telegram[];

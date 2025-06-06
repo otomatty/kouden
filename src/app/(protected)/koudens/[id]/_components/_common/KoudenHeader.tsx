@@ -54,13 +54,13 @@ export default function KoudenHeader({
 						<AlertTitle>プランのアップグレード</AlertTitle>
 						<AlertDescription>
 							無料プランの残り期間はあと{remainingDays}
-							日です。期間内にデータを入力し、PDFを出力してください。
+							日です。期間内にデータを入力し、PDFをダウンロードできます。
 						</AlertDescription>
 					</div>
 					<div className="flex items-center space-x-2">
-						<Link href={`/koudens/${koudenId}/purchase`}>
-							<Button size="sm">アップグレード</Button>
-						</Link>
+						<Button size="sm" asChild>
+							<Link href={`/koudens/${koudenId}/purchase`}>アップグレード</Link>
+						</Button>
 						<Button variant="ghost" size="icon" onClick={() => setShowAlert(false)}>
 							<X className="h-4 w-4" />
 						</Button>

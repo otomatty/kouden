@@ -255,10 +255,7 @@ CREATE INDEX IF NOT EXISTS idx_koudens_plan ON koudens(plan_id);
   5. Resend を用いてメール送信
      - 添付ファイルとして領収書PDFを base64 エンコードで添付
      - メール本文テンプレート: 購入完了のお礼と領収書案内
-  6. `notifications` テーブルにレコードを挿入 (`notification_type = 'receipt'`)
-- エラーハンドリング／冪等性:
-  - Stripe Webhook シグニチャを検証し、正当性を担保
-  - 同一 Webhook イベントの重複処理を防ぐためイベントIDを一意キーとして管理
+  6. notification_typesテーブルから 'receipt_sent' のIDを取得し、notificationsテーブルにレコードを挿入 (user_id, notification_type_id, data, link_path)
 
 ### 11.2 リマインダー
 - 送信タイミング:
@@ -266,26 +263,53 @@ CREATE INDEX IF NOT EXISTS idx_koudens_plan ON koudens(plan_id);
   - 作成日 +13日目（閲覧期限1日前）
   - 作成日 +14日目（閲覧期限当日）
 - 実行方法:
-  - Vercel Cron または Supabase Edge Function で毎日定期実行（例: 毎日0時に `/api/cron/send-reminders`）
+  - Vercel Cron を利用し、毎日0時に Next.js API Route `/api/cron/send-reminders` を呼び出すようスケジュール設定
 - 処理フロー:
   1. 対象レコードを SQL で抽出
   2. Resend でメール送信（テンプレート例: "閲覧期限まであと2日です" 等）
-  3. `notifications` テーブルにレコードを挿入 (`notification_type = 'reminder_before'` または `'reminder_after'`)
+  3. notification_typesテーブルから 'reminder_before' または 'reminder_after' のIDを取得し、notificationsテーブルにレコードを挿入 (user_id, notification_type_id, data: { message }, link_path: null)
 
 ### 11.3 通知ログテーブル定義
-ファイル: `database/notifications.sql`
-```sql
-CREATE TABLE IF NOT EXISTS notifications (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  event_id TEXT UNIQUE NOT NULL, -- Stripe Webhook eventIDで一意管理
-  kouden_id UUID NOT NULL REFERENCES koudens(id),
-  user_id UUID NOT NULL REFERENCES auth.users(id),
-  notification_type TEXT NOT NULL
-    CHECK (notification_type IN ('receipt','reminder_before','reminder_after')),
-  sent_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
-  metadata JSONB       -- 任意の補足情報
-);
-```
+- ファイル: `database/notifications.sql`
+- ```sql
+- CREATE TABLE IF NOT EXISTS notifications (
+-   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+-   event_id TEXT UNIQUE NOT NULL, -- Stripe Webhook eventIDで一意管理
+-   kouden_id UUID NOT NULL REFERENCES koudens(id),
+-   user_id UUID NOT NULL REFERENCES auth.users(id),
+-   notification_type TEXT NOT NULL
+-     CHECK (notification_type IN ('receipt','reminder_before','reminder_after')),
+-   sent_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
+-   metadata JSONB       -- 任意の補足情報
+- );
+- ```
++ 通知関連テーブル定義
++
++ ```sql
++ -- notification_typesテーブル定義
++ CREATE TABLE IF NOT EXISTS public.notification_types (
++   id SERIAL PRIMARY KEY,
++   type_key TEXT NOT NULL UNIQUE,
++   default_title TEXT NOT NULL,
++   default_icon TEXT,
++   description TEXT,
++   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
++ );
++ CREATE INDEX IF NOT EXISTS idx_notification_types_type_key ON public.notification_types(type_key);
++
++ -- notificationsテーブル定義
++ CREATE TABLE IF NOT EXISTS public.notifications (
++   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
++   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
++   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
++   is_read BOOLEAN NOT NULL DEFAULT false,
++   notification_type_id INTEGER NOT NULL REFERENCES public.notification_types(id) ON DELETE RESTRICT,
++   data JSONB,
++   link_path TEXT
++ );
++ CREATE INDEX IF NOT EXISTS idx_notifications_user_id_created_at ON public.notifications (user_id, created_at DESC);
++ CREATE INDEX IF NOT EXISTS idx_notifications_user_id_is_read ON public.notifications (user_id, is_read);
++ ```
 
 ### 11.4 環境変数
 - RESEND_API_KEY       （Resend API キー）

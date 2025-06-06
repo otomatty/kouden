@@ -7,31 +7,37 @@ import { getKouden, getKoudenWithPlan } from "@/app/_actions/koudens";
 import { notFound } from "next/navigation";
 import ArchivedPage from "./archived/page";
 import KoudenHeader from "./_components/_common/KoudenHeader";
+import TabNavigation from "./_components/_common/TabNavigation";
 
-export const metadata: Metadata = {
-	title: "香典帳詳細",
-	description: "香典帳詳細",
-};
+/**
+ * 動的ルートのメタデータを生成する
+ * @param params.id - 香典帳ID
+ */
+export async function generateMetadata({
+	params,
+}: { params: Promise<{ id: string }> }): Promise<Metadata> {
+	const { id: koudenId } = await params;
+	const kouden = await getKouden(koudenId);
+	if (!kouden) {
+		notFound();
+	}
+	return {
+		title: `${kouden.title} | 香典帳`,
+		description: kouden.description || "香典帳詳細",
+	};
+}
 
 interface KoudenLayoutProps {
 	params: Promise<{ id: string }>;
 	children: React.ReactNode;
-	tabs?: React.ReactNode;
-	purchase?: React.ReactNode;
 }
 
 /**
  * 香典帳詳細ページのレイアウトコンポーネント
  * @param params.id - 香典帳ID
  * @param children - 子コンポーネント
- * @param tabs - タブコンテンツ
  */
-export default async function KoudenLayout({
-	params,
-	children,
-	tabs,
-	purchase,
-}: KoudenLayoutProps) {
+export default async function KoudenLayout({ params, children }: KoudenLayoutProps) {
 	const { id: koudenId } = await params;
 
 	try {
@@ -48,11 +54,6 @@ export default async function KoudenLayout({
 		// koudenが見つからない場合は404エラーを投げる
 		if (!kouden) {
 			notFound();
-		}
-
-		// purchase スロットがあればそのまま返す
-		if (purchase) {
-			return purchase;
 		}
 
 		if (kouden.status === "archived") {
@@ -72,7 +73,9 @@ export default async function KoudenLayout({
 								enableExcel={enableExcel}
 								remainingDays={remainingDays}
 							/>
-							<div className="mb-4 min-h-[calc(100vh-10rem)]">{tabs ?? children}</div>
+							{/* タブナビゲーション */}
+							<TabNavigation koudenId={kouden.id} />
+							<div className="mb-4 min-h-[calc(100vh-10rem)]">{children}</div>
 						</div>
 					</div>
 				</div>

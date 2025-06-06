@@ -23,14 +23,16 @@ import { UserMenu } from "./user-menu";
 import { NotificationsPopover } from "./notifications-popover";
 import { FeedbackButton } from "@/components/custom/feedback-button";
 import { GuideMenu } from "./guide-menu";
+import type { NotificationItem } from "@/types/notifications";
 
 interface HeaderProps {
 	user: User;
 	isAdmin: boolean;
 	version: string;
+	notifications: NotificationItem[];
 }
 
-export function Header({ user, isAdmin, version }: HeaderProps) {
+export function Header({ user, isAdmin, version, notifications }: HeaderProps) {
 	const router = useRouter();
 	const supabase = createClient();
 	const [isOpen, setIsOpen] = useState(false);
@@ -55,14 +57,14 @@ export function Header({ user, isAdmin, version }: HeaderProps) {
 					{/* デスクトップ表示 */}
 					<div className="hidden md:flex items-center space-x-6">
 						<div className="flex items-center space-x-2">
-							<NotificationsPopover />
+							<NotificationsPopover notifications={notifications} />
 							<GuideMenu />
 						</div>
 						<UserMenu user={user} isAdmin={isAdmin} />
 					</div>
 					{/* モバイル表示 */}
 					<div className="md:hidden flex items-center gap-2">
-						<NotificationsPopover />
+						<NotificationsPopover notifications={notifications} />
 						<GuideMenu />
 						<Sheet open={isOpen} onOpenChange={setIsOpen}>
 							<SheetTrigger asChild>

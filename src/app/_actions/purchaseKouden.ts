@@ -73,6 +73,7 @@ export async function purchaseKouden({
 			return { error: "認証が必要です" };
 		}
 		const userId = user.id;
+		const userEmail = user.email;
 		// 決済金額の算出
 		let amount = plan.price;
 		if (planCode === "premium_full_support" && typeof expectedCount === "number") {
@@ -88,6 +89,7 @@ export async function purchaseKouden({
 				: process.env.NEXT_PUBLIC_APP_URL;
 		const session = await stripe.checkout.sessions.create({
 			payment_method_types: ["card", "konbini"],
+			customer_email: userEmail,
 			line_items: [
 				{
 					price_data: {

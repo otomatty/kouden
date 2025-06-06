@@ -12,6 +12,7 @@ import { Toaster } from "@/components/ui/toaster";
 import pkg from "../../../package.json";
 import { Provider } from "jotai";
 import { AuthProvider } from "@/components/providers/auth-provider";
+import { getNotifications } from "@/app/_actions/notifications";
 
 const version = pkg.version;
 
@@ -49,6 +50,9 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
 	// 管理者権限の確認
 	const isAdminUser = await isAdmin();
 
+	// ユーザー通知事前取得
+	const { notifications: userNotifications } = await getNotifications();
+
 	return (
 		<LoadingProvider>
 			<Toaster />
@@ -57,7 +61,12 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
 					<Provider>
 						<AuthProvider initialUser={user}>
 							<div className="min-h-screen bg-muted">
-								<Header user={user} isAdmin={isAdminUser} version={version} />
+								<Header
+									user={user}
+									isAdmin={isAdminUser}
+									version={version}
+									notifications={userNotifications || []}
+								/>
 								<div className="app-body container mx-auto px-4 py-8 md:my-12">
 									<main>{children}</main>
 								</div>

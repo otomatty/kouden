@@ -115,6 +115,15 @@ CREATE POLICY "service_role_delete_notifications" ON notifications
   FOR DELETE
   USING (auth.role() = 'service_role');
 
+-- notification_typesテーブルにRLSポリシーを設定
+ALTER TABLE public.notification_types ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "select_notification_types_for_authenticated" ON public.notification_types
+  FOR SELECT
+  USING (auth.role() = 'authenticated');
+CREATE POLICY "service_role_manage_notification_types" ON public.notification_types
+  FOR ALL
+  USING (auth.role() = 'service_role');
+
 -- 9. plansテーブル 初期データシード
 INSERT INTO plans (code, name, description, price) VALUES
   ('free', '無料プラン', '作成から14日間無料で閲覧可能', 0),

@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { calcSupportFee } from "@/utils/calcSupportFee";
 import type { KoudenPermission } from "@/types/role";
-import KoudenHeader from "../../../_components/_common/KoudenHeader";
+import KoudenHeader from "../../_components/_common/KoudenHeader";
 import ExpectedCountInput from "@/components/ui/ExpectedCountInput";
 
 // Supabaseから取得するプラン型
@@ -27,21 +27,9 @@ interface PurchasePageClientProps {
 	plans: Plan[];
 	/** 現在のプラン */
 	currentPlan: Plan;
-	title: string;
-	description?: string | null;
-	permission: KoudenPermission;
-	enableExcel: boolean;
 }
 
-export default function PurchasePageClient({
-	id,
-	plans,
-	currentPlan,
-	title,
-	description,
-	permission,
-	enableExcel,
-}: PurchasePageClientProps) {
+export default function PurchasePageClient({ id, plans, currentPlan }: PurchasePageClientProps) {
 	const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [expectedCount, setExpectedCount] = useState<number | undefined>(undefined);
@@ -73,16 +61,6 @@ export default function PurchasePageClient({
 
 	return (
 		<>
-			<KoudenHeader
-				koudenId={id}
-				title={title}
-				description={description}
-				fullAccess={false}
-				permission={permission}
-				enableExcel={enableExcel}
-				backLinkHref={`/koudens/${id}/entries`}
-				backLinkText="エントリ一覧に戻る"
-			/>
 			<div className="py-8">
 				<h1 className="text-2xl font-bold mb-6">プランを選択</h1>
 				{error && <p className="text-red-600 mb-4">{error}</p>}
