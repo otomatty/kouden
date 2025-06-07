@@ -4,15 +4,14 @@ import { ensureProfile } from "@/app/_actions/auth";
 import { isAdmin } from "@/app/_actions/admin/admin-users";
 import { getUserSettings } from "@/app/_actions/settings";
 import { InitializeGuideMode } from "@/components/providers/initialize-guide-mode";
-import { Header } from "./_components/header";
 import { TourGuide } from "@/components/custom/TourGuide/TourGuide";
-import { FeedbackButton } from "@/components/custom/feedback-button";
 import { LoadingProvider } from "@/components/custom/loading-provider";
 import { Toaster } from "@/components/ui/toaster";
 import pkg from "../../../package.json";
 import { Provider } from "jotai";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { getNotifications } from "@/app/_actions/notifications";
+import ProtectedClientLayout from "./ProtectedClientLayout";
 
 const version = pkg.version;
 
@@ -60,22 +59,14 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
 				<TourGuide>
 					<Provider>
 						<AuthProvider initialUser={user}>
-							<div className="min-h-screen bg-muted">
-								<Header
-									user={user}
-									isAdmin={isAdminUser}
-									version={version}
-									notifications={userNotifications || []}
-								/>
-								<div className="app-body container mx-auto px-4 py-8 md:my-12">
-									<main>{children}</main>
-								</div>
-								{/* デスクトップのみ表示 */}
-								{/* モバイルは/(protected)/_components/header.tsxに配置 */}
-								<div className="fixed bottom-6 right-6 z-50 hidden md:block">
-									<FeedbackButton />
-								</div>
-							</div>
+							<ProtectedClientLayout
+								user={user}
+								isAdminUser={isAdminUser}
+								version={version}
+								userNotifications={userNotifications || []}
+							>
+								{children}
+							</ProtectedClientLayout>
 						</AuthProvider>
 					</Provider>
 				</TourGuide>

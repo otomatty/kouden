@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useNavigationMode } from "@/context/navigation-mode";
 import { cn } from "@/lib/utils";
 import {
 	Table2,
@@ -15,6 +16,7 @@ import {
 	FileDown,
 	HelpCircle,
 	PackageCheck,
+	Plus,
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -24,10 +26,9 @@ import type { Relationship } from "@/types/relationships";
 import { Button } from "@/components/ui/button";
 
 interface BottomNavigationProps {
-	id: string;
-	entries: Entry[];
-	relationships: Relationship[];
-	onEntryCreated?: (entry: Entry) => void;
+	id?: string;
+	entries?: Entry[];
+	relationships?: Relationship[];
 }
 
 /**
@@ -38,16 +39,87 @@ interface BottomNavigationProps {
  * - 中央に新規作成ボタンを配置
  * - 現在のパスに基づいてアクティブな項目を強調表示
  */
-export function BottomNavigation({ id, entries, relationships }: BottomNavigationProps) {
+export function BottomNavigation({ id, entries = [], relationships = [] }: BottomNavigationProps) {
+	const mode = useNavigationMode();
 	const pathname = usePathname();
 	const [showMoreMenu, setShowMoreMenu] = useState(false);
-
-	// エントリー作成後のローカルステート更新
 	const [localEntries, setLocalEntries] = useState<Entry[]>(entries);
 	const [localRelationships] = useState<Relationship[]>(relationships);
-	const handleEntryCreated = (entry: Entry) => {
-		setLocalEntries((prev) => [entry, ...prev]);
-	};
+	const handleEntryCreated = (entry: Entry) => setLocalEntries((prev) => [entry, ...prev]);
+
+	if (mode === "none") return null;
+	if (mode === "global") {
+		const globalAction = {
+			component: <CreateButtonContainer koudenId="" entries={[]} relationships={[]} />,
+			label: "新規作成",
+		};
+		return (
+			<nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-muted bg-background md:hidden">
+				<div className="relative h-16">
+					{globalAction && (
+						<div className="absolute left-1/2 -translate-x-1/2 z-10">
+							<div className="relative flex h-16 w-16 items-center justify-center">
+								<div className="absolute top-0 left-1/2 h-16 w-full overflow-hidden -translate-x-1/2">
+									<div className="absolute bottom-6 h-16 w-full rounded-full bg-muted" />
+								</div>
+								<div className="absolute -top-5">
+									<div className="flex flex-col items-center gap-1">
+										{globalAction.component}
+										<span className="text-xs">{globalAction.label}</span>
+									</div>
+								</div>
+							</div>
+						</div>
+					)}
+					<div className="flex justify-between items-center h-16 px-4">
+						<div className="flex items-center space-x-4">
+							{/* 左サイドナビ */}
+							<Link
+								href="/koudens"
+								className={cn(
+									"flex flex-col items-center justify-center gap-1 rounded-lg transition-colors p-1",
+									pathname.startsWith("/koudens")
+										? "text-primary bg-primary/10 font-medium [&_svg]:text-primary"
+										: "text-muted-foreground hover:text-primary hover:bg-muted [&_svg]:text-muted-foreground",
+								)}
+							>
+								<Table2 className="h-5 w-5" />
+								<span className="text-xs">香典帳</span>
+							</Link>
+							<Link
+								href="/guide"
+								className={cn(
+									"flex flex-col items-center justify-center gap-1 rounded-lg transition-colors p-1",
+									pathname.startsWith("/guide")
+										? "text-primary bg-primary/10 font-medium [&_svg]:text-primary"
+										: "text-muted-foreground hover:text-primary hover:bg-muted [&_svg]:text-muted-foreground",
+								)}
+							>
+								<HelpCircle className="h-5 w-5" />
+								<span className="text-xs">ガイド</span>
+							</Link>
+						</div>
+						<div className="flex items-center space-x-4">
+							{/* 右サイドナビ */}
+							<Link
+								href="/settings"
+								className={cn(
+									"flex flex-col items-center justify-center gap-1 rounded-lg transition-colors p-1",
+									pathname.startsWith("/settings")
+										? "text-primary bg-primary/10 font-medium [&_svg]:text-primary"
+										: "text-muted-foreground hover:text-primary hover:bg-muted [&_svg]:text-muted-foreground",
+								)}
+							>
+								<Settings className="h-5 w-5" />
+								<span className="text-xs">設定</span>
+							</Link>
+						</div>
+					</div>
+				</div>
+			</nav>
+		);
+	}
+	if (!id) return null;
 
 	const getActionButton = (path: string) => {
 		// 新規作成が必要なページ

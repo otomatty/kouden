@@ -21,7 +21,7 @@ import type { Relationship } from "@/types/relationships";
 const formSchema = z.object({
 	name: z.string().min(1, "関係性の名称を入力してください"),
 	description: z.string().nullable().optional(),
-	is_default: z.boolean().default(false),
+	is_default: z.boolean(),
 });
 
 export type RelationshipFormValues = z.infer<typeof formSchema>;

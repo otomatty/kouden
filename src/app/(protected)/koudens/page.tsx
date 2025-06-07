@@ -33,15 +33,25 @@ async function KoudensPageContent() {
 	}
 
 	return (
-		<div className="space-y-12">
+		<div className="space-y-4 md:space-y-8 mb-16">
 			<div className="flex justify-between items-center">
 				<h2 className="text-2xl font-bold">香典帳一覧</h2>
-				<Link href="/koudens/new">
-					<Button className="flex items-center gap-2">
-						<Plus className="h-4 w-4" />
-						<span>香典帳を作成する</span>
+				<div className="flex items-center">
+					{/* Mobile: default size, full label */}
+					<Button asChild size="sm" className="flex items-center gap-2 md:hidden">
+						<Link href="/koudens/new">
+							<Plus className="h-4 w-4" />
+							<span>香典帳を作成</span>
+						</Link>
 					</Button>
-				</Link>
+					{/* Desktop: small size, shortened label */}
+					<Button asChild className="hidden items-center gap-2 md:flex">
+						<Link href="/koudens/new">
+							<Plus className="h-4 w-4" />
+							<span>香典帳を作成する</span>
+						</Link>
+					</Button>
+				</div>
 			</div>
 
 			<KoudenList koudens={koudens || []} />

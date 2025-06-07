@@ -63,7 +63,7 @@ export function Header({ user, isAdmin, version, notifications }: HeaderProps) {
 						<UserMenu user={user} isAdmin={isAdmin} />
 					</div>
 					{/* モバイル表示 */}
-					<div className="md:hidden flex items-center gap-2">
+					<div className="md:hidden flex items-center gap-1 md:gap-2">
 						<NotificationsPopover notifications={notifications} />
 						<GuideMenu />
 						<Sheet open={isOpen} onOpenChange={setIsOpen}>

@@ -25,7 +25,7 @@ const formSchema = z.object({
 		.min(1, { message: "関係性の名称は必須です" })
 		.max(50, { message: "関係性の名称は50文字以内で入力してください" }),
 	description: z.string().max(200, { message: "説明は200文字以内で入力してください" }).optional(),
-	is_default: z.boolean().default(false),
+	is_default: z.boolean(),
 });
 
 // フォームの型定義

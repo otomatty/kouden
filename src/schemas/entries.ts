@@ -54,7 +54,7 @@ export const entryFormSchema = z
 				"正しい電話番号形式で入力してください",
 			),
 		relationshipId: z.string().uuid("関係性IDが不正です").nullable(),
-		attendanceType: z.enum(["FUNERAL", "CONDOLENCE_VISIT", "ABSENT"]).default("ABSENT"),
+		attendanceType: z.enum(["FUNERAL", "CONDOLENCE_VISIT", "ABSENT"]),
 		notes: z.string().nullable(),
 		koudenId: z.string().uuid("香典帳IDが不正です"),
 	})

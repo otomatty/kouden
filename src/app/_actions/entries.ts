@@ -10,7 +10,7 @@ import type {
 	Entry,
 	AttendanceType,
 } from "@/types/entries";
-import { camelToSnake, snakeToCamel } from "@/utils/case-converter";
+import { camelToSnake } from "@/utils/case-converter";
 import type { Database } from "@/types/supabase";
 
 type KoudenEntry = Database["public"]["Tables"]["kouden_entries"]["Insert"];

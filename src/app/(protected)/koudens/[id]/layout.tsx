@@ -1,17 +1,16 @@
 import type { Metadata } from "next";
 import { checkKoudenPermission } from "@/app/_actions/permissions";
-import { PermissionProvider } from "@/components/providers/permission-provider";
+import ClientProviders from "@/components/providers/ClientProviders";
 // Server Actions
 import { getKouden, getKoudenWithPlan } from "@/app/_actions/koudens";
-import { getEntries } from "@/app/_actions/entries";
-import { getRelationships } from "@/app/_actions/relationships";
+
 // components
 import { notFound, redirect } from "next/navigation";
 import ArchivedPage from "./archived/page";
 import KoudenHeader from "./_components/_common/KoudenHeader";
 import TabNavigation from "./_components/_common/TabNavigation";
-import type { Kouden } from "@/types/kouden";
 import { BottomNavigation } from "@/components/custom/bottom-navigation";
+import type { Kouden } from "@/types/kouden";
 
 /**
  * 動的ルートのメタデータを生成する
@@ -70,12 +69,8 @@ export default async function KoudenLayout({ params, children }: KoudenLayoutPro
 			return <ArchivedPage params={params} />;
 		}
 
-		// モバイルナビゲーション用にエントリーと関係性を取得
-		const { entries } = await getEntries(koudenId);
-		const relationships = await getRelationships(koudenId);
-
 		return (
-			<PermissionProvider permission={permission}>
+			<ClientProviders permission={permission}>
 				<div className="flex h-full flex-col">
 					<div className="flex-1 overflow-hidden">
 						<div>
@@ -90,11 +85,11 @@ export default async function KoudenLayout({ params, children }: KoudenLayoutPro
 							{/* タブナビゲーション */}
 							<TabNavigation koudenId={kouden.id} />
 							<div className="mb-4 min-h-[calc(100vh-10rem)] pb-16">{children}</div>
-							<BottomNavigation id={kouden.id} entries={entries} relationships={relationships} />
 						</div>
 					</div>
 				</div>
-			</PermissionProvider>
+				<BottomNavigation id={kouden.id} />
+			</ClientProviders>
 		);
 	} catch {
 		// エラー発生時は一覧ページへリダイレクト
