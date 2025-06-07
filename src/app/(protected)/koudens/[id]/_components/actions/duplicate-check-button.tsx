@@ -53,7 +53,7 @@ export function DuplicateCheckButton({ koudenId }: DuplicateCheckButtonProps) {
 			className="flex items-center gap-2 text-sm"
 		>
 			{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-			<span>{loading ? "検証中..." : "重複チェック"}</span>
+			<span>{loading ? "検証中..." : "重複を確認する"}</span>
 		</Button>
 	);
 }

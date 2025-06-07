@@ -4,10 +4,11 @@ import { PermissionProvider } from "@/components/providers/permission-provider";
 // Server Actions
 import { getKouden, getKoudenWithPlan } from "@/app/_actions/koudens";
 // components
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import ArchivedPage from "./archived/page";
 import KoudenHeader from "./_components/_common/KoudenHeader";
 import TabNavigation from "./_components/_common/TabNavigation";
+import type { Kouden } from "@/types/kouden";
 
 /**
  * 動的ルートのメタデータを生成する
@@ -17,9 +18,15 @@ export async function generateMetadata({
 	params,
 }: { params: Promise<{ id: string }> }): Promise<Metadata> {
 	const { id: koudenId } = await params;
-	const kouden = await getKouden(koudenId);
+	let kouden: Kouden | null;
+	try {
+		kouden = await getKouden(koudenId);
+	} catch {
+		// データ取得エラー時は一覧にリダイレクト
+		redirect("/koudens");
+	}
 	if (!kouden) {
-		notFound();
+		redirect("/koudens");
 	}
 	return {
 		title: `${kouden.title} | 香典帳`,
@@ -81,10 +88,8 @@ export default async function KoudenLayout({ params, children }: KoudenLayoutPro
 				</div>
 			</PermissionProvider>
 		);
-	} catch (error) {
-		if (error instanceof Error) {
-			throw error;
-		}
-		throw new Error("香典帳の読み込み中にエラーが発生しました。");
+	} catch {
+		// エラー発生時は一覧ページへリダイレクト
+		redirect("/koudens");
 	}
 }

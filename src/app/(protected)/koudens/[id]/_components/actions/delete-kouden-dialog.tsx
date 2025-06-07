@@ -34,7 +34,7 @@ export function DeleteKoudenDialog({ koudenId, koudenTitle }: DeleteKoudenDialog
 			toast({
 				title: "香典帳を削除しました",
 			});
-			router.push("/koudens");
+			router.replace("/koudens");
 		} catch (error) {
 			console.error("[DeleteKoudenDialog] deleteKouden threw error:", error);
 			console.error("Failed to delete kouden:", error);

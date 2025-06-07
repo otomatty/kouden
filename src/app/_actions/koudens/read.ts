@@ -132,7 +132,8 @@ export async function getKouden(id: string) {
       updated_at,
       owner_id,
       created_by,
-      status
+      status,
+      plan_id
     `)
 		.eq("id", id)
 		.single();

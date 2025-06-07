@@ -15,6 +15,7 @@ interface MenuItem {
 const basicMenuItems: MenuItem[] = [
 	{ label: "一般設定", href: "general", icon: <Settings /> },
 	{ label: "メンバー", href: "members", icon: <Users /> },
+	{ label: "プラン管理", href: "plan-upgrade", icon: <Truck /> },
 ];
 
 // カスタマイズ可能なメニュー項目

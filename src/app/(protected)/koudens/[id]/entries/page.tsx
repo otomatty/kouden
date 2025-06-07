@@ -26,11 +26,6 @@ export default async function EntriesPage({
 	}>;
 }) {
 	const { id: koudenId } = await params;
-	const kouden = await getKouden(koudenId);
-	if (!kouden) notFound();
-	if (kouden.status === "archived") {
-		redirect(`/koudens/${koudenId}/archived`);
-	}
 	const rawSearchParams = await searchParams;
 	const {
 		page: pageStr,
