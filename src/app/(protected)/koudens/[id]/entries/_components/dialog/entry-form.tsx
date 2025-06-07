@@ -21,7 +21,6 @@ import { EntryFormAdditional } from "./entry-form-additional";
 // stores
 import { formSubmissionStateAtom } from "@/store/entries";
 // Server Actions
-import { updateEntry, createEntry } from "@/app/_actions/entries";
 import { handleEntrySubmission } from "@/app/_actions/entry-form";
 
 export interface EntryFormProps {

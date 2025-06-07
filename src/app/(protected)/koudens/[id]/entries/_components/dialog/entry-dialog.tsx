@@ -10,6 +10,8 @@ export interface EntryDialogProps {
 	relationships: Relationship[];
 	defaultValues?: Entry;
 	variant?: "create" | "edit" | undefined; // undefinedはボタンが表示されないことを表す
+	open?: boolean;
+	onOpenChange?: (open: boolean) => void;
 	onSuccess?: (entry: Entry) => void;
 	trigger?: React.ReactNode;
 	/**
@@ -24,11 +26,15 @@ export function EntryDialog({
 	defaultValues,
 	variant,
 	onSuccess,
+	open,
+	onOpenChange,
 	trigger,
 	shortcutKey,
 }: EntryDialogProps) {
 	return (
 		<CrudDialog<Entry>
+			open={open}
+			onOpenChange={onOpenChange}
 			title={variant === "create" ? "香典を登録する" : "編集する"}
 			variant={variant}
 			shortcutKey={shortcutKey}

@@ -22,6 +22,9 @@ interface DisplaySettingsProps {
 	showDateFilter?: boolean;
 	dateRange?: { from?: Date; to?: Date };
 	onDateRangeChange?: (range: { from?: Date; to?: Date }) => void;
+	// 複製エントリフィルター
+	duplicateFilter?: boolean;
+	onDuplicateFilterChange?: (value: boolean) => void;
 }
 
 /**
@@ -37,6 +40,8 @@ export function DisplaySettings({
 	showDateFilter,
 	dateRange,
 	onDateRangeChange,
+	duplicateFilter = false,
+	onDuplicateFilterChange,
 }: DisplaySettingsProps) {
 	const currentUser = useAtomValue(userAtom);
 	const currentUserId = currentUser?.id ?? "";
@@ -179,6 +184,33 @@ export function DisplaySettings({
 							</div>
 						</div>
 					)}
+					{/* 重複フィルター */}
+					{onDuplicateFilterChange && (
+						<div className="mt-4">
+							<div className="mb-2 text-sm font-semibold">重複のみ表示</div>
+							<div className="flex items-center gap-2">
+								<Checkbox
+									checked={duplicateFilter}
+									onCheckedChange={(val) => onDuplicateFilterChange(val as boolean)}
+								/>
+								<span className="text-sm">重複のみ表示</span>
+							</div>
+						</div>
+					)}
+					{/* Clear all settings button */}
+					<div className="flex justify-end mt-4">
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => {
+								handleScopeChange("all");
+								onDateRangeChange?.({});
+								onDuplicateFilterChange?.(false);
+							}}
+						>
+							設定をクリア
+						</Button>
+					</div>
 				</div>
 			)}
 		</div>

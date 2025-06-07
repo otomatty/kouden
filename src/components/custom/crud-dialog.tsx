@@ -116,9 +116,17 @@ export interface CrudDialogProps<T = void> {
 	 * 成功時のコールバック
 	 */
 	onSuccess?: (data: T) => void;
+
+	/** Controlled open state */
+	open?: boolean;
+
+	/** Controlled onOpenChange callback */
+	onOpenChange?: (open: boolean) => void;
 }
 
 export function CrudDialog<T = void>({
+	open,
+	onOpenChange,
 	title,
 	variant,
 	buttonClassName,
@@ -193,9 +201,13 @@ export function CrudDialog<T = void>({
 		</Button>
 	) : null;
 
+	// if customTrigger prop is provided (even null), use it; otherwise use defaultTrigger
+	const triggerNode = customTrigger !== undefined ? customTrigger : defaultTrigger;
 	return (
 		<ResponsiveDialog
-			trigger={customTrigger || defaultTrigger}
+			open={open}
+			onOpenChange={onOpenChange}
+			trigger={triggerNode}
 			title={title}
 			contentClassName={contentClassName}
 			onSuccess={onSuccess ? () => onSuccess({} as T) : undefined}

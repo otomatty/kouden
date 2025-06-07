@@ -32,9 +32,15 @@ interface ResponsiveDialogProps {
 	 * Shortcut key to open the dialog (with Ctrl/Cmd + key).
 	 */
 	shortcutKey?: string;
+	/** Controlled open state */
+	open?: boolean;
+	/** Controlled onOpenChange callback */
+	onOpenChange?: (open: boolean) => void;
 }
 
 export function ResponsiveDialog({
+	open: openProp,
+	onOpenChange,
 	children,
 	trigger,
 	title,
@@ -44,7 +50,9 @@ export function ResponsiveDialog({
 	onSuccess,
 	shortcutKey,
 }: ResponsiveDialogProps) {
-	const [open, setOpen] = useState(false);
+	const [internalOpen, setInternalOpen] = useState(false);
+	const open = openProp ?? internalOpen;
+	const setOpen = onOpenChange ?? setInternalOpen;
 	// クライアントサイドでのみレンダリングするかどうかを管理 (SSR対策)
 	const [isClient, setIsClient] = useState(false);
 	// コンポーネントがマウントされたかどうかを管理 (マウント遅延対策)
@@ -55,7 +63,7 @@ export function ResponsiveDialog({
 	const closeDialog = useCallback(() => {
 		setOpen(false);
 		onSuccess?.();
-	}, [onSuccess]);
+	}, [onSuccess, setOpen]);
 
 	// DialogContentのaria-describedby警告を解消
 	const dialogContentProps = {
@@ -95,7 +103,7 @@ export function ResponsiveDialog({
 		return () => {
 			window.removeEventListener("keydown", handleKeyDown);
 		};
-	}, [shortcutKey]);
+	}, [shortcutKey, setOpen]);
 
 	if (!isClient) {
 		return null; // SSR では何もレンダリングしない

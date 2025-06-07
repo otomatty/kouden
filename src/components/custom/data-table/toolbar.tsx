@@ -35,7 +35,6 @@ import {
 import { permissionAtom, canUpdateKouden } from "@/store/permission";
 import { useAtomValue } from "jotai";
 import { DisplaySettings } from "@/components/custom/data-table/display-settings";
-import { FloatingPagination } from "@/components/ui/floating-pagination";
 
 interface SearchOption {
 	value: string;
@@ -60,6 +59,9 @@ interface MemberOption {
 
 export interface DataTableToolbarProps<TData> {
 	table: Table<TData>;
+	// 複製エントリフィルター
+	duplicateFilter?: boolean;
+	onDuplicateFilterChange?: (value: boolean) => void;
 	searchOptions?: SearchOption[];
 	filterColumn?: string;
 	filterOptions?: FilterOption[];
@@ -109,6 +111,9 @@ export interface DataTableToolbarProps<TData> {
 
 export function DataTableToolbar<TData>({
 	table,
+	// 複製エントリフィルター
+	duplicateFilter = false,
+	onDuplicateFilterChange,
 	searchOptions = [],
 	filterColumn,
 	filterOptions = [],
@@ -135,19 +140,14 @@ export function DataTableToolbar<TData>({
 	members = [],
 	selectedMemberIds = [],
 	onMemberSelectionChange,
-	// 追加: ページネーション
-	showPagination = false,
-	currentPage,
-	totalCount,
-	pageSize,
-	onPageChange,
-	onPageSizeChange,
+
 	// 追加: 作成日フィルター
 	showDateFilter = false,
 	dateRange,
 	onDateRangeChange,
 }: DataTableToolbarProps<TData>) {
-	const [globalFilter, setGlobalFilter] = React.useState(searchValue || "");
+	// Draft search value for Enter-key submission
+	const [inputValue, setInputValue] = React.useState(searchValue || "");
 	const permission = useAtomValue(permissionAtom);
 
 	// デスクトップサイズでテーブル表示にリセットする
@@ -165,7 +165,6 @@ export function DataTableToolbar<TData>({
 	// グローバル検索の処理
 	const handleSearch = React.useCallback(
 		(value: string) => {
-			setGlobalFilter(value);
 			if (onSearchChange) {
 				onSearchChange(value);
 			} else {
@@ -219,8 +218,13 @@ export function DataTableToolbar<TData>({
 							<Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
 							<Input
 								placeholder={`${searchOptions.map((opt) => opt.label).join("・")}から検索...`}
-								value={searchValue ?? globalFilter ?? ""}
-								onChange={(event) => handleSearch(event.target.value)}
+								value={inputValue}
+								onChange={(event) => setInputValue(event.target.value)}
+								onKeyDown={(event) => {
+									if (event.key === "Enter") {
+										handleSearch(inputValue);
+									}
+								}}
 								className="pl-8 bg-background"
 							/>
 						</div>
@@ -367,6 +371,9 @@ export function DataTableToolbar<TData>({
 											showDateFilter={showDateFilter}
 											dateRange={dateRange}
 											onDateRangeChange={onDateRangeChange}
+											// 複製エントリフィルター
+											duplicateFilter={duplicateFilter}
+											onDuplicateFilterChange={onDuplicateFilterChange}
 										/>
 									)}
 							</GuideCard>
@@ -466,23 +473,6 @@ export function DataTableToolbar<TData>({
 				</div>
 				{/* 編集権限のあるユーザーにのみchildrenを表示 */}
 				{canUpdateKouden(permission) && children}
-				{showPagination &&
-					currentPage != null &&
-					totalCount != null &&
-					pageSize != null &&
-					onPageChange &&
-					onPageSizeChange && (
-						<div className="mt-4 flex justify-center lg:justify-end lg:flex-auto">
-							<FloatingPagination
-								currentPage={currentPage}
-								totalPages={Math.ceil(totalCount / pageSize)}
-								totalCount={totalCount}
-								pageSize={pageSize}
-								onPageChange={onPageChange}
-								onPageSizeChange={onPageSizeChange}
-							/>
-						</div>
-					)}
 			</div>
 		</div>
 	);

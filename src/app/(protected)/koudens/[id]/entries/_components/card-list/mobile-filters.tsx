@@ -1,4 +1,5 @@
 import { MobileDataTableToolbar } from "@/components/custom/data-table/mobile-toolbar";
+import { DisplaySettings } from "@/components/custom/data-table/display-settings";
 import { StickySearchHeader } from "./sticky-search-header";
 import {
 	User,
@@ -20,6 +21,16 @@ interface MobileFiltersProps {
 	onSearchFieldChange: (value: string) => void;
 	sortOrder: string;
 	onSortOrderChange: (value: string) => void;
+	viewScope?: "own" | "all" | "others";
+	onViewScopeChange?: (scope: "own" | "all" | "others") => void;
+	members?: { value: string; label: string }[];
+	selectedMemberIds?: string[];
+	onMemberSelectionChange?: (ids: string[]) => void;
+	showDateFilter?: boolean;
+	dateRange?: { from?: Date; to?: Date };
+	onDateRangeChange?: (range: { from?: Date; to?: Date }) => void;
+	duplicateFilter?: boolean;
+	onDuplicateFilterChange?: (value: boolean) => void;
 }
 
 // 検索オプション
@@ -101,6 +112,16 @@ export function MobileFilters({
 	onSearchChange,
 	sortOrder,
 	onSortOrderChange,
+	viewScope = "all",
+	onViewScopeChange = () => {},
+	members = [],
+	selectedMemberIds = [],
+	onMemberSelectionChange = () => {},
+	showDateFilter = false,
+	dateRange = {},
+	onDateRangeChange = () => {},
+	duplicateFilter = false,
+	onDuplicateFilterChange = () => {},
 }: MobileFiltersProps) {
 	const searchBarRef = useRef<HTMLDivElement>(null);
 	const [lastSearchQuery, setLastSearchQuery] = useState(searchQuery);
@@ -118,6 +139,19 @@ export function MobileFilters({
 
 	return (
 		<>
+			{/* Display settings for mobile */}
+			<DisplaySettings
+				viewScope={viewScope}
+				onViewScopeChange={onViewScopeChange}
+				members={members}
+				selectedMemberIds={selectedMemberIds}
+				onMemberSelectionChange={onMemberSelectionChange}
+				showDateFilter={showDateFilter}
+				dateRange={dateRange}
+				onDateRangeChange={onDateRangeChange}
+				duplicateFilter={duplicateFilter}
+				onDuplicateFilterChange={onDuplicateFilterChange}
+			/>
 			<StickySearchHeader
 				searchQuery={lastSearchQuery}
 				onSearchChange={handleSearch}

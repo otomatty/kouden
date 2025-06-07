@@ -8,6 +8,7 @@ import type { KoudenPermission } from "@/types/role";
 import { useState } from "react";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { X } from "lucide-react";
+import PlanUpgradeAlert from "./plan-upgrade-alert";
 
 interface KoudenHeaderProps {
 	koudenId: string;
@@ -49,23 +50,11 @@ export default function KoudenHeader({
 				</a>
 			</Button>
 			{remainingDays != null && showAlert && (
-				<Alert className="w-full flex items-start justify-between">
-					<div>
-						<AlertTitle>プランのアップグレード</AlertTitle>
-						<AlertDescription>
-							無料プランの残り期間はあと{remainingDays}
-							日です。期間内にデータを入力し、PDFをダウンロードできます。
-						</AlertDescription>
-					</div>
-					<div className="flex items-center space-x-2">
-						<Button size="sm" asChild>
-							<Link href={`/koudens/${koudenId}/purchase`}>アップグレード</Link>
-						</Button>
-						<Button variant="ghost" size="icon" onClick={() => setShowAlert(false)}>
-							<X className="h-4 w-4" />
-						</Button>
-					</div>
-				</Alert>
+				<PlanUpgradeAlert
+					remainingDays={remainingDays}
+					koudenId={koudenId}
+					onClose={() => setShowAlert(false)}
+				/>
 			)}
 			<div className="flex items-center justify-between">
 				<KoudenTitle koudenId={koudenId} title={title} description={description} />

@@ -66,6 +66,9 @@ interface EntryTableProps {
 	showDateFilter?: boolean;
 	dateRange?: { from?: Date; to?: Date };
 	onDateRangeChange?: (range: { from?: Date; to?: Date }) => void;
+	// 複製エントリフィルター
+	duplicateFilter?: boolean;
+	onDuplicateFilterChange?: (value: boolean) => void;
 }
 
 export function DataTable({
@@ -85,6 +88,8 @@ export function DataTable({
 	showDateFilter,
 	dateRange,
 	onDateRangeChange,
+	duplicateFilter = false,
+	onDuplicateFilterChange,
 }: EntryTableProps) {
 	const permission = useAtomValue(permissionAtom);
 	const duplicateResults = useAtomValue(duplicateEntriesAtom);
@@ -431,6 +436,8 @@ export function DataTable({
 							showDateFilter={showDateFilter}
 							dateRange={dateRange}
 							onDateRangeChange={onDateRangeChange}
+							duplicateFilter={duplicateFilter}
+							onDuplicateFilterChange={onDuplicateFilterChange}
 							showPagination={duplicateResults === null}
 							currentPage={duplicateResults === null ? currentPage : dupPage}
 							pageSize={duplicateResults === null ? pageSize : dupPageSize}

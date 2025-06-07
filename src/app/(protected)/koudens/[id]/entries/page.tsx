@@ -1,6 +1,4 @@
-import { redirect, notFound } from "next/navigation";
-import { getKouden } from "@/app/_actions/koudens";
-import { EntryView } from "./_components";
+import EntriesPageClient from "./EntriesPageClient";
 import { getEntries } from "@/app/_actions/entries";
 import { getRelationships } from "@/app/_actions/relationships";
 
@@ -64,7 +62,7 @@ export default async function EntriesPage({
 
 	return (
 		<div className="mt-4">
-			<EntryView
+			<EntriesPageClient
 				koudenId={koudenId}
 				entries={entries}
 				relationships={relationships}

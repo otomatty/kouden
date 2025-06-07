@@ -38,14 +38,16 @@ interface BottomNavigationProps {
  * - 中央に新規作成ボタンを配置
  * - 現在のパスに基づいてアクティブな項目を強調表示
  */
-export function BottomNavigation({
-	id,
-	entries,
-	relationships,
-	onEntryCreated,
-}: BottomNavigationProps) {
+export function BottomNavigation({ id, entries, relationships }: BottomNavigationProps) {
 	const pathname = usePathname();
 	const [showMoreMenu, setShowMoreMenu] = useState(false);
+
+	// エントリー作成後のローカルステート更新
+	const [localEntries, setLocalEntries] = useState<Entry[]>(entries);
+	const [localRelationships] = useState<Relationship[]>(relationships);
+	const handleEntryCreated = (entry: Entry) => {
+		setLocalEntries((prev) => [entry, ...prev]);
+	};
 
 	const getActionButton = (path: string) => {
 		// 新規作成が必要なページ
@@ -54,12 +56,12 @@ export function BottomNavigation({
 				component: (
 					<CreateButtonContainer
 						koudenId={id}
-						entries={entries}
-						relationships={relationships}
-						onEntryCreated={onEntryCreated}
+						entries={localEntries}
+						relationships={localRelationships}
+						onEntryCreated={handleEntryCreated}
 					/>
 				),
-				label: "香典を追加",
+				label: "香典を登録",
 			};
 		}
 		if (path.includes("/offerings")) {
@@ -67,9 +69,9 @@ export function BottomNavigation({
 				component: (
 					<CreateButtonContainer
 						koudenId={id}
-						entries={entries}
-						relationships={relationships}
-						onEntryCreated={onEntryCreated}
+						entries={localEntries}
+						relationships={localRelationships}
+						onEntryCreated={handleEntryCreated}
 					/>
 				),
 				label: "供物を追加",
@@ -80,9 +82,9 @@ export function BottomNavigation({
 				component: (
 					<CreateButtonContainer
 						koudenId={id}
-						entries={entries}
-						relationships={relationships}
-						onEntryCreated={onEntryCreated}
+						entries={localEntries}
+						relationships={localRelationships}
+						onEntryCreated={handleEntryCreated}
 					/>
 				),
 				label: "弔電を追加",
@@ -147,7 +149,7 @@ export function BottomNavigation({
 
 	const mainTabs = [
 		{ id: "entries", label: "ご香典", icon: <Table2 className="h-5 w-5" /> },
-		{ id: "return_records", label: "香典返し", icon: <Box className="h-5 w-5" /> },
+		{ id: "return_records", label: "お返し", icon: <Box className="h-5 w-5" /> },
 		{ id: "statistics", label: "統計", icon: <BarChart3 className="h-5 w-5" /> },
 	];
 
@@ -175,23 +177,27 @@ export function BottomNavigation({
 		);
 	};
 
+	const action = getActionButton(pathname);
+
 	return (
 		<nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-muted bg-background md:hidden">
 			<div className="relative h-16">
-				{/* 中央の新規作成ボタン - アニメーションの外に配置 */}
-				<div className="absolute left-1/2 -translate-x-1/2 z-10">
-					<div className="relative flex h-16 w-16 items-center justify-center">
-						<div className="absolute top-0 left-1/2 h-16 w-full overflow-hidden -translate-x-1/2">
-							<div className="absolute bottom-6 h-16 w-full rounded-full bg-muted" />
-						</div>
-						<div className="absolute -top-5">
-							<div className="flex flex-col items-center gap-1">
-								{getActionButton(pathname)?.component}
-								<span className="text-xs">{getActionButton(pathname)?.label}</span>
+				{/* 中央の新規作成ボタン - アクションがあるときだけ表示 */}
+				{action && (
+					<div className="absolute left-1/2 -translate-x-1/2 z-10">
+						<div className="relative flex h-16 w-16 items-center justify-center">
+							<div className="absolute top-0 left-1/2 h-16 w-full overflow-hidden -translate-x-1/2">
+								<div className="absolute bottom-6 h-16 w-full rounded-full bg-muted" />
+							</div>
+							<div className="absolute -top-5">
+								<div className="flex flex-col items-center gap-1">
+									{action.component}
+									<span className="text-xs">{action.label}</span>
+								</div>
 							</div>
 						</div>
 					</div>
-				</div>
+				)}
 
 				<AnimatePresence initial={false}>
 					<motion.div

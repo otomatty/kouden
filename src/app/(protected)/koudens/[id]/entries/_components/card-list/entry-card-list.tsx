@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useAtom } from "jotai";
 import type { Entry } from "@/types/entries";
+import { useInfiniteEntries } from "@/hooks/use-infinite-entries";
 import { MobileFilters } from "./mobile-filters";
 import { EntryCard } from "./entry-card";
 import { entriesAtom } from "@/store/entries";
@@ -15,24 +16,25 @@ interface EntryCardListProps {
 	relationships: Relationship[];
 }
 
-export function EntryCardList({
-	entries: initialEntries,
-	koudenId,
-	relationships,
-}: EntryCardListProps) {
+export function EntryCardList({ koudenId, relationships }: EntryCardListProps) {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [searchField, setSearchField] = useState("name");
 	const [sortOrder, setSortOrder] = useState("created_at_desc");
 
-	// Jotaiのatomから最新のentriesを取得
-	const [entries, setEntries] = useAtom(entriesAtom);
-
-	// 初期表示時にinitialEntriesをatomに設定
+	// Server-side paginated entries (100 per page)
+	const { entries, isLoading, fetchNextPage, hasNextPage } = useInfiniteEntries({
+		koudenId,
+		pageSize: 100,
+	});
+	const loadMoreRef = useRef<HTMLDivElement>(null);
 	useEffect(() => {
-		if (entries.length === 0 && initialEntries.length > 0) {
-			setEntries(initialEntries);
-		}
-	}, [initialEntries, entries.length, setEntries]);
+		if (!loadMoreRef.current) return;
+		const observer = new IntersectionObserver(([e]) => {
+			if (e?.isIntersecting && hasNextPage) fetchNextPage();
+		});
+		observer.observe(loadMoreRef.current);
+		return () => observer.disconnect();
+	}, [fetchNextPage, hasNextPage]);
 
 	// フィルタリングとソートを適用したデータ
 	const filteredAndSortedData = useMemo(() => {
@@ -96,12 +98,14 @@ export function EntryCardList({
 							relationships={relationships}
 						/>
 					))}
+					<div ref={loadMoreRef} className="h-1" />
+					{isLoading && <div className="text-center py-4">Loading...</div>}
 					{filteredAndSortedData.length === 0 && (
 						<div className="text-center py-8 text-muted-foreground h-[40vh] flex flex-col justify-between items-center">
 							<span className="font-semibold">
 								データがありません。
 								<br />
-								「香典を追加」ボタンをクリックして追加してください。
+								「香典を登録」ボタンをクリックして追加してください。
 							</span>
 							<ArrowDown className="h-8 w-8 mx-auto" />
 						</div>
