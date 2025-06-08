@@ -117,7 +117,7 @@ export function EntryView({
 						onDateRangeChange={setDateRange}
 					/>
 					<div ref={loadMoreRef} className="h-1" />
-					{infiniteLoading && <Loading message="Loading..." />}
+					{infiniteLoading && <Loading message="読み込み中..." />}
 				</>
 			)}
 		</>

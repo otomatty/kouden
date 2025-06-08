@@ -29,6 +29,13 @@ const settingCards: SettingCard[] = [
 		category: "basic",
 	},
 	{
+		title: "プラン管理",
+		description: "香典帳のプランを管理します",
+		href: "plans",
+		icon: <Truck className="w-6 h-6" />,
+		category: "basic",
+	},
+	{
 		title: "関係性",
 		description: "弔問者との関係性の種類を管理します",
 		href: "relationships",

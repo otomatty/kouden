@@ -794,6 +794,7 @@ export type Database = {
           description: string | null
           id: string
           is_default: boolean
+          is_enabled: boolean
           kouden_id: string
           name: string
           updated_at: string
@@ -804,6 +805,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_default?: boolean
+          is_enabled?: boolean
           kouden_id: string
           name: string
           updated_at?: string
@@ -814,6 +816,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_default?: boolean
+          is_enabled?: boolean
           kouden_id?: string
           name?: string
           updated_at?: string
@@ -1415,6 +1418,26 @@ export type Database = {
         }
         Returns: string
       }
+      gtrgm_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_decompress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_in: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_options: {
+        Args: { "": unknown }
+        Returns: undefined
+      }
+      gtrgm_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
       has_kouden_access: {
         Args: { p_kouden_id: string }
         Returns: boolean
@@ -1434,6 +1457,18 @@ export type Database = {
       set_invitation_token: {
         Args: { token: string }
         Returns: undefined
+      }
+      set_limit: {
+        Args: { "": number }
+        Returns: number
+      }
+      show_limit: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      show_trgm: {
+        Args: { "": string }
+        Returns: string[]
       }
       update_member_role: {
         Args: { p_kouden_id: string; p_user_id: string; p_role_id: string }

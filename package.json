@@ -94,6 +94,7 @@
 		"resend": "^4.5.2",
 		"shiki": "^3.6.0",
 		"snakecase-keys": "^8.0.1",
+		"sonner": "^2.0.5",
 		"stripe": "^18.2.1",
 		"tailwind-merge": "^3.3.0",
 		"tailwindcss-animate": "^1.0.7",

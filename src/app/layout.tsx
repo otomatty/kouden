@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { notoSansJP, zenOldMincho } from "./fonts";
+import { Toaster } from "sonner";
 
 export const viewport: Viewport = {
 	width: "device-width",
@@ -52,7 +53,10 @@ export default async function RootLayout({
 				suppressHydrationWarning
 			>
 				<TooltipProvider>
-					<Providers>{children}</Providers>
+					<Providers>
+						{children}
+						<Toaster />
+					</Providers>
 				</TooltipProvider>
 				<Analytics />
 				<SpeedInsights />

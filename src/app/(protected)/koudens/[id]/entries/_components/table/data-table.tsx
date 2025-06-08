@@ -24,9 +24,11 @@ import type { Entry } from "@/types/entries";
 import type { Relationship } from "@/types/relationships";
 import type { AttendanceType } from "@/types/entries";
 import type { CellValue } from "@/types/table";
+import type { SelectOption } from "@/types/additional-select";
 // Server Actions
 import { deleteEntries, updateEntryField } from "@/app/_actions/entries";
 import { getMembers } from "@/app/_actions/members";
+import { createRelationship } from "@/app/_actions/relationships";
 // hooks
 import { useMediaQuery } from "@/hooks/use-media-query";
 // stores
@@ -121,6 +123,7 @@ export function DataTable({
 			: "all";
 	const [viewScope, setViewScope] = useState<"own" | "all" | "others">(initialViewScope);
 	const [members, setMembers] = useState<{ value: string; label: string }[]>([]);
+	const [relationshipOptions, setRelationshipOptions] = useState<Relationship[]>(relationships);
 	const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>(parsedMemberIds);
 	const [, setSelectedRows] = useState<string[]>([]);
 	const { toast } = useToast();
@@ -243,6 +246,7 @@ export function DataTable({
 			const targetEntry = normalizedEntries.find((e) => e.id === rowId);
 
 			if (!targetEntry) {
+				console.error("[DEBUG handleCellEdit] targetEntry not found for rowId=", rowId);
 				console.error("[ERROR] Entry not found:", {
 					rowId,
 					entriesCount: normalizedEntries.length,
@@ -365,6 +369,10 @@ export function DataTable({
 			}
 		})();
 	}, [koudenId]);
+
+	useEffect(() => {
+		setRelationshipOptions(relationships);
+	}, [relationships]);
 
 	// Determine data source: use paginated entries normally, but show all duplicates when duplicateResults exist
 	const dataForTable = duplicateResults === null ? paginatedEntries : displayEntries;
@@ -489,11 +497,13 @@ export function DataTable({
 								...editableColumns,
 								relationshipId: {
 									type: "additional-select" as const,
-									options: relationships.map((rel) => ({
-										value: rel.id,
-										label: rel.name,
-									})),
+									options: relationshipOptions.map((rel) => ({ value: rel.id, label: rel.name })),
 									addOptionPlaceholder: "関係性を追加",
+									onAddOption: async (option: SelectOption) => {
+										const newRel = await createRelationship({ koudenId, name: option.value });
+										setRelationshipOptions((prev) => [...prev, newRel]);
+										return newRel.id;
+									},
 								},
 							}}
 							sorting={sorting}

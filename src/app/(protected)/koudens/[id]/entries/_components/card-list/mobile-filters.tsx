@@ -21,6 +21,10 @@ interface MobileFiltersProps {
 	onSearchFieldChange: (value: string) => void;
 	sortOrder: string;
 	onSortOrderChange: (value: string) => void;
+	/** フィルタリングカラムの現在値 */
+	filterColumn: string;
+	/** フィルタリングカラム変更時 */
+	onFilterColumnChange: (value: string) => void;
 	viewScope?: "own" | "all" | "others";
 	onViewScopeChange?: (scope: "own" | "all" | "others") => void;
 	members?: { value: string; label: string }[];
@@ -96,7 +100,7 @@ const sortOptions = [
 ];
 
 // フィルターオプション
-const filterOptions = [
+export const filterOptions = [
 	{
 		value: "has_offering",
 		label: "供物あり",
@@ -122,6 +126,8 @@ export function MobileFilters({
 	onDateRangeChange = () => {},
 	duplicateFilter = false,
 	onDuplicateFilterChange = () => {},
+	filterColumn,
+	onFilterColumnChange,
 }: MobileFiltersProps) {
 	const searchBarRef = useRef<HTMLDivElement>(null);
 	const [lastSearchQuery, setLastSearchQuery] = useState(searchQuery);
@@ -139,19 +145,6 @@ export function MobileFilters({
 
 	return (
 		<>
-			{/* Display settings for mobile */}
-			<DisplaySettings
-				viewScope={viewScope}
-				onViewScopeChange={onViewScopeChange}
-				members={members}
-				selectedMemberIds={selectedMemberIds}
-				onMemberSelectionChange={onMemberSelectionChange}
-				showDateFilter={showDateFilter}
-				dateRange={dateRange}
-				onDateRangeChange={onDateRangeChange}
-				duplicateFilter={duplicateFilter}
-				onDuplicateFilterChange={onDuplicateFilterChange}
-			/>
 			<StickySearchHeader
 				searchQuery={lastSearchQuery}
 				onSearchChange={handleSearch}
@@ -169,6 +162,18 @@ export function MobileFilters({
 					searchOptions={searchOptions}
 					sortOptions={sortOptions}
 					filterOptions={filterOptions}
+					filterColumn={filterColumn}
+					onFilterColumnChange={onFilterColumnChange}
+					viewScope={viewScope}
+					onViewScopeChange={onViewScopeChange}
+					members={members}
+					selectedMemberIds={selectedMemberIds}
+					onMemberSelectionChange={onMemberSelectionChange}
+					showDateFilter={showDateFilter}
+					dateRange={dateRange}
+					onDateRangeChange={onDateRangeChange}
+					duplicateFilter={duplicateFilter}
+					onDuplicateFilterChange={onDuplicateFilterChange}
 					showFilter={true}
 					showSort={true}
 					searchValue={lastSearchQuery}

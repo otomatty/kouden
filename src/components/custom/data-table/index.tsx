@@ -95,6 +95,8 @@ export function DataTable<Data>({
 	 */
 	const table = useReactTable({
 		data,
+		// Use stable row IDs to prevent key reordering on deletion
+		getRowId: (row: Data) => (row as { id: string }).id,
 		columns,
 		getCoreRowModel: getCoreRowModel(),
 		onSortingChange: onSortingChange,
@@ -129,7 +131,8 @@ export function DataTable<Data>({
 			}
 
 			const value = cell.getValue() as CellValue;
-			const rowId = cell.row.id;
+			// use the actual entry id for lookups
+			const rowId = (cell.row.original as { id: string }).id;
 
 			/**
 			 * セル編集時のコールバック
@@ -163,8 +166,17 @@ export function DataTable<Data>({
 							options={config.options}
 							value={value as string | null}
 							onValueChange={handleSave}
-							onAddOption={(option: SelectOption) => {
-								handleSave(option.value);
+							onAddOption={async (option: SelectOption) => {
+								if (
+									config.type === "additional-select" &&
+									typeof config.onAddOption === "function"
+								) {
+									// obtain the new relation ID and then save it
+									const newId = await config.onAddOption(option, rowId);
+									await handleSave(newId as string);
+								} else {
+									await handleSave(option.value);
+								}
 							}}
 							addOptionPlaceholder={config.addOptionPlaceholder}
 						/>

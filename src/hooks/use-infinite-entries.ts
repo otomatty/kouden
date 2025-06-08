@@ -10,6 +10,8 @@ interface UseInfiniteEntriesOptions {
 	dateFrom?: string;
 	dateTo?: string;
 	isDuplicate?: boolean;
+	/** フィルタリング用のカラム */
+	filter?: string;
 }
 
 interface UseInfiniteEntriesResult {
@@ -30,6 +32,7 @@ export function useInfiniteEntries({
 	dateFrom,
 	dateTo,
 	isDuplicate,
+	filter,
 }: UseInfiniteEntriesOptions): UseInfiniteEntriesResult {
 	const [entries, setEntries] = useState<Entry[]>([]);
 	const [totalCount, setTotalCount] = useState(0);
@@ -50,6 +53,7 @@ export function useInfiniteEntries({
 				if (dateFrom) params.set("dateFrom", dateFrom);
 				if (dateTo) params.set("dateTo", dateTo);
 				if (isDuplicate) params.set("isDuplicate", "true");
+				if (filter) params.set("filter", filter);
 
 				const res = await fetch(`/api/koudens/${koudenId}/entries?${params.toString()}`);
 				const json = await res.json();
@@ -65,7 +69,7 @@ export function useInfiniteEntries({
 				setIsLoading(false);
 			}
 		},
-		[koudenId, pageSize, memberIds, search, sort, dateFrom, dateTo, isDuplicate],
+		[koudenId, pageSize, memberIds, search, sort, dateFrom, dateTo, isDuplicate, filter],
 	);
 
 	useEffect(() => {

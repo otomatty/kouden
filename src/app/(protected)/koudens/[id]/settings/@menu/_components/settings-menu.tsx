@@ -15,7 +15,7 @@ interface MenuItem {
 const basicMenuItems: MenuItem[] = [
 	{ label: "一般設定", href: "general", icon: <Settings /> },
 	{ label: "メンバー", href: "members", icon: <Users /> },
-	{ label: "プラン管理", href: "plan-upgrade", icon: <Truck /> },
+	{ label: "プラン管理", href: "plans", icon: <Truck /> },
 ];
 
 // カスタマイズ可能なメニュー項目
@@ -48,10 +48,9 @@ export function SettingsMenu({ koudenId }: SettingsMenuProps) {
 						href={href}
 						className={cn(
 							"flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-colors",
-							"hover:bg-gray-100 dark:hover:bg-gray-800",
 							isActive
-								? "bg-gray-100 dark:bg-gray-800 text-primary font-medium"
-								: "text-gray-700 dark:text-gray-300",
+								? "bg-primary text-primary-foreground font-medium"
+								: "text-gray-700 dark:text-gray-300 hover:bg-primary/10",
 						)}
 					>
 						<span className="w-5 h-5">{item.icon}</span>
@@ -63,7 +62,7 @@ export function SettingsMenu({ koudenId }: SettingsMenuProps) {
 	};
 
 	return (
-		<nav className="w-64 h-full py-4 border-r border-border">
+		<nav className="w-64 h-full py-4 border-r border-border pr-4">
 			<div className="space-y-6">
 				<div>
 					<h3 className="px-4 text-sm font-medium text-gray-500 dark:text-gray-400">基本設定</h3>

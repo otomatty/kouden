@@ -39,6 +39,8 @@ import {
 } from "@/components/ui/drawer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Filter, ArrowDownAZ, ArrowUpAZ, Columns, SlidersHorizontal } from "lucide-react";
+import { MobileDisplaySettings } from "./mobile-display-settings";
+import type { MemberOption } from "./display-settings";
 
 /**
  * 検索オプションの型定義
@@ -185,6 +187,26 @@ export interface MobileDataTableToolbarProps {
 	onSortOrderChange?: (value: string) => void;
 	/** 検索フィールドのプレースホルダーテキスト */
 	searchPlaceholder?: string;
+	/** 表示設定用のビュー範囲 */
+	viewScope?: "own" | "all" | "others";
+	/** 表示設定: ビュー範囲変更時 */
+	onViewScopeChange?: (scope: "own" | "all" | "others") => void;
+	/** 表示設定: メンバーオプション一覧 */
+	members?: MemberOption[];
+	/** 表示設定: 選択中のメンバーID */
+	selectedMemberIds?: string[];
+	/** 表示設定: メンバー選択変更時 */
+	onMemberSelectionChange?: (ids: string[]) => void;
+	/** 日付フィルターを表示するか */
+	showDateFilter?: boolean;
+	/** 日付範囲 */
+	dateRange?: { from?: Date; to?: Date };
+	/** 日付範囲変更時 */
+	onDateRangeChange?: (range: { from?: Date; to?: Date }) => void;
+	/** 重複フィルターオンオフ */
+	duplicateFilter?: boolean;
+	/** 重複フィルター変更時 */
+	onDuplicateFilterChange?: (value: boolean) => void;
 }
 
 /**
@@ -210,6 +232,16 @@ export function MobileDataTableToolbar({
 	onSortOrderChange,
 	searchPlaceholder,
 	searchValue,
+	viewScope = "all",
+	onViewScopeChange = () => {},
+	members = [],
+	selectedMemberIds = [],
+	onMemberSelectionChange = () => {},
+	showDateFilter = false,
+	dateRange = {},
+	onDateRangeChange = () => {},
+	duplicateFilter = false,
+	onDuplicateFilterChange = () => {},
 }: MobileDataTableToolbarProps) {
 	const [globalFilter, setGlobalFilter] = React.useState(searchValue || "");
 	const searchTimeoutRef = React.useRef<NodeJS.Timeout | undefined>(undefined);
@@ -290,16 +322,14 @@ export function MobileDataTableToolbar({
 							</DrawerTrigger>
 							<DrawerContent>
 								<DrawerHeader>
-									<DrawerTitle>フィルタリングと並び替え</DrawerTitle>
+									<DrawerTitle>表示設定と並び替え</DrawerTitle>
 								</DrawerHeader>
 								<div className="max-w-md mx-auto p-8">
 									<Tabs defaultValue="sort" className="px-4">
 										<TabsList className="grid w-full grid-cols-2 mb-4">
-											{showFilter && (
-												<TabsTrigger value="filter" className="text-sm">
-													フィルタリング
-												</TabsTrigger>
-											)}
+											<TabsTrigger value="display" className="text-sm">
+												表示設定
+											</TabsTrigger>
 											{showSort && (
 												<TabsTrigger value="sort" className="text-sm">
 													並び替え
@@ -307,49 +337,25 @@ export function MobileDataTableToolbar({
 											)}
 										</TabsList>
 
-										{/* フィルタリングオプション */}
-										{showFilter && (
-											<TabsContent value="filter" className="mt-0">
-												<div className="p-4 space-y-4">
-													<RadioGroup
-														value={filterColumn}
-														onValueChange={(value) => {
-															if (onFilterColumnChange) {
-																onFilterColumnChange(value);
-															}
-															setGlobalFilter("");
-														}}
-														className="space-y-3"
-													>
-														{filterOptions.map((option) => (
-															<div
-																key={option.value}
-																className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted/50"
-															>
-																<RadioGroupItem
-																	value={option.value}
-																	id={`filter-${option.value}`}
-																/>
-																<Label
-																	htmlFor={`filter-${option.value}`}
-																	className="flex items-center gap-2 font-normal flex-1 cursor-pointer"
-																>
-																	{option.icon}
-																	<div className="flex flex-col">
-																		<span>{option.label}</span>
-																		{option.description && (
-																			<span className="text-xs text-muted-foreground">
-																				{option.description}
-																			</span>
-																		)}
-																	</div>
-																</Label>
-															</div>
-														))}
-													</RadioGroup>
-												</div>
-											</TabsContent>
-										)}
+										{/* 表示設定 */}
+										<TabsContent value="display" className="mt-0">
+											<MobileDisplaySettings
+												viewScope={viewScope}
+												onViewScopeChange={onViewScopeChange}
+												members={members}
+												selectedMemberIds={selectedMemberIds}
+												onMemberSelectionChange={onMemberSelectionChange}
+												showDateFilter={showDateFilter}
+												dateRange={dateRange}
+												onDateRangeChange={onDateRangeChange}
+												duplicateFilter={duplicateFilter}
+												onDuplicateFilterChange={onDuplicateFilterChange}
+												showFilter={showFilter}
+												filterColumn={filterColumn}
+												filterOptions={filterOptions}
+												onFilterColumnChange={onFilterColumnChange}
+											/>
+										</TabsContent>
 
 										{/* 並び替えオプション */}
 										{showSort && (

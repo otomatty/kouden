@@ -1,12 +1,10 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useAtom } from "jotai";
 import type { Entry } from "@/types/entries";
 import { useInfiniteEntries } from "@/hooks/use-infinite-entries";
-import { MobileFilters } from "./mobile-filters";
+import { MobileFilters, filterOptions } from "./mobile-filters";
 import { EntryCard } from "./entry-card";
-import { entriesAtom } from "@/store/entries";
 import type { Relationship } from "@/types/relationships";
 import { ArrowDown } from "lucide-react";
 
@@ -20,11 +18,13 @@ export function EntryCardList({ koudenId, relationships }: EntryCardListProps) {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [searchField, setSearchField] = useState("name");
 	const [sortOrder, setSortOrder] = useState("created_at_desc");
+	const [filterColumn, setFilterColumn] = useState<string>(filterOptions[0]?.value || "");
 
 	// Server-side paginated entries (100 per page)
 	const { entries, isLoading, fetchNextPage, hasNextPage } = useInfiniteEntries({
 		koudenId,
 		pageSize: 100,
+		filter: filterColumn,
 	});
 	const loadMoreRef = useRef<HTMLDivElement>(null);
 	useEffect(() => {
@@ -87,6 +87,8 @@ export function EntryCardList({ koudenId, relationships }: EntryCardListProps) {
 				onSearchChange={setSearchQuery}
 				sortOrder={sortOrder}
 				onSortOrderChange={setSortOrder}
+				filterColumn={filterColumn}
+				onFilterColumnChange={setFilterColumn}
 			/>
 			<div className="flex-1 overflow-auto">
 				<div className="space-y-2 py-4">
@@ -99,7 +101,7 @@ export function EntryCardList({ koudenId, relationships }: EntryCardListProps) {
 						/>
 					))}
 					<div ref={loadMoreRef} className="h-1" />
-					{isLoading && <div className="text-center py-4">Loading...</div>}
+					{isLoading && <div className="text-center py-4">読み込み中...</div>}
 					{filteredAndSortedData.length === 0 && (
 						<div className="text-center py-8 text-muted-foreground h-[40vh] flex flex-col justify-between items-center">
 							<span className="font-semibold">
