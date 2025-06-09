@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { Calculator, TrendingUp, AlertCircle } from "lucide-react";
+import { PageHero } from "../../_components/page-hero";
 import { SectionTitle } from "@/components/ui/section-title";
 import { FeaturePointCard } from "../_components/FeaturePointCard";
 import ScenarioVideoWrapper from "./_components/scenario-video-wrapper";
 import { TestimonialsSection } from "../_components/TestimonialsSection";
 import { testimonials } from "./testimonials";
 import { OtherFeaturesList } from "../_components/OtherFeaturesList";
-import { CTASection } from "../_components/CTASection";
+import { CTASection } from "../../_components/cta-section";
 
 export const metadata: Metadata = {
 	title: "自動計算＆グラフ表示 | 機能詳細 | 香典帳",
@@ -35,22 +36,19 @@ export default function AutoCalcGraphPage() {
 
 	return (
 		<div className="space-y-24">
-			<section className="py-16 container">
-				<SectionTitle
-					title="自動計算＆グラフ表示"
-					subtitle="金額ミスを防ぎ、視覚的にデータを把握"
-					className="mb-8"
-				/>
-				<p className="text-muted-foreground mb-6">
-					面倒な計算は任せて、データの傾向をすぐにキャッチ。
-				</p>
+			<PageHero
+				title="自動計算＆グラフ表示"
+				subtitle="金額ミスを防ぎ、視覚的にデータを把握"
+				className="bg-background"
+			/>
+			<section className="py-16 container mx-auto">
 				<div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
 					{/* デモ動画またはスクリーンショット */}
 					動画/スクリーンショット
 				</div>
 			</section>
 
-			<section className="container">
+			<section className="container mx-auto">
 				<SectionTitle title="特徴" className="mb-8" />
 				<div className="grid md:grid-cols-3 gap-8">
 					{points.map((p) => (
@@ -59,7 +57,7 @@ export default function AutoCalcGraphPage() {
 				</div>
 			</section>
 
-			<section className="container">
+			<section className="container mx-auto">
 				<SectionTitle title="利用シーン" className="mb-8" />
 				<ScenarioVideoWrapper />
 			</section>

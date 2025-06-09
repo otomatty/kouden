@@ -66,6 +66,121 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_request_attachments: {
+        Row: {
+          file_name: string
+          file_url: string
+          id: string
+          request_id: string
+          uploaded_at: string
+        }
+        Insert: {
+          file_name: string
+          file_url: string
+          id?: string
+          request_id: string
+          uploaded_at?: string
+        }
+        Update: {
+          file_name?: string
+          file_url?: string
+          id?: string
+          request_id?: string
+          uploaded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_request_attachments_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "contact_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_requests: {
+        Row: {
+          category: string
+          company_name: string | null
+          company_size: string | null
+          created_at: string
+          email: string
+          id: string
+          ip_address: unknown | null
+          message: string
+          name: string | null
+          status: string
+          subject: string | null
+          updated_at: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          category: string
+          company_name?: string | null
+          company_size?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          ip_address?: unknown | null
+          message: string
+          name?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          category?: string
+          company_name?: string | null
+          company_size?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          ip_address?: unknown | null
+          message?: string
+          name?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      contact_responses: {
+        Row: {
+          created_at: string
+          id: string
+          request_id: string
+          responder_id: string | null
+          response_message: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          request_id: string
+          responder_id?: string | null
+          response_message: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          request_id?: string
+          responder_id?: string | null
+          response_message?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_responses_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "contact_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       debug_logs: {
         Row: {
           action: string | null

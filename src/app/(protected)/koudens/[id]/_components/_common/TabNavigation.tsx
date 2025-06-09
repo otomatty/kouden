@@ -4,7 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import type { LucideIcon } from "lucide-react";
-import { Gift, List, Send, RefreshCcw, BarChart2, Settings } from "lucide-react";
+import {
+	Gift,
+	List,
+	Send,
+	RefreshCcw,
+	BarChart2,
+	Settings,
+	Table2,
+	Box,
+	BarChart3,
+	Mail,
+} from "lucide-react";
 
 interface Tab {
 	key: string;
@@ -13,11 +24,11 @@ interface Tab {
 }
 
 const tabs: Tab[] = [
-	{ key: "entries", label: "ご香典", icon: Gift },
-	{ key: "offerings", label: "お供物", icon: List },
-	{ key: "telegrams", label: "ご弔電", icon: Send },
-	{ key: "return_records", label: "お返し", icon: RefreshCcw },
-	{ key: "statistics", label: "統計", icon: BarChart2 },
+	{ key: "entries", label: "ご香典", icon: Table2 },
+	{ key: "offerings", label: "お供物", icon: Gift },
+	{ key: "telegrams", label: "ご弔電", icon: Mail },
+	{ key: "return_records", label: "お返し", icon: Box },
+	{ key: "statistics", label: "統計", icon: BarChart3 },
 	{ key: "settings", label: "設定", icon: Settings },
 ];
 
@@ -34,7 +45,9 @@ export default function TabNavigation({ koudenId }: { koudenId: string }) {
 						key={tab.key}
 						href={href}
 						className={`flex items-center px-4 py-2 ${
-							active ? "border-b-2 border-primary text-primary" : "text-muted-foreground"
+							active
+								? "border-b-2 border-primary text-primary"
+								: "text-muted-foreground hover:text-foreground"
 						}`}
 					>
 						<Icon className="w-4 h-4 mr-2" />

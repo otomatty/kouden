@@ -115,8 +115,8 @@ const StoryText = ({ text, emphasizedWords }: Story) => {
 
 export function PainPointsSection() {
 	return (
-		<section className="py-64 bg-gray-50 dark:bg-gray-900/50">
-			<div className="container px-4 md:px-6">
+		<section className="py-16 md:py-32 bg-gray-50 dark:bg-gray-900/50">
+			<div className="container mx-auto px-4 md:px-6">
 				<SectionTitle
 					title="こんなお困りごとはありませんか？"
 					subtitle="香典の管理でよくある悩みをすべて解決します"

@@ -48,7 +48,7 @@ const guideFaqs = [
 
 export default function GuidePage() {
 	return (
-		<div className="space-y-24">
+		<div className="space-y-8 mb-24">
 			<PageHero
 				title="香典帳の使い方ガイド"
 				subtitle="初めての方でも安心してご利用いただけるよう、詳しく解説します"
@@ -61,7 +61,7 @@ export default function GuidePage() {
 			/>
 
 			{/* 基本的な使い方セクション */}
-			<section className="container">
+			<section className="container mx-auto">
 				<SectionTitle
 					title="基本的な使い方"
 					subtitle="3ステップで簡単に始められます"
@@ -98,7 +98,7 @@ export default function GuidePage() {
 			</section>
 
 			{/* 詳細な機能説明セクション */}
-			<section className="container">
+			<section className="container mx-auto">
 				<SectionTitle
 					title="主要な機能"
 					subtitle="香典帳をより便利に使いこなすための機能"

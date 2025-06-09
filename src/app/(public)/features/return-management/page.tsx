@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { Gift, List, Bell, FileText } from "lucide-react";
+import { List, Bell, FileText } from "lucide-react";
+import { PageHero } from "../../_components/page-hero";
 import { SectionTitle } from "@/components/ui/section-title";
 import { FeaturePointCard } from "../_components/FeaturePointCard";
 import ScenarioVideoWrapper from "./_components/scenario-video-wrapper";
 import { TestimonialsSection } from "../_components/TestimonialsSection";
 import { testimonials } from "./testimonials";
-import { CTASection } from "../_components/CTASection";
+import { CTASection } from "../../_components/cta-section";
 import { OtherFeaturesList } from "../_components/OtherFeaturesList";
 
 export const metadata: Metadata = {
@@ -34,18 +35,15 @@ export default function ReturnManagementPage() {
 
 	return (
 		<div className="space-y-24">
-			<section className="py-16 container">
-				<SectionTitle title="香典返し管理" subtitle="返礼品の手配を一括管理" className="mb-8" />
-				<p className="text-muted-foreground mb-6">
-					誰に何をいつ返したか、すべての履歴を可視化します。
-				</p>
+			<PageHero title="香典返し管理" subtitle="返礼品の手配を一括管理" className="bg-background" />
+			<section className="py-16 container mx-auto">
 				<div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
 					{/* デモ動画またはスクリーンショット */}
 					動画/スクリーンショット
 				</div>
 			</section>
 
-			<section className="container">
+			<section className="container mx-auto">
 				<SectionTitle title="特徴" className="mb-8" />
 				<div className="grid md:grid-cols-3 gap-8">
 					{points.map((p) => (
@@ -54,7 +52,7 @@ export default function ReturnManagementPage() {
 				</div>
 			</section>
 
-			<section className="container">
+			<section className="container mx-auto">
 				<SectionTitle title="利用シーン" className="mb-8" />
 				<ScenarioVideoWrapper />
 			</section>

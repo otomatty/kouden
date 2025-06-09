@@ -14,10 +14,14 @@ export function Header({ version }: { version: string }) {
 					</Link>
 				</h1>
 				<HeaderNavigation />
-
-				<Button asChild>
-					<Link href="/auth/login">利用を開始する</Link>
-				</Button>
+				<div className="flex items-center space-x-2">
+					<Button variant="outline" className="hidden md:block">
+						<Link href="/contact">お問い合わせ</Link>
+					</Button>
+					<Button asChild>
+						<Link href="/auth/login">利用を開始する</Link>
+					</Button>
+				</div>
 			</div>
 		</header>
 	);

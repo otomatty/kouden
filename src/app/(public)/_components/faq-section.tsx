@@ -46,7 +46,7 @@ export interface FAQSectionProps {
 
 export function FAQSection({ faqs = defaultFaqs }: FAQSectionProps) {
 	return (
-		<section className="py-64 bg-white dark:bg-gray-800">
+		<section className="py-16 md:py-32 bg-white dark:bg-gray-800">
 			<div className="container px-4 md:px-6 mx-auto">
 				<SectionTitle
 					title="よくある質問"

@@ -12,8 +12,8 @@ import {
 	Timer,
 } from "lucide-react";
 import { SectionTitle } from "@/components/ui/section-title";
-import { Button } from "@/components/ui/button";
 import { PageHero } from "../_components/page-hero";
+import { CTASection } from "../_components/cta-section";
 
 export const metadata: Metadata = {
 	title: "機能紹介 | 香典帳",
@@ -89,13 +89,13 @@ export default function FeaturesPage() {
 				className="bg-background"
 			/>
 
-			<section className="container">
+			<section className="container mx-auto">
 				<SectionTitle
 					title="主要な機能"
 					subtitle="香典管理の困りごとを一気に解消"
 					className="mb-12"
 				/>
-				<div className="grid sm:grid-cols-2 md:grid-cols-4 gap-8">
+				<div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
 					{features.map((feature) => (
 						<Link
 							key={feature.id}
@@ -110,7 +110,7 @@ export default function FeaturesPage() {
 				</div>
 			</section>
 
-			<section className="container">
+			<section className="container mx-auto">
 				<SectionTitle title="利用シーン" subtitle="動画で見る使い方" className="mb-12" />
 				<div className="flex flex-col md:flex-row gap-8">
 					<div className="md:w-1/2">
@@ -130,15 +130,7 @@ export default function FeaturesPage() {
 				</div>
 			</section>
 
-			<section className="text-center container h-[40vh] flex flex-col justify-center">
-				<SectionTitle title="さあ、始めましょう" subtitle="" className="mb-8" />
-				<Button asChild className="w-fit mx-auto">
-					<Link href="/auth/login">
-						無料で登録する
-						<ChevronRight className="ml-2 h-4 w-4" />
-					</Link>
-				</Button>
-			</section>
+			<CTASection />
 		</div>
 	);
 }

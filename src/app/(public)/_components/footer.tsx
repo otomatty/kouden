@@ -3,14 +3,13 @@ import { Button } from "@/components/ui/button";
 
 const footerLinks = {
 	product: [
-		{ name: "機能紹介", href: "/features" },
+		{ name: "料金", href: "/pricing" },
+		{ name: "機能", href: "/features" },
 		{ name: "使い方", href: "/guide" },
-		{ name: "活用事例", href: "/use-cases" },
-		{ name: "料金プラン", href: "/pricing" },
 	],
 	info: [
-		{ name: "ブログ", href: "/blog" },
 		{ name: "更新情報", href: "/updates" },
+		{ name: "ブログ", href: "/blog" },
 	],
 	support: [
 		{ name: "よくある質問", href: "/faq" },
@@ -26,21 +25,16 @@ const footerLinks = {
 export function Footer() {
 	return (
 		<footer className="border-t bg-background">
-			<div className="container px-4 md:px-6 py-12 mx-auto">
-				<div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-					<div className="space-y-4">
+			<div className="container px-4 md:px-6 py-8 mx-auto">
+				<div className="grid grid-cols-2 md:grid-cols-5 gap-8">
+					<div className="space-y-4 col-span-2 md:col-span-1">
 						<h2 className="text-lg font-semibold">香典帳</h2>
 						<p className="text-sm text-muted-foreground">
 							香典や供物の記録、返礼品の管理をデジタルで簡単に。
 						</p>
-						<div className="flex space-x-4">
-							<Button asChild variant="outline" size="sm">
-								<Link href="/auth/login">ログイン</Link>
-							</Button>
-							<Button asChild size="sm">
-								<Link href="/auth/signup">無料で始める</Link>
-							</Button>
-						</div>
+						<Button asChild size="sm">
+							<Link href="/auth/login">利用を開始する</Link>
+						</Button>
 					</div>
 
 					<div>
@@ -107,10 +101,12 @@ export function Footer() {
 						</ul>
 					</div>
 				</div>
-
-				<div className="mt-12 pt-8 border-t text-center text-sm text-muted-foreground">
-					<p>© {new Date().getFullYear()} 香典帳 All rights reserved.</p>
-				</div>
+			</div>
+			<div className="py-8 border-t text-center text-sm text-muted-foreground">
+				<p>
+					© {new Date().getFullYear()} <Link href="https://saedgewell.net">Saedgewell</Link> All
+					rights reserved.
+				</p>
 			</div>
 		</footer>
 	);

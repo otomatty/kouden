@@ -28,7 +28,7 @@ const searchOptions = [
 		value: "provider_name",
 		label: "提供者名",
 		icon: <User className="h-4 w-4" />,
-		description: "提供者のお名前で検索",
+		description: "提供者の氏名で検索",
 	},
 	{
 		value: "description",

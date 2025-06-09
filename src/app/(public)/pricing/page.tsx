@@ -49,7 +49,7 @@ export default function PricingPage() {
 			/>
 
 			{/* Plan Cards */}
-			<section className="container grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-12 md:mb-16">
+			<section className="container mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-12 md:mb-16">
 				{/* Free Plan */}
 				<Card className="flex flex-col">
 					<CardHeader>
@@ -129,7 +129,7 @@ export default function PricingPage() {
 			</section>
 
 			{/* Full Support Plan */}
-			<section className="container bg-muted rounded-lg">
+			<section className="container mx-auto bg-muted rounded-lg">
 				<Card className="bg-background shadow-none border-none">
 					<div className="grid md:grid-cols-2 gap-6 items-center">
 						<div>

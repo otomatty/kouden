@@ -32,7 +32,7 @@ type PageHeroProps = {
 export function PageHero({ title, subtitle, cta, secondaryCta, className }: PageHeroProps) {
 	return (
 		<section className={cn("py-16 md:py-24", className)}>
-			<div className="container px-4 md:px-6">
+			<div className="container mx-auto px-4 md:px-6">
 				<div className="text-center space-y-8">
 					<SectionTitle title={title} subtitle={subtitle} className="mx-auto max-w-3xl" />
 					{(cta || secondaryCta) && (

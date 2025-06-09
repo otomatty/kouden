@@ -1,4 +1,4 @@
-import { Check, PenLine, Send, UserPlus } from "lucide-react";
+import { Check, PenLine, Send, UserPlus, UserSearch } from "lucide-react";
 import { SectionTitle } from "@/components/ui/section-title";
 
 const steps = [
@@ -17,31 +17,31 @@ const steps = [
 	{
 		id: "gift-management",
 		icon: Check,
-		title: "返礼品の管理",
-		description: "適切な返礼品を選定し、配送状況を一元管理できます。",
+		title: "香典返しの管理",
+		description: "適切な返礼品を選定し、香典返しの状況を管理できます。",
 	},
 	{
 		id: "delivery-optimization",
-		icon: Send,
-		title: "配達の最適化",
-		description: "効率的な配達ルートを自動で作成し、スムーズな配送を実現します。",
+		icon: UserSearch,
+		title: "香典の確認",
+		description: "確認したいときに、いただいた香典の内容を確認できます。",
 	},
 ];
 
 export function HowItWorksSection() {
 	return (
-		<section className="py-64 bg-gray-50 dark:bg-gray-900">
+		<section className="py-16 md:py-32 bg-gray-50 dark:bg-gray-900">
 			<div className="container px-4 md:px-6 mx-auto">
 				<SectionTitle
 					title="使い方"
 					subtitle="4つの簡単なステップで始められます"
 					className="mb-16"
 				/>
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+				<div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
 					{steps.map((step) => (
 						<div
 							key={step.id}
-							className="relative flex flex-col items-center text-center space-y-4"
+							className="relative flex flex-row items-start text-left space-x-4 lg:flex-col lg:items-center lg:text-center lg:space-y-4 lg:space-x-0"
 						>
 							{step.id !== "delivery-optimization" && (
 								<div className="hidden lg:block absolute top-8 left-1/2 w-full h-0.5 bg-gray-200 dark:bg-gray-700" />
@@ -54,8 +54,10 @@ export function HowItWorksSection() {
 									{steps.indexOf(step) + 1}
 								</div>
 							</div>
-							<h3 className="text-xl font-bold">{step.title}</h3>
-							<p className="text-gray-500 dark:text-gray-400">{step.description}</p>
+							<div className="flex-1">
+								<h3 className="text-xl font-bold">{step.title}</h3>
+								<p className="text-gray-500 dark:text-gray-400">{step.description}</p>
+							</div>
 						</div>
 					))}
 				</div>

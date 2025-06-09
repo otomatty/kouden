@@ -67,9 +67,7 @@ type FormFieldContextValue<
 	name: TName;
 };
 
-const FormFieldContext = React.createContext<FormFieldContextValue>(
-	{} as FormFieldContextValue,
-);
+const FormFieldContext = React.createContext<FormFieldContextValue>({} as FormFieldContextValue);
 
 /**
  * フォームフィールドのコンテキストプロバイダー
@@ -132,26 +130,23 @@ type FormItemContextValue = {
 	id: string;
 };
 
-const FormItemContext = React.createContext<FormItemContextValue>(
-	{} as FormItemContextValue,
-);
+const FormItemContext = React.createContext<FormItemContextValue>({} as FormItemContextValue);
 
 /**
  * フォームアイテムのコンテナコンポーネント
  * FormLabel、FormControl、FormDescription、FormMessageをグループ化
  */
-const FormItem = React.forwardRef<
-	HTMLDivElement,
-	React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => {
-	const id = React.useId();
+const FormItem = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+	({ className, ...props }, ref) => {
+		const id = React.useId();
 
-	return (
-		<FormItemContext.Provider value={{ id }}>
-			<div ref={ref} className={cn("space-y-2", className)} {...props} />
-		</FormItemContext.Provider>
-	);
-});
+		return (
+			<FormItemContext.Provider value={{ id }}>
+				<div ref={ref} className={cn("space-y-2", className)} {...props} />
+			</FormItemContext.Provider>
+		);
+	},
+);
 FormItem.displayName = "FormItem";
 
 /**
@@ -159,8 +154,7 @@ FormItem.displayName = "FormItem";
  * @property {boolean} required - 必須項目を示すラベルを表示
  * @property {boolean} optional - 任意項目を示すラベルを表示
  */
-interface FormLabelProps
-	extends React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root> {
+interface FormLabelProps extends React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root> {
 	required?: boolean;
 	optional?: boolean;
 }
@@ -175,35 +169,34 @@ interface FormLabelProps
  * <FormLabel optional>プロフィール画像</FormLabel>
  * ```
  */
-const FormLabel = React.forwardRef<
-	React.ElementRef<typeof LabelPrimitive.Root>,
-	FormLabelProps
->(({ className, required, optional, children, ...props }, ref) => {
-	const { error, formItemId } = useFormField();
+const FormLabel = React.forwardRef<React.ElementRef<typeof LabelPrimitive.Root>, FormLabelProps>(
+	({ className, required, optional, children, ...props }, ref) => {
+		const { error, formItemId } = useFormField();
 
-	return (
-		<div className="flex items-center gap-2">
-			<Label
-				ref={ref}
-				className={cn(error && "text-destructive", className)}
-				htmlFor={formItemId}
-				{...props}
-			>
-				{children}
-			</Label>
-			{required && (
-				<span className="rounded bg-destructive px-1.5 py-0.5 text-xs font-medium text-destructive-foreground">
-					必須
-				</span>
-			)}
-			{optional && (
-				<span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
-					任意
-				</span>
-			)}
-		</div>
-	);
-});
+		return (
+			<div className="flex items-center gap-2">
+				<Label
+					ref={ref}
+					className={cn(error && "text-destructive", className)}
+					htmlFor={formItemId}
+					{...props}
+				>
+					{children}
+				</Label>
+				{required && (
+					<span className="rounded bg-destructive px-1.5 py-0.5 text-xs font-medium text-destructive-foreground">
+						必須
+					</span>
+				)}
+				{optional && (
+					<span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground border border-border">
+						任意
+					</span>
+				)}
+			</div>
+		);
+	},
+);
 FormLabel.displayName = "FormLabel";
 
 /**
@@ -214,18 +207,13 @@ const FormControl = React.forwardRef<
 	React.ElementRef<typeof Slot>,
 	React.ComponentPropsWithoutRef<typeof Slot>
 >(({ ...props }, ref) => {
-	const { error, formItemId, formDescriptionId, formMessageId } =
-		useFormField();
+	const { error, formItemId, formDescriptionId, formMessageId } = useFormField();
 
 	return (
 		<Slot
 			ref={ref}
 			id={formItemId}
-			aria-describedby={
-				!error
-					? `${formDescriptionId}`
-					: `${formDescriptionId} ${formMessageId}`
-			}
+			aria-describedby={!error ? `${formDescriptionId}` : `${formDescriptionId} ${formMessageId}`}
 			aria-invalid={!!error}
 			{...props}
 		/>

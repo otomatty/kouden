@@ -43,7 +43,7 @@ const searchOptions = [
 		value: "name",
 		label: "ご芳名",
 		icon: <User className="h-4 w-4" />,
-		description: "参列者のお名前で検索",
+		description: "参列者の氏名で検索",
 	},
 	{
 		value: "address",
