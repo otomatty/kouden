@@ -47,6 +47,7 @@ export type EditableColumnConfig =
 			type: "additional-select";
 			options: SelectOption[];
 			addOptionPlaceholder?: string;
+			onAddOption?: (option: SelectOption, rowId?: string) => Promise<string>;
 	  }
 	| {
 			type: "searchable-selector";

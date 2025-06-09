@@ -53,6 +53,7 @@ export async function getRelationships(koudenId: string) {
 				name,
 				description,
 				is_default,
+				is_enabled,
 				kouden_id,
 				created_at,
 				updated_at,

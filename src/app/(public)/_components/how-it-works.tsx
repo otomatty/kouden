@@ -21,7 +21,7 @@ const steps = [
 		description: "適切な返礼品を選定し、香典返しの状況を管理できます。",
 	},
 	{
-		id: "delivery-optimization",
+		id: "check-koudens",
 		icon: UserSearch,
 		title: "香典の確認",
 		description: "確認したいときに、いただいた香典の内容を確認できます。",
@@ -43,9 +43,6 @@ export function HowItWorksSection() {
 							key={step.id}
 							className="relative flex flex-row items-start text-left space-x-4 lg:flex-col lg:items-center lg:text-center lg:space-y-4 lg:space-x-0"
 						>
-							{step.id !== "delivery-optimization" && (
-								<div className="hidden lg:block absolute top-8 left-1/2 w-full h-0.5 bg-gray-200 dark:bg-gray-700" />
-							)}
 							<div className="relative">
 								<div className="p-3 bg-primary/10 rounded-full">
 									<step.icon className="w-6 h-6 text-primary" />

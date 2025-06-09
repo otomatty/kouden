@@ -1,5 +1,6 @@
 import { Header } from "./_components/header";
 import { Footer } from "./_components/footer";
+import { MobileBottomNavigation } from "./_components/mobile-bottom-navigation";
 import type { Metadata } from "next";
 import pkg from "../../../package.json";
 
@@ -15,8 +16,9 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
 	return (
 		<>
 			<Header version={version} />
-			<main className="mt-16 min-h-screen">{children}</main>
+			<main className="mt-16 min-h-screen overflow-x-hidden">{children}</main>
 			<Footer />
+			<MobileBottomNavigation />
 		</>
 	);
 }

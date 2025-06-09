@@ -30,7 +30,7 @@ export default function LoginPage() {
 										href="https://accounts.google.com/signup"
 										target="_blank"
 										rel="noopener noreferrer"
-										className="text-primary hover:underline"
+										className="text-blue-500 underline"
 									>
 										こちら
 									</a>

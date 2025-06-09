@@ -85,6 +85,7 @@ export async function getContactRequestDetail(requestId: string) {
 			*,
 			contact_responses (
 				id,
+				request_id,
 				responder_id,
 				response_message,
 				created_at

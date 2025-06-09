@@ -2,12 +2,12 @@ import { getContactRequestDetail } from "@/app/_actions/contact";
 import ContactDetail from "./_components/contact-detail";
 import ResponseList from "./_components/response-list";
 
-interface PageProps {
-	params: { id: string };
-}
-
-export default async function ContactDetailPage({ params }: PageProps) {
-	const { id } = params;
+export default async function ContactDetailPage({
+	params,
+}: {
+	params: Promise<{ id: string }>;
+}) {
+	const { id } = await params;
 	const data = await getContactRequestDetail(id);
 
 	return (

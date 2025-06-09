@@ -75,6 +75,7 @@ const navItems: NavItem[] = [
 	{ type: "link", name: "料金", href: "/pricing" },
 	{ type: "dropdown", name: "機能", items: features },
 	{ type: "link", name: "使い方", href: "/guide" },
+	{ type: "link", name: "企業", href: "/enterprise" },
 ];
 
 export function HeaderNavigation() {
