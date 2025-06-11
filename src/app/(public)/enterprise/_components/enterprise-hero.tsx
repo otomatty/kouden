@@ -2,16 +2,18 @@
 
 import React from "react";
 import Link from "next/link";
+import { zenOldMincho } from "@/app/fonts";
 import { Button } from "@/components/ui/button";
+import { Section } from "@/components/ui/section";
 
 /**
  * Heroセクション
  */
 export function EnterpriseHero() {
 	return (
-		<section className="bg-gray-50 py-20">
-			<div className="container mx-auto px-4 text-center">
-				<h1 className="text-4xl font-bold mb-4">
+		<Section bgClassName="bg-background" className="py-32">
+			<div className="text-center">
+				<h1 className={`text-4xl font-bold mb-4 ${zenOldMincho.className}`}>
 					故人を偲ぶ大切な時間を、煩雑な作業で奪わないために。
 				</h1>
 				<p className="text-lg text-gray-600 mb-8">
@@ -22,10 +24,10 @@ export function EnterpriseHero() {
 						<Link href="#partner-programs">パートナーシップの詳細を見る</Link>
 					</Button>
 					<Button asChild variant="outline">
-						<Link href="#contact-form">3分でわかるサービス資料ダウンロード</Link>
+						<Link href="#contact-form">オンラインデモを予約する</Link>
 					</Button>
 				</div>
 			</div>
-		</section>
+		</Section>
 	);
 }

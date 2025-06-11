@@ -1,34 +1,48 @@
 import type React from "react";
 import { Users, Box, TrendingUp } from "lucide-react";
+import { SectionTitle } from "@/components/ui/section-title";
+import { Section } from "@/components/ui/section";
 
 interface Program {
 	title: string;
 	target: string;
 	value: string;
-	details: string;
+	details: string[];
 	icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
 }
 
 const programs: Program[] = [
 	{
-		title: "カスタマーサポート・パートナー",
-		target: "葬儀社様、寺院様",
-		value: "ご遺族の負担を軽減し、「感謝されるサポート」を実現します。",
-		details: "ご紹介用パンフレットやツールの無償提供、貴社専用特典コードの発行など。",
+		title: "サポートパートナー",
+		target: "葬儀社様・寺院様",
+		value: "香典管理を自動化し、手間を大幅削減。",
+		details: [
+			"QRコードスキャンで香典情報を自動登録",
+			"月次レポートをPDFで自動生成・配布",
+			"24時間以内のトラブル対応と操作サポート",
+		],
 		icon: Users,
 	},
 	{
-		title: "ソリューション・パートナー",
+		title: "ソリューションパートナー",
 		target: "ギフトショップ運営事業者様",
-		value: "香典返し選びの手間と不安を解消し、感謝の伝わる購買体験を創ります。",
-		details: "API連携によるシームレスなデータ連携、商品レコメンド機能の共同開発など。",
+		value: "システム連携で受注・在庫管理を",
+		details: [
+			"受注・在庫データを顧客管理システムと自動同期",
+			"在庫閾値割れ時にSlack通知を自動送信",
+			"注文データ分析によるレコメンド機能開発",
+		],
 		icon: Box,
 	},
 	{
-		title: "ビジネスデベロップメント・パートナー",
-		target: "新規事業を模索する企業様、VC様",
-		value: "「ライフエンディング・テック」の温かい市場を共に開拓します。",
-		details: "資本業務提携を通じた経営連携、新機能・新サービスの共同開発。",
+		title: "ビジネスパートナー",
+		target: "新規事業を模索する企業様",
+		value: "市場拡大と新サービス開発を共に推進。",
+		details: [
+			"新サービス企画の共同ワークショップ開催",
+			"四半期ごとの市場分析レポート提供",
+			"契約交渉・法務サポートの提供",
+		],
 		icon: TrendingUp,
 	},
 ];
@@ -38,24 +52,34 @@ const programs: Program[] = [
  */
 export function PartnerPrograms() {
 	return (
-		<section id="partner-programs" className="container mx-auto px-4">
-			<h2 className="text-2xl font-semibold text-center mb-8">
-				貴社のビジネスを成長させる3つのパートナーシップ
-			</h2>
+		<Section id="partner-programs">
+			<SectionTitle
+				title="3つのパートナーシップ"
+				subtitle="企業向けサービス概要"
+				className="mb-12"
+			/>
 			<div className="grid gap-8 md:grid-cols-3">
 				{programs.map((p) => (
 					<div
 						key={p.title}
-						className="p-6 bg-white rounded-lg shadow hover:shadow-lg transform hover:-translate-y-1 transition"
+						className="relative p-8 bg-white rounded-lg shadow-sm hover:shadow-lg transition border border-border"
 					>
-						<p.icon className="h-10 w-10 text-secondary mb-4 mx-auto" />
-						<h3 className="text-xl font-medium mb-1">{p.title}</h3>
-						<p className="text-sm text-gray-500 mb-2">{p.target}</p>
-						<p className="font-medium mb-2">{p.value}</p>
-						<p className="text-gray-600">{p.details}</p>
+						<span className="absolute z-10 top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-sm text-primary border border-border rounded-full p-1">
+							{p.target}
+						</span>
+						<p.icon className="absolute bottom-4 right-4 h-32 w-32 text-secondary opacity-10" />
+						<div className="relative z-10 flex flex-col items-center text-center">
+							<h3 className="text-2xl md:text-3xl font-bold mb-2">{p.title}</h3>
+							<p className="text-lg md:text-xl font-semibold mb-4">{p.value}</p>
+							<ul className="list-disc list-inside text-gray-600 space-y-2 self-start text-left">
+								{p.details.map((d) => (
+									<li key={d}>{d}</li>
+								))}
+							</ul>
+						</div>
 					</div>
 				))}
 			</div>
-		</section>
+		</Section>
 	);
 }

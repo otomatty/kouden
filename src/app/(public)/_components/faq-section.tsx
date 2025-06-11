@@ -8,6 +8,7 @@ import {
 	AccordionContent,
 } from "@/components/ui/accordion";
 import { SectionTitle } from "@/components/ui/section-title";
+import { Section } from "@/components/ui/section";
 
 interface FAQ {
 	id: string;
@@ -46,24 +47,22 @@ export interface FAQSectionProps {
 
 export function FAQSection({ faqs = defaultFaqs }: FAQSectionProps) {
 	return (
-		<section className="py-16 md:py-32 bg-white dark:bg-gray-800">
-			<div className="container px-4 md:px-6 mx-auto">
-				<SectionTitle
-					title="よくある質問"
-					subtitle="ご不明点はこちらをご覧ください"
-					className="mb-16"
-				/>
-				<Accordion type="single" collapsible className="space-y-4">
-					{faqs.map((faq) => (
-						<AccordionItem key={faq.id} value={faq.id}>
-							<AccordionTrigger>{faq.question}</AccordionTrigger>
-							<AccordionContent>
-								<p className="text-gray-500 dark:text-gray-400">{faq.answer}</p>
-							</AccordionContent>
-						</AccordionItem>
-					))}
-				</Accordion>
-			</div>
-		</section>
+		<Section bgClassName="bg-white dark:bg-gray-800">
+			<SectionTitle
+				title="よくある質問"
+				subtitle="ご不明点はこちらをご覧ください"
+				className="mb-16"
+			/>
+			<Accordion type="single" collapsible className="space-y-4">
+				{faqs.map((faq) => (
+					<AccordionItem key={faq.id} value={faq.id}>
+						<AccordionTrigger>{faq.question}</AccordionTrigger>
+						<AccordionContent>
+							<p className="text-gray-500 dark:text-gray-400">{faq.answer}</p>
+						</AccordionContent>
+					</AccordionItem>
+				))}
+			</Accordion>
+		</Section>
 	);
 }

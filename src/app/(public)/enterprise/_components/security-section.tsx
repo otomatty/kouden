@@ -1,12 +1,18 @@
 import React from "react";
+import { SectionTitle } from "@/components/ui/section-title";
+import { Section } from "@/components/ui/section";
 
 /**
  * 安心・安全への取り組みセクション
  */
 export function SecuritySection() {
 	return (
-		<section id="security" className="container mx-auto px-4">
-			<h2 className="text-2xl font-semibold text-center mb-8">安心・安全への取り組み</h2>
+		<Section id="security">
+			<SectionTitle
+				title="安心・安全への取り組み"
+				subtitle="お客様のデータとプライバシーを守る"
+				className="mb-8"
+			/>
 			<div className="grid gap-8 md:grid-cols-2">
 				<div className="p-6 bg-white rounded-lg shadow">
 					<h3 className="text-xl font-medium mb-2">個人情報保護・セキュリティ</h3>
@@ -36,6 +42,6 @@ export function SecuritySection() {
 					</div>
 				</div>
 			</div>
-		</section>
+		</Section>
 	);
 }

@@ -26,7 +26,7 @@ export function Footer() {
 	return (
 		<footer className="border-t bg-background">
 			<div className="container px-4 md:px-6 py-8 mx-auto">
-				<div className="grid grid-cols-2 md:grid-cols-5 gap-8">
+				<div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-8">
 					<div className="space-y-4 col-span-2 md:col-span-1">
 						<h2 className="text-lg font-semibold">香典帳</h2>
 						<p className="text-sm text-muted-foreground">
@@ -98,6 +98,44 @@ export function Footer() {
 									</Link>
 								</li>
 							))}
+						</ul>
+					</div>
+
+					<div>
+						<h3 className="font-semibold mb-4">企業</h3>
+						<ul className="space-y-3">
+							<li>
+								<Link
+									href="/enterprise"
+									className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+								>
+									企業向け機能
+								</Link>
+							</li>
+							<li>
+								<Link
+									href="/funeral-management"
+									className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+								>
+									葬儀会社管理
+								</Link>
+							</li>
+							<li>
+								<Link
+									href="/gift-management"
+									className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+								>
+									ギフトショップ管理
+								</Link>
+							</li>
+							<li>
+								<Link
+									href="/organizations/request"
+									className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+								>
+									法人アカウント申請
+								</Link>
+							</li>
 						</ul>
 					</div>
 				</div>

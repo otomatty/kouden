@@ -9,26 +9,36 @@ import { useRouter } from "next/navigation";
 
 interface AuthFormProps {
 	invitationToken?: string;
+	redirectTo?: string;
 }
 
-export function AuthForm({ invitationToken }: AuthFormProps) {
+export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFormProps) {
 	const router = useRouter();
 	const [email, setEmail] = useState("");
 	const [message, setMessage] = useState<string | null>(null);
-	const [redirectTo, setRedirectTo] = useState<string>("");
+	const [redirectUrl, setRedirectUrl] = useState<string>("");
 	const supabase = createClient();
 
 	useEffect(() => {
-		const origin = window.location.origin;
-		const baseUrl = `${origin}/auth/callback`;
-		setRedirectTo(invitationToken ? `${baseUrl}?token=${invitationToken}` : baseUrl);
+		// Build callback URL for Supabase OAuth (include invitation token if present)
+		const base = `${window.location.origin}/auth/callback`;
+		const params = new URLSearchParams();
+		if (invitationToken) {
+			params.append("token", invitationToken);
+		}
+		const callbackUrl = params.toString() ? `${base}?${params.toString()}` : base;
+		setRedirectUrl(callbackUrl);
 	}, [invitationToken]);
 
 	const handleMagicLinkLogin = async () => {
 		try {
+			// Store post-login redirect in cookie if provided
+			if (propRedirectTo) {
+				document.cookie = `post_auth_redirect=${encodeURIComponent(propRedirectTo)}; path=/; SameSite=Lax`;
+			}
 			const { error } = await supabase.auth.signInWithOtp({
 				email,
-				options: { emailRedirectTo: redirectTo },
+				options: { emailRedirectTo: redirectUrl },
 			});
 			if (error) throw error;
 			router.push(`/auth/sent?email=${encodeURIComponent(email)}`);
@@ -43,9 +53,13 @@ export function AuthForm({ invitationToken }: AuthFormProps) {
 
 	const handleGoogleLogin = async () => {
 		try {
+			// Store post-login redirect in cookie if provided
+			if (propRedirectTo) {
+				document.cookie = `post_auth_redirect=${encodeURIComponent(propRedirectTo)}; path=/; SameSite=Lax`;
+			}
 			const { error } = await supabase.auth.signInWithOAuth({
 				provider: "google",
-				options: { redirectTo },
+				options: { redirectTo: redirectUrl },
 			});
 			if (error) throw error;
 		} catch (error) {

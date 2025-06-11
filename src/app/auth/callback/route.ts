@@ -8,6 +8,8 @@ export async function GET(request: Request) {
 	const code = requestUrl.searchParams.get("code");
 	const cookieStore = await cookies();
 	const invitationToken = cookieStore.get("invitation_token")?.value;
+	// Read custom redirect target (deprecated, cookie override used)
+	const redirectToParam = requestUrl.searchParams.get("redirectTo");
 
 	try {
 		const supabase = await createClient();
@@ -18,6 +20,13 @@ export async function GET(request: Request) {
 				console.error("Auth error during exchange:", authError);
 				return Response.redirect(new URL("/auth/login", requestUrl.origin));
 			}
+		}
+
+		// Check for post-auth redirect cookie
+		const postRedirect = cookieStore.get("post_auth_redirect")?.value;
+		if (postRedirect) {
+			cookieStore.delete("post_auth_redirect");
+			return Response.redirect(new URL(postRedirect, requestUrl.origin));
 		}
 
 		const {
@@ -41,6 +50,20 @@ export async function GET(request: Request) {
 			}
 		}
 
+		// If a custom redirect was requested, go there first
+		if (redirectToParam) {
+			return Response.redirect(new URL(redirectToParam, requestUrl.origin));
+		}
+
+		// Determine application access based on organization membership
+		const { data: memberships } = await supabase
+			.from("organization_members")
+			.select("organization_id")
+			.eq("user_id", user.id);
+		if ((memberships?.length ?? 0) > 0) {
+			return Response.redirect(new URL("/application-select", requestUrl.origin));
+		}
+		// default to main app
 		return Response.redirect(new URL("/koudens", requestUrl.origin));
 	} catch (error) {
 		console.error("Error in auth callback:", error);

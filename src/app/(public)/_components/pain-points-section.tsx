@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { FileSpreadsheet, Users2, Calculator, History } from "lucide-react";
 import { SectionTitle } from "@/components/ui/section-title";
+import { Section } from "@/components/ui/section";
 
 type Story = {
 	text: string;
@@ -115,33 +116,31 @@ const StoryText = ({ text, emphasizedWords }: Story) => {
 
 export function PainPointsSection() {
 	return (
-		<section className="py-16 md:py-32 bg-gray-50 dark:bg-gray-900/50">
-			<div className="container mx-auto px-4 md:px-6">
-				<SectionTitle
-					title="こんなお困りごとはありませんか？"
-					subtitle="香典の管理でよくある悩みをすべて解決します"
-					className="mb-12"
-				/>
-				<div className="grid gap-4 md:grid-cols-2">
-					{painPoints.map((point) => (
-						<Card key={point.id} className="p-8 space-y-6 hover:shadow-lg transition-shadow">
-							<div className="flex items-center gap-4">
-								<div className="p-2 bg-primary/10 rounded-lg">{point.icon}</div>
-								<h3 className="text-2xl font-bold">{point.title}</h3>
-							</div>
-							<ul className="text-gray-500 dark:text-gray-400 space-y-4 list-disc pl-6">
-								{point.stories.map((story, index) => (
-									<StoryText
-										key={`${point.id}-story-${index}`}
-										text={story.text}
-										emphasizedWords={story.emphasizedWords}
-									/>
-								))}
-							</ul>
-						</Card>
-					))}
-				</div>
+		<Section id="pain-points" bgClassName="bg-gray-50 dark:bg-gray-900/50">
+			<SectionTitle
+				title="こんなお困りごとはありませんか？"
+				subtitle="香典の管理でよくある悩みをすべて解決します"
+				className="mb-12"
+			/>
+			<div className="grid gap-4 md:grid-cols-2">
+				{painPoints.map((point) => (
+					<Card key={point.id} className="p-8 space-y-6 hover:shadow-lg transition-shadow">
+						<div className="flex items-center gap-4">
+							<div className="p-2 bg-primary/10 rounded-lg">{point.icon}</div>
+							<h3 className="text-2xl font-bold">{point.title}</h3>
+						</div>
+						<ul className="text-gray-500 dark:text-gray-400 space-y-4 list-disc pl-6">
+							{point.stories.map((story, index) => (
+								<StoryText
+									key={`${point.id}-story-${index}`}
+									text={story.text}
+									emphasizedWords={story.emphasizedWords}
+								/>
+							))}
+						</ul>
+					</Card>
+				))}
 			</div>
-		</section>
+		</Section>
 	);
 }

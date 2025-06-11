@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
 	LayoutDashboard,
+	Briefcase,
 	Users,
 	Bell,
 	LifeBuoy,
@@ -15,6 +16,7 @@ import {
 
 const navigation = [
 	{ name: "ダッシュボード", href: "/admin", icon: LayoutDashboard },
+	{ name: "組織管理", href: "/admin/organizations", icon: Briefcase },
 	{ name: "管理者", href: "/admin/users", icon: Users },
 	{ name: "お知らせ", href: "/admin/announcements", icon: Bell },
 	{ name: "サポート", href: "/admin/support", icon: LifeBuoy },
@@ -49,9 +51,7 @@ export function AdminSidebar() {
 								>
 									<item.icon
 										className={cn(
-											isActive
-												? "text-white"
-												: "text-gray-400 group-hover:text-white",
+											isActive ? "text-white" : "text-gray-400 group-hover:text-white",
 											"mr-3 h-5 w-5 flex-shrink-0",
 										)}
 									/>

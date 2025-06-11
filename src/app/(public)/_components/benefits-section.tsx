@@ -1,5 +1,6 @@
 import { Clock, Heart, Shield } from "lucide-react";
 import { SectionTitle } from "@/components/ui/section-title";
+import { Section } from "@/components/ui/section";
 
 const benefits = [
 	{
@@ -27,30 +28,28 @@ const benefits = [
 
 export function BenefitsSection() {
 	return (
-		<section className="py-16 md:py-32 bg-white dark:bg-gray-800">
-			<div className="container px-4 md:px-6 mx-auto">
-				<SectionTitle
-					title="導入のメリット"
-					subtitle="デジタル化による効率化で、より大切なことに時間を使えます"
-					className="mb-16"
-				/>
-				<div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-					{benefits.map((benefit) => (
-						<div
-							key={benefit.id}
-							className="flex flex-row items-start text-left space-x-4 md:flex-col md:items-center md:text-center md:space-y-4 md:space-x-0"
-						>
-							<div className="p-3 bg-primary/10 rounded-full">
-								<benefit.icon className="w-6 h-6 text-primary" />
-							</div>
-							<div className="flex-1">
-								<h3 className="text-xl font-bold">{benefit.title}</h3>
-								<p className="text-gray-500 dark:text-gray-400">{benefit.description}</p>
-							</div>
+		<Section id="benefits" bgClassName="bg-white dark:bg-gray-800">
+			<SectionTitle
+				title="導入のメリット"
+				subtitle="デジタル化による効率化で、より大切なことに時間を使えます"
+				className="mb-16"
+			/>
+			<div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+				{benefits.map((benefit) => (
+					<div
+						key={benefit.id}
+						className="flex flex-row items-start text-left space-x-4 md:flex-col md:items-center md:text-center md:space-y-4 md:space-x-0"
+					>
+						<div className="p-3 bg-primary/10 rounded-full">
+							<benefit.icon className="w-6 h-6 text-primary" />
 						</div>
-					))}
-				</div>
+						<div className="flex-1">
+							<h3 className="text-xl font-bold">{benefit.title}</h3>
+							<p className="text-gray-500 dark:text-gray-400">{benefit.description}</p>
+						</div>
+					</div>
+				))}
 			</div>
-		</section>
+		</Section>
 	);
 }

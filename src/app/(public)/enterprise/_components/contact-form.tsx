@@ -13,14 +13,20 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { SectionTitle } from "@/components/ui/section-title";
+import { Section } from "@/components/ui/section";
 
 /**
  * お問い合わせ / 資料請求セクション
  */
 export function ContactForm() {
 	return (
-		<section id="contact-form" className="container mx-auto px-4 pb-16">
-			<h2 className="text-2xl font-semibold text-center mb-8">お問い合わせ / 資料請求</h2>
+		<Section id="contact-form" className="pb-16">
+			<SectionTitle
+				title="お問い合わせ / 資料請求"
+				subtitle="サービス資料のダウンロードはこちら"
+				className="mb-8"
+			/>
 			<form className="max-w-md mx-auto bg-white p-6 rounded-lg shadow grid gap-4">
 				<div>
 					<Label htmlFor="email">メールアドレス</Label>
@@ -48,6 +54,6 @@ export function ContactForm() {
 					資料をダウンロード
 				</Button>
 			</form>
-		</section>
+		</Section>
 	);
 }
