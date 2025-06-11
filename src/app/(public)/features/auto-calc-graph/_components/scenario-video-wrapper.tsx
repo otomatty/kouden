@@ -22,23 +22,16 @@ const scenarios: Scenario[] = [
 	{
 		id: "duplicate-check",
 		title: "重複チェック",
-		description: "入力済みの同一データを自動で検出して通知する機能よ。",
+		description: "似たようなデータを自動で検出して通知します。",
 		icon: CheckCircle,
 		videoUrl: "/videos/auto-calc-graph/duplicate-check.mp4",
 	},
 	{
 		id: "category-filter",
 		title: "カテゴリフィルタリング",
-		description: "葬儀／返礼などカテゴリ別にグラフを切り替え表示できるわ。",
+		description: "葬儀／返礼などカテゴリ別にグラフを表示できます。",
 		icon: Filter,
 		videoUrl: "/videos/auto-calc-graph/category-filter.mp4",
-	},
-	{
-		id: "period-compare",
-		title: "期間比較",
-		description: "任意の2期間を並べて支出推移を比較できるダッシュボードよ。",
-		icon: BarChart,
-		videoUrl: "/videos/auto-calc-graph/period-compare.mp4",
 	},
 ];
 

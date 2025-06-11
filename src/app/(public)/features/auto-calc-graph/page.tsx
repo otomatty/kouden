@@ -8,6 +8,7 @@ import { TestimonialsSection } from "../_components/TestimonialsSection";
 import { testimonials } from "./testimonials";
 import { OtherFeaturesList } from "../_components/OtherFeaturesList";
 import { CTASection } from "../../_components/cta-section";
+import { Section } from "@/components/ui/section";
 
 export const metadata: Metadata = {
 	title: "自動計算＆グラフ表示 | 機能詳細 | 香典帳",
@@ -35,32 +36,32 @@ export default function AutoCalcGraphPage() {
 	];
 
 	return (
-		<div className="space-y-24">
+		<div className="space-y-8">
 			<PageHero
 				title="自動計算＆グラフ表示"
 				subtitle="金額ミスを防ぎ、視覚的にデータを把握"
 				className="bg-background"
 			/>
-			<section className="py-16 container mx-auto">
+			<Section>
 				<div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
 					{/* デモ動画またはスクリーンショット */}
 					動画/スクリーンショット
 				</div>
-			</section>
+			</Section>
 
-			<section className="container mx-auto">
+			<Section>
 				<SectionTitle title="特徴" className="mb-8" />
 				<div className="grid md:grid-cols-3 gap-8">
 					{points.map((p) => (
 						<FeaturePointCard key={p.title} {...p} />
 					))}
 				</div>
-			</section>
+			</Section>
 
-			<section className="container mx-auto">
+			<Section>
 				<SectionTitle title="利用シーン" className="mb-8" />
 				<ScenarioVideoWrapper />
-			</section>
+			</Section>
 
 			<TestimonialsSection testimonials={testimonials} />
 

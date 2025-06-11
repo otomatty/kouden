@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { LayoutDashboard, SlidersHorizontal, Moon } from "lucide-react";
 import { PageHero } from "../../_components/page-hero";
 import { SectionTitle } from "@/components/ui/section-title";
+import { Section } from "@/components/ui/section";
+import { MediaSection } from "../_components/MediaSection";
 import { FeaturePointCard } from "../_components/FeaturePointCard";
 import ScenarioVideoWrapper from "./_components/scenario-video-wrapper";
 import { TestimonialsSection } from "../_components/TestimonialsSection";
@@ -34,32 +36,27 @@ export default function DedicatedUIPage() {
 	];
 
 	return (
-		<div className="space-y-24">
+		<div className="space-y-8">
 			<PageHero
 				title="使いやすいUI"
 				subtitle="迷わず直感的に操作できるデザイン"
 				className="bg-background"
 			/>
-			<section className="py-16 container mx-auto">
-				<div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
-					{/* デモ動画またはスクリーンショット */}
-					動画/スクリーンショット
-				</div>
-			</section>
+			<MediaSection />
 
-			<section className="container mx-auto">
+			<Section>
 				<SectionTitle title="特徴" className="mb-8" />
-				<div className="grid md:grid-cols-3 gap-8">
+				<div className="grid md:grid-cols-3 gap-4">
 					{points.map((p) => (
 						<FeaturePointCard key={p.title} {...p} />
 					))}
 				</div>
-			</section>
+			</Section>
 
-			<section className="container mx-auto">
+			<Section>
 				<SectionTitle title="利用シーン" className="mb-8" />
 				<ScenarioVideoWrapper />
-			</section>
+			</Section>
 
 			<TestimonialsSection testimonials={testimonials} />
 

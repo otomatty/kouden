@@ -1,16 +1,8 @@
 import Link from "next/link";
 import { SectionTitle } from "@/components/ui/section-title";
-import {
-	Cloud,
-	BarChart2,
-	FileText,
-	Monitor,
-	Gift,
-	Lock,
-	LayoutDashboard,
-	Timer,
-} from "lucide-react";
+import { Cloud, BarChart2, FileText, Monitor, Gift, Lock, LayoutDashboard } from "lucide-react";
 import type React from "react";
+import { Section } from "@/components/ui/section";
 
 type FeatureItem = {
 	id: string;
@@ -58,7 +50,7 @@ const iconMap: Record<string, React.ComponentType<React.SVGProps<SVGSVGElement>>
 export function OtherFeaturesList({ currentFeatureId }: { currentFeatureId: string }) {
 	const others = featuresList.filter((f) => f.id !== currentFeatureId);
 	return (
-		<section className="py-16 container mx-auto">
+		<Section>
 			<SectionTitle title="他の機能も見る" className="mb-8" />
 			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 				{others.map((f) => {
@@ -81,6 +73,6 @@ export function OtherFeaturesList({ currentFeatureId }: { currentFeatureId: stri
 					);
 				})}
 			</div>
-		</section>
+		</Section>
 	);
 }

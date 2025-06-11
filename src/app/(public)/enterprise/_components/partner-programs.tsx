@@ -24,8 +24,8 @@ const programs: Program[] = [
 		icon: Users,
 	},
 	{
-		title: "ソリューションパートナー",
-		target: "ギフトショップ運営事業者様",
+		title: "ECパートナー",
+		target: "ギフトショップ様",
 		value: "システム連携で受注・在庫管理を",
 		details: [
 			"受注・在庫データを顧客管理システムと自動同期",

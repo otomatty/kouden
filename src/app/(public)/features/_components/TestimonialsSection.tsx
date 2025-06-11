@@ -14,7 +14,7 @@ export function TestimonialsSection({
 	return (
 		<section>
 			<SectionTitle title="利用者の声" className="mb-8" />
-			<div className="flex space-x-6 overflow-x-auto pb-4 px-48 scrollbar-hide">
+			<div className="flex space-x-4 overflow-x-auto pb-4 px-56 scrollbar-hide">
 				{testimonials.map((t) => (
 					<TestimonialCard
 						key={t.id}
