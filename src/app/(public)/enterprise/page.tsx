@@ -7,6 +7,8 @@ import { RoadmapTimeline } from "./_components/roadmap-timeline";
 import { SecuritySection } from "./_components/security-section";
 import CalendarSection from "./_components/calendar-section";
 
+export const dynamic = "force-dynamic";
+
 /**
  * 企業向け紹介ページ
  */
