@@ -1,8 +1,8 @@
 import { Header } from "@/app/(public)/_components/header";
 import { LoginForm } from "./_components/login-form";
-import pkg from "../../../../package.json";
 
-const version = pkg.version;
+// Version fetched from environment variable
+const version = process.env.NEXT_PUBLIC_APP_VERSION ?? "";
 
 export default function LoginPage() {
 	return (

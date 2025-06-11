@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import AppSelectHeader from "./_components/app-select-header";
 import { createClient } from "@/lib/supabase/server";
-import pkg from "../../../package.json";
 
-const version = pkg.version;
+// Version fetched from environment variable
+const version = process.env.NEXT_PUBLIC_APP_VERSION ?? "";
 
 export default async function OrganizationsLayout({ children }: { children: ReactNode }) {
 	const supabase = await createClient();

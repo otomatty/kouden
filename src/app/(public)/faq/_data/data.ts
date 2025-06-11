@@ -16,13 +16,13 @@ export const data: FAQCategory = {
 		},
 		{
 			id: "faq-data-4",
-			question: "CSVエクスポートの方法は？",
-			answer: "記録一覧画面のエクスポートボタンからCSV形式でダウンロードできます。",
+			question: "PDFをダウンロードする方法は？",
+			answer: "記録一覧画面のエクスポートボタンからPDF形式でダウンロードできます。",
 		},
 		{
 			id: "faq-data-5",
 			question: "Excel形式で出力できますか？",
-			answer: "はい、CSVをExcelで開くか、設定からExcel形式でエクスポート可能です。",
+			answer: "はい、Excel形式で出力可能です(有料プランのみ)",
 		},
 		{
 			id: "faq-data-6",

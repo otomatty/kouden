@@ -8,7 +8,7 @@ export function CTASection() {
 		<Section bgClassName="bg-primary text-primary-foreground" className="py-24">
 			<div className="flex flex-col items-center space-y-4">
 				<SectionTitle
-					title="今すぐ始めましょう"
+					title="すぐに利用できます"
 					subtitle="香典帳の管理をより簡単に、より効率的に。無料でアカウントを作成して、すぐに使い始めることができます。"
 					className="text-primary-foreground [&_p]:text-primary-foreground/80"
 				/>

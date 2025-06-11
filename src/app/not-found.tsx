@@ -1,13 +1,13 @@
 import { Header } from "./(public)/_components/header";
 import { Footer } from "./(public)/_components/footer";
 import { MobileBottomNavigation } from "./(public)/_components/mobile-bottom-navigation";
-import pkg from "../../package.json";
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
-const version = pkg.version;
+// Version fetched from environment variable
+const version = process.env.NEXT_PUBLIC_APP_VERSION ?? "";
 
 export default function NotFound() {
 	return (

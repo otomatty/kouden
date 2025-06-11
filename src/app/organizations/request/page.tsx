@@ -3,7 +3,6 @@ import Container from "@/components/ui/container";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { BackLink } from "@/components/custom/BackLink";
 
 export default async function RequestPage() {
 	const supabase = await createClient();
@@ -14,7 +13,10 @@ export default async function RequestPage() {
 	if (!user) {
 		redirect(`/auth/login?redirectTo=${encodeURIComponent("/organizations/request")}`);
 	}
-	const { data: types } = await supabase.from("organization_types").select("id, name");
+	const { data: types } = await supabase
+		.schema("common")
+		.from("organization_types")
+		.select("id, name");
 	return (
 		<Container className="py-8">
 			<OrganizationRequestForm types={types ?? []} />

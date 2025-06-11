@@ -16,6 +16,7 @@ export async function requireOrganizationAccess(type: "funeral_company" | "gift_
 
 	// find type ID
 	const { data: typeRecord } = await supabase
+		.schema("common")
 		.from("organization_types")
 		.select("id")
 		.eq("name", type)
@@ -26,11 +27,16 @@ export async function requireOrganizationAccess(type: "funeral_company" | "gift_
 	}
 
 	// fetch organizations of this type
-	const { data: orgs } = await supabase.from("organizations").select("id").eq("type_id", typeId);
+	const { data: orgs } = await supabase
+		.schema("common")
+		.from("organizations")
+		.select("id")
+		.eq("type_id", typeId);
 	const orgIds = orgs?.map((o) => o.id) ?? [];
 
 	// check membership
 	const { data: memberships } = await supabase
+		.schema("common")
 		.from("organization_members")
 		.select("organization_id")
 		.in("organization_id", orgIds)

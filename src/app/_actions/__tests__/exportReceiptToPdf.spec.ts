@@ -75,6 +75,12 @@ describe("exportReceiptToPdf", () => {
 						eq: () => ({ single: () => Promise.resolve({ data: mockKouden, error: null }) }),
 					}),
 				})
+				// notification_types select
+				.mockReturnValueOnce({
+					select: () => ({
+						eq: () => ({ single: () => Promise.resolve({ data: { id: "nt1" }, error: null }) }),
+					}),
+				})
 				// notifications insert
 				.mockReturnValueOnce({
 					insert: () => ({ single: () => Promise.resolve({ error: null }) }),

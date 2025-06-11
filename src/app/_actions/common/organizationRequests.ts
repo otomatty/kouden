@@ -9,12 +9,17 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export async function approveOrganization(id: string) {
 	const supabase = await createClient();
 	// Approve organization
-	const { error } = await supabase.from("organizations").update({ status: "active" }).eq("id", id);
+	const { error } = await supabase
+		.schema("common")
+		.from("organizations")
+		.update({ status: "active" })
+		.eq("id", id);
 	if (error) {
 		throw new Error(error.message);
 	}
 	// Fetch requester and organization name
 	const { data: org } = await supabase
+		.schema("common")
 		.from("organizations")
 		.select("requested_by, name")
 		.eq("id", id)
@@ -24,6 +29,7 @@ export async function approveOrganization(id: string) {
 		const orgName = org.name;
 		// add membership for requester as admin; ignore duplicate errors
 		const { error: memberError } = await supabase
+			.schema("common")
 			.from("organization_members")
 			.insert({ organization_id: id, user_id: requesterId, role: "admin" });
 		if (memberError) {
@@ -60,6 +66,7 @@ export async function approveOrganization(id: string) {
 export async function rejectOrganization(id: string) {
 	const supabase = await createClient();
 	const { error } = await supabase
+		.schema("common")
 		.from("organizations")
 		.update({ status: "rejected" })
 		.eq("id", id);

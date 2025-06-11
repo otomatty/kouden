@@ -14,6 +14,7 @@ export default async function ApplicationSelectPage() {
 	}
 	// fetch organization types via relational nesting (using slug)
 	const { data: membershipsWithTypes, error: typeError } = await supabase
+		.schema("common")
 		.from("organization_members")
 		.select(`
 			organizations (

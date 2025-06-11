@@ -16,6 +16,10 @@ const config: NextConfig = withPWA({
 	compress: true,
 	poweredByHeader: false,
 	reactStrictMode: true,
+	// Disable automatic Google Font optimization to avoid network fetches at build time
+	experimental: {
+		optimizeFonts: false,
+	},
 
 	// セキュリティヘッダーの設定
 	async headers() {

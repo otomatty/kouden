@@ -43,7 +43,7 @@ export default function IncludedFeaturesSection() {
 							<li>アプリの操作説明</li>
 							<li>香典情報の共同入力作業</li>
 							<li>入力内容の確認、疑問点の即時解決</li>
-							<li>CSVエクスポート後の活用アドバイス</li>
+							<li>Excelエクスポート後の活用アドバイス</li>
 							<li>その他、アプリを最大限に活用するためのコンサルティング</li>
 						</ul>
 					</CardContent>

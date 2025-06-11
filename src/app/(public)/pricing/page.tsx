@@ -145,7 +145,7 @@ export default function PricingPage() {
 									<li>✔︎ オンラインマンツーマンサポート</li>
 									<li>✔︎ 100件までの入力サポート込み</li>
 									<li>✔︎ 追加サポート (101件目以降50件ごと目安)</li>
-									<li>✔︎ CSVエクスポート後の活用アドバイス</li>
+									<li>✔︎ Excelエクスポート後の活用アドバイス</li>
 								</ul>
 							</CardContent>
 						</div>

@@ -25,6 +25,7 @@ export default async function StatusPage() {
 
 	// Fetch organizations requested by current user, including type
 	const { data: orgs } = await supabase
+		.schema("common")
 		.from("organizations")
 		.select("id, name, status, created_at, organization_types(name)")
 		.eq("requested_by", user.id);

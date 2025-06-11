@@ -58,8 +58,8 @@ export default async function RootLayout({
 						<Toaster />
 					</Providers>
 				</TooltipProvider>
-				<Analytics />
 				<SpeedInsights />
+				<Analytics />
 			</body>
 		</html>
 	);

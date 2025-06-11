@@ -10,9 +10,9 @@ import {
 import { AlertCircle, ArrowLeft } from "lucide-react";
 import { Header } from "@/app/(public)/_components/header";
 import Link from "next/link";
-import pkg from "../../../package.json";
 
-const version = pkg.version;
+// Version fetched from environment variable
+const version = process.env.NEXT_PUBLIC_APP_VERSION ?? "";
 
 interface PageProps {
 	params: Promise<Record<string, never>>;

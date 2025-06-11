@@ -8,7 +8,7 @@
 		"start": "next start -p 8788",
 		"lint": "biome check",
 		"test": "vitest",
-		"db:types": "supabase gen types typescript --project-id tcqnsslsaizqwjuyvoyu --schema public > src/types/supabase.d.ts",
+		"db:types": "supabase gen types typescript --project-id tcqnsslsaizqwjuyvoyu --schema public,common,gift,funeral > src/types/supabase.d.ts",
 		"db:pull": "supabase db pull --project-id tcqnsslsaizqwjuyvoyu",
 		"db:push": "supabase db push --project-id tcqnsslsaizqwjuyvoyu",
 		"db:reset": "supabase db reset --project-id tcqnsslsaizqwjuyvoyu",

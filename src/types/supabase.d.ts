@@ -7,6 +7,912 @@ export type Json =
   | Json[]
 
 export type Database = {
+  common: {
+    Tables: {
+      customers: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+          organization_id: string
+          phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          organization_id: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_customers_org"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory: {
+        Row: {
+          id: string
+          item: string
+          organization_id: string
+          stock_level: number
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          item: string
+          organization_id: string
+          stock_level: number
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          item?: string
+          organization_id?: string
+          stock_level?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_inventory_org"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_members: {
+        Row: {
+          created_at: string
+          organization_id: string
+          role: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          organization_id: string
+          role?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          organization_id?: string
+          role?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_types: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          slug: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          slug?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      organizations: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          requested_by: string
+          status: string
+          type_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          requested_by: string
+          status?: string
+          type_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          requested_by?: string
+          status?: string
+          type_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organizations_type_id_fkey"
+            columns: ["type_id"]
+            isOneToOne: false
+            referencedRelation: "organization_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      permissions: {
+        Row: {
+          action: string
+          id: string
+          resource: string
+        }
+        Insert: {
+          action: string
+          id?: string
+          resource: string
+        }
+        Update: {
+          action?: string
+          id?: string
+          resource?: string
+        }
+        Relationships: []
+      }
+      role_permissions: {
+        Row: {
+          permission_id: string
+          role_id: string
+        }
+        Insert: {
+          permission_id: string
+          role_id: string
+        }
+        Update: {
+          permission_id?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_rp_permission"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "permissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_rp_role"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roles: {
+        Row: {
+          id: string
+          name: string
+        }
+        Insert: {
+          id?: string
+          name: string
+        }
+        Update: {
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+  funeral: {
+    Tables: {
+      attendees: {
+        Row: {
+          case_id: string
+          created_at: string
+          id: string
+          name: string
+          organization_id: string
+          relation: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          id?: string
+          name: string
+          organization_id: string
+          relation?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          relation?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_attendees_case"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cases: {
+        Row: {
+          created_at: string
+          customer_id: string
+          deceased_name: string
+          id: string
+          organization_id: string
+          start_datetime: string | null
+          status: string | null
+          updated_at: string | null
+          venue: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          deceased_name: string
+          id?: string
+          organization_id: string
+          start_datetime?: string | null
+          status?: string | null
+          updated_at?: string | null
+          venue?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          deceased_name?: string
+          id?: string
+          organization_id?: string
+          start_datetime?: string | null
+          status?: string | null
+          updated_at?: string | null
+          venue?: string | null
+        }
+        Relationships: []
+      }
+      contacts: {
+        Row: {
+          created_at: string
+          customer_id: string
+          id: string
+          last_sent_at: string | null
+          organization_id: string
+          template: string | null
+          type: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          id?: string
+          last_sent_at?: string | null
+          organization_id: string
+          template?: string | null
+          type?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          id?: string
+          last_sent_at?: string | null
+          organization_id?: string
+          template?: string | null
+          type?: string | null
+        }
+        Relationships: []
+      }
+      donations: {
+        Row: {
+          amount: number
+          case_id: string
+          created_at: string
+          donor_name: string | null
+          id: string
+          organization_id: string
+          received_at: string | null
+        }
+        Insert: {
+          amount: number
+          case_id: string
+          created_at?: string
+          donor_name?: string | null
+          id?: string
+          organization_id: string
+          received_at?: string | null
+        }
+        Update: {
+          amount?: number
+          case_id?: string
+          created_at?: string
+          donor_name?: string | null
+          id?: string
+          organization_id?: string
+          received_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_donations_case"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          amount: number
+          case_id: string
+          created_at: string
+          due_date: string | null
+          id: string
+          organization_id: string
+          paid_at: string | null
+          status: string | null
+        }
+        Insert: {
+          amount: number
+          case_id: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          organization_id: string
+          paid_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          amount?: number
+          case_id?: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          organization_id?: string
+          paid_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_invoices_case"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      material_orders: {
+        Row: {
+          case_id: string
+          created_at: string
+          id: string
+          item: string | null
+          order_date: string | null
+          organization_id: string
+          quantity: number | null
+          status: string | null
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          id?: string
+          item?: string | null
+          order_date?: string | null
+          organization_id: string
+          quantity?: number | null
+          status?: string | null
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          id?: string
+          item?: string | null
+          order_date?: string | null
+          organization_id?: string
+          quantity?: number | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_material_orders_case"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotes: {
+        Row: {
+          case_id: string
+          created_at: string
+          id: string
+          organization_id: string
+          pdf_url: string | null
+          status: string | null
+          total_amount: number
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          id?: string
+          organization_id: string
+          pdf_url?: string | null
+          status?: string | null
+          total_amount: number
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          id?: string
+          organization_id?: string
+          pdf_url?: string | null
+          status?: string | null
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_quotes_case"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reservations: {
+        Row: {
+          created_at: string
+          customer_id: string
+          date: string | null
+          id: string
+          organization_id: string
+          status: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          date?: string | null
+          id?: string
+          organization_id: string
+          status?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          date?: string | null
+          id?: string
+          organization_id?: string
+          status?: string | null
+        }
+        Relationships: []
+      }
+      tasks: {
+        Row: {
+          assigned_to: string
+          case_id: string
+          created_at: string
+          due_date: string | null
+          id: string
+          organization_id: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to: string
+          case_id: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          organization_id: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string
+          case_id?: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          organization_id?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_tasks_case"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+  gift: {
+    Tables: {
+      loyalty_points: {
+        Row: {
+          created_at: string
+          customer_id: string
+          expires_at: string | null
+          id: string
+          organization_id: string
+          points: number
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          expires_at?: string | null
+          id?: string
+          organization_id: string
+          points: number
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          expires_at?: string | null
+          id?: string
+          organization_id?: string
+          points?: number
+        }
+        Relationships: []
+      }
+      marketing_campaigns: {
+        Row: {
+          end_date: string | null
+          id: string
+          name: string
+          organization_id: string
+          start_date: string | null
+          status: string | null
+        }
+        Insert: {
+          end_date?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          start_date?: string | null
+          status?: string | null
+        }
+        Update: {
+          end_date?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          start_date?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
+      marketing_templates: {
+        Row: {
+          campaign_id: string
+          content: string | null
+          id: string
+          type: string | null
+        }
+        Insert: {
+          campaign_id: string
+          content?: string | null
+          id?: string
+          type?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          content?: string | null
+          id?: string
+          type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_templates_campaign"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_items: {
+        Row: {
+          order_id: string
+          product_id: string
+          quantity: number
+          unit_price: number
+        }
+        Insert: {
+          order_id: string
+          product_id: string
+          quantity: number
+          unit_price: number
+        }
+        Update: {
+          order_id?: string
+          product_id?: string
+          quantity?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_items_order"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_items_product"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          created_at: string
+          customer_id: string
+          id: string
+          organization_id: string
+          status: string | null
+          total_amount: number
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          id?: string
+          organization_id: string
+          status?: string | null
+          total_amount: number
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          id?: string
+          organization_id?: string
+          status?: string | null
+          total_amount?: number
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          organization_id: string
+          price: number
+          sku: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          price: number
+          sku?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          price?: number
+          sku?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      promotions: {
+        Row: {
+          code: string
+          created_at: string
+          discount_type: string | null
+          discount_value: number | null
+          expires_at: string | null
+          id: string
+          organization_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          discount_type?: string | null
+          discount_value?: number | null
+          expires_at?: string | null
+          id?: string
+          organization_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          discount_type?: string | null
+          discount_value?: number | null
+          expires_at?: string | null
+          id?: string
+          organization_id?: string
+        }
+        Relationships: []
+      }
+      shipping: {
+        Row: {
+          carrier: string | null
+          delivered_at: string | null
+          id: string
+          order_id: string
+          organization_id: string
+          status: string | null
+          tracking_no: string | null
+        }
+        Insert: {
+          carrier?: string | null
+          delivered_at?: string | null
+          id?: string
+          order_id: string
+          organization_id: string
+          status?: string | null
+          tracking_no?: string | null
+        }
+        Update: {
+          carrier?: string | null
+          delivered_at?: string | null
+          id?: string
+          order_id?: string
+          organization_id?: string
+          status?: string | null
+          tracking_no?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_shipping_order"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          created_at: string
+          customer_id: string
+          id: string
+          message: string
+          organization_id: string
+          status: string | null
+          subject: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          id?: string
+          message: string
+          organization_id: string
+          status?: string | null
+          subject: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          id?: string
+          message?: string
+          organization_id?: string
+          status?: string | null
+          subject?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      tiers: {
+        Row: {
+          id: string
+          name: string
+          organization_id: string
+          threshold: number
+        }
+        Insert: {
+          id?: string
+          name: string
+          organization_id: string
+          threshold: number
+        }
+        Update: {
+          id?: string
+          name?: string
+          organization_id?: string
+          threshold?: number
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       admin_audit_logs: {
@@ -841,97 +1747,6 @@ export type Database = {
             columns: ["kouden_id"]
             isOneToOne: false
             referencedRelation: "koudens"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      organization_members: {
-        Row: {
-          created_at: string
-          organization_id: string
-          role: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          organization_id: string
-          role?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          organization_id?: string
-          role?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "organization_members_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      organization_types: {
-        Row: {
-          created_at: string
-          id: string
-          name: string
-          slug: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          name: string
-          slug?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          name?: string
-          slug?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      organizations: {
-        Row: {
-          created_at: string
-          id: string
-          name: string
-          requested_by: string
-          status: string
-          type_id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          name: string
-          requested_by: string
-          status?: string
-          type_id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          name?: string
-          requested_by?: string
-          status?: string
-          type_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "organizations_type_id_fkey"
-            columns: ["type_id"]
-            isOneToOne: false
-            referencedRelation: "organization_types"
             referencedColumns: ["id"]
           },
         ]
@@ -1805,6 +2620,15 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  common: {
+    Enums: {},
+  },
+  funeral: {
+    Enums: {},
+  },
+  gift: {
+    Enums: {},
+  },
   public: {
     Enums: {
       attendance_type: ["FUNERAL", "CONDOLENCE_VISIT"],

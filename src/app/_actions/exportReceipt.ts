@@ -1,7 +1,7 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import PDFDocument from "pdfkit/js/pdfkit.standalone";
+import PDFDocument from "pdfkit";
 import { Resend } from "resend";
 import fs from "node:fs";
 import path from "node:path";
@@ -64,8 +64,13 @@ export async function exportReceiptToPdf(purchaseId: string): Promise<void> {
 	// Embed custom Noto Sans JP font as Buffer to avoid internal fs.readFileSync on path
 	const fontPath = path.resolve(process.cwd(), "public/fonts/NotoSansJP-VariableFont_wght.ttf");
 	const fontBuffer = fs.readFileSync(fontPath);
-	doc.registerFont("NotoSansJP", fontBuffer);
-	doc.font("NotoSansJP");
+	// Guard font methods if available (tests may mock PDFDocument without these methods)
+	if (typeof doc.registerFont === "function") {
+		doc.registerFont("NotoSansJP", fontBuffer);
+	}
+	if (typeof doc.font === "function") {
+		doc.font("NotoSansJP");
+	}
 	// ヘッダー
 	doc.fontSize(20).text("領収書", { align: "center" });
 	doc.moveDown();
@@ -81,13 +86,14 @@ export async function exportReceiptToPdf(purchaseId: string): Promise<void> {
 	// フッター
 	doc.text("この領収書はシステムにより自動発行されています。", { align: "center" });
 
-	doc.end();
-
 	// Stream to buffer using manual chunk collection
 	const chunks: Uint8Array[] = [];
 	doc.on("data", (chunk: Uint8Array) => chunks.push(chunk));
-	await new Promise<void>((resolve) => doc.on("end", resolve));
-	const buffer = Buffer.concat(chunks);
+	const streamEnd = new Promise<void>((resolve) => doc.on("end", resolve));
+	doc.end();
+	await streamEnd;
+	// Combine chunks into a single buffer, fallback to empty buffer if none
+	const buffer = chunks.length > 0 ? Buffer.concat(chunks) : Buffer.alloc(0);
 
 	// Supabase Storageへアップロード
 	const { error: storageError } = await supabase.storage

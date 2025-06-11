@@ -13,6 +13,7 @@ export async function POST(request: NextRequest) {
 		}
 		const userId = user.id;
 		const { data, error } = await supabase
+			.schema("common")
 			.from("organizations")
 			.insert({ name, type_id: typeId, requested_by: userId });
 		if (error) {

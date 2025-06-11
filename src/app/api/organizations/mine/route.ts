@@ -11,12 +11,14 @@ export async function GET() {
 	}
 	// get membership org IDs
 	const { data: memberships } = await supabase
+		.schema("common")
 		.from("organization_members")
 		.select("organization_id")
 		.eq("user_id", user.id);
 	const orgIds = memberships?.map((m) => m.organization_id) ?? [];
 	// fetch active organizations
 	const { data: orgs } = await supabase
+		.schema("common")
 		.from("organizations")
 		.select("id, name")
 		.in("id", orgIds)

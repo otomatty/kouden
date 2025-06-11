@@ -7,13 +7,13 @@ import { InitializeGuideMode } from "@/components/providers/initialize-guide-mod
 import { TourGuide } from "@/components/custom/TourGuide/TourGuide";
 import { LoadingProvider } from "@/components/custom/loading-provider";
 import { Toaster } from "@/components/ui/toaster";
-import pkg from "../../../package.json";
 import { Provider } from "jotai";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { getNotifications } from "@/app/_actions/notifications";
 import ProtectedClientLayout from "./ProtectedClientLayout";
 
-const version = pkg.version;
+// Version fetched from environment variable
+const version = process.env.NEXT_PUBLIC_APP_VERSION ?? "";
 
 interface ProtectedLayoutProps {
 	children: React.ReactNode;

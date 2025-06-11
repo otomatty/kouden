@@ -17,6 +17,7 @@ interface OrgRequest {
 export default async function AdminOrganizationsPage() {
 	const supabase = await createClient();
 	const { data: requests } = await supabase
+		.schema("common")
 		.from("organizations")
 		.select("id, name, requested_by, status")
 		.eq("status", "pending");
@@ -24,6 +25,7 @@ export default async function AdminOrganizationsPage() {
 	const pendingRows: OrgRequest[] = requests ?? [];
 
 	const { data: activeData } = await supabase
+		.schema("common")
 		.from("organizations")
 		.select("id, name, requested_by, status, organization_types(name)")
 		.eq("status", "active");

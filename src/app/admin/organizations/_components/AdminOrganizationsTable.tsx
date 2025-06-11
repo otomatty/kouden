@@ -4,7 +4,10 @@ import React from "react";
 import { DataTable } from "@/components/ui/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import { approveOrganization, rejectOrganization } from "@/app/_actions/organizationRequests";
+import {
+	approveOrganization,
+	rejectOrganization,
+} from "@/app/_actions/common/organizationRequests";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 

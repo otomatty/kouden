@@ -57,6 +57,7 @@ export async function GET(request: Request) {
 
 		// Determine application access based on organization membership
 		const { data: memberships } = await supabase
+			.schema("common")
 			.from("organization_members")
 			.select("organization_id")
 			.eq("user_id", user.id);

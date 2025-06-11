@@ -2,9 +2,9 @@ import { Header } from "./_components/header";
 import { Footer } from "./_components/footer";
 import { MobileBottomNavigation } from "./_components/mobile-bottom-navigation";
 import type { Metadata } from "next";
-import pkg from "../../../package.json";
 
-const version = pkg.version;
+// Version fetched from environment variable
+const version = process.env.NEXT_PUBLIC_APP_VERSION ?? "";
 
 export const metadata: Metadata = {
 	title: "香典帳 | 香典・供物の記録と返礼品の管理を簡単に",
