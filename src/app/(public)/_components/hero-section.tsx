@@ -2,12 +2,13 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { zenOldMincho } from "@/app/fonts";
+import Container from "@/components/ui/container";
 
 export function HeroSection() {
 	return (
 		<section className="relative min-h-[calc(100vh-100px)] py-16 md:py-0 flex items-center justify-center bg-gradient-to-b from-primary/10 to-background">
-			<div className="container px-4 md:px-6 mx-auto">
-				<div className="grid gap-6 lg:grid-cols-[1fr_400px] lg:gap-12 xl:grid-cols-[1fr_800px]">
+			<Container>
+				<div className="grid gap-6 lg:grid-cols-[1fr_300px] lg:gap-12 xl:grid-cols-[1fr_600px]">
 					<div className="flex flex-col justify-center space-y-4">
 						<div className="space-y-4">
 							<h1
@@ -55,7 +56,7 @@ export function HeroSection() {
 						</div>
 					</div>
 				</div>
-			</div>
+			</Container>
 		</section>
 	);
 }

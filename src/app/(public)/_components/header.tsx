@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { HeaderNavigation } from "./header-navigation";
+import Container from "@/components/ui/container";
 
 export function Header({ version }: { version: string }) {
 	return (
 		<header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b">
-			<div className="container flex h-16 items-center justify-between px-4 md:px-6 mx-auto">
+			<Container className="flex h-16 items-center justify-between px-4 md:px-6 mx-auto">
 				<h1 className="text-xl font-bold">
 					<Link href="/" className="flex items-center space-x-2">
 						<span className="text-xl font-bold">香典帳</span>
@@ -22,7 +23,7 @@ export function Header({ version }: { version: string }) {
 						<Link href="/auth/login">利用を開始する</Link>
 					</Button>
 				</div>
-			</div>
+			</Container>
 		</header>
 	);
 }

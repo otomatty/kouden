@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { PageHero } from "../_components/page-hero";
 import { Heading } from "@/components/ui/heading";
+import { Section } from "@/components/ui/section";
 
 export const metadata: Metadata = {
 	title: "特定商取引法に基づく表記 | 香典帳",
@@ -15,7 +16,7 @@ export default function LegalPage() {
 				subtitle="香典帳アプリにおける特定商取引法に基づく表記"
 				className="bg-background"
 			/>
-			<section className="container mx-auto py-8 px-4">
+			<Section className="py-8 px-4">
 				<article className="prose prose-lg prose-gray">
 					<Heading level={2}>販売業者</Heading>
 					<p>Saedgewell</p>
@@ -67,7 +68,7 @@ export default function LegalPage() {
 					<Heading level={2}>付則</Heading>
 					<p>本表記は2025年6月1日より有効です。</p>
 				</article>
-			</section>
+			</Section>
 		</div>
 	);
 }

@@ -58,13 +58,13 @@ export function PartnerPrograms() {
 				subtitle="企業向けサービス概要"
 				className="mb-12"
 			/>
-			<div className="grid gap-8 md:grid-cols-3">
+			<div className="grid gap-4 md:grid-cols-3">
 				{programs.map((p) => (
 					<div
 						key={p.title}
 						className="relative p-8 bg-white rounded-lg shadow-sm hover:shadow-lg transition border border-border"
 					>
-						<span className="absolute z-10 top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-sm text-primary border border-border rounded-full p-1">
+						<span className="absolute z-10 top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-sm text-primary border border-border rounded-full p-2 text-center">
 							{p.target}
 						</span>
 						<p.icon className="absolute bottom-4 right-4 h-32 w-32 text-secondary opacity-10" />

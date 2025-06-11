@@ -5,6 +5,7 @@ import { ChevronRight, BookOpen, Search, Gift, Share2, Calculator, Bell } from "
 import Link from "next/link";
 import { PageHero } from "../_components/page-hero";
 import { FAQSection } from "../_components/faq-section";
+import { Section } from "@/components/ui/section";
 
 export const metadata: Metadata = {
 	title: "使い方ガイド | 香典帳",
@@ -61,13 +62,13 @@ export default function GuidePage() {
 			/>
 
 			{/* 基本的な使い方セクション */}
-			<section className="container mx-auto">
+			<Section>
 				<SectionTitle
 					title="基本的な使い方"
 					subtitle="3ステップで簡単に始められます"
 					className="mb-12"
 				/>
-				<div className="grid md:grid-cols-3 gap-8">
+				<div className="grid md:grid-cols-3 gap-4">
 					{[
 						{
 							id: "create-account",
@@ -95,16 +96,16 @@ export default function GuidePage() {
 						</div>
 					))}
 				</div>
-			</section>
+			</Section>
 
 			{/* 詳細な機能説明セクション */}
-			<section className="container mx-auto">
+			<Section>
 				<SectionTitle
 					title="主要な機能"
 					subtitle="香典帳をより便利に使いこなすための機能"
 					className="mb-12"
 				/>
-				<div className="grid md:grid-cols-2 gap-8">
+				<div className="grid md:grid-cols-2 gap-4">
 					{[
 						{
 							id: "search",
@@ -145,13 +146,13 @@ export default function GuidePage() {
 						</div>
 					))}
 				</div>
-			</section>
+			</Section>
 
 			{/* よくある質問セクション */}
 			<FAQSection faqs={guideFaqs} />
 
 			{/* サポート情報セクション */}
-			<section className="text-center">
+			<Section className="text-center">
 				<SectionTitle
 					title="サポート"
 					subtitle="ご不明な点がございましたら、お気軽にお問い合わせください"
@@ -163,7 +164,7 @@ export default function GuidePage() {
 						<ChevronRight className="ml-2 h-4 w-4" />
 					</Link>
 				</Button>
-			</section>
+			</Section>
 		</div>
 	);
 }

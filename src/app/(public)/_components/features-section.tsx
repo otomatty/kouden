@@ -1,6 +1,7 @@
 import { Cloud, BarChart2, FileText, Monitor, Gift, Lock, LayoutDashboard } from "lucide-react";
 import { BentoCard, BentoGrid } from "@/components/magicui/bento-grid";
 import { SectionTitle } from "@/components/ui/section-title";
+import { Section } from "@/components/ui/section";
 
 const features = [
 	{
@@ -77,19 +78,17 @@ const features = [
 
 export function FeaturesSection() {
 	return (
-		<section id="features" className="py-16 md:py-32 bg-background">
-			<div className="container px-4 md:px-6 mx-auto">
-				<SectionTitle
-					title="不安を解決するための機能"
-					subtitle="初めての方でも安心して使える、シンプルで便利な機能"
-					className="mb-16"
-				/>
-				<BentoGrid className="auto-rows-[20rem] md:auto-rows-[25rem]">
-					{features.map((feature) => (
-						<BentoCard key={feature.id} {...feature} />
-					))}
-				</BentoGrid>
-			</div>
-		</section>
+		<Section id="features" bgClassName="bg-background">
+			<SectionTitle
+				title="不安を解決するための機能"
+				subtitle="初めての方でも安心して使える、シンプルで便利な機能"
+				className="mb-16"
+			/>
+			<BentoGrid className="auto-rows-[20rem] md:auto-rows-[25rem]">
+				{features.map((feature) => (
+					<BentoCard key={feature.id} {...feature} />
+				))}
+			</BentoGrid>
+		</Section>
 	);
 }

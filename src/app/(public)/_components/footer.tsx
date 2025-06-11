@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import Container from "@/components/ui/container";
 
 const footerLinks = {
 	product: [
@@ -25,7 +26,7 @@ const footerLinks = {
 export function Footer() {
 	return (
 		<footer className="border-t bg-background">
-			<div className="container px-4 md:px-6 py-8 mx-auto">
+			<Container className="container px-4 md:px-6 py-8 mx-auto">
 				<div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-8">
 					<div className="space-y-4 col-span-2 md:col-span-1">
 						<h2 className="text-lg font-semibold">香典帳</h2>
@@ -139,7 +140,7 @@ export function Footer() {
 						</ul>
 					</div>
 				</div>
-			</div>
+			</Container>
 			<div className="py-8 border-t text-center text-sm text-muted-foreground">
 				<p>
 					© {new Date().getFullYear()} <Link href="https://saedgewell.net">Saedgewell</Link> All

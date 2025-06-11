@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { PageHero } from "../_components/page-hero";
 import { Heading } from "@/components/ui/heading";
+import { Section } from "@/components/ui/section";
 
 export const metadata: Metadata = {
 	title: "プライバシーポリシー | 香典帳",
@@ -15,7 +16,7 @@ export default function PrivacyPage() {
 				subtitle="香典帳アプリのプライバシーポリシーについて"
 				className="bg-background"
 			/>
-			<section className="container mx-auto py-8 px-4">
+			<Section className="py-8 px-4">
 				<article className="prose prose-lg prose-gray">
 					<Heading level={2}>1. 個人情報の定義</Heading>
 					<p>
@@ -82,7 +83,7 @@ export default function PrivacyPage() {
 						ユーザーはブラウザの設定でクッキーの許可・拒否を選択できます。ただし、拒否した場合は一部機能が利用できなくなる可能性があります。
 					</p>
 				</article>
-			</section>
+			</Section>
 		</div>
 	);
 }

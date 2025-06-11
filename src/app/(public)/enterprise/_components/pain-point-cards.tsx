@@ -38,7 +38,7 @@ export function PainPointCards() {
 				subtitle="ご遺族が直面する主な3つの壁"
 				className="mb-8"
 			/>
-			<div className="grid gap-8 md:grid-cols-3">
+			<div className="grid gap-4 md:grid-cols-3">
 				{points.map((point) => (
 					<div
 						key={point.title}
