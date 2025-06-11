@@ -18,7 +18,7 @@ if (!GOOGLE_CALENDAR_ID) {
 // JWT認証クライアントの初期化
 const auth = new google.auth.JWT({
 	email: GOOGLE_SERVICE_ACCOUNT_EMAIL,
-	key: GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.replace(/\n/g, "\n"),
+	key: GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.replace(/\\n/g, "\n"),
 	scopes: ["https://www.googleapis.com/auth/calendar"],
 });
 const calendar = google.calendar({ version: "v3", auth });
