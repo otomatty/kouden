@@ -8,7 +8,7 @@ export function HeroSection() {
 	return (
 		<section className="relative min-h-[calc(100vh-100px)] py-16 md:py-0 flex items-center justify-center bg-gradient-to-b from-primary/10 to-background">
 			<Container>
-				<div className="grid gap-6 lg:grid-cols-[1fr_300px] lg:gap-12 xl:grid-cols-[1fr_600px]">
+				<div className="grid gap-6 lg:grid-cols-[1fr_300px] lg:gap-12 xl:grid-cols-[1fr_720px]">
 					<div className="flex flex-col justify-center space-y-4">
 						<div className="space-y-4">
 							<h1
