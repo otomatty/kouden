@@ -1784,6 +1784,45 @@ export type Database = {
         }
         Relationships: []
       }
+      posts: {
+        Row: {
+          author_id: string
+          content: string | null
+          created_at: string
+          id: string
+          organization_id: string
+          published_at: string | null
+          slug: string
+          status: Database["public"]["Enums"]["post_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          organization_id: string
+          published_at?: string | null
+          slug: string
+          status?: Database["public"]["Enums"]["post_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          organization_id?: string
+          published_at?: string | null
+          slug?: string
+          status?: Database["public"]["Enums"]["post_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -2507,6 +2546,7 @@ export type Database = {
         | "canceled"
       invitation_type: "email" | "share"
       offering_type: "FLOWER" | "INCENSE" | "FOOD" | "MONEY" | "OTHER"
+      post_status: "draft" | "published"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2642,6 +2682,7 @@ export const Constants = {
       ],
       invitation_type: ["email", "share"],
       offering_type: ["FLOWER", "INCENSE", "FOOD", "MONEY", "OTHER"],
+      post_status: ["draft", "published"],
     },
   },
 } as const

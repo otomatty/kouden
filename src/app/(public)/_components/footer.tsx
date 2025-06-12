@@ -115,7 +115,7 @@ export function Footer() {
 							</li>
 							<li>
 								<Link
-									href="/funeral-management"
+									href="/enterprise/funeral-management"
 									className="text-sm text-muted-foreground hover:text-foreground transition-colors"
 								>
 									葬儀会社管理
@@ -123,7 +123,7 @@ export function Footer() {
 							</li>
 							<li>
 								<Link
-									href="/gift-management"
+									href="/enterprise/gift-management"
 									className="text-sm text-muted-foreground hover:text-foreground transition-colors"
 								>
 									ギフトショップ管理
