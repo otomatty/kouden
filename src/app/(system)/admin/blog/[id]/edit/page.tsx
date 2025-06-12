@@ -3,14 +3,15 @@ import { getPostById, getCurrentUserOrganizationId } from "@/app/_actions/blog/p
 import { BlogPostForm } from "@/components/blog/blog-post-form";
 
 interface AdminEditBlogPostPageProps {
-	params: {
+	params: Promise<{
 		id: string;
-	};
+	}>;
 }
 
 export default async function AdminEditBlogPostPage({ params }: AdminEditBlogPostPageProps) {
+	const { id } = await params;
 	const [{ data: post, error: postError }, { data: organizationId, error: orgError }] =
-		await Promise.all([getPostById(params.id), getCurrentUserOrganizationId()]);
+		await Promise.all([getPostById(id), getCurrentUserOrganizationId()]);
 
 	if (postError || !post) {
 		notFound();

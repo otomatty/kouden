@@ -6,13 +6,14 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ChevronLeft } from "lucide-react";
 
 interface BlogPostPageProps {
-	params: {
+	params: Promise<{
 		slug: string;
-	};
+	}>;
 }
 
 export default async function BlogPostPage({ params }: BlogPostPageProps) {
-	const { data: post, error } = await getPublishedPostBySlug(params.slug);
+	const { slug } = await params;
+	const { data: post, error } = await getPublishedPostBySlug(slug);
 
 	if (error || !post) {
 		notFound();
