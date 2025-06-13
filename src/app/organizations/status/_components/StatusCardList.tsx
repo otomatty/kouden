@@ -15,6 +15,7 @@ interface StatusCardListProps {
 // Map English status to Japanese labels
 const statusLabels: Record<string, string> = {
 	pending: "承認待ち",
+	active: "有効",
 	approved: "承認済み",
 	rejected: "却下",
 };
@@ -42,7 +43,7 @@ export default function StatusCardList({ data }: StatusCardListProps) {
 						<div>
 							<span
 								className={`px-3 py-1 rounded-full text-sm ${
-									status === "approved"
+									status === "approved" || status === "active"
 										? "bg-green-100 text-green-800"
 										: status === "pending"
 											? "bg-yellow-100 text-yellow-800"

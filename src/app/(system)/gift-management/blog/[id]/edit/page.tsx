@@ -1,5 +1,9 @@
 import { notFound } from "next/navigation";
-import { getPostById, getCurrentUserOrganizationId } from "@/app/_actions/blog/posts";
+import { getPostById } from "@/app/_actions/blog/posts";
+import {
+	getAccessibleOrganizations,
+	getContextOrganizationId,
+} from "@/app/_actions/blog/organizations";
 import { BlogPostForm } from "@/components/blog/blog-post-form";
 
 interface GiftManagementEditBlogPostPageProps {
@@ -12,14 +16,21 @@ export default async function GiftManagementEditBlogPostPage({
 	params,
 }: GiftManagementEditBlogPostPageProps) {
 	const { id } = await params;
-	const [{ data: post, error: postError }, { data: organizationId, error: orgError }] =
-		await Promise.all([getPostById(id), getCurrentUserOrganizationId()]);
+	const [
+		{ data: post, error: postError },
+		{ data: organizations, error: orgError },
+		{ data: organizationId },
+	] = await Promise.all([
+		getPostById(id),
+		getAccessibleOrganizations(),
+		getContextOrganizationId("/gift-management"),
+	]);
 
 	if (postError || !post) {
 		notFound();
 	}
 
-	if (orgError || !organizationId) {
+	if (orgError || !organizations) {
 		return (
 			<div className="p-6">
 				<h1 className="text-2xl font-bold mb-6">記事を編集</h1>
@@ -33,7 +44,13 @@ export default async function GiftManagementEditBlogPostPage({
 	return (
 		<div className="p-6">
 			<h1 className="text-2xl font-bold mb-6">記事を編集</h1>
-			<BlogPostForm organizationId={organizationId} basePath="/gift-management" post={post} />
+			<BlogPostForm
+				mode="organization"
+				organizations={organizations}
+				defaultOrganizationId={organizationId}
+				basePath="/gift-management"
+				post={post}
+			/>
 		</div>
 	);
 }

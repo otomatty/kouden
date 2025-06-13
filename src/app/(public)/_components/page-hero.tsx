@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
+import { zenOldMincho } from "@/app/fonts";
 
 interface CTAButton {
 	label: string;
@@ -23,7 +24,9 @@ export function PageHero({ title, subtitle, cta, secondaryCta, className = "" }:
 	return (
 		<div className={`px-4 py-12 md:py-20 text-center bg-background ${className}`}>
 			<div className="container max-w-4xl mx-auto">
-				<h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-3 md:mb-4">
+				<h1
+					className={`text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-3 md:mb-4 ${zenOldMincho.className}`}
+				>
 					{title}
 				</h1>
 				<p className="text-lg md:text-xl text-muted-foreground mx-auto max-w-2xl mb-6 md:mb-8">

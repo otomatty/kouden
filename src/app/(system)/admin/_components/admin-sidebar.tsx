@@ -18,6 +18,7 @@ const navigation = [
 	{ name: "ダッシュボード", href: "/admin", icon: LayoutDashboard },
 	{ name: "組織管理", href: "/admin/organizations", icon: Briefcase },
 	{ name: "管理者", href: "/admin/users", icon: Users },
+	{ name: "オウンドメディア", href: "/admin/blog", icon: FileText },
 	{ name: "お知らせ", href: "/admin/announcements", icon: Bell },
 	{ name: "サポート", href: "/admin/support", icon: LifeBuoy },
 	{ name: "監査ログ", href: "/admin/audit-logs", icon: FileText },

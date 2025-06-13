@@ -16,13 +16,25 @@ export async function GET() {
 		.select("organization_id")
 		.eq("user_id", user.id);
 	const orgIds = memberships?.map((m) => m.organization_id) ?? [];
-	// fetch active organizations
+	// fetch active organizations with type information
 	const { data: orgs } = await supabase
 		.schema("common")
 		.from("organizations")
-		.select("id, name")
+		.select(`
+			id, 
+			name,
+			organization_types(slug)
+		`)
 		.in("id", orgIds)
 		.eq("status", "active");
 
-	return NextResponse.json({ orgs: orgs ?? [] });
+	// Transform the data to include type information
+	const transformedOrgs =
+		orgs?.map((org) => ({
+			id: org.id,
+			name: org.name,
+			type: org.organization_types?.slug || null,
+		})) ?? [];
+
+	return NextResponse.json({ orgs: transformedOrgs });
 }

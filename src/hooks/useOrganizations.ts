@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 type Org = {
 	id: string;
 	name: string;
+	type?: string;
 };
 
 export function useOrganizations() {

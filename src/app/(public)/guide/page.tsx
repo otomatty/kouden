@@ -50,7 +50,7 @@ export default function GuidePage() {
 	return (
 		<>
 			<PageHero
-				title="香典帳の使い方ガイド"
+				title="香典帳の使い方"
 				subtitle="初めての方でも安心してご利用いただけるよう、詳しく解説します"
 				cta={{
 					label: "今すぐ始める",

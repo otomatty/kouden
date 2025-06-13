@@ -8,6 +8,8 @@ export const PostSchema = z.object({
 	author_id: z.string().uuid(),
 	title: z.string().min(1, "タイトルは必須です。"),
 	content: z.string().nullable(),
+	excerpt: z.string().nullable(),
+	category: z.string().nullable(),
 	slug: z
 		.string()
 		.min(1, "スラッグは必須です。")
@@ -21,12 +23,20 @@ export const PostSchema = z.object({
 export const CreatePostSchema = PostSchema.pick({
 	title: true,
 	content: true,
+	excerpt: true,
+	category: true,
 	slug: true,
 	status: true,
 	organization_id: true,
 }).extend({
 	// content は任意入力にする
 	content: z.string().optional(),
+	// excerpt は任意入力にする
+	excerpt: z.string().optional(),
+	// category は任意入力にする
+	category: z.string().optional(),
+	// organization_id は任意入力にする
+	organization_id: z.string().optional(),
 	// status は任意入力で、デフォルトは 'draft'
 	status: PostStatusSchema.default("draft"),
 	// 公開する場合、公開日をセットする
@@ -36,6 +46,8 @@ export const CreatePostSchema = PostSchema.pick({
 export const UpdatePostSchema = PostSchema.pick({
 	title: true,
 	content: true,
+	excerpt: true,
+	category: true,
 	slug: true,
 	status: true,
 })

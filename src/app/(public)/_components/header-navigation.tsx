@@ -93,7 +93,7 @@ export function HeaderNavigation() {
 						<NavigationMenuItem key={item.name}>
 							<NavigationMenuTrigger>{item.name}</NavigationMenuTrigger>
 							<NavigationMenuContent>
-								<ul className="grid gap-2 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr]">
+								<ul className="grid gap-2 md:w-[400px] lg:w-[600px] lg:grid-cols-2">
 									{item.items.map((feature) => (
 										<ListItem
 											key={feature.href}
@@ -134,12 +134,14 @@ function ListItem({
 					href={href}
 					className="flex items-start gap-2 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
 				>
-					<div className="flex flex-col gap-1">
-						<div className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-gray-100">
-							<Icon className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-							{title}
+					<div className="flex items-center gap-4">
+						<div className="flex items-center justify-center rounded-md bg-gray-100 dark:bg-gray-800 p-4 w-12 h-12">
+							<Icon className=" text-gray-700 dark:text-gray-300" />
 						</div>
-						<p className="text-muted-foreground text-sm leading-snug">{children}</p>
+						<div className="flex flex-col flex-1">
+							{title}
+							<p className="text-muted-foreground text-sm leading-snug">{children}</p>
+						</div>
 					</div>
 				</Link>
 			</NavigationMenuLink>

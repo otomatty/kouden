@@ -22,15 +22,28 @@ import { createPost, updatePost } from "@/app/_actions/blog/posts";
 import { CreatePostSchema, type UpdatePostSchema } from "@/schemas/posts";
 import type { TPost } from "@/types/post";
 
+interface Organization {
+	id: string;
+	name: string;
+}
+
 interface BlogPostFormProps {
-	organizationId: string;
+	organizations?: Organization[];
+	defaultOrganizationId: string | null;
 	basePath: string;
 	post?: TPost; // 編集の場合のみ
+	mode?: "admin" | "organization"; // 管理者モードか組織モードか
 }
 
 type FormData = z.infer<typeof CreatePostSchema>;
 
-export function BlogPostForm({ organizationId, basePath, post }: BlogPostFormProps) {
+export function BlogPostForm({
+	organizations = [],
+	defaultOrganizationId,
+	basePath,
+	post,
+	mode = "organization",
+}: BlogPostFormProps) {
 	const router = useRouter();
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const isEdit = !!post;
@@ -48,11 +61,12 @@ export function BlogPostForm({ organizationId, basePath, post }: BlogPostFormPro
 			content: post?.content || "",
 			slug: post?.slug || "",
 			status: (post?.status || "draft") as "draft" | "published",
-			organization_id: organizationId,
+			organization_id: post?.organization_id || defaultOrganizationId || "",
 		},
 	});
 
 	const statusValue = watch("status");
+	const organizationValue = watch("organization_id");
 
 	// タイトルからスラッグを自動生成（新規作成時のみ）
 	const generateSlug = (title: string) => {
@@ -128,6 +142,38 @@ export function BlogPostForm({ organizationId, basePath, post }: BlogPostFormPro
 						</p>
 						{errors.slug && <p className="text-sm text-destructive">{errors.slug.message}</p>}
 					</div>
+
+					{/* 組織選択（全ての管理画面で表示、adminのみ選択可能） */}
+					{organizations.length > 0 && (
+						<div className="space-y-2">
+							<Label htmlFor="organization">組織</Label>
+							{mode === "admin" ? (
+								<Select
+									value={organizationValue}
+									onValueChange={(value) => setValue("organization_id", value)}
+								>
+									<SelectTrigger>
+										<SelectValue placeholder="組織を選択してください" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="">組織なし</SelectItem>
+										{organizations.map((org) => (
+											<SelectItem key={org.id} value={org.id}>
+												{org.name}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							) : (
+								<div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm">
+									{organizations.find((org) => org.id === organizationValue)?.name || "組織なし"}
+								</div>
+							)}
+							{errors.organization_id && (
+								<p className="text-sm text-destructive">{errors.organization_id.message}</p>
+							)}
+						</div>
+					)}
 
 					<div className="space-y-2">
 						<Label htmlFor="content">内容</Label>

@@ -1,52 +1,97 @@
 import Link from "next/link";
+import { ArrowRight, Download } from "lucide-react";
 import { getPublishedPosts } from "@/app/_actions/blog/posts";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Container from "@/components/ui/container";
+import { PageHero } from "@/app/(public)/_components/page-hero";
+import { FeaturedPostsSection } from "./_components/featured-posts-section";
+import { PostsGrid } from "./_components/posts-grid";
+import { BlogSidebar } from "./_components/blog-sidebar";
 
 export default async function BlogPage() {
 	const { data: posts, error } = await getPublishedPosts();
 
 	if (error) {
 		return (
-			<div className="container mx-auto py-8">
-				<h1 className="text-3xl font-bold mb-8">お知らせ</h1>
-				<p className="text-red-500">記事の読み込み中にエラーが発生しました。</p>
-			</div>
+			<>
+				<PageHero
+					title="香典・葬儀のお役立ち情報"
+					subtitle="香典のマナーから葬儀の準備まで、大切な時に知っておきたい情報をお届けします"
+				/>
+				<Container className="py-8">
+					<p className="text-red-500 text-center">記事の読み込み中にエラーが発生しました。</p>
+				</Container>
+			</>
 		);
 	}
 
 	if (!posts || posts.length === 0) {
 		return (
-			<div className="container mx-auto py-8">
-				<h1 className="text-3xl font-bold mb-8">お知らせ</h1>
-				<p>まだ記事がありません。</p>
-			</div>
+			<>
+				<PageHero
+					title="香典・葬儀のお役立ち情報"
+					subtitle="香典のマナーから葬儀の準備まで、大切な時に知っておきたい情報をお届けします"
+					cta={{
+						label: "アプリをダウンロード",
+						href: "/download",
+						icon: Download,
+					}}
+					secondaryCta={{
+						label: "機能を見る",
+						href: "/features",
+						icon: ArrowRight,
+					}}
+				/>
+				<Container className="py-8">
+					<p className="text-center text-muted-foreground">まだ記事がありません。</p>
+				</Container>
+			</>
 		);
 	}
 
+	// 記事を分類
+	const featuredPosts = posts.slice(0, 3); // 注目記事
+	const popularPosts = posts.slice(0, 5); // 人気記事（とりあえず最新5件）
+	const recentPosts = posts.slice(0, 8); // 最新記事
+	const allPosts = posts.slice(3); // その他の記事
+
 	return (
-		<div className="container mx-auto py-8">
-			<h1 className="text-3xl font-bold mb-8">お知らせ</h1>
-			<div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-				{posts.map((post) => (
-					<Link href={`/blog/${post.slug}`} key={post.id}>
-						<Card className="hover:shadow-lg transition-shadow cursor-pointer">
-							<CardHeader>
-								<CardTitle className="line-clamp-2">{post.title}</CardTitle>
-								<div className="flex items-center gap-2">
-									{/* TODO: 組織名を表示する */}
-									<Badge variant="secondary">{post.organization_id}</Badge>
-								</div>
-							</CardHeader>
-							<CardContent>
-								<p className="text-sm text-muted-foreground">
-									{post.published_at && new Date(post.published_at).toLocaleDateString("ja-JP")}
-								</p>
-							</CardContent>
-						</Card>
-					</Link>
-				))}
-			</div>
-		</div>
+		<>
+			{/* ヒーローセクション */}
+			<PageHero
+				title="香典・葬儀のお役立ち情報"
+				subtitle="香典のマナーから葬儀の準備まで、大切な時に知っておきたい情報をお届けします"
+				cta={{
+					label: "アプリをダウンロード",
+					href: "/download",
+					icon: Download,
+				}}
+				secondaryCta={{
+					label: "機能を見る",
+					href: "/features",
+					icon: ArrowRight,
+				}}
+				className="bg-gradient-to-b from-background to-muted/20"
+			/>
+
+			<Container className="py-12">
+				{/* 注目記事セクション */}
+				{featuredPosts.length > 0 && (
+					<FeaturedPostsSection posts={featuredPosts} title="注目記事" />
+				)}
+
+				{/* 2カラムレイアウト */}
+				<div className="grid gap-8 lg:grid-cols-3">
+					{/* メインコンテンツ */}
+					<div className="lg:col-span-2">
+						{allPosts.length > 0 && <PostsGrid posts={allPosts} title="すべての記事" />}
+					</div>
+
+					{/* サイドバー */}
+					<div className="lg:col-span-1">
+						<BlogSidebar popularPosts={popularPosts} recentPosts={recentPosts} />
+					</div>
+				</div>
+			</Container>
+		</>
 	);
 }

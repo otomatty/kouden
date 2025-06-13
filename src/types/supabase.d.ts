@@ -356,6 +356,51 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_details: {
+        Row: {
+          address: string | null
+          allergy: string | null
+          created_at: string
+          customer_id: string
+          id: string
+          last_contact_date: string | null
+          notes: string | null
+          organization_id: string
+          registration_date: string | null
+          religion: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          allergy?: string | null
+          created_at?: string
+          customer_id: string
+          id?: string
+          last_contact_date?: string | null
+          notes?: string | null
+          organization_id: string
+          registration_date?: string | null
+          religion?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          allergy?: string | null
+          created_at?: string
+          customer_id?: string
+          id?: string
+          last_contact_date?: string | null
+          notes?: string | null
+          organization_id?: string
+          registration_date?: string | null
+          religion?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       donations: {
         Row: {
           amount: number
@@ -1787,8 +1832,10 @@ export type Database = {
       posts: {
         Row: {
           author_id: string
+          category: string | null
           content: string | null
           created_at: string
+          excerpt: string | null
           id: string
           organization_id: string
           published_at: string | null
@@ -1799,8 +1846,10 @@ export type Database = {
         }
         Insert: {
           author_id: string
+          category?: string | null
           content?: string | null
           created_at?: string
+          excerpt?: string | null
           id?: string
           organization_id: string
           published_at?: string | null
@@ -1811,8 +1860,10 @@ export type Database = {
         }
         Update: {
           author_id?: string
+          category?: string | null
           content?: string | null
           created_at?: string
+          excerpt?: string | null
           id?: string
           organization_id?: string
           published_at?: string | null

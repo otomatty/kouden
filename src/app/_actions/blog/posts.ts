@@ -25,6 +25,9 @@ export async function createPost(data: z.infer<typeof CreatePostSchema>) {
 		const postData: Omit<TPost, "id" | "created_at" | "updated_at"> = {
 			...validatedData,
 			content: validatedData.content ?? "",
+			excerpt: validatedData.excerpt ?? null,
+			category: validatedData.category ?? null,
+			organization_id: validatedData.organization_id ?? "",
 			author_id: authData.user.id,
 			published_at: validatedData.status === "published" ? new Date().toISOString() : null,
 		};
@@ -130,7 +133,7 @@ export async function getPublishedPosts() {
 	try {
 		const { data, error } = await supabase
 			.from("posts")
-			.select("*, organization:organizations(name)")
+			.select("*")
 			.eq("status", "published")
 			.order("published_at", { ascending: false });
 
@@ -152,7 +155,7 @@ export async function getPublishedPostBySlug(slug: string) {
 	try {
 		const { data, error } = await supabase
 			.from("posts")
-			.select("*, organization:organizations(name), author:users(display_name)")
+			.select("*")
 			.eq("slug", slug)
 			.eq("status", "published")
 			.single();
@@ -180,7 +183,7 @@ export async function getOrganizationPosts() {
 		// RLSポリシーによって、ユーザーがアクセス可能な投稿のみが返される
 		const { data, error } = await supabase
 			.from("posts")
-			.select("*, organization:organizations(name), author:users(display_name)")
+			.select("*")
 			.order("updated_at", { ascending: false });
 
 		if (error) throw error;
@@ -192,8 +195,8 @@ export async function getOrganizationPosts() {
 }
 
 /**
- * 現在のユーザーの組織IDを取得する
- * @returns 組織ID
+ * 現在のユーザーの組織IDを取得する（任意）
+ * @returns 組織ID または null
  */
 export async function getCurrentUserOrganizationId() {
 	const supabase = await createClient();
@@ -206,28 +209,20 @@ export async function getCurrentUserOrganizationId() {
 		// RLSが設定されているので、直接postsテーブルから組織IDを取得
 		const { data: posts, error } = await supabase.from("posts").select("organization_id").limit(1);
 
-		if (error) throw error;
+		if (error) {
+			// 権限エラーの場合はnullを返す（組織なしで作成可能）
+			return { data: null, error: null };
+		}
 
-		// 投稿がない場合は、組織のメンバーシップを直接確認
+		// 投稿がない場合はnullを返す
 		if (!posts || posts.length === 0) {
-			// 組織情報を取得（RLSで自分がアクセス可能な組織のみ返される）
-			const { data: orgs, error: orgError } = await supabase
-				.schema("common")
-				.from("organizations")
-				.select("id")
-				.limit(1);
-
-			if (orgError) throw orgError;
-			if (!orgs || orgs.length === 0) {
-				throw new Error("User is not a member of any organization.");
-			}
-
-			return { data: orgs[0]?.id, error: null };
+			return { data: null, error: null };
 		}
 
 		return { data: posts[0]?.organization_id, error: null };
-	} catch (error) {
-		return { data: null, error: getErrorMessage(error) };
+	} catch {
+		// エラーが発生した場合もnullを返す（組織なしで作成可能）
+		return { data: null, error: null };
 	}
 }
 
@@ -245,11 +240,7 @@ export async function getPostById(id: string) {
 		}
 
 		// RLSポリシーによって、ユーザーがアクセス可能な投稿のみが返される
-		const { data, error } = await supabase
-			.from("posts")
-			.select("*, organization:organizations(name), author:users(display_name)")
-			.eq("id", id)
-			.single();
+		const { data, error } = await supabase.from("posts").select("*").eq("id", id).single();
 
 		if (error) throw error;
 

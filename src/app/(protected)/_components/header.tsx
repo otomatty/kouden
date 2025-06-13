@@ -50,7 +50,7 @@ export function Header({ user, isAdmin, version, notifications }: HeaderProps) {
 					<Link href="/koudens" className="hover:opacity-80 transition-opacity">
 						<h1 className="text-xl font-semibold flex items-center gap-2">
 							香典帳
-							<Badge className="text-xs">β版</Badge>
+							<span className="text-xs">β版</span>
 							<span className="text-xs">v{version}</span>
 						</h1>
 					</Link>
