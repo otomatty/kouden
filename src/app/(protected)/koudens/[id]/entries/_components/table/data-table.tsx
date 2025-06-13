@@ -156,7 +156,10 @@ export function DataTable({
 					relationshipId: entry.relationship_id ?? null,
 					attendanceType: entry.attendance_type as AttendanceType,
 					hasOffering: entry.has_offering ?? false,
-					isReturnCompleted: entry.is_return_completed ?? false,
+					// 返礼完了状況の判定: 新しいreturn_statusがCOMPLETEDの場合、またはreturn_statusがなくis_return_completedがtrueの場合
+					isReturnCompleted:
+						entry.return_status === "COMPLETED" ||
+						(!entry.return_status && (entry.is_return_completed ?? false)),
 					createdAt: entry.created_at,
 					updatedAt: entry.updated_at,
 					createdBy: entry.created_by,

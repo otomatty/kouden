@@ -144,7 +144,6 @@ export async function duplicateKouden(id: string): Promise<{ kouden?: Kouden; er
 				phone_number,
 				attendance_type,
 				has_offering,
-				is_return_completed,
 				notes,
 				relationship_id
 			`) // prettier-ignore

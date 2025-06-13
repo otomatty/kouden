@@ -106,7 +106,7 @@ export const filterOptions = [
 		label: "供物あり",
 	},
 	{
-		value: "is_return_completed",
+		value: "return_completed",
 		label: "返礼済",
 	},
 ];

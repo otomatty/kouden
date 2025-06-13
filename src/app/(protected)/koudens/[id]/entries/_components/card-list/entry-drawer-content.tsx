@@ -199,10 +199,19 @@ export function EntryDrawerContent({
 									{entry.has_offering ? "供物あり" : "供物なし"}
 								</Badge>
 								<Badge
-									variant={entry.is_return_completed ? "default" : "secondary"}
+									variant={
+										entry.return_status === "COMPLETED" ||
+										(!entry.return_status && entry.is_return_completed)
+											? "default"
+											: "secondary"
+									}
 									className="whitespace-nowrap"
 								>
-									{entry.is_return_completed ? "返礼済" : "未返礼"}
+									{entry.status_display ||
+										(entry.return_status === "COMPLETED" ||
+										(!entry.return_status && entry.is_return_completed)
+											? "返礼済"
+											: "未返礼")}
 								</Badge>
 							</div>
 						</div>
@@ -326,8 +335,19 @@ export function EntryDrawerContent({
 									<div className="flex justify-between items-center">
 										<span className="text-sm text-muted-foreground">返礼状況</span>
 										<div className="flex items-center gap-2">
-											<Badge variant={entry.is_return_completed ? "default" : "secondary"}>
-												{entry.is_return_completed ? "返礼済" : "未返礼"}
+											<Badge
+												variant={
+													entry.return_status === "COMPLETED" ||
+													(!entry.return_status && entry.is_return_completed)
+														? "default"
+														: "secondary"
+												}
+											>
+												{entry.status_display ||
+													(entry.return_status === "COMPLETED" ||
+													(!entry.return_status && entry.is_return_completed)
+														? "返礼済"
+														: "未返礼")}
 											</Badge>
 											{canEdit && (
 												<Button variant="ghost" size="sm" onClick={handleNavigateToReturns}>

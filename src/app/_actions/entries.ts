@@ -10,7 +10,6 @@ import type {
 	Entry,
 	AttendanceType,
 } from "@/types/entries";
-import { camelToSnake } from "@/utils/case-converter";
 import type { Database } from "@/types/supabase";
 
 type KoudenEntry = Database["public"]["Tables"]["kouden_entries"]["Insert"];
@@ -26,12 +25,20 @@ export async function createEntry(input: CreateEntryInput): Promise<EntryRespons
 	}
 
 	try {
-		// キャメルケースからスネークケースへの変換
-		const snakeCaseData = camelToSnake(input) as KoudenEntry;
-
-		// created_by の追加
+		// 明示的にスネークケースでマッピング
 		const createData: KoudenEntry = {
-			...snakeCaseData,
+			kouden_id: input.koudenId,
+			name: input.name,
+			organization: input.organization,
+			position: input.position,
+			amount: input.amount,
+			postal_code: input.postalCode,
+			address: input.address,
+			phone_number: input.phoneNumber,
+			relationship_id: input.relationshipId,
+			attendance_type: input.attendanceType,
+			has_offering: input.hasOffering,
+			notes: input.notes,
 			created_by: user.id,
 		};
 

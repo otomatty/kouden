@@ -2,7 +2,7 @@
 
 import { OfferingForm } from "./offering-form";
 import { CrudDialog } from "@/components/custom/crud-dialog";
-import type { Entry } from "@//types/entries";
+import type { Entry } from "@/types/entries";
 import type { Offering } from "@/types/offerings";
 
 export interface OfferingDialogProps {

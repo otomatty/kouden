@@ -24,7 +24,10 @@ export default async function StatisticsPage({ params }: StatisticsPageProps) {
 	);
 	const returnProgress = entries.reduce(
 		(acc, entry) => {
-			entry.is_return_completed ? acc.completed++ : acc.pending++;
+			// 新しいreturn_statusがCOMPLETEDの場合、またはreturn_statusがなくis_return_completedがtrueの場合は完了
+			const isCompleted =
+				entry.return_status === "COMPLETED" || (!entry.return_status && entry.is_return_completed);
+			isCompleted ? acc.completed++ : acc.pending++;
 			return acc;
 		},
 		{ completed: 0, pending: 0 },

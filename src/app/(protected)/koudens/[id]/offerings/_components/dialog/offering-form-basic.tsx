@@ -1,13 +1,7 @@
 // library
 import { useFormContext } from "react-hook-form";
 // ui
-import {
-	FormControl,
-	FormField,
-	FormItem,
-	FormLabel,
-	FormMessage,
-} from "@/components/ui/form";
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
 	Select,
@@ -17,7 +11,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 // types
-import type { Entry } from "@//types/entries";
+import type { Entry } from "@/types/entries";
 import type { OfferingFormValues } from "@/types/offerings";
 import { SearchableCheckboxList } from "@/components/ui/searchable-checkbox-list";
 

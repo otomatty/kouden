@@ -33,6 +33,12 @@ export function EntryCard({ entry: initialEntry, koudenId, relationships }: Entr
 	// 関係性の名前を取得
 	const relationshipName = relationships.find((r) => r.id === entry.relationship_id)?.name;
 
+	// 返礼状況の判定（新しいreturn_statusがある場合はそれを使用、なければis_return_completedから判定）
+	const isReturnCompleted =
+		entry.return_status === "COMPLETED" ||
+		(entry.return_status ? false : entry.is_return_completed);
+	const returnStatusDisplay = entry.status_display || (isReturnCompleted ? "返礼済" : "未返礼");
+
 	return (
 		<Drawer open={isOpen} onOpenChange={setIsOpen}>
 			<DrawerTrigger asChild>
@@ -63,10 +69,10 @@ export function EntryCard({ entry: initialEntry, koudenId, relationships }: Entr
 										{entry.has_offering ? "供物あり" : "供物なし"}
 									</Badge>
 									<Badge
-										variant={entry.is_return_completed ? "default" : "secondary"}
+										variant={isReturnCompleted ? "default" : "secondary"}
 										className="whitespace-nowrap"
 									>
-										{entry.is_return_completed ? "返礼済" : "未返礼"}
+										{returnStatusDisplay}
 									</Badge>
 								</div>
 								<ChevronRight className="h-5 w-5 text-muted-foreground" />

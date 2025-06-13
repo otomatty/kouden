@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 
 // types
-import type { Entry } from "@//types/entries";
+import type { Entry } from "@/types/entries";
 import type { Offering, OfferingType, BaseOffering, OfferingFormValues } from "@/types/offerings";
 import { offeringFormSchema } from "@/schemas/offerings";
 // components
