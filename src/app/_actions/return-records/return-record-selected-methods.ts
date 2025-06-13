@@ -27,15 +27,15 @@ export async function createReturnRecordSelectedMethod(
 	try {
 		const supabase = await createClient();
 		const {
-			data: { session },
-		} = await supabase.auth.getSession();
-		if (!session) {
+			data: { user },
+		} = await supabase.auth.getUser();
+		if (!user) {
 			throw new Error("認証されていません");
 		}
 
 		const { data, error } = await supabase
 			.from("return_record_selected_methods")
-			.insert({ ...input, created_by: session.user.id })
+			.insert({ ...input, created_by: user.id })
 			.select("*")
 			.single();
 

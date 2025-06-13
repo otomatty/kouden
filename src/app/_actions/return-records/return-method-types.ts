@@ -25,15 +25,15 @@ export async function createReturnMethodType(
 	try {
 		const supabase = await createClient();
 		const {
-			data: { session },
-		} = await supabase.auth.getSession();
-		if (!session) {
+			data: { user },
+		} = await supabase.auth.getUser();
+		if (!user) {
 			throw new Error("認証されていません");
 		}
 
 		const { data, error } = await supabase
 			.from("return_method_types")
-			.insert({ ...input, created_by: session.user.id })
+			.insert({ ...input, created_by: user.id })
 			.select("*")
 			.single();
 

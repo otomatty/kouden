@@ -25,8 +25,8 @@ export default async function InvitationPage({ params }: InvitationPageProps) {
 		const invitation = await getInvitation(token);
 		const supabase = await createClient();
 		const {
-			data: { session },
-		} = await supabase.auth.getSession();
+			data: { user },
+		} = await supabase.auth.getUser();
 
 		if (!invitation) {
 			notFound();
@@ -46,9 +46,9 @@ export default async function InvitationPage({ params }: InvitationPageProps) {
 					expiresIn={expiresIn}
 					maxUses={invitation.max_uses ?? undefined}
 					usedCount={invitation.used_count ?? undefined}
-					userEmail={session?.user?.email}
+					userEmail={user?.email ?? undefined}
 					token={token}
-					isLoggedIn={!!session?.user}
+					isLoggedIn={!!user}
 					isExistingMember={invitation.isExistingMember}
 				/>
 			</div>

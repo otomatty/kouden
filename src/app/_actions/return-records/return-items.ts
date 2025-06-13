@@ -175,10 +175,10 @@ export async function updateReturnItem(
 
 		// セッションの取得
 		const {
-			data: { session },
-		} = await supabase.auth.getSession();
+			data: { user },
+		} = await supabase.auth.getUser();
 
-		if (!session) {
+		if (!user) {
 			throw new Error("認証されていません");
 		}
 
@@ -222,10 +222,10 @@ export async function deleteReturnItem(id: string, koudenId: string): Promise<vo
 
 		// セッションの取得
 		const {
-			data: { session },
-		} = await supabase.auth.getSession();
+			data: { user },
+		} = await supabase.auth.getUser();
 
-		if (!session) {
+		if (!user) {
 			throw new Error("認証されていません");
 		}
 

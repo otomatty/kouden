@@ -26,10 +26,10 @@ export async function createReturnEntry(input: CreateReturnEntryInput): Promise<
 
 		// セッションの取得
 		const {
-			data: { session },
-		} = await supabase.auth.getSession();
+			data: { user },
+		} = await supabase.auth.getUser();
 
-		if (!session) {
+		if (!user) {
 			throw new Error("認証されていません");
 		}
 
@@ -41,7 +41,7 @@ export async function createReturnEntry(input: CreateReturnEntryInput): Promise<
 				return_items: JSON.parse(JSON.stringify(input.return_items || [])),
 				funeral_date: input.funeral_date,
 				notes: input.notes,
-				created_by: session.user.id,
+				created_by: user.id,
 			})
 			.select("*")
 			.single();
@@ -148,10 +148,10 @@ export async function updateReturnEntry(
 
 		// セッションの取得
 		const {
-			data: { session },
-		} = await supabase.auth.getSession();
+			data: { user },
+		} = await supabase.auth.getUser();
 
-		if (!session) {
+		if (!user) {
 			throw new Error("認証されていません");
 		}
 
@@ -204,10 +204,10 @@ export async function deleteReturnEntry(koudenEntryId: string, koudenId: string)
 
 		// セッションの取得
 		const {
-			data: { session },
-		} = await supabase.auth.getSession();
+			data: { user },
+		} = await supabase.auth.getUser();
 
-		if (!session) {
+		if (!user) {
 			throw new Error("認証されていません");
 		}
 
@@ -246,10 +246,10 @@ export async function updateReturnEntryStatus(
 
 		// セッションの取得
 		const {
-			data: { session },
-		} = await supabase.auth.getSession();
+			data: { user },
+		} = await supabase.auth.getUser();
 
-		if (!session) {
+		if (!user) {
 			throw new Error("認証されていません");
 		}
 

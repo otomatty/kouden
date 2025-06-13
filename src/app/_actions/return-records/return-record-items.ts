@@ -29,10 +29,10 @@ export async function createReturnRecordItem(
 
 		// セッションの取得
 		const {
-			data: { session },
-		} = await supabase.auth.getSession();
+			data: { user },
+		} = await supabase.auth.getUser();
 
-		if (!session) {
+		if (!user) {
 			throw new Error("認証されていません");
 		}
 
@@ -40,7 +40,7 @@ export async function createReturnRecordItem(
 			.from("return_record_items")
 			.insert({
 				...input,
-				created_by: session.user.id,
+				created_by: user.id,
 			})
 			.select("*")
 			.single();
@@ -136,10 +136,10 @@ export async function updateReturnRecordItem(
 
 		// セッションの取得
 		const {
-			data: { session },
-		} = await supabase.auth.getSession();
+			data: { user },
+		} = await supabase.auth.getUser();
 
-		if (!session) {
+		if (!user) {
 			throw new Error("認証されていません");
 		}
 
@@ -192,10 +192,10 @@ export async function deleteReturnRecordItem(id: string, koudenId: string): Prom
 
 		// セッションの取得
 		const {
-			data: { session },
-		} = await supabase.auth.getSession();
+			data: { user },
+		} = await supabase.auth.getUser();
 
-		if (!session) {
+		if (!user) {
 			throw new Error("認証されていません");
 		}
 

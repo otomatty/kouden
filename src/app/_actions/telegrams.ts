@@ -53,8 +53,10 @@ export async function createTelegram(
 ): Promise<Telegram> {
 	try {
 		const supabase = await createClient();
-		const { data: session } = await supabase.auth.getSession();
-		if (!session?.session?.user?.id) throw new Error("認証が必要です");
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
+		if (!user) throw new Error("認証が必要です");
 
 		const snakeCaseData = toSnakeCase(input);
 		const { data, error } = await supabase
@@ -62,7 +64,7 @@ export async function createTelegram(
 			.insert({
 				kouden_id: input.koudenId,
 				sender_name: input.senderName,
-				created_by: session.session.user.id,
+				created_by: user.id,
 				...snakeCaseData,
 			})
 			.select("*")

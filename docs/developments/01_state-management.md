@@ -54,7 +54,7 @@ export async function getEntries(koudenId: string) {
 
 export async function createEntry(input: CreateEntryInput) {
   const supabase = createServerClient();
-  const session = await getSession();
+  const session = await getUser();
   
   if (!session) {
     throw new Error('Unauthorized');
