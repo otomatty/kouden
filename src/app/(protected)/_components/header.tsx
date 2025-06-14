@@ -149,7 +149,7 @@ export function Header({ user, isAdmin, version, notifications }: HeaderProps) {
 										</Button>
 									</div>
 									<div className="mt-auto flex flex-col gap-2">
-										<FeedbackButton />
+										<FeedbackButton user={user} />
 										<Separator />
 										<Button variant="outline" className="justify-start" onClick={handleSignOut}>
 											<LogOut className="mr-2 h-4 w-4" />

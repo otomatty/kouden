@@ -155,7 +155,7 @@ export function DataTable<Data>({
 			switch (config.type) {
 				case "select":
 				case "boolean":
-					// 返礼ステータスの場合は色付きセレクトボックスを使用
+					// 返礼状況の場合は色付きセレクトボックスを使用
 					if (columnId === "returnStatus") {
 						return (
 							<ColoredSelectCell
@@ -285,6 +285,11 @@ export function DataTable<Data>({
 												: "bg-background border-r last:border-r-0 whitespace-nowrap overflow-hidden text-ellipsis",
 											cellClassName,
 										)}
+										style={{
+											width: header.getSize() !== 150 ? `${header.getSize()}px` : undefined,
+											minWidth: header.getSize() !== 150 ? `${header.getSize()}px` : undefined,
+											maxWidth: header.getSize() !== 150 ? `${header.getSize()}px` : undefined,
+										}}
 									>
 										{header.isPlaceholder
 											? null
@@ -309,6 +314,14 @@ export function DataTable<Data>({
 												"border-r last:border-r-0 overflow-hidden text-ellipsis",
 												cellClassName,
 											)}
+											style={{
+												width:
+													cell.column.getSize() !== 150 ? `${cell.column.getSize()}px` : undefined,
+												minWidth:
+													cell.column.getSize() !== 150 ? `${cell.column.getSize()}px` : undefined,
+												maxWidth:
+													cell.column.getSize() !== 150 ? `${cell.column.getSize()}px` : undefined,
+											}}
 										>
 											{renderCell(cell, cell.column.id)}
 										</TableCell>

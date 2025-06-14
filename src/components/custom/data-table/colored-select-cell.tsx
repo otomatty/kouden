@@ -119,7 +119,7 @@ export function ColoredSelectCell({ value, options, onSave, className }: Colored
 					return (
 						<SelectItem key={option.value} value={option.value} className="p-2">
 							<div
-								className="flex items-center justify-center px-3 py-1.5 rounded text-sm font-medium min-w-0 transition-colors"
+								className="flex items-center justify-center px-3 py-1.5 rounded text-sm font-medium min-w-0 transition-colors w-full"
 								style={{
 									backgroundColor: colors.background,
 									color: colors.text,

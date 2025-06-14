@@ -53,7 +53,6 @@ export function createColumns({
 	entries,
 	relationships,
 	onDeleteRows,
-	onEditReturn,
 	permission,
 }: ColumnProps) {
 	const canEdit = permission === "owner" || permission === "editor";
@@ -133,6 +132,7 @@ export function createColumns({
 				const value = row.getValue("returnRecordCreated") as string;
 				return formatCell(value, "date");
 			},
+			size: 180,
 		},
 		{
 			accessorKey: "entryName",
@@ -160,6 +160,7 @@ export function createColumns({
 					</div>
 				);
 			},
+			size: 200,
 		},
 		{
 			accessorKey: "organization",
@@ -168,6 +169,7 @@ export function createColumns({
 				const value = row.getValue("organization") as string;
 				return formatCell(value);
 			},
+			size: 150,
 		},
 		{
 			accessorKey: "entryPosition",
@@ -176,6 +178,7 @@ export function createColumns({
 				const value = row.getValue("entryPosition") as string;
 				return formatCell(value);
 			},
+			size: 120,
 		},
 		{
 			accessorKey: "relationshipName",
@@ -193,6 +196,7 @@ export function createColumns({
 				const value = row.getValue("relationshipName") as string;
 				return formatCell(value);
 			},
+			size: 100,
 		},
 		{
 			accessorKey: "koudenAmount",
@@ -210,6 +214,7 @@ export function createColumns({
 				const value = row.getValue("koudenAmount") as number;
 				return formatCell(value, "currency");
 			},
+			size: 120,
 		},
 		{
 			accessorKey: "offeringTotal",
@@ -235,6 +240,7 @@ export function createColumns({
 				const value = row.getValue("totalAmount") as number;
 				return <div className="font-medium">{formatCell(value, "currency")}</div>;
 			},
+			size: 120,
 		},
 		{
 			accessorKey: "returnStatus",
@@ -244,7 +250,7 @@ export function createColumns({
 					className="hover:bg-transparent"
 					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
 				>
-					返礼ステータス
+					返礼状況
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			),
@@ -258,6 +264,7 @@ export function createColumns({
 					</Badge>
 				);
 			},
+			size: 120,
 		},
 		{
 			accessorKey: "funeralGiftAmount",
@@ -309,6 +316,7 @@ export function createColumns({
 				);
 			},
 			enableSorting: false,
+			size: 300,
 		},
 		{
 			accessorKey: "returnItemsCost",
@@ -410,19 +418,16 @@ export function createColumns({
 				);
 			},
 			enableSorting: false,
+			size: 300,
 		},
 		{
 			id: "actions",
-			header: "アクション",
+			header: "操作",
 			cell: ({ row }: { row: Row<ReturnManagementSummary> }) => {
 				const returnRecord = row.original;
 
 				const handleViewDetails = () => {
 					console.log("詳細表示:", returnRecord);
-				};
-
-				const handleEdit = () => {
-					onEditReturn?.(returnRecord);
 				};
 
 				const handleDelete = () => {
@@ -432,53 +437,42 @@ export function createColumns({
 				};
 
 				return (
-					<div className="flex items-center gap-2">
-						{canEdit && (
-							<ReturnDialog
-								koudenId={koudenId}
-								entries={entries}
-								relationships={relationships}
-								defaultValues={returnRecord}
-								variant="edit"
-								trigger={
-									<Button variant="ghost" size="sm">
-										<Pen className="h-4 w-4" />
-									</Button>
-								}
-							/>
-						)}
-
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button variant="ghost" className="h-8 w-8 p-0">
-									<span className="sr-only">メニューを開く</span>
-									<MoreHorizontal className="h-4 w-4" />
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent align="end">
-								<DropdownMenuItem onClick={handleViewDetails}>
-									<Eye className="mr-2 h-4 w-4" />
-									詳細表示
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button variant="ghost" className="h-8 w-8 p-0">
+								<span className="sr-only">メニューを開く</span>
+								<MoreHorizontal className="h-4 w-4" />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end">
+							<DropdownMenuItem onClick={handleViewDetails}>
+								<Eye className="mr-2 h-4 w-4" />
+								詳細表示
+							</DropdownMenuItem>
+							{canEdit && (
+								<DropdownMenuItem asChild>
+									<ReturnDialog
+										koudenId={koudenId}
+										entries={entries}
+										relationships={relationships}
+										defaultValues={returnRecord}
+										variant="edit"
+									/>
 								</DropdownMenuItem>
-								{canEdit && (
-									<DropdownMenuItem onClick={handleEdit}>
-										<Pen className="mr-2 h-4 w-4" />
-										編集
-									</DropdownMenuItem>
-								)}
-								{canDelete && (
-									<DropdownMenuItem onClick={handleDelete} className="text-destructive">
-										<Trash className="mr-2 h-4 w-4" />
-										削除
-									</DropdownMenuItem>
-								)}
-							</DropdownMenuContent>
-						</DropdownMenu>
-					</div>
+							)}
+							{canDelete && (
+								<DropdownMenuItem onClick={handleDelete} className="text-destructive">
+									<Trash className="mr-2 h-4 w-4" />
+									削除
+								</DropdownMenuItem>
+							)}
+						</DropdownMenuContent>
+					</DropdownMenu>
 				);
 			},
 			enableSorting: false,
 			enableHiding: false,
+			size: 100,
 		},
 	];
 }

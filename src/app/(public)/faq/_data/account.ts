@@ -16,45 +16,50 @@ export const account: FAQCategory = {
 		},
 		{
 			id: "faq-account-3",
-			question: "メールアドレスを変更したい",
+			question: "MagicLinkとはなんですか？",
 			answer:
-				"アカウント設定画面から、メールアドレスの変更が可能です。変更後、確認メールが送信されます。",
+				"MagicLinkは、メールアドレスに送信されるリンクです。パスワードが不要で、リンクをクリックするとログインできます。",
 		},
 		{
 			id: "faq-account-4",
-			question: "アカウントを削除できますか？",
-			answer:
-				"設定画面からアカウントを削除できます。削除するとすべてのデータが失われるため、注意してください。",
+			question: "メールアドレスを変更したいです。",
+			answer: "現時点では、メールアドレスの変更はできません。今後のアップデートで対応予定です。",
 		},
 		{
 			id: "faq-account-5",
+			question: "アカウントを削除できますか？",
+			answer:
+				"アカウントを削除するためには、「お問い合わせ」から運営にアカウントを削除する旨を伝えてください。アカウントを削除するとすべてのデータが失われるため、注意してください。",
+		},
+		{
+			id: "faq-account-6",
 			question: "ソーシャルログイン（Google/Facebook）には対応していますか？",
 			answer:
 				"はい、Google認証でのログインをサポートしています。Facebookログインは現在未対応です。",
 		},
 		{
-			id: "faq-account-6",
+			id: "faq-account-7",
 			question: "メールアドレスを変更した後、確認メールが届きません",
 			answer:
 				"迷惑メールフォルダをご確認ください。数分経っても届かない場合はサポートまでご連絡ください。",
 		},
 		{
-			id: "faq-account-7",
+			id: "faq-account-8",
 			question: "MagicLinkの有効期限は？",
 			answer: "MagicLinkは発行後15分間有効です。",
 		},
 		{
-			id: "faq-account-8",
+			id: "faq-account-9",
 			question: "同じメールアドレスで複数アカウントを作成できますか？",
 			answer: "同一メールアドレスでの複数アカウント作成はできません。",
 		},
 		{
-			id: "faq-account-9",
+			id: "faq-account-10",
 			question: "ログアウト方法を教えてください",
 			answer: "画面右上のユーザーメニューから「ログアウト」を選択してください。",
 		},
 		{
-			id: "faq-account-10",
+			id: "faq-account-11",
 			question: "アカウント情報をダウンロードできますか？",
 			answer: "現在はアカウント情報のダウンロード機能は提供していません。",
 		},

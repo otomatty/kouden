@@ -14,9 +14,9 @@ export default function FAQPage() {
 			<PageHero
 				title="よくある質問"
 				subtitle="アプリの使用中によくある質問とその回答をまとめています"
-				className="bg-background"
+				className="bg-muted"
 			/>
-			<Section maxWidthClassName="max-w-4xl">
+			<Section maxWidthClassName="max-w-5xl" className="bg-background">
 				<FAQClient />
 			</Section>
 		</>

@@ -3,11 +3,18 @@
 import { MessageSquarePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { FeedbackForm } from "@/components/custom/feedback-form";
-import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
+import AppContactForm from "@/components/contact/app-contact-form";
+import { FeedbackDialog } from "@/components/custom/feedback-dialog";
+import type { User } from "@supabase/supabase-js";
+import { useState } from "react";
 
-export function FeedbackButton() {
+interface FeedbackButtonProps {
+	user: User;
+}
+
+export function FeedbackButton({ user }: FeedbackButtonProps) {
 	const isDesktop = useMediaQuery("(min-width: 768px)");
+	const [isOpen, setIsOpen] = useState(false);
 
 	const trigger = isDesktop ? (
 		<Button
@@ -24,9 +31,18 @@ export function FeedbackButton() {
 		</Button>
 	);
 
+	const handleSuccess = () => {
+		setIsOpen(false);
+	};
+
 	return (
-		<ResponsiveDialog trigger={trigger} title="不具合・ご要望はこちら" className="p-4">
-			<FeedbackForm />
-		</ResponsiveDialog>
+		<FeedbackDialog
+			trigger={trigger}
+			title="不具合・ご要望はこちら"
+			open={isOpen}
+			onOpenChange={setIsOpen}
+		>
+			<AppContactForm user={user} onSuccess={handleSuccess} />
+		</FeedbackDialog>
 	);
 }

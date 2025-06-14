@@ -119,13 +119,13 @@ CREATE TABLE return_entry_records (
 | `total_amount` | bigint | 香典+お供物合計金額 | ✅ トリガー |
 | `funeral_gift_amount` | bigint | 会葬品返礼額 | - |
 | `additional_return_amount` | bigint | 追加返礼必要額 | ✅ 計算カラム |
-| `return_status` | text | 返礼ステータス | - |
+| `return_status` | text | 返礼状況 | - |
 | `return_method` | text | 返礼方法 | - |
 | `return_items` | jsonb | 返礼品詳細 | - |
 | `arrangement_date` | date | 手配日 | - |
 | `remarks` | text | 備考 | - |
 
-#### 返礼ステータス定義
+#### 返礼状況定義
 
 | ステータス | 説明 | 表示名 |
 |------------|------|--------|
@@ -186,7 +186,7 @@ SECURITY DEFINER
 
 **機能:**
 - 指定香典帳の全エントリーに会葬品返礼額を一括設定
-- 返礼ステータスの自動判定・更新
+- 返礼状況の自動判定・更新
 - 権限チェック付きセキュア実行
 
 **使用例:**

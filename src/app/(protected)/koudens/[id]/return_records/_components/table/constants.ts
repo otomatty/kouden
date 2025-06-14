@@ -1,7 +1,7 @@
 import type { EditableColumnConfig } from "@/types/table";
 import type { SelectColorConfig } from "@/types/select-colors";
 
-// 返礼ステータスのマッピング
+// 返礼状況のマッピング
 export const returnStatusMap = {
 	PENDING: "未対応",
 	PARTIAL_RETURNED: "一部返礼",
@@ -9,7 +9,7 @@ export const returnStatusMap = {
 	NOT_REQUIRED: "返礼不要",
 } as const;
 
-// 返礼ステータスの優先順位（ソート用）
+// 返礼状況の優先順位（ソート用）
 export const returnStatusPriority = {
 	PENDING: 4,
 	PARTIAL_RETURNED: 3,
@@ -17,7 +17,7 @@ export const returnStatusPriority = {
 	NOT_REQUIRED: 1,
 } as const;
 
-// 返礼ステータスのバッジ色
+// 返礼状況のバッジ色
 export const returnStatusBadgeVariant = {
 	PENDING: "outline",
 	PARTIAL_RETURNED: "secondary",
@@ -26,16 +26,16 @@ export const returnStatusBadgeVariant = {
 } as const;
 
 /**
- * 返礼ステータス用のカスタム色設定
+ * 返礼状況用のカスタム色設定
  * 各プロジェクトで独自の色を設定したい場合はここを変更
  */
 export const returnStatusCustomColors: Record<string, SelectColorConfig> = {
 	PENDING: {
-		background: "hsl(210 40% 98%)", // slate-50
-		text: "hsl(222.2 84% 4.9%)", // slate-900
-		border: "hsl(214.3 31.8% 91.4%)", // slate-200
-		hoverBackground: "hsl(210 40% 96%)",
-		hoverText: "hsl(222.2 84% 4.9%)",
+		background: "hsl(0 0% 0%)", // black-50
+		text: "hsl(0 0% 100%)", // white
+		border: "hsl(0 0% 0%)", // black-200
+		hoverBackground: "hsl(0 0% 0%)",
+		hoverText: "hsl(0 0% 100%)",
 	},
 	PARTIAL_RETURNED: {
 		background: "hsl(45.4 93.4% 47.5%)", // yellow-500
@@ -52,10 +52,10 @@ export const returnStatusCustomColors: Record<string, SelectColorConfig> = {
 		hoverText: "hsl(0 0% 100%)",
 	},
 	NOT_REQUIRED: {
-		background: "hsl(0 84.2% 60.2%)", // red-500
+		background: "hsl(217.2 91.2% 59.8%)", // blue-500
 		text: "hsl(0 0% 100%)", // white
-		border: "hsl(0 84.2% 60.2%)",
-		hoverBackground: "hsl(0 72.2% 50.6%)",
+		border: "hsl(217.2 91.2% 59.8%)",
+		hoverBackground: "hsl(217.2 91.2% 59.8%)",
 		hoverText: "hsl(0 0% 100%)",
 	},
 };
@@ -70,7 +70,7 @@ export const columnLabels: Record<string, string> = {
 	koudenAmount: "香典金額",
 	offeringTotal: "供物金額",
 	totalAmount: "合計金額",
-	returnStatus: "返礼ステータス",
+	returnStatus: "返礼状況",
 	funeralGiftAmount: "葬儀ギフト金額",
 	additionalReturnAmount: "追加返礼金額",
 	returnMethod: "返礼方法",
@@ -82,7 +82,7 @@ export const columnLabels: Record<string, string> = {
 	returnRecordCreated: "登録日時",
 	returnRecordUpdated: "更新日時",
 	remarks: "備考",
-	actions: "アクション",
+	actions: "操作",
 };
 
 // 検索オプションの定義

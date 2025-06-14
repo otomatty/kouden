@@ -22,7 +22,6 @@ export async function createContactRequest(formData: FormData) {
 		subject: formData.get("subject") as string | null,
 		message: formData.get("message") as string,
 		company_name: formData.get("company_name") as string | null,
-		company_size: formData.get("company_size") as string | null,
 		user_id: user?.id ?? null,
 	};
 

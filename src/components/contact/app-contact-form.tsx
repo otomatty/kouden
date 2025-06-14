@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import {
 	Form,
@@ -21,24 +20,30 @@ import StepSummary from "./step-summary";
 import { getPlaceholderByCategory } from "./category-placeholders";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import Router from "next/router";
+import { useToast } from "@/hooks/use-toast";
+import type { User } from "@supabase/supabase-js";
 
 interface ContactFormValues {
 	category: string;
-	name?: string;
+	name: string;
 	email: string;
 	message: string;
 	company_name?: string;
 	attachment?: FileList;
 }
 
-export default function ContactForm() {
-	const router = useRouter();
+interface AppContactFormProps {
+	user: User;
+	onSuccess?: () => void;
+}
+
+export default function AppContactForm({ user, onSuccess }: AppContactFormProps) {
+	const { toast } = useToast();
 	const form = useForm<ContactFormValues>({
 		defaultValues: {
 			category: "support",
-			name: "",
-			email: "",
+			name: user.user_metadata?.full_name || user.email?.split("@")[0] || "",
+			email: user.email || "",
 			message: "",
 			company_name: "",
 			attachment: undefined,
@@ -58,38 +63,10 @@ export default function ContactForm() {
 			description: "問題の詳細を記入",
 		},
 		{
-			title: "連絡先入力",
-			description: "お客様情報を入力",
+			title: "確認・送信",
+			description: "内容を確認して送信",
 		},
 	];
-
-	// フォームが変更されているとき、ページ遷移やリロードを防ぐための確認
-	useEffect(() => {
-		const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-			if (form.formState.isDirty) {
-				e.preventDefault();
-				// returnValue assignment is deprecated and not required by modern browsers
-			}
-		};
-		window.addEventListener("beforeunload", handleBeforeUnload);
-
-		const handleRouteChange = () => {
-			if (form.formState.isDirty) {
-				// ユーザーに確認
-				if (!confirm("入力内容が消えてしまいますが、よろしいですか？")) {
-					Router.events.emit("routeChangeError");
-					// ルート変更を中止
-					throw "Abort route change by user";
-				}
-			}
-		};
-		Router.events.on("routeChangeStart", handleRouteChange);
-
-		return () => {
-			window.removeEventListener("beforeunload", handleBeforeUnload);
-			Router.events.off("routeChangeStart", handleRouteChange);
-		};
-	}, [form.formState.isDirty]);
 
 	/**
 	 * 次へボタン: 現在のステップの必須項目をバリデートしてから進む
@@ -101,8 +78,6 @@ export default function ContactForm() {
 			fieldsToValidate = ["category"];
 		} else if (step === 2) {
 			fieldsToValidate = ["message"];
-		} else if (step === 3) {
-			fieldsToValidate = ["name", "email"];
 		}
 
 		const valid = await form.trigger(fieldsToValidate);
@@ -112,19 +87,40 @@ export default function ContactForm() {
 	};
 
 	const onSubmit = async (values: ContactFormValues) => {
-		const formData = new FormData();
-		for (const [key, value] of Object.entries(values)) {
-			if (key === "attachment" && value instanceof FileList) {
-				const file = value.item(0);
-				if (file) {
-					formData.append(key, file, file.name);
+		try {
+			const formData = new FormData();
+			for (const [key, value] of Object.entries(values)) {
+				if (key === "attachment" && value instanceof FileList) {
+					const file = value.item(0);
+					if (file) {
+						formData.append(key, file, file.name);
+					}
+				} else if (value != null) {
+					formData.append(key, String(value));
 				}
-			} else if (value != null) {
-				formData.append(key, String(value));
 			}
+
+			await createContactRequest(formData);
+
+			toast({
+				title: "お問い合わせを送信しました",
+				description: "ご連絡ありがとうございます。回答をお待ちください。",
+			});
+
+			// フォームをリセット
+			form.reset();
+			setStep(1);
+
+			// 成功時のコールバック実行
+			onSuccess?.();
+		} catch (error) {
+			console.error("Failed to send contact:", error);
+			toast({
+				title: "送信に失敗しました",
+				description: "しばらく時間をおいて再度お試しください。",
+				variant: "destructive",
+			});
 		}
-		await createContactRequest(formData);
-		router.push("/contact/success");
 	};
 
 	// 選択されたカテゴリに応じたプレースホルダーを取得
@@ -135,14 +131,14 @@ export default function ContactForm() {
 
 	return (
 		<Form {...form}>
-			<div className="max-w-4xl mx-auto p-4 mb-12 space-y-6">
+			<div className="space-y-6">
 				{/* ステップインジケータ */}
 				<StepIndicator currentStep={step} totalSteps={steps.length} steps={steps} />
 
 				<form
 					onSubmit={form.handleSubmit(onSubmit)}
 					encType="multipart/form-data"
-					className="space-y-6 bg-card p-6 rounded-lg border"
+					className="space-y-6"
 				>
 					{/* 前のステップの入力内容表示 */}
 					<StepSummary currentStep={step} formData={formValues} />
@@ -163,6 +159,7 @@ export default function ContactForm() {
 							)}
 						/>
 					)}
+
 					{step === 2 && (
 						<>
 							<FormField
@@ -198,6 +195,7 @@ export default function ContactForm() {
 							/>
 						</>
 					)}
+
 					{step === 3 && (
 						<>
 							<FormField
@@ -241,8 +239,17 @@ export default function ContactForm() {
 									<FormItem>
 										<FormLabel required>メールアドレス</FormLabel>
 										<FormControl>
-											<TextField {...field} type="email" label="メールアドレス" />
+											<TextField
+												{...field}
+												type="email"
+												label="メールアドレス"
+												readOnly
+												className="bg-muted/50 cursor-not-allowed"
+											/>
 										</FormControl>
+										<div className="text-xs text-muted-foreground mt-1">
+											※ ログイン中のアカウントのメールアドレスが自動入力されています
+										</div>
 										<FormMessage />
 									</FormItem>
 								)}

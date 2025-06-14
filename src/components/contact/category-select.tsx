@@ -91,7 +91,7 @@ export default function CategorySelect({
 							className={`w-6 h-6 ${value === opt.value ? "text-primary" : "text-muted-foreground"}`}
 						/>
 						<span
-							className={`font-semibold ${value === opt.value ? "text-primary" : "text-foreground"}`}
+							className={`text-xl font-semibold ${value === opt.value ? "text-primary" : "text-foreground"}`}
 						>
 							{opt.label}
 						</span>

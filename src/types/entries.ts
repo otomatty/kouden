@@ -11,7 +11,7 @@ export interface Relationship {
 	description?: string;
 }
 
-// 返礼ステータスの型定義
+// 返礼状況の型定義
 export type ReturnStatus = "PENDING" | "PARTIAL_RETURNED" | "COMPLETED" | "NOT_REQUIRED";
 
 // 返礼品アイテムの型定義

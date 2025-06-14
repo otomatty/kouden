@@ -21,7 +21,7 @@ interface MobileFiltersProps {
 }
 
 /**
- * 返礼ステータスのオプション
+ * 返礼状況のオプション
  */
 const statusOptions = [
 	{ value: "all", label: "すべて" },

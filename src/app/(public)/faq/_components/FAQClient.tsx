@@ -58,7 +58,7 @@ export default function FAQClient() {
 			{filteredData.length === 0 ? (
 				<p className="text-center text-gray-500">該当するQ&Aがありません。</p>
 			) : (
-				<Tabs defaultValue={defaultTab}>
+				<Tabs defaultValue={defaultTab} className="space-y-4">
 					<TabsList>
 						{filteredData.map(({ category }) => (
 							<TabsTrigger key={category} value={category}>

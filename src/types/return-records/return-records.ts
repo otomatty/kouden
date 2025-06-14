@@ -4,9 +4,10 @@
  */
 
 import type { Database } from "@/types/supabase";
+import type { AttendanceType } from "@/types/entries";
 
 /**
- * 返礼ステータスの型定義
+ * 返礼状況の型定義
  */
 export type ReturnStatus = "PENDING" | "PARTIAL_RETURNED" | "COMPLETED" | "NOT_REQUIRED";
 
@@ -31,7 +32,7 @@ export type ReturnEntryRecord = Database["public"]["Tables"]["return_entry_recor
 export interface CreateReturnEntryInput {
 	/** 香典エントリーID */
 	kouden_entry_id: string;
-	/** 返礼ステータス */
+	/** 返礼状況 */
 	return_status: ReturnStatus;
 	/** 返礼品リスト（JSON） */
 	return_items?: ReturnItem[];
@@ -47,7 +48,7 @@ export interface CreateReturnEntryInput {
 export interface UpdateReturnEntryInput {
 	/** 香典エントリーID */
 	kouden_entry_id: string;
-	/** 返礼ステータス */
+	/** 返礼状況 */
 	return_status?: ReturnStatus;
 	/** 返礼品リスト（JSON） */
 	return_items?: ReturnItem[];
@@ -95,4 +96,66 @@ export interface ReturnManagementSummary {
 	// 新規追加: コスト情報
 	returnItemsCost: number;
 	profitLoss: number;
+}
+
+/**
+ * 一括変更の条件設定
+ */
+export interface BulkUpdateFilters {
+	/** 金額範囲 */
+	amountRange?: {
+		min?: number;
+		max?: number;
+	};
+	/** 関係性ID */
+	relationshipIds?: string[];
+	/** 現在のステータス */
+	currentStatuses?: ReturnStatus[];
+	/** 参列タイプ */
+	attendanceTypes?: AttendanceType[];
+	/** お供物の有無 */
+	hasOffering?: boolean;
+}
+
+/**
+ * 一括変更の更新内容
+ */
+export interface BulkUpdateChanges {
+	/** 返礼品の操作 */
+	returnItems?: {
+		action: "add" | "replace" | "clear";
+		items: ReturnItem[];
+	};
+	/** ステータス変更 */
+	status?: ReturnStatus;
+	/** 返礼方法 */
+	returnMethod?: string;
+	/** 手配日 */
+	arrangementDate?: Date;
+	/** 備考 */
+	remarks?: string;
+}
+
+/**
+ * 一括変更の設定
+ */
+export interface BulkUpdateConfig {
+	/** 条件設定 */
+	filters: BulkUpdateFilters;
+	/** 変更内容 */
+	updates: BulkUpdateChanges;
+}
+
+/**
+ * 一括変更のプレビュー結果
+ */
+export interface BulkUpdatePreview {
+	/** 対象件数 */
+	targetCount: number;
+	/** 対象の総金額 */
+	totalAmount: number;
+	/** 対象レコードのサンプル */
+	sampleRecords: ReturnManagementSummary[];
+	/** 変更内容のサマリー */
+	changesSummary: string[];
 }

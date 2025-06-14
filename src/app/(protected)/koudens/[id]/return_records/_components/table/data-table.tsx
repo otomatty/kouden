@@ -18,7 +18,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 
 // types
-import type { ReturnManagementSummary } from "@/types/return-records/return-records";
+import type {
+	ReturnManagementSummary,
+	BulkUpdateConfig,
+} from "@/types/return-records/return-records";
 import type { Relationship } from "@/types/relationships";
 import type { Entry } from "@/types/entries";
 import type { CellValue } from "@/types/table";
@@ -27,6 +30,7 @@ import type { CellValue } from "@/types/table";
 import {
 	deleteReturnRecords,
 	updateReturnRecordFieldByKoudenEntryId,
+	bulkUpdateReturnRecords,
 } from "@/app/_actions/return-records/return-records";
 
 // hooks
@@ -40,6 +44,7 @@ import { DataTable as BaseDataTable } from "@/components/custom/data-table";
 import { TableSkeleton } from "@/components/custom/loading/skeletons";
 import { DataTableToolbar } from "@/components/custom/data-table/toolbar";
 import { ReturnItemsButton } from "../return-items-button";
+import { BulkUpdateTableDialog } from "../dialog/bulk-update-table";
 import { createColumns } from "./columns";
 import {
 	columnLabels,
@@ -315,8 +320,9 @@ export function DataTable({
 				columnLabels={columnLabels}
 				showDateFilter={false}
 			>
-				{/* 返礼品管理ボタン */}
-				<div className="flex items-center justify-end">
+				{/* 返礼品管理ボタンと一括変更ボタン */}
+				<div className="flex items-center justify-end gap-2">
+					<BulkUpdateTableDialog koudenId={koudenId} onBulkUpdate={async () => onDataChange()} />
 					<ReturnItemsButton koudenId={koudenId} />
 				</div>
 			</DataTableToolbar>

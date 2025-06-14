@@ -1053,7 +1053,6 @@ export type Database = {
         Row: {
           category: string
           company_name: string | null
-          company_size: string | null
           created_at: string
           email: string
           id: string
@@ -1069,7 +1068,6 @@ export type Database = {
         Insert: {
           category: string
           company_name?: string | null
-          company_size?: string | null
           created_at?: string
           email: string
           id?: string
@@ -1085,7 +1083,6 @@ export type Database = {
         Update: {
           category?: string
           company_name?: string | null
-          company_size?: string | null
           created_at?: string
           email?: string
           id?: string

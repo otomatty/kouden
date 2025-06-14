@@ -21,7 +21,7 @@ export function ReturnItemsButton({ koudenId, className }: ReturnItemsButtonProp
 	};
 
 	return (
-		<Button size="lg" onClick={handleClick} className={className}>
+		<Button variant="outline" size="lg" onClick={handleClick} className={className}>
 			<Package className="h-4 w-4 mr-2" />
 			返礼品を管理する
 		</Button>

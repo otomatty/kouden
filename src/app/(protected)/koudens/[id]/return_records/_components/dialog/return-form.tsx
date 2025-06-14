@@ -206,7 +206,7 @@ export function ReturnForm({
 					</TabsContent>
 
 					<TabsContent value="additional" className="space-y-4 mt-4">
-						<ReturnFormAdditional form={form} selectedEntry={selectedEntry} />
+						<ReturnFormAdditional form={form} />
 					</TabsContent>
 				</Tabs>
 

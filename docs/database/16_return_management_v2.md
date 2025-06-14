@@ -82,7 +82,7 @@ CREATE TABLE return_entry_records (
 | `id` | uuid | 主キー |
 | `kouden_entry_id` | uuid | 香典エントリーID（一意制約） |
 | `total_amount` | bigint | 香典金額 + お供物合計（自動計算） |
-| `return_status` | text | 返礼ステータス |
+| `return_status` | text | 返礼状況 |
 | `funeral_gift_amount` | bigint | 会葬品返礼額 |
 | `additional_return_amount` | bigint | 追加返礼必要額（計算カラム） |
 | `return_method` | text | 返礼方法 |
@@ -90,7 +90,7 @@ CREATE TABLE return_entry_records (
 | `arrangement_date` | date | 手配日 |
 | `remarks` | text | 備考 |
 
-#### 返礼ステータス
+#### 返礼状況
 
 - `PENDING`: 未対応
 - `PARTIAL_RETURNED`: 一部返礼済み（会葬品のみ等）
@@ -143,7 +143,7 @@ RETURNS TABLE (
 
 **機能:**
 - 指定した香典帳の全エントリーに会葬品返礼額を一括設定
-- 返礼ステータスの自動更新
+- 返礼状況の自動更新
 - 処理結果の詳細情報を返却
 
 **使用例:**

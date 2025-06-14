@@ -25,7 +25,7 @@ interface ReturnCardProps {
 }
 
 /**
- * 返礼ステータスのバッジ色を取得
+ * 返礼状況のバッジ色を取得
  */
 function getStatusBadgeVariant(status: string) {
 	switch (status) {
@@ -43,7 +43,7 @@ function getStatusBadgeVariant(status: string) {
 }
 
 /**
- * 返礼ステータスの表示名を取得
+ * 返礼状況の表示名を取得
  */
 function getStatusDisplayName(status: string) {
 	switch (status) {

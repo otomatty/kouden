@@ -43,7 +43,7 @@ interface ReturnFormBasicProps {
 }
 
 /**
- * 返礼ステータスのオプション
+ * 返礼状況のオプション
  */
 const statusOptions = [
 	{ value: "PENDING", label: "未対応", color: "outline" },
@@ -57,12 +57,7 @@ const statusOptions = [
  * 役割：返礼フォームの基本情報タブ（編集専用）
  * 香典エントリーは変更不可（編集対象が固定のため）
  */
-export function ReturnFormBasic({
-	form,
-	entries,
-	relationships,
-	selectedEntry,
-}: ReturnFormBasicProps) {
+export function ReturnFormBasic({ form, relationships, selectedEntry }: ReturnFormBasicProps) {
 	// 選択されたエントリーの関係性情報を取得
 	const selectedRelationship = selectedEntry?.relationship_id
 		? relationships.find((r) => r.id === selectedEntry.relationship_id)
@@ -70,90 +65,49 @@ export function ReturnFormBasic({
 
 	return (
 		<div className="space-y-6">
-			{/* 香典エントリー選択（編集時は変更不可） */}
-			<FormField
-				control={form.control}
-				name="kouden_entry_id"
-				render={({ field }) => (
-					<FormItem>
-						<FormLabel>香典エントリー *</FormLabel>
-						<Select
-							onValueChange={field.onChange}
-							defaultValue={field.value}
-							disabled={true} // 編集専用なので常に無効
-						>
-							<FormControl>
-								<SelectTrigger>
-									<SelectValue placeholder="香典エントリーを選択してください" />
-								</SelectTrigger>
-							</FormControl>
-							<SelectContent>
-								{entries.map((entry) => (
-									<SelectItem key={entry.id} value={entry.id}>
-										<div className="flex flex-col">
-											<span>{entry.name}</span>
-											<span className="text-xs text-muted-foreground">
-												{entry.organization} - ¥{entry.amount.toLocaleString()}
-											</span>
-										</div>
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-						<FormMessage />
-					</FormItem>
-				)}
-			/>
-
 			{/* 選択されたエントリーの詳細表示 */}
 			{selectedEntry && (
-				<Card>
-					<CardHeader>
-						<CardTitle className="text-sm">選択されたエントリー</CardTitle>
-						<CardDescription>返礼対象の香典情報です</CardDescription>
-					</CardHeader>
-					<CardContent className="space-y-3">
-						<div className="grid grid-cols-2 gap-4 text-sm">
-							<div>
-								<span className="text-muted-foreground">名前:</span>
-								<p className="font-medium">{selectedEntry.name}</p>
-							</div>
-							<div>
-								<span className="text-muted-foreground">組織:</span>
-								<p>{selectedEntry.organization}</p>
-							</div>
-							{selectedEntry.position && (
-								<div>
-									<span className="text-muted-foreground">役職:</span>
-									<p>{selectedEntry.position}</p>
-								</div>
-							)}
-							<div>
-								<span className="text-muted-foreground">関係性:</span>
-								<p>{selectedRelationship?.name || "-"}</p>
-							</div>
-							<div>
-								<span className="text-muted-foreground">香典金額:</span>
-								<p className="font-medium">¥{selectedEntry.amount.toLocaleString()}</p>
-							</div>
-							{selectedEntry.has_offering && (
-								<div>
-									<span className="text-muted-foreground">お供え物:</span>
-									<p>あり</p>
-								</div>
-							)}
+				<Card className="p-4">
+					<div className="grid grid-cols-2 gap-4 text-sm">
+						<div>
+							<span className="text-muted-foreground">名前:</span>
+							<p className="font-medium">{selectedEntry.name}</p>
 						</div>
-					</CardContent>
+						<div>
+							<span className="text-muted-foreground">組織:</span>
+							<p>{selectedEntry.organization}</p>
+						</div>
+						{selectedEntry.position && (
+							<div>
+								<span className="text-muted-foreground">役職:</span>
+								<p>{selectedEntry.position}</p>
+							</div>
+						)}
+						<div>
+							<span className="text-muted-foreground">関係性:</span>
+							<p>{selectedRelationship?.name || "-"}</p>
+						</div>
+						<div>
+							<span className="text-muted-foreground">香典金額:</span>
+							<p className="font-medium">¥{selectedEntry.amount.toLocaleString()}</p>
+						</div>
+						{selectedEntry.has_offering && (
+							<div>
+								<span className="text-muted-foreground">お供え物:</span>
+								<p>あり</p>
+							</div>
+						)}
+					</div>
 				</Card>
 			)}
 
-			{/* 返礼ステータス */}
+			{/* 返礼状況 */}
 			<FormField
 				control={form.control}
 				name="return_status"
 				render={({ field }) => (
 					<FormItem>
-						<FormLabel>返礼ステータス *</FormLabel>
+						<FormLabel required>返礼状況</FormLabel>
 						<Select onValueChange={field.onChange} defaultValue={field.value}>
 							<FormControl>
 								<SelectTrigger>
@@ -187,7 +141,7 @@ export function ReturnFormBasic({
 				name="funeral_gift_amount"
 				render={({ field }) => (
 					<FormItem>
-						<FormLabel>葬儀ギフト金額 *</FormLabel>
+						<FormLabel required>葬儀ギフト金額</FormLabel>
 						<FormControl>
 							<Input
 								type="number"
@@ -207,7 +161,7 @@ export function ReturnFormBasic({
 				name="additional_return_amount"
 				render={({ field }) => (
 					<FormItem>
-						<FormLabel>追加返礼金額</FormLabel>
+						<FormLabel optional>追加返礼金額</FormLabel>
 						<FormControl>
 							<Input
 								type="number"
@@ -227,7 +181,7 @@ export function ReturnFormBasic({
 				name="return_method"
 				render={({ field }) => (
 					<FormItem>
-						<FormLabel>返礼方法</FormLabel>
+						<FormLabel optional>返礼方法</FormLabel>
 						<FormControl>
 							<Input placeholder="例: 直接お渡し、郵送など" {...field} />
 						</FormControl>
