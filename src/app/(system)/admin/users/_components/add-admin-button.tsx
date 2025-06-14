@@ -22,24 +22,14 @@ import {
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@supabase/supabase-js";
-import {
-	addAdminUser,
-	findUserByEmail,
-} from "@/app/_actions/admin/admin-users";
 import { useRouter } from "next/navigation";
 
 interface AddAdminButtonProps {
 	findUserByEmail: (email: string) => Promise<User | undefined>;
-	addAdminUser: (
-		userId: string,
-		role: "admin" | "super_admin",
-	) => Promise<void>;
+	addAdminUser: (userId: string, role: "admin" | "super_admin") => Promise<void>;
 }
 
-export function AddAdminButton({
-	findUserByEmail,
-	addAdminUser,
-}: AddAdminButtonProps) {
+export function AddAdminButton({ findUserByEmail, addAdminUser }: AddAdminButtonProps) {
 	const router = useRouter();
 	const [open, setOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
@@ -56,8 +46,7 @@ export function AddAdminButton({
 			if (!user) {
 				toast({
 					title: "エラー",
-					description:
-						"指定されたメールアドレスのユーザーが見つかりませんでした。",
+					description: "指定されたメールアドレスのユーザーが見つかりませんでした。",
 					variant: "destructive",
 				});
 				return;
@@ -109,10 +98,7 @@ export function AddAdminButton({
 					</div>
 					<div className="space-y-2">
 						<Label htmlFor="role">権限</Label>
-						<Select
-							value={role}
-							onValueChange={(value: "admin" | "super_admin") => setRole(value)}
-						>
+						<Select value={role} onValueChange={(value: "admin" | "super_admin") => setRole(value)}>
 							<SelectTrigger>
 								<SelectValue />
 							</SelectTrigger>

@@ -45,7 +45,7 @@ export default async function AdminOrganizationsPage() {
 	];
 
 	return (
-		<Container className="py-8">
+		<>
 			<h1 className="text-xl font-bold mb-4">組織管理</h1>
 			<Tabs defaultValue="pending">
 				<TabsList>
@@ -59,6 +59,6 @@ export default async function AdminOrganizationsPage() {
 					<DataTable columns={allColumns} data={activeRows} />
 				</TabsContent>
 			</Tabs>
-		</Container>
+		</>
 	);
 }

@@ -33,10 +33,7 @@ import type { AdminUser } from "@/types/admin";
 
 interface AdminUsersTableProps {
 	adminUsers: AdminUser[];
-	updateAdminRole: (
-		adminId: string,
-		role: "admin" | "super_admin",
-	) => Promise<void>;
+	updateAdminRole: (adminId: string, role: "admin" | "super_admin") => Promise<void>;
 	removeAdminUser: (adminId: string) => Promise<void>;
 }
 
@@ -48,10 +45,7 @@ export function AdminUsersTable({
 	const [loading, setLoading] = useState<string | null>(null);
 	const { toast } = useToast();
 
-	const handleRoleChange = async (
-		adminId: string,
-		role: "admin" | "super_admin",
-	) => {
+	const handleRoleChange = async (adminId: string, role: "admin" | "super_admin") => {
 		setLoading(adminId);
 		try {
 			await updateAdminRole(adminId, role);
@@ -123,18 +117,12 @@ export function AdminUsersTable({
 							</Select>
 						</TableCell>
 						<TableCell>
-							{admin.created_at
-								? new Date(admin.created_at).toLocaleString("ja-JP")
-								: "-"}
+							{admin.created_at ? new Date(admin.created_at).toLocaleString("ja-JP") : "-"}
 						</TableCell>
 						<TableCell>
 							<AlertDialog>
 								<AlertDialogTrigger asChild>
-									<Button
-										variant="destructive"
-										size="sm"
-										disabled={loading === admin.id}
-									>
+									<Button variant="destructive" size="sm" disabled={loading === admin.id}>
 										削除
 									</Button>
 								</AlertDialogTrigger>

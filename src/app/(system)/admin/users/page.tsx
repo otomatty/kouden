@@ -1,13 +1,6 @@
 import { Suspense } from "react";
-import {
-	getAdminUsers,
-	addAdminUser,
-	updateAdminRole,
-	removeAdminUser,
-	findUserByEmail,
-} from "@/app/_actions/admin/admin-users";
+import { getAdminUsers, updateAdminRole, removeAdminUser } from "@/app/_actions/admin/admin-users";
 import { AdminUsersTable } from "./_components/admin-users-table";
-import { AddAdminButton } from "./_components/add-admin-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AdminUser } from "@/types/admin";
 
