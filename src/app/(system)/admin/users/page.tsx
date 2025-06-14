@@ -1,27 +1,17 @@
 import { Suspense } from "react";
-import { getAdminUsers, updateAdminRole, removeAdminUser } from "@/app/_actions/admin/admin-users";
-import { AdminUsersTable } from "./_components/admin-users-table";
-import { Skeleton } from "@/components/ui/skeleton";
-import type { AdminUser } from "@/types/admin";
+import { UserManagement } from "./_components/user-management";
+import { UserManagementSkeleton } from "./_components/user-management-skeleton";
 
-export default async function AdminUsersPage() {
-	const adminUsers = await getAdminUsers();
-
+export default function AdminUsersPage() {
 	return (
-		<div className="space-y-6">
-			<div className="flex items-center justify-between">
-				<h1 className="text-2xl font-semibold">管理者一覧</h1>
-				{/* <AddAdminButton
-					findUserByEmail={findUserByEmail}
-					addAdminUser={addAdminUser}
-				/> */}
+		<div className="container mx-auto px-4 py-8">
+			<div className="mb-8">
+				<h1 className="text-3xl font-bold">ユーザー管理</h1>
+				<p className="text-muted-foreground mt-2">全ユーザーの管理と詳細情報の確認ができます</p>
 			</div>
-			<Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
-				<AdminUsersTable
-					adminUsers={adminUsers as AdminUser[]}
-					updateAdminRole={updateAdminRole}
-					removeAdminUser={removeAdminUser}
-				/>
+
+			<Suspense fallback={<UserManagementSkeleton />}>
+				<UserManagement />
 			</Suspense>
 		</div>
 	);

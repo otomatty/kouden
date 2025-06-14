@@ -24,8 +24,8 @@ interface AdminHeaderProps {
 // 主要なナビゲーション項目（タブとして表示）
 const mainNavigation = [
 	{ name: "ダッシュボード", href: "/admin", icon: LayoutDashboard },
-	{ name: "組織管理", href: "/admin/organizations", icon: Briefcase },
-	{ name: "管理者", href: "/admin/users", icon: Users },
+	{ name: "組織", href: "/admin/organizations", icon: Briefcase },
+	{ name: "ユーザー", href: "/admin/users", icon: Users },
 	{ name: "オウンドメディア", href: "/admin/blog", icon: FileText },
 	{ name: "サポート", href: "/admin/support", icon: LifeBuoy },
 ];
