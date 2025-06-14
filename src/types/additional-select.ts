@@ -1,6 +1,13 @@
 export interface SelectOption {
 	value: string;
 	label: string;
+	variant?: "default" | "secondary" | "destructive" | "outline";
+	/** カスタム色設定 */
+	colors?: {
+		background?: string;
+		text?: string;
+		border?: string;
+	};
 }
 
 export interface AdditionalSelectProps {

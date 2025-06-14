@@ -2018,10 +2018,15 @@ export type Database = {
           funeral_gift_amount: number
           id: string
           kouden_entry_id: string
+          profit_loss: number | null
           remarks: string | null
           return_items: Json | null
+          return_items_cost: number
           return_method: string | null
           return_status: string
+          shipping_address: string | null
+          shipping_phone_number: string | null
+          shipping_postal_code: string | null
           total_amount: number
           updated_at: string
         }
@@ -2033,10 +2038,15 @@ export type Database = {
           funeral_gift_amount?: number
           id?: string
           kouden_entry_id: string
+          profit_loss?: number | null
           remarks?: string | null
           return_items?: Json | null
+          return_items_cost?: number
           return_method?: string | null
           return_status?: string
+          shipping_address?: string | null
+          shipping_phone_number?: string | null
+          shipping_postal_code?: string | null
           total_amount?: number
           updated_at?: string
         }
@@ -2048,10 +2058,15 @@ export type Database = {
           funeral_gift_amount?: number
           id?: string
           kouden_entry_id?: string
+          profit_loss?: number | null
           remarks?: string | null
           return_items?: Json | null
+          return_items_cost?: number
           return_method?: string | null
           return_status?: string
+          shipping_address?: string | null
+          shipping_phone_number?: string | null
+          shipping_postal_code?: string | null
           total_amount?: number
           updated_at?: string
         }
@@ -2074,33 +2089,51 @@ export type Database = {
       }
       return_items: {
         Row: {
+          category: string | null
           created_at: string
           created_by: string
           description: string | null
           id: string
+          image_url: string | null
+          is_active: boolean | null
           kouden_id: string
           name: string
           price: number
+          recommended_amount_max: number | null
+          recommended_amount_min: number | null
+          sort_order: number | null
           updated_at: string
         }
         Insert: {
+          category?: string | null
           created_at?: string
           created_by: string
           description?: string | null
           id?: string
+          image_url?: string | null
+          is_active?: boolean | null
           kouden_id: string
           name: string
           price: number
+          recommended_amount_max?: number | null
+          recommended_amount_min?: number | null
+          sort_order?: number | null
           updated_at?: string
         }
         Update: {
+          category?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
           id?: string
+          image_url?: string | null
+          is_active?: boolean | null
           kouden_id?: string
           name?: string
           price?: number
+          recommended_amount_max?: number | null
+          recommended_amount_min?: number | null
+          sort_order?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -2579,23 +2612,28 @@ export type Database = {
         Row: {
           additional_return_amount: number | null
           arrangement_date: string | null
+          entry_name: string | null
+          entry_position: string | null
           funeral_gift_amount: number | null
           kouden_amount: number | null
           kouden_entry_id: string | null
           kouden_id: string | null
-          name: string | null
           needs_additional_return: boolean | null
           offering_count: number | null
           offering_total: number | null
           organization: string | null
-          position: string | null
+          profit_loss: number | null
           relationship_name: string | null
           remarks: string | null
           return_items: Json | null
+          return_items_cost: number | null
           return_method: string | null
           return_record_created: string | null
           return_record_updated: string | null
           return_status: string | null
+          shipping_address: string | null
+          shipping_phone_number: string | null
+          shipping_postal_code: string | null
           status_display: string | null
           total_amount: number | null
         }
@@ -2632,6 +2670,10 @@ export type Database = {
           updated_count: number
           affected_entries: Json
         }[]
+      }
+      calculate_return_items_cost: {
+        Args: { p_return_record_id: string }
+        Returns: number
       }
       calculate_total_amount: {
         Args: { p_kouden_entry_id: string }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Settings, Users, HeartHandshake, Truck, Gift } from "lucide-react";
+import { Settings, Users, HeartHandshake, Truck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SettingCard {
@@ -40,13 +40,6 @@ const settingCards: SettingCard[] = [
 		description: "弔問者との関係性の種類を管理します",
 		href: "relationships",
 		icon: <HeartHandshake className="w-6 h-6" />,
-		category: "customizable",
-	},
-	{
-		title: "返礼品",
-		description: "返礼品の種類と在庫を管理します",
-		href: "return-items",
-		icon: <Gift className="w-6 h-6" />,
 		category: "customizable",
 	},
 ];

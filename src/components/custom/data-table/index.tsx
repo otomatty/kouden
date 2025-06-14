@@ -20,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { EditableCell } from "./editable-cell";
 import { SelectCell } from "./select-cell";
+import { ColoredSelectCell } from "./colored-select-cell";
 import { DateCell } from "./date-cell";
 import { AdditionalSelectCell } from "./additional-select-cell";
 import { SearchableSelectorDialog } from "@/components/custom/searchable-selector-dialog";
@@ -28,6 +29,11 @@ import type { CellValue, DataTableProperties } from "@/types/table";
 import type { SelectOption } from "@/types/additional-select";
 import type { OfferingType } from "@/types/offerings";
 import { typeLabels } from "@/app/(protected)/koudens/[id]/offerings/_components/table/constants";
+import {
+	returnStatusMap,
+	returnStatusBadgeVariant,
+	returnStatusCustomColors,
+} from "@/app/(protected)/koudens/[id]/return_records/_components/table/constants";
 
 /**
  * カスタマイズ可能なデータテーブルコンポーネント
@@ -131,8 +137,9 @@ export function DataTable<Data>({
 			}
 
 			const value = cell.getValue() as CellValue;
-			// use the actual entry id for lookups
-			const rowId = (cell.row.original as { id: string }).id;
+			// 返礼記録の場合はkoudenEntryIdを使用、その他はidを使用
+			const rowData = cell.row.original as Record<string, unknown>;
+			const rowId = (rowData.koudenEntryId as string) || (rowData.id as string);
 
 			/**
 			 * セル編集時のコールバック
@@ -148,6 +155,33 @@ export function DataTable<Data>({
 			switch (config.type) {
 				case "select":
 				case "boolean":
+					// 返礼ステータスの場合は色付きセレクトボックスを使用
+					if (columnId === "returnStatus") {
+						return (
+							<ColoredSelectCell
+								value={value}
+								options={config.options.map((opt) => ({
+									value: opt,
+									label: returnStatusMap[opt as keyof typeof returnStatusMap],
+									variant: returnStatusBadgeVariant[opt as keyof typeof returnStatusBadgeVariant] as
+										| "default"
+										| "secondary"
+										| "destructive"
+										| "outline",
+									colors: returnStatusCustomColors[opt]
+										? {
+												background: returnStatusCustomColors[opt].background,
+												text: returnStatusCustomColors[opt].text,
+												border: returnStatusCustomColors[opt].border,
+											}
+										: undefined,
+								}))}
+								onSave={handleSave}
+							/>
+						);
+					}
+
+					// その他の場合は通常のセレクトボックス
 					return (
 						<SelectCell
 							value={value}

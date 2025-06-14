@@ -225,8 +225,8 @@ export function OfferingDrawerContent({ offering, koudenId, onClose }: OfferingD
 									</div>
 									<EditableField
 										label="提供者名"
-										value={offering.provider_name}
-										onSave={(value) => handleUpdateField("provider_name", value)}
+										value={offering.providerName || "未設定"}
+										onSave={(value) => handleUpdateField("providerName", value)}
 										canEdit={canEdit}
 									/>
 									<EditableField

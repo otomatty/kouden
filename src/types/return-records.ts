@@ -4,12 +4,18 @@
 export interface ReturnItem {
 	id: string;
 	name: string;
-	description: string | null;
+	description?: string;
 	price: number;
+	category: string;
+	image_url?: string;
+	is_active: boolean;
+	recommended_amount_min: number;
+	recommended_amount_max?: number;
+	sort_order: number;
+	kouden_id: string;
 	created_at: string;
 	updated_at: string;
 	created_by: string;
-	kouden_id: string;
 }
 
 /**

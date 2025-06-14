@@ -66,14 +66,10 @@ export function OfferingCardList({
 				const priceB = b.price || 0;
 				return order === "desc" ? priceB - priceA : priceA - priceB;
 			}
-			if (field === "provider_name") {
+			if (field === "providerName") {
 				return order === "desc"
-					? (b.providerName || b.provider_name || "").localeCompare(
-							a.providerName || a.provider_name || "",
-						)
-					: (a.providerName || a.provider_name || "").localeCompare(
-							b.providerName || b.provider_name || "",
-						);
+					? (b.providerName || "").localeCompare(a.providerName || "")
+					: (a.providerName || "").localeCompare(b.providerName || "");
 			}
 			return 0;
 		});

@@ -32,13 +32,13 @@ export interface CreateReturnEntryInput {
 	/** 香典エントリーID */
 	kouden_entry_id: string;
 	/** 返礼ステータス */
-	return_status?: ReturnStatus;
+	return_status: ReturnStatus;
 	/** 返礼品リスト（JSON） */
 	return_items?: ReturnItem[];
 	/** 葬儀日 */
 	funeral_date?: string | null;
 	/** 備考 */
-	notes?: string | null;
+	remarks?: string | null;
 }
 
 /**
@@ -67,25 +67,32 @@ export interface UpdateReturnEntryInput {
  * 返礼管理サマリーの型定義（ビューから取得）
  */
 export interface ReturnManagementSummary {
-	kouden_id: string;
-	kouden_entry_id: string;
-	entry_name: string;
+	koudenId: string;
+	koudenEntryId: string;
+	entryName: string;
 	organization: string;
-	entry_position: string;
-	relationship_name: string;
-	kouden_amount: number;
-	offering_count: number;
-	offering_total: number;
-	total_amount: number;
-	return_status: ReturnStatus;
-	funeral_gift_amount: number;
-	additional_return_amount: number;
-	return_method: string;
-	return_items: ReturnItem[];
-	arrangement_date: string;
+	entryPosition: string;
+	relationshipName: string;
+	koudenAmount: number;
+	offeringCount: number;
+	offeringTotal: number;
+	totalAmount: number;
+	returnStatus: ReturnStatus;
+	funeralGiftAmount: number;
+	additionalReturnAmount: number;
+	returnMethod: string;
+	returnItems: ReturnItem[];
+	arrangementDate: string;
 	remarks: string;
-	return_record_created: string;
-	return_record_updated: string;
-	status_display: string;
-	needs_additional_return: boolean;
+	returnRecordCreated: string;
+	returnRecordUpdated: string;
+	statusDisplay: string;
+	needsAdditionalReturn: boolean;
+	// 新規追加: 発送先情報
+	shippingPostalCode?: string;
+	shippingAddress?: string;
+	shippingPhoneNumber?: string;
+	// 新規追加: コスト情報
+	returnItemsCost: number;
+	profitLoss: number;
 }

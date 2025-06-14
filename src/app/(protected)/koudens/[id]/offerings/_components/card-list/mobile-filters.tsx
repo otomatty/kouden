@@ -25,7 +25,7 @@ interface MobileFiltersProps {
 // 検索オプション
 const searchOptions = [
 	{
-		value: "provider_name",
+		value: "providerName",
 		label: "提供者名",
 		icon: <User className="h-4 w-4" />,
 		description: "提供者の氏名で検索",
@@ -71,7 +71,7 @@ const sortOptions = [
 		description: "金額が低い順",
 	},
 	{
-		value: "provider_name_asc",
+		value: "providerNameAsc",
 		label: "提供者名順",
 		icon: <ArrowDownAZ className="h-4 w-4" />,
 		description: "提供者名の五十音順",

@@ -22,17 +22,18 @@ export const typeLabels: Record<OfferingType, string> = {
 export const columnLabels: Record<string, string> = {
 	select: "選択",
 	type: "種類",
-	provider_name: "提供者名",
+	providerName: "提供者名",
 	description: "内容",
 	price: "金額",
+	entries: "関連する香典情報",
 	quantity: "数量",
 	notes: "備考",
-	offering_photos: "写真",
-	actions: "アクション",
+	offeringPhotos: "写真",
+	actions: "操作",
 };
 
 export const searchOptions = [
-	{ value: "provider_name", label: "提供者名" },
+	{ value: "providerName", label: "提供者名" },
 	{ value: "description", label: "内容" },
 	{ value: "type", label: "種類" },
 ];
@@ -42,7 +43,7 @@ export const sortOptions = [
 	{ value: "created_at_asc", label: "古い順" },
 	{ value: "price_desc", label: "金額が高い順" },
 	{ value: "price_asc", label: "金額が低い順" },
-	{ value: "provider_name_asc", label: "提供者名順" },
+	{ value: "providerNameAsc", label: "提供者名順" },
 	{ value: "type_asc", label: "種類順" },
 ];
 
@@ -56,7 +57,7 @@ export const filterOptions = [
 
 export const defaultColumnVisibility = {
 	notes: false,
-	offering_photos: false,
+	offeringPhotos: false,
 } as const;
 
 export const tabletColumnVisibility = {
@@ -91,7 +92,7 @@ export const editableColumns: Record<string, EditableColumnConfig> = {
 	// 編集不可のカラム
 	select: { type: "readonly" },
 	actions: { type: "readonly" },
-	offering_photos: { type: "readonly" },
+	offeringPhotos: { type: "readonly" },
 } as const;
 
 export const OFFERING_TYPES = {

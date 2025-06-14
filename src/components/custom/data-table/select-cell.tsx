@@ -6,6 +6,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { SelectOption } from "@/types/additional-select";
 
@@ -52,12 +53,18 @@ export function SelectCell({ value, options, onSave, className }: SelectCellProp
 					className,
 				)}
 			>
-				<SelectValue>{currentOption?.label || value}</SelectValue>
+				<SelectValue>
+					{currentOption?.variant ? (
+						<Badge variant={currentOption.variant}>{currentOption.label}</Badge>
+					) : (
+						currentOption?.label || value
+					)}
+				</SelectValue>
 			</SelectTrigger>
 			<SelectContent>
 				{options.map((option) => (
 					<SelectItem key={option.value} value={option.value}>
-						{option.label}
+						{option.variant ? <Badge variant={option.variant}>{option.label}</Badge> : option.label}
 					</SelectItem>
 				))}
 			</SelectContent>

@@ -15,6 +15,16 @@ import type {
 } from "@/types/return-records/return-records";
 
 /**
+ * 返礼記録の更新可能フィールドの値の型定義
+ */
+type ReturnRecordFieldValue =
+	| ReturnStatus // return_status
+	| number // funeral_gift_amount, additional_return_amount, return_items_cost
+	| string // return_method, arrangement_date, remarks, shipping_postal_code, shipping_address, shipping_phone_number
+	| boolean // for compatibility with CellValue type
+	| null; // nullable fields
+
+/**
  * 返礼情報を作成する
  * @param {CreateReturnEntryInput} input - 作成する返礼情報
  * @returns {Promise<ReturnEntryRecord>} 作成された返礼情報
@@ -40,7 +50,7 @@ export async function createReturnEntry(input: CreateReturnEntryInput): Promise<
 				return_status: input.return_status || "PENDING",
 				return_items: JSON.parse(JSON.stringify(input.return_items || [])),
 				funeral_date: input.funeral_date,
-				notes: input.notes,
+				remarks: input.remarks,
 				created_by: user.id,
 			})
 			.select("*")
@@ -130,6 +140,83 @@ export async function getReturnEntriesByKouden(koudenId: string): Promise<Return
 		return data as ReturnEntryRecord[];
 	} catch (error) {
 		console.error("返礼情報一覧の取得エラー:", error);
+		throw error;
+	}
+}
+
+/**
+ * 香典帳IDに紐づく返礼情報をページング付きで取得する（無限スクロール用）
+ * @param {string} koudenId - 香典帳ID
+ * @param {number} limit - 取得件数（デフォルト100件）
+ * @param {string} [cursor] - カーソル（最後のレコードのID）
+ * @param {Object} filters - フィルター条件
+ * @param {string} [filters.search] - 検索キーワード
+ * @param {string} [filters.status] - ステータスフィルター
+ * @returns {Promise<{ data: ReturnEntryRecord[], hasMore: boolean, nextCursor?: string }>} ページング付き返礼情報
+ * @throws {Error} 取得失敗時のエラー
+ */
+export async function getReturnEntriesByKoudenPaginated(
+	koudenId: string,
+	limit = 100,
+	cursor?: string,
+	filters?: {
+		search?: string;
+		status?: string;
+	},
+): Promise<{ data: ReturnEntryRecord[]; hasMore: boolean; nextCursor?: string }> {
+	try {
+		const supabase = await createClient();
+
+		let query = supabase
+			.from("return_entry_records")
+			.select(`
+				*,
+				kouden_entries!inner (
+					kouden_id,
+					name,
+					organization,
+					position
+				)
+			`)
+			.eq("kouden_entries.kouden_id", koudenId)
+			.order("created_at", { ascending: false })
+			.limit(limit + 1); // 次のページがあるかチェックするため+1
+
+		// カーソル（ページング）
+		if (cursor) {
+			query = query.lt("created_at", cursor);
+		}
+
+		// ステータスフィルター
+		if (filters?.status && filters.status !== "all") {
+			query = query.eq("return_status", filters.status);
+		}
+
+		// 検索フィルター（エントリー名または組織名）
+		if (filters?.search) {
+			query = query.or(
+				`kouden_entries.name.ilike.%${filters.search}%,kouden_entries.organization.ilike.%${filters.search}%`,
+			);
+		}
+
+		const { data, error } = await query;
+
+		if (error) {
+			throw error;
+		}
+
+		const records = data as ReturnEntryRecord[];
+		const hasMore = records.length > limit;
+		const actualData = hasMore ? records.slice(0, limit) : records;
+		const nextCursor = hasMore ? actualData[actualData.length - 1]?.created_at : undefined;
+
+		return {
+			data: actualData,
+			hasMore,
+			nextCursor,
+		};
+	} catch (error) {
+		console.error("返礼情報一覧の取得エラー（ページング）:", error);
 		throw error;
 	}
 }
@@ -274,6 +361,220 @@ export async function updateReturnEntryStatus(
 		return data as ReturnEntryRecord;
 	} catch (error) {
 		console.error("返礼情報のステータス更新エラー:", error);
+		throw error;
+	}
+}
+
+/**
+ * 複数の返礼記録を一括削除する
+ * @param {string[]} returnRecordIds - 削除する返礼記録のID配列
+ * @returns {Promise<void>}
+ * @throws {Error} 認証エラーまたは削除失敗時のエラー
+ */
+export async function deleteReturnRecords(returnRecordIds: string[]): Promise<void> {
+	try {
+		const supabase = await createClient();
+
+		// セッションの取得
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
+
+		if (!user) {
+			throw new Error("認証されていません");
+		}
+
+		if (!returnRecordIds.length) {
+			throw new Error("削除対象のIDが指定されていません");
+		}
+
+		// 削除前に関連する香典帳IDを取得（キャッシュ再検証用）
+		const { data: koudenIds } = await supabase
+			.from("return_entry_records")
+			.select(`
+				kouden_entries!inner (
+					kouden_id
+				)
+			`)
+			.in("id", returnRecordIds);
+
+		// 一括削除実行
+		const { error } = await supabase
+			.from("return_entry_records")
+			.delete()
+			.in("id", returnRecordIds);
+
+		if (error) {
+			throw error;
+		}
+
+		// 関連する香典帳のキャッシュを再検証
+		if (koudenIds) {
+			const uniqueKoudenIds = [...new Set(koudenIds.map((item) => item.kouden_entries.kouden_id))];
+			for (const koudenId of uniqueKoudenIds) {
+				revalidatePath(`/koudens/${koudenId}`);
+			}
+		}
+	} catch (error) {
+		console.error("返礼記録の一括削除エラー:", error);
+		throw error;
+	}
+}
+
+/**
+ * 返礼記録の特定フィールドを更新する
+ * @param {string} returnRecordId - 返礼記録ID
+ * @param {string} fieldName - 更新するフィールド名
+ * @param {ReturnRecordFieldValue} value - 新しい値
+ * @returns {Promise<void>}
+ * @throws {Error} 認証エラーまたは更新失敗時のエラー
+ */
+export async function updateReturnRecordField(
+	returnRecordId: string,
+	fieldName: string,
+	value: ReturnRecordFieldValue,
+): Promise<void> {
+	try {
+		const supabase = await createClient();
+
+		// セッションの取得
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
+
+		if (!user) {
+			throw new Error("認証されていません");
+		}
+
+		// 更新可能なフィールドのホワイトリスト
+		const allowedFields = [
+			"return_status",
+			"funeral_gift_amount",
+			"additional_return_amount",
+			"return_method",
+			"arrangement_date",
+			"remarks",
+			"shipping_postal_code",
+			"shipping_address",
+			"shipping_phone_number",
+			"return_items_cost",
+		];
+
+		if (!allowedFields.includes(fieldName)) {
+			throw new Error(`フィールド '${fieldName}' は更新できません`);
+		}
+
+		// 更新前に香典帳IDを取得（キャッシュ再検証用）
+		const { data: recordData } = await supabase
+			.from("return_entry_records")
+			.select(`
+				kouden_entries!inner (
+					kouden_id
+				)
+			`)
+			.eq("id", returnRecordId)
+			.single();
+
+		// フィールド更新実行
+		const updateData: Record<string, ReturnRecordFieldValue> = {
+			[fieldName]: value,
+			updated_at: new Date().toISOString(),
+		};
+
+		const { error } = await supabase
+			.from("return_entry_records")
+			.update(updateData)
+			.eq("id", returnRecordId);
+
+		if (error) {
+			throw error;
+		}
+
+		// 関連する香典帳のキャッシュを再検証
+		if (recordData) {
+			revalidatePath(`/koudens/${recordData.kouden_entries.kouden_id}`);
+		}
+	} catch (error) {
+		console.error("返礼記録フィールドの更新エラー:", error);
+		throw error;
+	}
+}
+
+/**
+ * 香典エントリーIDベースで返礼記録の特定フィールドを更新する
+ * @param {string} koudenEntryId - 香典エントリーID
+ * @param {string} fieldName - 更新するフィールド名
+ * @param {ReturnRecordFieldValue} value - 新しい値
+ * @returns {Promise<void>}
+ * @throws {Error} 認証エラーまたは更新失敗時のエラー
+ */
+export async function updateReturnRecordFieldByKoudenEntryId(
+	koudenEntryId: string,
+	fieldName: string,
+	value: ReturnRecordFieldValue,
+): Promise<void> {
+	try {
+		const supabase = await createClient();
+
+		// セッションの取得
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
+
+		if (!user) {
+			throw new Error("認証されていません");
+		}
+
+		// 更新可能なフィールドのホワイトリスト
+		const allowedFields = [
+			"return_status",
+			"funeral_gift_amount",
+			"additional_return_amount",
+			"return_method",
+			"arrangement_date",
+			"remarks",
+			"shipping_postal_code",
+			"shipping_address",
+			"shipping_phone_number",
+			"return_items_cost",
+		];
+
+		if (!allowedFields.includes(fieldName)) {
+			throw new Error(`フィールド '${fieldName}' は更新できません`);
+		}
+
+		// 更新前に香典帳IDを取得（キャッシュ再検証用）
+		const { data: recordData } = await supabase
+			.from("return_entry_records")
+			.select(`
+				kouden_entries!inner (
+					kouden_id
+				)
+			`)
+			.eq("kouden_entry_id", koudenEntryId)
+			.single();
+
+		// フィールド更新実行
+		const updateData: Record<string, ReturnRecordFieldValue> = {
+			[fieldName]: value,
+			updated_at: new Date().toISOString(),
+		};
+
+		const { error } = await supabase
+			.from("return_entry_records")
+			.update(updateData)
+			.eq("kouden_entry_id", koudenEntryId);
+
+		if (error) {
+			throw error;
+		}
+
+		// 関連する香典帳のキャッシュを再検証
+		if (recordData) {
+			revalidatePath(`/koudens/${recordData.kouden_entries.kouden_id}`);
+		}
+	} catch (error) {
+		console.error("返礼記録フィールドの更新エラー:", error);
 		throw error;
 	}
 }

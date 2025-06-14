@@ -5,8 +5,6 @@ import type { Entry } from "@/types/entries";
 import type { Relationship } from "@/types/relationships";
 import { EntryView } from "./_components";
 import { EntryDialog } from "./_components/dialog/entry-dialog";
-import MobileNavigation from "../_components/_common/MobileNavigation";
-import { BottomNavigation } from "@/components/custom/bottom-navigation";
 
 interface EntriesPageClientProps {
 	koudenId: string;

@@ -179,7 +179,7 @@ export function DataTable({ koudenId, entries, offerings, onDataChange }: DataTa
 			if (!filterValue) return true;
 
 			const searchValue = String(filterValue).toLowerCase();
-			const searchableColumns = ["provider_name", "description", "type"];
+			const searchableColumns = ["providerName", "description", "type"];
 
 			// 各カラムのマッチング結果を収集
 			const matchResults = searchableColumns.map((columnId) => {

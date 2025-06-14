@@ -30,7 +30,7 @@ export const columnLabels: Record<string, string> = {
 	hasOffering: "供物",
 	isReturnCompleted: "返礼",
 	notes: "備考",
-	actions: "アクション",
+	actions: "操作",
 };
 
 // 検索オプションの定義
