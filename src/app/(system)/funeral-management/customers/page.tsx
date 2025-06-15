@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import Link from "next/link";
 import { CustomersClient } from "./_components/customers-client";
 import type { Customer } from "@/types/funeral-management";
+import Container from "@/components/ui/container";
 
 export const metadata: Metadata = {
 	title: "顧客管理 | 葬儀会社管理システム",
@@ -104,7 +105,7 @@ const sampleCustomers: Customer[] = [
 
 export default function CustomersPage() {
 	return (
-		<div className="container mx-auto p-6 space-y-6">
+		<Container className="py-6 space-y-6">
 			{/* ヘッダー */}
 			<div className="flex items-center justify-between">
 				<div>
@@ -121,6 +122,6 @@ export default function CustomersPage() {
 
 			{/* クライアントサイドコンポーネント */}
 			<CustomersClient initialCustomers={sampleCustomers} />
-		</div>
+		</Container>
 	);
 }

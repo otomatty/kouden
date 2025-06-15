@@ -71,6 +71,8 @@ interface EntryTableProps {
 	// 複製エントリフィルター
 	duplicateFilter?: boolean;
 	onDuplicateFilterChange?: (value: boolean) => void;
+	// 管理者モード
+	isAdminMode?: boolean;
 }
 
 export function DataTable({
@@ -92,6 +94,7 @@ export function DataTable({
 	onDateRangeChange,
 	duplicateFilter = false,
 	onDuplicateFilterChange,
+	isAdminMode = false,
 }: EntryTableProps) {
 	const permission = useAtomValue(permissionAtom);
 	const duplicateResults = useAtomValue(duplicateEntriesAtom);
@@ -360,7 +363,15 @@ export function DataTable({
 	useEffect(() => {
 		(async () => {
 			try {
-				const mems = await getMembers(koudenId);
+				let mems;
+				if (isAdminMode) {
+					// 管理者モードの場合は管理者用関数を使用
+					const { getMembersForAdmin } = await import("@/app/_actions/members");
+					mems = await getMembersForAdmin(koudenId);
+				} else {
+					// 通常モードの場合は通常の関数を使用
+					mems = await getMembers(koudenId);
+				}
 				setMembers(
 					mems.map((m) => ({
 						value: m.user_id,
@@ -371,7 +382,7 @@ export function DataTable({
 				console.error("[ERROR] Failed to fetch members:", error);
 			}
 		})();
-	}, [koudenId]);
+	}, [koudenId, isAdminMode]);
 
 	useEffect(() => {
 		setRelationshipOptions(relationships);

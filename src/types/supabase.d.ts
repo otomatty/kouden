@@ -480,6 +480,50 @@ export type Database = {
           },
         ]
       }
+      kouden_cases: {
+        Row: {
+          case_id: string
+          created_at: string
+          family_user_id: string | null
+          id: string
+          kouden_id: string
+          organization_id: string
+          proxy_manager_id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          family_user_id?: string | null
+          id?: string
+          kouden_id: string
+          organization_id: string
+          proxy_manager_id: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          family_user_id?: string | null
+          id?: string
+          kouden_id?: string
+          organization_id?: string
+          proxy_manager_id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_kouden_cases_case"
+            columns: ["case_id"]
+            isOneToOne: true
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       material_orders: {
         Row: {
           case_id: string
@@ -2690,6 +2734,10 @@ export type Database = {
         }
         Returns: string
       }
+      create_funeral_company_role: {
+        Args: { p_kouden_id: string; p_created_by: string }
+        Returns: string
+      }
       create_invitation: {
         Args: {
           p_kouden_id: string
@@ -2698,6 +2746,16 @@ export type Database = {
           p_created_by: string
           p_type?: Database["public"]["Enums"]["invitation_type"]
           p_max_uses?: number
+        }
+        Returns: string
+      }
+      create_kouden_for_funeral_case: {
+        Args: {
+          p_case_id: string
+          p_organization_id: string
+          p_proxy_manager_id: string
+          p_title: string
+          p_description?: string
         }
         Returns: string
       }
@@ -2803,6 +2861,14 @@ export type Database = {
       show_trgm: {
         Args: { "": string }
         Returns: string[]
+      }
+      transfer_kouden_ownership: {
+        Args: {
+          p_kouden_id: string
+          p_new_owner_id: string
+          p_proxy_manager_id: string
+        }
+        Returns: boolean
       }
       update_member_role: {
         Args: { p_kouden_id: string; p_user_id: string; p_role_id: string }

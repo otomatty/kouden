@@ -34,10 +34,15 @@ const tabs: Tab[] = [
 
 export default function TabNavigation({ koudenId }: { koudenId: string }) {
 	const pathname = usePathname() || "";
+
+	// 管理者モードかどうかを判定
+	const isAdminMode = pathname.startsWith("/admin/koudens/");
+	const basePath = isAdminMode ? `/admin/koudens/${koudenId}` : `/koudens/${koudenId}`;
+
 	return (
 		<nav className="hidden md:flex space-x-4 border-b mb-4">
 			{tabs.map((tab) => {
-				const href = `/koudens/${koudenId}/${tab.key}`;
+				const href = `${basePath}/${tab.key}`;
 				const active = pathname === href;
 				const Icon = tab.icon;
 				return (

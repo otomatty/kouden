@@ -29,13 +29,38 @@ export async function getKoudenRoles(koudenId: string): Promise<KoudenRole[]> {
 }
 
 /**
+ * 管理者用: 香典帳のロールを取得
+ */
+export async function getKoudenRolesForAdmin(koudenId: string): Promise<KoudenRole[]> {
+	// 管理者権限をチェック
+	const { isAdmin } = await import("@/app/_actions/admin/permissions");
+	const adminCheck = await isAdmin();
+	if (!adminCheck) {
+		throw new Error("管理者権限が必要です");
+	}
+
+	// 管理者用クライアント（RLSバイパス）を使用
+	const { createAdminClient } = await import("@/lib/supabase/admin");
+	const supabase = createAdminClient();
+
+	const { data: roles, error } = await supabase
+		.from("kouden_roles")
+		.select("id, name")
+		.eq("kouden_id", koudenId)
+		.in("name", ["編集者", "閲覧者"]);
+
+	if (error) {
+		console.error("[ERROR] Error fetching roles for admin:", error);
+		throw new Error("ロール情報の取得に失敗しました");
+	}
+
+	return roles;
+}
+
+/**
  * メンバーのロールを更新
  */
-export async function updateMemberRole(
-	koudenId: string,
-	userId: string,
-	roleId: string,
-) {
+export async function updateMemberRole(koudenId: string, userId: string, roleId: string) {
 	const supabase = await createClient();
 
 	const { error } = await supabase.rpc("update_member_role", {

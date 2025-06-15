@@ -37,9 +37,8 @@ export async function getKoudens(): Promise<{ koudens?: KoudenWithPlan[]; error?
 		const memberKoudenIds = memberKoudens?.map((m) => m.kouden_id) || [];
 
 		// 香典帳を取得（オーナーまたはメンバー）
-		const { data: koudens, error } = await supabase
-			.from("koudens")
-			.select(`
+		// memberKoudenIdsが空の場合を考慮してクエリを構築
+		let query = supabase.from("koudens").select(`
         id,
         title,
         description,
@@ -49,11 +48,30 @@ export async function getKoudens(): Promise<{ koudens?: KoudenWithPlan[]; error?
         created_by,
         status,
         plan_id
-      `)
-			.or(`owner_id.eq.${user.id},id.in.(${memberKoudenIds.join(",")})`)
-			.order("created_at", { ascending: false });
+      `);
+
+		// オーナーとして所有している香典帳、またはメンバーとして参加している香典帳を取得
+		if (memberKoudenIds.length > 0) {
+			query = query.or(`owner_id.eq.${user.id},id.in.(${memberKoudenIds.join(",")})`);
+		} else {
+			// メンバーとして参加している香典帳がない場合は、オーナーのもののみ
+			query = query.eq("owner_id", user.id);
+		}
+
+		// ステータスフィルタリング（activeとarchivedを表示）
+		query = query.in("status", ["active", "archived"]);
+
+		// 作成日時順でソート
+		query = query.order("created_at", { ascending: false });
+
+		const { data: koudens, error } = await query;
 
 		if (error) throw error;
+
+		// 香典帳が見つからない場合は空配列を返す
+		if (!koudens || koudens.length === 0) {
+			return { koudens: [] };
+		}
 
 		// オーナー情報を取得
 		const ownerIds = [...new Set(koudens?.map((k) => k.owner_id) || [])];
@@ -220,6 +238,95 @@ export async function getKoudenWithEntries(id: string) {
  */
 export async function getKoudenWithPlan(id: string) {
 	const supabase = await createClient();
+	// 香典帳からplan_idと作成日時を取得
+	const { data: kouden, error: koudenError } = await supabase
+		.from("koudens")
+		.select("plan_id, created_at")
+		.eq("id", id)
+		.single();
+	if (koudenError || !kouden) {
+		throw new Error("香典帳の取得に失敗しました");
+	}
+	// プラン情報を取得
+	const { data: plan, error: planError } = await supabase
+		.from("plans")
+		.select("*")
+		.eq("id", kouden.plan_id)
+		.single();
+	if (planError || !plan) {
+		throw new Error("プラン情報の取得に失敗しました");
+	}
+	// 無料プランの期限切れ判定
+	let expired = false;
+	let remainingDays: number | undefined;
+	if (plan.code === "free") {
+		const ageMs = Date.now() - new Date(kouden.created_at).getTime();
+		const ageDays = ageMs / (1000 * 60 * 60 * 24);
+		if (ageDays >= 14) {
+			expired = true;
+			remainingDays = 0;
+		} else {
+			remainingDays = Math.ceil(14 - ageDays);
+		}
+	}
+	return { plan, expired, remainingDays };
+}
+
+/**
+ * 管理者用: 香典帳の取得（RLSをバイパス）
+ */
+export async function getKoudenForAdmin(id: string) {
+	// 管理者権限をチェック
+	const { isAdmin } = await import("@/app/_actions/admin/permissions");
+	const adminCheck = await isAdmin();
+	if (!adminCheck) {
+		throw new Error("管理者権限が必要です");
+	}
+
+	// 管理者用クライアント（RLSをバイパス）
+	const { createAdminClient } = await import("@/lib/supabase/admin");
+	const supabase = createAdminClient();
+
+	const { data, error } = await supabase
+		.from("koudens")
+		.select(`
+      id,
+      title,
+      description,
+      created_at,
+      updated_at,
+      owner_id,
+      created_by,
+      status,
+      plan_id
+    `)
+		.eq("id", id)
+		.single();
+
+	if (error) {
+		throw new Error("香典帳の取得に失敗しました");
+	}
+
+	return data;
+}
+
+/**
+ * 管理者用: 香典帳のプラン情報を取得（RLSをバイパス）
+ * @param id 香典帳ID
+ * @returns plan情報と無料プラン期限切れフラグ
+ */
+export async function getKoudenWithPlanForAdmin(id: string) {
+	// 管理者権限をチェック
+	const { isAdmin } = await import("@/app/_actions/admin/permissions");
+	const adminCheck = await isAdmin();
+	if (!adminCheck) {
+		throw new Error("管理者権限が必要です");
+	}
+
+	// 管理者用クライアント（RLSをバイパス）
+	const { createAdminClient } = await import("@/lib/supabase/admin");
+	const supabase = createAdminClient();
+
 	// 香典帳からplan_idと作成日時を取得
 	const { data: kouden, error: koudenError } = await supabase
 		.from("koudens")

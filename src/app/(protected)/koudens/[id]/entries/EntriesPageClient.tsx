@@ -13,6 +13,7 @@ interface EntriesPageClientProps {
 	totalCount: number;
 	currentPage: number;
 	pageSize: number;
+	isAdminMode?: boolean;
 }
 
 export default function EntriesPageClient({
@@ -22,6 +23,7 @@ export default function EntriesPageClient({
 	totalCount,
 	currentPage,
 	pageSize,
+	isAdminMode = false,
 }: EntriesPageClientProps) {
 	const [open, setOpen] = useState(false);
 
@@ -34,6 +36,7 @@ export default function EntriesPageClient({
 				totalCount={totalCount}
 				currentPage={currentPage}
 				pageSize={pageSize}
+				isAdminMode={isAdminMode}
 			/>
 			<EntryDialog
 				koudenId={koudenId}

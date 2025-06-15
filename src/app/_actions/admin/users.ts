@@ -57,6 +57,13 @@ export async function getAllUsers(params: GetUsersParams = {}): Promise<{
 	total: number;
 	hasMore: boolean;
 }> {
+	// 管理者権限をチェック（入り口で1回だけ）
+	const { isAdmin: isAdminUser } = await import("@/app/_actions/admin/permissions");
+	const adminCheck = await isAdminUser();
+	if (!adminCheck) {
+		throw new Error("管理者権限が必要です");
+	}
+
 	const supabase = await createClient();
 	const {
 		page = 1,
@@ -125,43 +132,51 @@ export async function getAllUsers(params: GetUsersParams = {}): Promise<{
 			return { users: [], total: count || 0, hasMore: false };
 		}
 
-		// 2. 各ユーザーの詳細情報を並列取得
-		const usersWithDetails = await Promise.all(
-			profiles.map(async (profile) => {
-				try {
-					// 認証情報、統計情報、管理者情報を並列取得
-					const [authInfo, stats, adminInfo] = await Promise.all([
-						getUserAuthInfo(profile.id),
-						getUserStats(profile.id),
-						getUserAdminInfo(profile.id),
-					]);
+		// 2. 各ユーザーの詳細情報を並列取得（認証情報は一括取得）
+		const userIds = profiles.map((p) => p.id);
+		const [authInfoMap, usersWithDetails] = await Promise.all([
+			getAllUsersAuthInfo(userIds),
+			Promise.all(
+				profiles.map(async (profile) => {
+					try {
+						// 統計情報、管理者情報を並列取得
+						const [stats, adminInfo] = await Promise.all([
+							getUserStats(profile.id),
+							getUserAdminInfo(profile.id),
+						]);
 
-					return {
-						...profile,
-						...authInfo,
-						stats,
-						admin_info: adminInfo,
-					};
-				} catch (error) {
-					console.error(`Failed to get details for user ${profile.id}:`, error);
-					// エラーが発生した場合は基本情報のみ返す
-					const stats = await getUserStats(profile.id).catch(() => ({
-						owned_koudens_count: 0,
-						participated_koudens_count: 0,
-						total_entries_count: 0,
-					}));
+						return {
+							...profile,
+							stats,
+							admin_info: adminInfo,
+						};
+					} catch (error) {
+						console.error(`Failed to get details for user ${profile.id}:`, error);
+						// エラーが発生した場合は基本情報のみ返す
+						const stats = await getUserStats(profile.id).catch(() => ({
+							owned_koudens_count: 0,
+							participated_koudens_count: 0,
+							total_entries_count: 0,
+						}));
 
-					return {
-						...profile,
-						stats,
-					};
-				}
-			}),
-		);
+						return {
+							...profile,
+							stats,
+						};
+					}
+				}),
+			),
+		]);
+
+		// 認証情報をマージ
+		const finalUsersWithDetails = usersWithDetails.map((user) => ({
+			...user,
+			...authInfoMap[user.id],
+		}));
 
 		// last_sign_in_atでソートが指定されている場合はここでソート
 		if (sortBy === "last_sign_in_at") {
-			usersWithDetails.sort((a, b) => {
+			finalUsersWithDetails.sort((a, b) => {
 				const aLastSignIn = (a as UserListItem).last_sign_in_at;
 				const bLastSignIn = (b as UserListItem).last_sign_in_at;
 				const aDate = aLastSignIn ? new Date(aLastSignIn).getTime() : 0;
@@ -171,7 +186,7 @@ export async function getAllUsers(params: GetUsersParams = {}): Promise<{
 		}
 
 		return {
-			users: usersWithDetails,
+			users: finalUsersWithDetails,
 			total: count || 0,
 			hasMore: (count || 0) > offset + limit,
 		};
@@ -185,6 +200,13 @@ export async function getAllUsers(params: GetUsersParams = {}): Promise<{
  * ユーザー詳細情報を取得
  */
 export async function getUserDetail(userId: string): Promise<UserDetail> {
+	// 管理者権限をチェック（入り口で1回だけ）
+	const { isAdmin: isAdminUser } = await import("@/app/_actions/admin/permissions");
+	const adminCheck = await isAdminUser();
+	if (!adminCheck) {
+		throw new Error("管理者権限が必要です");
+	}
+
 	const supabase = await createClient();
 
 	try {
@@ -221,6 +243,7 @@ export async function getUserDetail(userId: string): Promise<UserDetail> {
 
 /**
  * Admin APIを使用してユーザーの認証情報を取得
+ * 注意: この関数を呼び出す前に、呼び出し元で管理者権限をチェックすること
  */
 async function getUserAuthInfo(userId: string): Promise<{
 	email?: string;
@@ -230,13 +253,6 @@ async function getUserAuthInfo(userId: string): Promise<{
 	const supabase = await createClient();
 
 	try {
-		// 管理者権限をチェック
-		const isAdminUser = await isAdmin();
-		if (!isAdminUser) {
-			console.warn(`Admin access required to get auth info for user ${userId}`);
-			return {};
-		}
-
 		const { data: authUser, error } = await supabase.auth.admin.getUserById(userId);
 
 		if (error) {
@@ -257,6 +273,70 @@ async function getUserAuthInfo(userId: string): Promise<{
 	} catch (error) {
 		console.error(`Error getting auth info for user ${userId}:`, error);
 		return {};
+	}
+}
+
+/**
+ * 複数ユーザーの認証情報を一括取得
+ * 注意: この関数を呼び出す前に、呼び出し元で管理者権限をチェックすること
+ */
+async function getAllUsersAuthInfo(userIds: string[]): Promise<
+	Record<
+		string,
+		{
+			email?: string;
+			last_sign_in_at?: string;
+			email_confirmed_at?: string;
+		}
+	>
+> {
+	const supabase = await createClient();
+	const result: Record<
+		string,
+		{
+			email?: string;
+			last_sign_in_at?: string;
+			email_confirmed_at?: string;
+		}
+	> = {};
+
+	try {
+		// Admin APIで全ユーザーを一括取得
+		const { data: users, error } = await supabase.auth.admin.listUsers();
+
+		if (error) {
+			console.error("Failed to get all users auth info:", error);
+			// エラーの場合は空のオブジェクトを各ユーザーに設定
+			for (const id of userIds) {
+				result[id] = {};
+			}
+			return result;
+		}
+
+		// 必要なユーザーのみフィルタリングしてマップに変換
+		const userMap = new Map(users.users.map((user) => [user.id, user]));
+
+		for (const userId of userIds) {
+			const user = userMap.get(userId);
+			if (user) {
+				result[userId] = {
+					email: user.email,
+					last_sign_in_at: user.last_sign_in_at,
+					email_confirmed_at: user.email_confirmed_at,
+				};
+			} else {
+				result[userId] = {};
+			}
+		}
+
+		return result;
+	} catch (error) {
+		console.error("Error getting all users auth info:", error);
+		// エラーの場合は空のオブジェクトを各ユーザーに設定
+		for (const id of userIds) {
+			result[id] = {};
+		}
+		return result;
 	}
 }
 
@@ -344,20 +424,20 @@ async function getUserKoudens(userId: string): Promise<
 	const supabase = await createClient();
 
 	try {
-		// 所有している香典帳
+		// 所有している香典帳（全ステータス）
 		const { data: ownedKoudens } = await supabase
 			.from("koudens")
-			.select("id, title, created_at, updated_at")
+			.select("id, title, created_at, updated_at, status")
 			.eq("owner_id", userId)
 			.order("created_at", { ascending: false });
 
-		// 参加している香典帳
+		// 参加している香典帳（全ステータス）
 		const { data: memberKoudens } = await supabase
 			.from("kouden_members")
 			.select(`
         created_at,
         kouden_id,
-        koudens!inner(id, title, updated_at),
+        koudens!inner(id, title, updated_at, status),
         kouden_roles!inner(name)
       `)
 			.eq("user_id", userId)
@@ -374,6 +454,7 @@ async function getUserKoudens(userId: string): Promise<
 					role: "owner" as const,
 					joined_at: kouden.created_at,
 					last_activity: kouden.updated_at,
+					status: kouden.status, // ステータス情報も含める
 				})),
 			);
 		}
@@ -387,6 +468,7 @@ async function getUserKoudens(userId: string): Promise<
 					role: member.kouden_roles.name === "editor" ? ("editor" as const) : ("viewer" as const),
 					joined_at: member.created_at,
 					last_activity: member.koudens.updated_at,
+					status: member.koudens.status, // ステータス情報も含める
 				})),
 			);
 		}
@@ -396,9 +478,10 @@ async function getUserKoudens(userId: string): Promise<
 			(kouden, index, self) => index === self.findIndex((k) => k.id === kouden.id),
 		);
 
-		return uniqueKoudens.sort(
-			(a, b) => new Date(b.joined_at).getTime() - new Date(a.joined_at).getTime(),
-		);
+		// ステータス情報を除いて返す（型定義に合わせるため）
+		return uniqueKoudens
+			.sort((a, b) => new Date(b.joined_at).getTime() - new Date(a.joined_at).getTime())
+			.map(({ status, ...kouden }) => kouden);
 	} catch (error) {
 		console.error(`Error getting koudens for user ${userId}:`, error);
 		return [];
@@ -484,10 +567,303 @@ export async function findUserByEmail(email: string) {
 	return user;
 }
 
-export async function isAdmin() {
-	const supabase = await createClient();
-	const { data: adminUser, error } = await supabase.from("admin_users").select("role").single();
+// isAdmin関数は permissions.ts に統一されました
 
-	if (error && error.code !== "PGRST116") throw error;
-	return !!adminUser;
+/**
+ * 管理者用: 全香典帳一覧を取得
+ */
+export interface AdminKoudenListItem {
+	id: string;
+	title: string;
+	description: string | null;
+	status: "active" | "archived" | "inactive";
+	created_at: string;
+	updated_at: string;
+	owner: {
+		id: string;
+		display_name: string;
+		avatar_url: string | null;
+	};
+	plan: {
+		id: string;
+		code: string;
+		name: string;
+	};
+	stats: {
+		entries_count: number;
+		members_count: number;
+		total_amount: number;
+	};
+	expired: boolean;
+	remainingDays?: number;
+}
+
+export interface GetAdminKoudensParams {
+	page?: number;
+	limit?: number;
+	search?: string;
+	status?: "all" | "active" | "archived" | "inactive";
+	sortBy?: "created_at" | "updated_at" | "title" | "entries_count";
+	sortOrder?: "asc" | "desc";
+}
+
+/**
+ * 管理者用: 全香典帳一覧を取得
+ */
+export async function getAllKoudens(params: GetAdminKoudensParams = {}): Promise<{
+	koudens: AdminKoudenListItem[];
+	total: number;
+	hasMore: boolean;
+}> {
+	// 管理者権限をチェック（通常のクライアントで）
+
+	// 管理者用にサービスロールクライアントを使用（RLSをバイパス）
+	const { createAdminClient } = await import("@/lib/supabase/admin");
+	const supabase = createAdminClient();
+	const {
+		page = 1,
+		limit = 20,
+		search,
+		status = "all",
+		sortBy = "created_at",
+		sortOrder = "desc",
+	} = params;
+	const offset = (page - 1) * limit;
+
+	console.log("getAllKoudens called with params:", params);
+
+	try {
+		// 管理者権限をチェック（通常のクライアントで）
+		const { isAdmin: isAdminUser } = await import("@/app/_actions/admin/permissions");
+		const adminCheck = await isAdminUser();
+		console.log("Admin check result:", adminCheck);
+
+		if (!adminCheck) {
+			console.error("Admin permission denied");
+			throw new Error("管理者権限が必要です");
+		}
+
+		// 1. 香典帳の基本情報を取得
+		let query = supabase.from("koudens").select(
+			`
+        id,
+        title,
+        description,
+        status,
+        created_at,
+        updated_at,
+        owner_id,
+        plan_id
+      `,
+			{ count: "exact" },
+		);
+
+		// 検索条件
+		if (search) {
+			query = query.ilike("title", `%${search}%`);
+		}
+
+		// ステータスフィルタリング
+		if (status !== "all") {
+			query = query.eq("status", status);
+		}
+
+		// ソート（entries_count以外）
+		if (sortBy !== "entries_count") {
+			query = query.order(sortBy, { ascending: sortOrder === "asc" });
+		} else {
+			// entries_countでソートする場合は後でソート
+			query = query.order("created_at", { ascending: false });
+		}
+
+		// ページネーション
+		query = query.range(offset, offset + limit - 1);
+
+		const { data: koudens, error: koudensError, count } = await query;
+		console.log("Query result:", {
+			koudensCount: koudens?.length || 0,
+			totalCount: count,
+			error: koudensError?.message,
+		});
+
+		if (koudensError) {
+			console.error("Koudens query error:", koudensError);
+			throw new Error(`香典帳の取得に失敗しました: ${koudensError.message}`);
+		}
+
+		if (!koudens || koudens.length === 0) {
+			console.log("No koudens found, returning empty result");
+			return { koudens: [], total: count || 0, hasMore: false };
+		}
+
+		// 2. 各香典帳の詳細情報を並列取得
+		const koudensWithDetails = await Promise.all(
+			koudens.map(async (kouden) => {
+				try {
+					// オーナー情報、プラン情報、統計情報を並列取得
+					const [owner, plan, stats] = await Promise.all([
+						getKoudenOwner(kouden.owner_id),
+						getKoudenPlan(kouden.plan_id),
+						getKoudenStats(kouden.id),
+					]);
+
+					// 無料プランの期限切れ判定
+					let expired = false;
+					let remainingDays: number | undefined;
+					if (plan.code === "free") {
+						const ageMs = Date.now() - new Date(kouden.created_at).getTime();
+						const ageDays = ageMs / (1000 * 60 * 60 * 24);
+						if (ageDays >= 14) {
+							expired = true;
+							remainingDays = 0;
+						} else {
+							remainingDays = Math.ceil(14 - ageDays);
+						}
+					}
+
+					return {
+						...kouden,
+						status: kouden.status as "active" | "archived" | "inactive",
+						owner,
+						plan,
+						stats,
+						expired,
+						remainingDays,
+					};
+				} catch (error) {
+					console.error(`Failed to get details for kouden ${kouden.id}:`, error);
+					// エラーが発生した場合は基本情報のみ返す
+					return {
+						...kouden,
+						status: kouden.status as "active" | "archived" | "inactive",
+						owner: { id: kouden.owner_id, display_name: "不明", avatar_url: null },
+						plan: { id: kouden.plan_id, code: "unknown", name: "不明" },
+						stats: { entries_count: 0, members_count: 0, total_amount: 0 },
+						expired: false,
+					};
+				}
+			}),
+		);
+
+		// entries_countでソートが指定されている場合はここでソート
+		if (sortBy === "entries_count") {
+			koudensWithDetails.sort((a, b) => {
+				const aCount = a.stats.entries_count;
+				const bCount = b.stats.entries_count;
+				return sortOrder === "asc" ? aCount - bCount : bCount - aCount;
+			});
+		}
+
+		console.log("Returning koudens:", {
+			koudensCount: koudensWithDetails.length,
+			total: count || 0,
+			hasMore: (count || 0) > offset + limit,
+		});
+
+		return {
+			koudens: koudensWithDetails,
+			total: count || 0,
+			hasMore: (count || 0) > offset + limit,
+		};
+	} catch (error) {
+		console.error("Error fetching admin koudens:", error);
+
+		// エラーの詳細を含めて再スロー
+		if (error instanceof Error) {
+			throw new Error(`香典帳一覧の取得に失敗しました: ${error.message}`);
+		}
+		throw new Error("香典帳一覧の取得に失敗しました（不明なエラー）");
+	}
+}
+
+/**
+ * 香典帳のオーナー情報を取得
+ */
+async function getKoudenOwner(ownerId: string): Promise<{
+	id: string;
+	display_name: string;
+	avatar_url: string | null;
+}> {
+	const { createAdminClient } = await import("@/lib/supabase/admin");
+	const supabase = createAdminClient();
+
+	const { data: owner, error } = await supabase
+		.from("profiles")
+		.select("id, display_name, avatar_url")
+		.eq("id", ownerId)
+		.single();
+
+	if (error || !owner) {
+		return { id: ownerId, display_name: "不明", avatar_url: null };
+	}
+
+	return owner;
+}
+
+/**
+ * 香典帳のプラン情報を取得
+ */
+async function getKoudenPlan(planId: string): Promise<{
+	id: string;
+	code: string;
+	name: string;
+}> {
+	const { createAdminClient } = await import("@/lib/supabase/admin");
+	const supabase = createAdminClient();
+
+	const { data: plan, error } = await supabase
+		.from("plans")
+		.select("id, code, name")
+		.eq("id", planId)
+		.single();
+
+	if (error || !plan) {
+		return { id: planId, code: "unknown", name: "不明" };
+	}
+
+	return plan;
+}
+
+/**
+ * 香典帳の統計情報を取得
+ */
+async function getKoudenStats(koudenId: string): Promise<{
+	entries_count: number;
+	members_count: number;
+	total_amount: number;
+}> {
+	const { createAdminClient } = await import("@/lib/supabase/admin");
+	const supabase = createAdminClient();
+
+	try {
+		// 並列でクエリ実行
+		const [entriesResult, membersResult, totalAmountResult] = await Promise.all([
+			supabase
+				.from("kouden_entries")
+				.select("id", { count: "exact", head: true })
+				.eq("kouden_id", koudenId),
+			supabase
+				.from("kouden_members")
+				.select("id", { count: "exact", head: true })
+				.eq("kouden_id", koudenId),
+			supabase.from("kouden_entries").select("amount").eq("kouden_id", koudenId),
+		]);
+
+		// 合計金額を計算
+		const totalAmount =
+			totalAmountResult.data?.reduce((sum, entry) => sum + (entry.amount || 0), 0) || 0;
+
+		return {
+			entries_count: entriesResult.count || 0,
+			members_count: membersResult.count || 0,
+			total_amount: totalAmount,
+		};
+	} catch (error) {
+		console.error(`Error getting stats for kouden ${koudenId}:`, error);
+		return {
+			entries_count: 0,
+			members_count: 0,
+			total_amount: 0,
+		};
+	}
 }

@@ -34,28 +34,17 @@ export async function getAdminUsers() {
 	return adminUsersWithDetails;
 }
 
-export async function addAdminUser(
-	userId: string,
-	role: "admin" | "super_admin",
-) {
+export async function addAdminUser(userId: string, role: "admin" | "super_admin") {
 	const supabase = await createClient();
-	const { error } = await supabase
-		.from("admin_users")
-		.insert({ user_id: userId, role });
+	const { error } = await supabase.from("admin_users").insert({ user_id: userId, role });
 
 	if (error) throw error;
 	revalidatePath("/admin/users");
 }
 
-export async function updateAdminRole(
-	adminId: string,
-	role: "admin" | "super_admin",
-) {
+export async function updateAdminRole(adminId: string, role: "admin" | "super_admin") {
 	const supabase = await createClient();
-	const { error } = await supabase
-		.from("admin_users")
-		.update({ role })
-		.eq("id", adminId);
+	const { error } = await supabase.from("admin_users").update({ role }).eq("id", adminId);
 
 	if (error) throw error;
 	revalidatePath("/admin/users");
@@ -63,10 +52,7 @@ export async function updateAdminRole(
 
 export async function removeAdminUser(adminId: string) {
 	const supabase = await createClient();
-	const { error } = await supabase
-		.from("admin_users")
-		.delete()
-		.eq("id", adminId);
+	const { error } = await supabase.from("admin_users").delete().eq("id", adminId);
 
 	if (error) throw error;
 	revalidatePath("/admin/users");
@@ -94,13 +80,5 @@ export async function findUserByEmail(email: string) {
 	return user;
 }
 
-export async function isAdmin() {
-	const supabase = await createClient();
-	const { data: adminUser, error } = await supabase
-		.from("admin_users")
-		.select("role")
-		.single();
-
-	if (error && error.code !== "PGRST116") throw error;
-	return !!adminUser;
-}
+// isAdmin関数は permissions.ts に移動しました
+// 重複を避けるため、こちらからは削除

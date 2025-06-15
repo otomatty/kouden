@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Plus, Search, Calendar, User, MapPin, Eye, Edit } from "lucide-react";
+import Container from "@/components/ui/container";
+import { Plus } from "lucide-react";
 import Link from "next/link";
 import { CasesClient } from "./_components/cases-client";
 import type { FuneralCaseWithDetails } from "@/types/funeral-management";
@@ -71,7 +69,7 @@ const sampleCases: FuneralCaseWithDetails[] = [
 
 export default function CasesPage() {
 	return (
-		<div className="container mx-auto p-6 space-y-6">
+		<Container className="py-6 space-y-6">
 			{/* ヘッダー */}
 			<div className="flex items-center justify-between">
 				<div>
@@ -88,6 +86,6 @@ export default function CasesPage() {
 
 			{/* クライアントサイドコンポーネント */}
 			<CasesClient initialCases={sampleCases} />
-		</div>
+		</Container>
 	);
 }

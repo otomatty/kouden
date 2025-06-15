@@ -21,6 +21,7 @@ interface EntryViewProps {
 	totalCount: number;
 	currentPage: number;
 	pageSize: number;
+	isAdminMode?: boolean;
 }
 
 /**
@@ -28,11 +29,13 @@ interface EntryViewProps {
  * 役割：エントリーの表示
  */
 export function EntryView({
+	entries: serverEntries,
 	koudenId,
 	relationships = [],
 	totalCount,
 	currentPage,
 	pageSize,
+	isAdminMode = false,
 }: EntryViewProps) {
 	const isMobile = useMediaQuery("(max-width: 767px)");
 	const [isClient, setIsClient] = useState(false);
@@ -51,7 +54,7 @@ export function EntryView({
 		setIsLoading(false);
 	}, []);
 
-	// infinite scroll hook with filters
+	// infinite scroll hook with filters (通常モードのみ)
 	const {
 		entries: infiniteEntries,
 		isLoading: infiniteLoading,
@@ -71,24 +74,35 @@ export function EntryView({
 	const loadMoreRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
-		if (!loadMoreRef.current) return;
+		if (!loadMoreRef.current || isAdminMode) return; // 管理者モードでは無限スクロール無効
 		const observer = new IntersectionObserver(([e]) => {
 			if (e?.isIntersecting && hasNextPage) fetchNextPage();
 		});
 		observer.observe(loadMoreRef.current);
 		return () => observer.disconnect();
-	}, [fetchNextPage, hasNextPage]);
+	}, [fetchNextPage, hasNextPage, isAdminMode]);
 
 	if (!isClient || isLoading) {
 		return <Loading message="表示モードを確認中..." />;
 	}
+
+	// 管理者モードではサーバーサイドのデータを使用、通常モードでは無限スクロールのデータを使用
+	const displayEntries = isAdminMode ? serverEntries : infiniteEntries;
+
+	console.log("[DEBUG] EntryView - Display data:", {
+		isAdminMode,
+		serverEntriesCount: serverEntries.length,
+		infiniteEntriesCount: infiniteEntries.length,
+		displayEntriesCount: displayEntries.length,
+		totalCount,
+	});
 
 	return (
 		<>
 			{isMobile ? (
 				<>
 					<EntryCardList
-						entries={infiniteEntries}
+						entries={displayEntries}
 						koudenId={koudenId}
 						relationships={relationships}
 					/>
@@ -97,7 +111,7 @@ export function EntryView({
 				<>
 					<DataTable
 						koudenId={koudenId}
-						entries={infiniteEntries}
+						entries={displayEntries}
 						duplicateFilter={showDuplicates}
 						onDuplicateFilterChange={_setShowDuplicates}
 						relationships={Array.isArray(relationships) ? relationships : []}
@@ -115,9 +129,14 @@ export function EntryView({
 						showDateFilter={true}
 						dateRange={dateRange}
 						onDateRangeChange={setDateRange}
+						isAdminMode={isAdminMode}
 					/>
-					<div ref={loadMoreRef} className="h-1" />
-					{infiniteLoading && <Loading message="読み込み中..." />}
+					{!isAdminMode && (
+						<>
+							<div ref={loadMoreRef} className="h-1" />
+							{infiniteLoading && <Loading message="読み込み中..." />}
+						</>
+					)}
 				</>
 			)}
 		</>

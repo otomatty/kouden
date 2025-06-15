@@ -27,6 +27,19 @@ export interface ReturnItem {
 export type ReturnEntryRecord = Database["public"]["Tables"]["return_entry_records"]["Row"];
 
 /**
+ * 返礼エントリーレコードとkouden_entriesをjoinした型定義
+ */
+export interface ReturnEntryRecordWithKoudenEntry extends ReturnEntryRecord {
+	kouden_entries: {
+		kouden_id: string;
+		name: string;
+		organization: string | null;
+		position: string | null;
+		amount: number | null;
+	};
+}
+
+/**
  * 返礼エントリーレコード作成時の入力型
  */
 export interface CreateReturnEntryInput {

@@ -194,6 +194,115 @@ export async function getEntries(
 	}
 }
 
+/**
+ * 管理者用: エントリー一覧を取得
+ */
+export async function getEntriesForAdmin(
+	koudenId: string,
+	page = 1,
+	pageSize = 100,
+	memberIds?: string[],
+	searchValue?: string,
+	sortValue?: string,
+	dateFrom?: string,
+	dateTo?: string,
+	showDuplicates?: boolean,
+): Promise<{ entries: Entry[]; count: number }> {
+	// 管理者権限をチェック
+	const { isAdmin } = await import("@/app/_actions/admin/permissions");
+	const adminCheck = await isAdmin();
+	if (!adminCheck) {
+		throw new Error("管理者権限が必要です");
+	}
+
+	// 管理者用クライアント（RLSバイパス）を使用
+	const { createAdminClient } = await import("@/lib/supabase/admin");
+	const supabase = createAdminClient();
+
+	try {
+		// エントリー情報の取得
+		const from = (page - 1) * pageSize;
+		const to = from + pageSize - 1;
+		// Build base query and apply optional user filter
+		let query = supabase
+			.from("kouden_entries")
+			.select("*", { count: "exact" })
+			.eq("kouden_id", koudenId);
+		// Filter by duplicate flag if requested
+		if (showDuplicates) {
+			query = query.eq("is_duplicate", true);
+		}
+		if (memberIds && memberIds.length > 0) {
+			// Filter entries by selected creator user IDs
+			query = query.in("created_by", memberIds);
+		}
+		// Apply global search filter
+		if (searchValue) {
+			const search = `%${searchValue}%`;
+			query = query.or(
+				`name.ilike.${search},address.ilike.${search},organization.ilike.${search},position.ilike.${search}`,
+			);
+		}
+		// Apply date range filter
+		if (dateFrom) {
+			query = query.gte("created_at", dateFrom);
+		}
+		if (dateTo) {
+			query = query.lte("created_at", dateTo);
+		}
+		// Apply sorting
+		if (sortValue && sortValue !== "default") {
+			const [field = "created_at", direction = "desc"] = sortValue.split("_");
+			const ascending = direction === "asc";
+			query = query.order(field, { ascending });
+		} else {
+			// Default sorting by created_at desc
+			query = query.order("created_at", { ascending: false });
+		}
+		const { data: rawEntries, count, error: entriesError } = await query.range(from, to);
+		const entries = rawEntries ?? [];
+
+		if (entriesError) {
+			console.error("[ERROR] Failed to fetch entries for admin:", {
+				message: entriesError.message,
+				details: entriesError.details,
+				hint: entriesError.hint,
+				code: entriesError.code,
+			});
+			throw new Error("香典情報の取得に失敗しました");
+		}
+
+		// 関係性情報の取得
+		const { data: relationships, error: relationshipsError } = await supabase
+			.from("relationships")
+			.select("id, name, description")
+			.eq("kouden_id", koudenId);
+
+		if (relationshipsError) {
+			console.error("[ERROR] Failed to fetch relationships for admin:", {
+				message: relationshipsError.message,
+				details: relationshipsError.details,
+				hint: relationshipsError.hint,
+				code: relationshipsError.code,
+			});
+			throw new Error("関係性情報の取得に失敗しました");
+		}
+
+		// 関係性情報をエントリーにマッピング
+		const entriesWithRelationships = entries.map((entry) => ({
+			...entry,
+			attendanceType: entry.attendance_type as AttendanceType,
+			relationshipId: entry.relationship_id,
+			relationship: relationships.find((r) => r.id === entry.relationship_id) || null,
+		}));
+
+		return { entries: entriesWithRelationships as Entry[], count: count ?? 0 };
+	} catch (error) {
+		console.error("[ERROR] Unexpected error in getEntriesForAdmin:", error);
+		throw error;
+	}
+}
+
 export async function getEntry(id: string) {
 	const supabase = await createClient();
 	const {

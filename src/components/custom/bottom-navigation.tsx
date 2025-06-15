@@ -233,9 +233,13 @@ export function BottomNavigation({ id, entries = [], relationships = [] }: Botto
 
 	const NavLink = ({ tab }: { tab: (typeof mainTabs)[0] }) => {
 		const isActive = pathname.includes(`/${tab.id}`);
+		// 管理者モードかどうかを判定
+		const isAdminMode = pathname.startsWith("/admin/koudens/");
+		const basePath = isAdminMode ? `/admin/koudens/${id}` : `/koudens/${id}`;
+
 		return (
 			<Link
-				href={`/koudens/${id}/${tab.id}`}
+				href={`${basePath}/${tab.id}`}
 				className={cn(
 					"flex-1 flex flex-col items-center justify-center gap-1 rounded-lg transition-colors p-1",
 					isActive

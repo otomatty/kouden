@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { ensureProfile } from "@/app/_actions/auth";
-import { isAdmin } from "@/app/_actions/admin/admin-users";
+import { isAdmin } from "@/app/_actions/admin/permissions";
 import { getUserSettings } from "@/app/_actions/settings";
 import { InitializeGuideMode } from "@/components/providers/initialize-guide-mode";
 import { TourGuide } from "@/components/custom/TourGuide/TourGuide";

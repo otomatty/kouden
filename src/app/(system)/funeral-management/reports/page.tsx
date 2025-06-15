@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import Container from "@/components/ui/container";
 import {
 	TrendingUp,
 	TrendingDown,
@@ -15,7 +16,7 @@ import Link from "next/link";
 
 export default function ReportsPage() {
 	return (
-		<div className="p-6 space-y-6">
+		<Container className="py-6 space-y-6">
 			<div className="flex justify-between items-center">
 				<h1 className="text-3xl font-bold">レポート・分析</h1>
 				<div className="flex gap-2">
@@ -228,6 +229,6 @@ export default function ReportsPage() {
 					</div>
 				</CardContent>
 			</Card>
-		</div>
+		</Container>
 	);
 }

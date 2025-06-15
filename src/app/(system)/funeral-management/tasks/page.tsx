@@ -2,21 +2,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import {
-	Plus,
-	Search,
-	Calendar,
-	User,
-	Clock,
-	AlertTriangle,
-	CheckCircle,
-	Circle,
-} from "lucide-react";
+import Container from "@/components/ui/container";
+import { Plus, Calendar, User, Clock, AlertTriangle, CheckCircle, Circle } from "lucide-react";
 import Link from "next/link";
 
 export default function TasksPage() {
 	return (
-		<div className="p-6 space-y-6">
+		<Container className="py-6 space-y-6">
 			<div className="flex justify-between items-center">
 				<h1 className="text-3xl font-bold">タスク管理</h1>
 				<Button asChild>
@@ -244,6 +236,6 @@ export default function TasksPage() {
 					</div>
 				</CardContent>
 			</Card>
-		</div>
+		</Container>
 	);
 }

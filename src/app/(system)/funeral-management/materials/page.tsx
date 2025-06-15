@@ -3,11 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Package, Plus, AlertTriangle, Clock, Truck } from "lucide-react";
+import Container from "@/components/ui/container";
 import Link from "next/link";
 
 export default function MaterialsPage() {
 	return (
-		<div className="p-6 space-y-6">
+		<Container className="py-6 space-y-6">
 			<div className="flex justify-between items-center">
 				<h1 className="text-3xl font-bold">資材管理</h1>
 				<Button asChild>
@@ -327,6 +328,6 @@ export default function MaterialsPage() {
 					</Card>
 				</TabsContent>
 			</Tabs>
-		</div>
+		</Container>
 	);
 }

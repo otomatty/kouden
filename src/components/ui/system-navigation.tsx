@@ -46,17 +46,19 @@ export function SystemNavigation({ sections, quickAccess, className }: SystemNav
 			<NavigationMenuList>
 				{/* クイックアクセスメニュー */}
 				{quickAccess?.map((item) => (
-					<NavigationMenuItem key={item.href}>
+					<NavigationMenuItem key={item.href} className="flex items-center">
 						<NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
 							<Link
 								href={item.href}
 								className={cn(
-									"flex items-center gap-2",
+									"flex items-center",
 									isActiveLink(item.href) && "bg-accent text-accent-foreground",
 								)}
 							>
-								<item.icon className="h-4 w-4" />
-								{item.title}
+								<div className="flex items-center gap-2">
+									<item.icon className="h-4 w-4" />
+									{item.title}
+								</div>
 								{item.badge && (
 									<Badge variant="secondary" className="text-xs">
 										{item.badge}

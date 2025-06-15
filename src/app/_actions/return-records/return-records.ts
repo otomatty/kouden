@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type {
 	ReturnEntryRecord,
+	ReturnEntryRecordWithKoudenEntry,
 	ReturnStatus,
 	CreateReturnEntryInput,
 	UpdateReturnEntryInput,
@@ -166,7 +167,7 @@ export async function getReturnEntriesByKoudenPaginated(
 		search?: string;
 		status?: string;
 	},
-): Promise<{ data: ReturnEntryRecord[]; hasMore: boolean; nextCursor?: string }> {
+): Promise<{ data: ReturnEntryRecordWithKoudenEntry[]; hasMore: boolean; nextCursor?: string }> {
 	try {
 		const supabase = await createClient();
 
@@ -208,7 +209,7 @@ export async function getReturnEntriesByKoudenPaginated(
 			throw error;
 		}
 
-		const records = data as ReturnEntryRecord[];
+		const records = data as ReturnEntryRecordWithKoudenEntry[];
 		const hasMore = records.length > limit;
 		const actualData = hasMore ? records.slice(0, limit) : records;
 		const nextCursor = hasMore ? actualData[actualData.length - 1]?.created_at : undefined;

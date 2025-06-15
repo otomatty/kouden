@@ -80,6 +80,74 @@ export async function getRelationships(koudenId: string) {
 	}
 }
 
+/**
+ * 管理者用: 香典帳の関係性を取得
+ */
+export async function getRelationshipsForAdmin(koudenId: string) {
+	// 管理者権限をチェック
+	const { isAdmin } = await import("@/app/_actions/admin/permissions");
+	const adminCheck = await isAdmin();
+	if (!adminCheck) {
+		throw new Error("管理者権限が必要です");
+	}
+
+	// 管理者用クライアント（RLSバイパス）を使用
+	const { createAdminClient } = await import("@/lib/supabase/admin");
+	const supabase = createAdminClient();
+
+	try {
+		// 1. まず関係性の存在確認
+		const { count, error: countError } = await supabase
+			.from("relationships")
+			.select("*", { count: "exact", head: true })
+			.eq("kouden_id", koudenId);
+
+		if (countError) {
+			console.error("[ERROR] Failed to count relationships for admin:", countError);
+			throw countError;
+		}
+
+		// 関係性が存在しない場合はすぐに空配列を返す
+		if (count === 0) {
+			console.warn(`[WARN] No relationships found for kouden ${koudenId}`);
+			return [];
+		}
+
+		// 2. 関係性データの取得（必要な列のみ）
+		const { data, error } = await supabase
+			.from("relationships")
+			.select(`
+				id,
+				name,
+				description,
+				is_default,
+				is_enabled,
+				kouden_id,
+				created_at,
+				updated_at,
+				created_by
+			`)
+			.eq("kouden_id", koudenId)
+			.order("is_default", { ascending: false })
+			.order("name");
+
+		if (error) {
+			console.error("[ERROR] Failed to fetch relationships for admin:", error);
+			throw error;
+		}
+
+		if (!data || data.length === 0) {
+			console.warn(`[WARN] No relationships data returned for kouden ${koudenId}`);
+			return [];
+		}
+
+		return data;
+	} catch (error) {
+		console.error("[ERROR] Error in getRelationshipsForAdmin:", error);
+		throw error;
+	}
+}
+
 // 香典帳に新しい関係性を追加
 export async function createRelationship(input: {
 	koudenId: string;
