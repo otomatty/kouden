@@ -9,7 +9,7 @@ export interface KoudenMember {
 	created_at: string;
 	updated_at: string;
 	added_by: string;
-	invitation_id?: string;
+	invitation_id?: string | null;
 	profile?: {
 		display_name: string | null;
 		avatar_url: string | null;

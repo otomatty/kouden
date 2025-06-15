@@ -110,7 +110,7 @@ export function KoudenActionsMenu({
 						<Tooltip>
 							<TooltipTrigger asChild>
 								<Button variant="outline" asChild>
-									<Link href={`/koudens/${koudenId}/settings/members`}>
+									<Link href={`/koudens/${koudenId}/members`}>
 										<UserPlus className="h-4 w-4" />
 										共有
 									</Link>
@@ -264,7 +264,7 @@ export function KoudenActionsMenu({
 									<Tooltip>
 										<TooltipTrigger asChild>
 											<Button variant="outline" asChild>
-												<Link href={`/koudens/${koudenId}/settings/members`}>
+												<Link href={`/koudens/${koudenId}/members`}>
 													<UserPlus className="h-4 w-4" />
 													共有
 												</Link>

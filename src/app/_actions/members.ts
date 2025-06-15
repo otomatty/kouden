@@ -124,6 +124,10 @@ export const getMembers = cache(async (koudenId: string) => {
 				kouden_id,
 				user_id,
 				role_id,
+				created_at,
+				updated_at,
+				added_by,
+				invitation_id,
 				kouden_roles:kouden_roles (
 					id,
 					name
