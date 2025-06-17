@@ -4,9 +4,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ContactRequestsTable } from "./_components/contact-requests-table";
 import { ContactRequestsStats } from "./_components/contact-requests-stats";
 import { ContactRequestsFilters } from "./_components/contact-requests-filters";
+import { CampaignApplicationsTable } from "./_components/campaign-applications-table";
+import { CampaignApplicationsStats } from "./_components/campaign-applications-stats";
+import { SupportTabs } from "./_components/support-tabs";
 
 interface SupportPageProps {
 	searchParams: Promise<{
+		tab?: string;
 		status?: string;
 		category?: string;
 		page?: string;
@@ -14,34 +18,66 @@ interface SupportPageProps {
 }
 
 export default async function SupportPage({ searchParams }: SupportPageProps) {
-	const { page, status, category } = await searchParams;
+	const { tab, page, status, category } = await searchParams;
+	const activeTab = tab || "contact";
 
 	return (
 		<div className="space-y-6">
 			<div>
 				<h1 className="text-2xl font-semibold text-gray-900">サポート管理</h1>
-				<p className="text-gray-600 mt-1">お問い合わせの管理と対応状況を確認できます</p>
+				<p className="text-gray-600 mt-1">お問い合わせとキャンペーン申し込みの管理</p>
 			</div>
 
-			{/* 統計情報 */}
-			<Suspense fallback={<StatsLoadingSkeleton />}>
-				<ContactRequestsStats />
-			</Suspense>
+			<SupportTabs
+				activeTab={activeTab}
+				contactContent={
+					<div className="space-y-6">
+						{/* お問い合わせ統計情報 */}
+						<Suspense fallback={<StatsLoadingSkeleton />}>
+							<ContactRequestsStats />
+						</Suspense>
 
-			{/* フィルター */}
-			<ContactRequestsFilters />
+						{/* お問い合わせフィルター */}
+						<ContactRequestsFilters />
 
-			{/* お問い合わせ一覧 */}
-			<Card>
-				<CardHeader>
-					<CardTitle>お問い合わせ一覧</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<Suspense fallback={<TableLoadingSkeleton />}>
-						<ContactRequestsTable status={status} category={category} page={Number(page) || 1} />
-					</Suspense>
-				</CardContent>
-			</Card>
+						{/* お問い合わせ一覧 */}
+						<Card>
+							<CardHeader>
+								<CardTitle>お問い合わせ一覧</CardTitle>
+							</CardHeader>
+							<CardContent>
+								<Suspense fallback={<TableLoadingSkeleton />}>
+									<ContactRequestsTable
+										status={status}
+										category={category}
+										page={Number(page) || 1}
+									/>
+								</Suspense>
+							</CardContent>
+						</Card>
+					</div>
+				}
+				campaignContent={
+					<div className="space-y-6">
+						{/* キャンペーン申し込み統計情報 */}
+						<Suspense fallback={<StatsLoadingSkeleton />}>
+							<CampaignApplicationsStats />
+						</Suspense>
+
+						{/* キャンペーン申し込み一覧 */}
+						<Card>
+							<CardHeader>
+								<CardTitle>キャンペーン申し込み一覧</CardTitle>
+							</CardHeader>
+							<CardContent>
+								<Suspense fallback={<TableLoadingSkeleton />}>
+									<CampaignApplicationsTable status={status} page={Number(page) || 1} />
+								</Suspense>
+							</CardContent>
+						</Card>
+					</div>
+				}
+			/>
 		</div>
 	);
 }
