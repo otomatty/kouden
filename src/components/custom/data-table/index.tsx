@@ -25,8 +25,8 @@ import { DateCell } from "./date-cell";
 import { AdditionalSelectCell } from "./additional-select-cell";
 import { SearchableSelectorDialog } from "@/components/custom/searchable-selector-dialog";
 import { Button } from "@/components/ui/button";
-import type { CellValue, DataTableProperties } from "@/types/table";
-import type { SelectOption } from "@/types/additional-select";
+import type { CellValue, DataTableProperties } from "@/types/data-table/table";
+import type { SelectOption } from "@/types/data-table/additional-select";
 import type { OfferingType } from "@/types/offerings";
 import { typeLabels } from "@/app/(protected)/koudens/[id]/offerings/_components/table/constants";
 import {

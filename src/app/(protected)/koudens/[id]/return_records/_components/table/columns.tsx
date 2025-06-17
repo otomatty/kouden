@@ -28,7 +28,7 @@ import { SelectionColumn } from "@/components/custom/data-table/selection-column
 // types
 import type { KoudenPermission } from "@/types/role";
 import type { Table, Row, Column } from "@tanstack/react-table";
-import type { CellValue } from "@/types/table";
+import type { CellValue } from "@/types/data-table/table";
 // utils
 import { formatCurrency } from "@/utils/currency";
 // components

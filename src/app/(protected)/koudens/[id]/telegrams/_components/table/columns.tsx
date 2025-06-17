@@ -13,8 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { EditableCell } from "@/components/custom/data-table/editable-cell";
 import { SearchableSelectorDialog } from "@/components/custom/searchable-selector-dialog";
-import type { EditableColumnConfig } from "@/types/table";
-import type { CellValue } from "@/types/table";
+import type { EditableColumnConfig } from "@/types/data-table/table";
+import type { CellValue } from "@/types/data-table/table";
 import { SelectionColumn } from "@/components/custom/data-table/selection-column";
 
 // カラムラベルの定義

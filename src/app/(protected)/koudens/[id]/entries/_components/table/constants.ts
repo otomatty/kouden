@@ -1,4 +1,4 @@
-import type { EditableColumnConfig } from "@/types/table";
+import type { EditableColumnConfig } from "@/types/data-table/table";
 import type { Relationship } from "@/types/relationships";
 
 export const attendanceTypeMap = {

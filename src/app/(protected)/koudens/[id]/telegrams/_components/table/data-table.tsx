@@ -20,7 +20,7 @@ import { Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 // types
 import type { Telegram } from "@/types/telegrams";
-import type { CellValue } from "@/types/table";
+import type { CellValue } from "@/types/data-table/table";
 import type { Entry } from "@/types/entries";
 // Server Actions
 import { updateTelegramField, deleteTelegrams } from "@/app/_actions/telegrams";

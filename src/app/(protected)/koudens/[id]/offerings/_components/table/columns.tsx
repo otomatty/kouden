@@ -17,7 +17,7 @@ import type { KoudenPermission } from "@/types/role";
 import type { Table, Row, Column } from "@tanstack/react-table";
 import type { Entry } from "@/types/entries";
 import type { Offering, OfferingType, OfferingWithKoudenEntries } from "@/types/offerings";
-import type { CellValue } from "@/types/table";
+import type { CellValue } from "@/types/data-table/table";
 // utils
 import { formatCurrency } from "@/utils/currency";
 // components

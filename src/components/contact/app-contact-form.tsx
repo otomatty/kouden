@@ -18,7 +18,7 @@ import SubmitButton from "./submit-button";
 import StepIndicator from "./step-indicator";
 import StepSummary from "./step-summary";
 import { getPlaceholderByCategory } from "./category-placeholders";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@supabase/supabase-js";

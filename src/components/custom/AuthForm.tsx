@@ -17,9 +17,21 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 	const [email, setEmail] = useState("");
 	const [message, setMessage] = useState<string | null>(null);
 	const [redirectUrl, setRedirectUrl] = useState<string>("");
+	const [isLoading, setIsLoading] = useState(false);
 	const supabase = createClient();
 
 	useEffect(() => {
+		// Store invitation token in cookie before authentication
+		if (invitationToken) {
+			try {
+				document.cookie = `invitation_token=${invitationToken}; path=/; max-age=3600; SameSite=Lax; Secure`;
+				console.log("[DEBUG] Stored invitation token in cookie:", invitationToken);
+			} catch (error) {
+				console.error("[ERROR] Failed to store invitation token in cookie:", error);
+				setMessage("招待情報の保存に失敗しました。再度お試しください。");
+			}
+		}
+
 		// Build callback URL for Supabase OAuth (include invitation token if present)
 		const base = `${window.location.origin}/auth/callback`;
 		const params = new URLSearchParams();
@@ -31,47 +43,85 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 	}, [invitationToken]);
 
 	const handleMagicLinkLogin = async () => {
+		if (!email) {
+			setMessage("メールアドレスを入力してください");
+			return;
+		}
+
 		try {
+			setIsLoading(true);
+			setMessage(null);
+
 			// Store post-login redirect in cookie if provided
 			if (propRedirectTo) {
-				document.cookie = `post_auth_redirect=${encodeURIComponent(propRedirectTo)}; path=/; SameSite=Lax`;
+				document.cookie = `post_auth_redirect=${encodeURIComponent(propRedirectTo)}; path=/; SameSite=Lax; Secure`;
 			}
+
 			const { error } = await supabase.auth.signInWithOtp({
 				email,
 				options: { emailRedirectTo: redirectUrl },
 			});
-			if (error) throw error;
-			router.push(`/auth/sent?email=${encodeURIComponent(email)}`);
-			return;
-		} catch (error) {
-			if (error instanceof Error) {
-				console.error("Magic Link エラー:", error.message);
-				setMessage(`エラーが発生しました: ${error.message}`);
+
+			if (error) {
+				throw error;
 			}
+
+			router.push(`/auth/sent?email=${encodeURIComponent(email)}`);
+		} catch (error) {
+			console.error("[ERROR] Magic Link login failed:", error);
+			if (error instanceof Error) {
+				setMessage(`ログインに失敗しました: ${error.message}`);
+			} else {
+				setMessage("ログインに失敗しました。再度お試しください。");
+			}
+		} finally {
+			setIsLoading(false);
 		}
 	};
 
 	const handleGoogleLogin = async () => {
 		try {
+			setIsLoading(true);
+			setMessage(null);
+
 			// Store post-login redirect in cookie if provided
 			if (propRedirectTo) {
-				document.cookie = `post_auth_redirect=${encodeURIComponent(propRedirectTo)}; path=/; SameSite=Lax`;
+				document.cookie = `post_auth_redirect=${encodeURIComponent(propRedirectTo)}; path=/; SameSite=Lax; Secure`;
 			}
+
 			const { error } = await supabase.auth.signInWithOAuth({
 				provider: "google",
 				options: { redirectTo: redirectUrl },
 			});
-			if (error) throw error;
-		} catch (error) {
-			if (error instanceof Error) {
-				console.error("エラーメッセージ:", error.message);
-				console.error("エラースタック:", error.stack);
+
+			if (error) {
+				throw error;
 			}
+		} catch (error) {
+			console.error("[ERROR] Google login failed:", error);
+			if (error instanceof Error) {
+				setMessage(`Googleログインに失敗しました: ${error.message}`);
+			} else {
+				setMessage("Googleログインに失敗しました。再度お試しください。");
+			}
+			setIsLoading(false);
 		}
 	};
 
 	return (
 		<div className="flex flex-col space-y-4">
+			{message && (
+				<div
+					className={`text-sm p-3 rounded-md ${
+						message.includes("失敗") || message.includes("エラー")
+							? "bg-destructive/10 text-destructive border border-destructive/20"
+							: "bg-muted text-muted-foreground"
+					}`}
+				>
+					{message}
+				</div>
+			)}
+
 			{/* Magic Link Login Section */}
 			<div className="flex flex-col space-y-2">
 				<Input
@@ -80,11 +130,16 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 					onChange={(e) => setEmail(e.target.value)}
 					placeholder="メールアドレス"
 					className="w-full px-3 py-2 border rounded"
+					disabled={isLoading}
 				/>
-				<Button type="button" variant="outline" onClick={handleMagicLinkLogin} disabled={!email}>
-					メールでログイン
+				<Button
+					type="button"
+					variant="outline"
+					onClick={handleMagicLinkLogin}
+					disabled={!email || isLoading}
+				>
+					{isLoading ? "送信中..." : "メールでログイン"}
 				</Button>
-				{message && <p className="text-sm text-gray-500">{message}</p>}
 			</div>
 
 			{/* Separator */}
@@ -99,9 +154,10 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 				variant="outline"
 				onClick={handleGoogleLogin}
 				className="flex items-center justify-center gap-2"
+				disabled={isLoading}
 			>
 				<GoogleIcon className="h-5 w-5" />
-				<span>Googleでログイン</span>
+				<span>{isLoading ? "ログイン中..." : "Googleでログイン"}</span>
 			</Button>
 		</div>
 	);

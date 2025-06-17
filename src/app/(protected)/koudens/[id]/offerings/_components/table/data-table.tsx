@@ -20,7 +20,7 @@ import { toast } from "@/hooks/use-toast";
 // types
 import type { Offering, OfferingWithKoudenEntries } from "@/types/offerings";
 import type { Entry } from "@/types/entries";
-import type { CellValue } from "@/types/table";
+import type { CellValue } from "@/types/data-table/table";
 // Server Actions
 import { deleteOffering, updateOfferingField } from "@/app/_actions/offerings";
 // hooks

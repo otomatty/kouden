@@ -1,86 +1,170 @@
+import { Suspense } from "react";
+import { notFound } from "next/navigation";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardFooter,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
-import { AlertCircle, ArrowLeft } from "lucide-react";
-import { Header } from "@/app/(public)/_components/header";
 import Link from "next/link";
+import { AlertTriangle, Clock, Users, RefreshCw, Home, Mail } from "lucide-react";
 
-// Version fetched from environment variable
-const version = process.env.NEXT_PUBLIC_APP_VERSION ?? "";
-
-interface PageProps {
-	params: Promise<Record<string, never>>;
+interface InvitationErrorPageProps {
 	searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-export default async function InvitationErrorPage({ searchParams }: PageProps) {
-	const resolvedParams = await searchParams;
-	const errorMessage = resolvedParams.error as string | undefined;
+function InvitationErrorContent({
+	searchParams,
+}: { searchParams: { [key: string]: string | string[] | undefined } }) {
+	const error =
+		typeof searchParams.error === "string" ? searchParams.error : "不明なエラーが発生しました";
+	const type = typeof searchParams.type === "string" ? searchParams.type : "unknown";
+
+	// エラータイプに基づいてアイコンと推奨アクションを決定
+	const getErrorInfo = () => {
+		switch (type) {
+			case "invalid":
+				return {
+					icon: <AlertTriangle className="h-12 w-12 text-destructive" />,
+					title: "招待リンクが無効です",
+					description: "この招待リンクは使用できません。",
+					actions: [
+						{
+							label: "香典帳一覧に戻る",
+							href: "/koudens",
+							variant: "default" as const,
+							icon: <Home className="h-4 w-4" />,
+						},
+						{
+							label: "新しい招待を依頼する",
+							href: "/contact",
+							variant: "outline" as const,
+							icon: <Mail className="h-4 w-4" />,
+						},
+					],
+				};
+			case "server":
+				return {
+					icon: <RefreshCw className="h-12 w-12 text-destructive" />,
+					title: "サーバーエラーが発生しました",
+					description: "一時的な問題が発生している可能性があります。",
+					actions: [
+						{
+							label: "再試行する",
+							href: window.location.href,
+							variant: "default" as const,
+							icon: <RefreshCw className="h-4 w-4" />,
+						},
+						{
+							label: "香典帳一覧に戻る",
+							href: "/koudens",
+							variant: "outline" as const,
+							icon: <Home className="h-4 w-4" />,
+						},
+					],
+				};
+			default:
+				return {
+					icon: <AlertTriangle className="h-12 w-12 text-destructive" />,
+					title: "招待の処理に失敗しました",
+					description: "予期せぬエラーが発生しました。",
+					actions: [
+						{
+							label: "香典帳一覧に戻る",
+							href: "/koudens",
+							variant: "default" as const,
+							icon: <Home className="h-4 w-4" />,
+						},
+					],
+				};
+		}
+	};
+
+	const errorInfo = getErrorInfo();
+
+	// 具体的なエラーメッセージに基づく詳細説明
+	const getDetailedDescription = () => {
+		switch (error) {
+			case "招待が見つかりません":
+				return "この招待リンクは存在しないか、削除されている可能性があります。招待者に新しいリンクの作成を依頼してください。";
+			case "招待の有効期限が切れています":
+				return "この招待リンクの有効期限が切れています。招待者に新しいリンクの作成を依頼してください。";
+			case "この招待は既に使用されています":
+				return "この招待リンクは既に使用済みです。使用回数制限がある招待の場合、上限に達している可能性があります。";
+			case "招待の使用回数が上限に達しました":
+				return "この招待リンクの使用回数が上限に達しました。招待者に新しいリンクの作成を依頼してください。";
+			case "すでにメンバーとして参加しています":
+				return "あなたは既にこの香典帳のメンバーです。香典帳一覧からアクセスできます。";
+			default:
+				return errorInfo.description;
+		}
+	};
 
 	return (
-		<>
-			<Header version={version} />
-			<main className="min-h-screen pt-16">
-				<div className="container max-w-2xl py-8">
-					<div className="mb-6">
-						<Link href="/">
-							<Button variant="ghost" className="gap-2">
-								<ArrowLeft className="h-4 w-4" />
-								トップページに戻る
-							</Button>
-						</Link>
-					</div>
-					<Card>
-						<CardHeader>
-							<div className="flex items-center gap-2">
-								<AlertCircle className="h-6 w-6 text-destructive" />
-								<CardTitle>招待エラー</CardTitle>
+		<div className="min-h-screen bg-gradient-to-b from-background to-muted/50 py-8 px-4 sm:px-6 lg:px-8">
+			<div className="container max-w-2xl mx-auto">
+				<Card className="backdrop-blur-sm bg-card/95 shadow-lg border-muted">
+					<CardHeader className="text-center space-y-4">
+						<div className="flex justify-center">{errorInfo.icon}</div>
+						<CardTitle className="text-2xl sm:text-3xl font-bold text-destructive">
+							{errorInfo.title}
+						</CardTitle>
+						<CardDescription className="text-base">{getDetailedDescription()}</CardDescription>
+					</CardHeader>
+					<CardContent className="space-y-6">
+						{/* エラーの詳細情報 */}
+						<div className="rounded-lg bg-muted/50 p-4">
+							<h3 className="font-semibold text-sm text-muted-foreground mb-2">エラーの詳細</h3>
+							<p className="text-sm font-mono bg-background p-2 rounded border">{error}</p>
+						</div>
+
+						{/* 推奨アクション */}
+						<div className="space-y-3">
+							<h3 className="font-semibold text-sm text-muted-foreground">推奨アクション</h3>
+							<div className="space-y-2">
+								{errorInfo.actions.map((action) => (
+									<Button
+										key={action.label}
+										asChild
+										variant={action.variant}
+										className="w-full justify-start"
+									>
+										<Link href={action.href} className="flex items-center gap-2">
+											{action.icon}
+											{action.label}
+										</Link>
+									</Button>
+								))}
 							</div>
-							<CardDescription>招待の処理中にエラーが発生しました</CardDescription>
-						</CardHeader>
-						<CardContent>
-							{errorMessage && (
-								<div className="mb-6 rounded-md bg-destructive/10 p-4">
-									<p className="text-sm text-destructive">{decodeURIComponent(errorMessage)}</p>
+						</div>
+
+						{/* 追加のヘルプ情報 */}
+						<div className="border-t pt-4">
+							<details className="space-y-2">
+								<summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground">
+									問題が解決しない場合は...
+								</summary>
+								<div className="text-sm text-muted-foreground space-y-2 pl-4">
+									<p>• 招待者に連絡して、新しい招待リンクの作成を依頼してください</p>
+									<p>• ブラウザのキャッシュをクリアしてから再試行してください</p>
+									<p>• 問題が継続する場合は、サポートにお問い合わせください</p>
 								</div>
-							)}
-							<div className="space-y-6">
-								<div>
-									<h3 className="font-semibold text-lg mb-3">考えられる原因：</h3>
-									<ul className="list-disc pl-6 text-sm text-muted-foreground space-y-2">
-										<li>招待リンクの有効期限が切れている</li>
-										<li>招待リンクが既に使用されている</li>
-										<li>招待リンクの使用回数が上限に達している</li>
-										<li>招待リンクが無効または存在しない</li>
-									</ul>
-								</div>
-								<div>
-									<h3 className="font-semibold text-lg mb-3">対処方法：</h3>
-									<ul className="list-disc pl-6 text-sm text-muted-foreground space-y-2">
-										<li>招待者に新しい招待リンクを発行してもらう</li>
-										<li>招待者に連絡して状況を確認する</li>
-										<li>既にメンバーの場合は、直接香典帳一覧からアクセスする</li>
-									</ul>
-								</div>
-							</div>
-						</CardContent>
-						<CardFooter className="flex gap-4">
-							<Button asChild variant="default" size="lg">
-								<Link href="/koudens">香典帳一覧へ</Link>
-							</Button>
-							<Button asChild variant="outline" size="lg">
-								<Link href="/">トップページへ</Link>
-							</Button>
-						</CardFooter>
-					</Card>
-				</div>
-			</main>
-		</>
+							</details>
+						</div>
+					</CardContent>
+				</Card>
+			</div>
+		</div>
+	);
+}
+
+export default async function InvitationErrorPage({ searchParams }: InvitationErrorPageProps) {
+	const resolvedSearchParams = await searchParams;
+
+	// エラーパラメータが存在しない場合は404
+	if (!resolvedSearchParams.error) {
+		notFound();
+	}
+
+	return (
+		<Suspense fallback={<div>読み込み中...</div>}>
+			<InvitationErrorContent searchParams={resolvedSearchParams} />
+		</Suspense>
 	);
 }

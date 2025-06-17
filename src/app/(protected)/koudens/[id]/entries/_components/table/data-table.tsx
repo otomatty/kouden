@@ -23,8 +23,8 @@ import { Button } from "@/components/ui/button";
 import type { Entry } from "@/types/entries";
 import type { Relationship } from "@/types/relationships";
 import type { AttendanceType } from "@/types/entries";
-import type { CellValue } from "@/types/table";
-import type { SelectOption } from "@/types/additional-select";
+import type { CellValue } from "@/types/data-table/table";
+import type { SelectOption } from "@/types/data-table/additional-select";
 // Server Actions
 import { deleteEntries, updateEntryField } from "@/app/_actions/entries";
 import { getMembers } from "@/app/_actions/members";
@@ -363,7 +363,7 @@ export function DataTable({
 	useEffect(() => {
 		(async () => {
 			try {
-				let mems;
+				let mems: Awaited<ReturnType<typeof getMembers>>;
 				if (isAdminMode) {
 					// 管理者モードの場合は管理者用関数を使用
 					const { getMembersForAdmin } = await import("@/app/_actions/members");

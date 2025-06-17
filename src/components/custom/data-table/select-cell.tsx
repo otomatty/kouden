@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { SelectOption } from "@/types/additional-select";
+import type { SelectOption } from "@/types/data-table/additional-select";
 
 interface SelectCellProps {
 	value: string | number | boolean | null;

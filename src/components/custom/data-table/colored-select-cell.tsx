@@ -7,8 +7,8 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import type { SelectOption } from "@/types/additional-select";
-import { getDefaultColorByVariant, type SelectColorConfig } from "@/types/select-colors";
+import type { SelectOption } from "@/types/data-table/additional-select";
+import { getDefaultColorByVariant, type SelectColorConfig } from "@/types/data-table/select-colors";
 
 interface ColoredSelectCellProps {
 	value: string | number | boolean | null;

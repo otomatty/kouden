@@ -10,7 +10,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { PlusCircle } from "lucide-react";
 import { AddOptionInput } from "./add-option-input";
-import type { AdditionalSelectProps } from "@/types/additional-select";
+import type { AdditionalSelectProps } from "@/types/data-table/additional-select";
 
 export function AdditionalSelect({
 	label,

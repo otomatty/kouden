@@ -1061,6 +1061,84 @@ export type Database = {
         }
         Relationships: []
       }
+      announcements: {
+        Row: {
+          created_at: string
+          created_by: string
+          cta_label: string | null
+          cta_link: string | null
+          description: string
+          id: string
+          image_url: string | null
+          is_active: boolean
+          priority: number
+          show_until: string | null
+          title: string
+          type: Database["public"]["Enums"]["announcement_type"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          cta_label?: string | null
+          cta_link?: string | null
+          description: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          priority?: number
+          show_until?: string | null
+          title: string
+          type?: Database["public"]["Enums"]["announcement_type"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          cta_label?: string | null
+          cta_link?: string | null
+          description?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          priority?: number
+          show_until?: string | null
+          title?: string
+          type?: Database["public"]["Enums"]["announcement_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      campaign_hearing_applications: {
+        Row: {
+          created_at: string | null
+          form_data: Json
+          google_event_id: string | null
+          id: string
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          form_data: Json
+          google_event_id?: string | null
+          id?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          form_data?: Json
+          google_event_id?: string | null
+          id?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       contact_request_attachments: {
         Row: {
           file_name: string
@@ -2888,6 +2966,12 @@ export type Database = {
       }
     }
     Enums: {
+      announcement_type:
+        | "info"
+        | "warning"
+        | "success"
+        | "promotion"
+        | "maintenance"
       attendance_type: "FUNERAL" | "CONDOLENCE_VISIT"
       delivery_method: "MAIL" | "HAND" | "DELIVERY" | "OTHER"
       invitation_status:
@@ -3023,6 +3107,13 @@ export const Constants = {
   },
   public: {
     Enums: {
+      announcement_type: [
+        "info",
+        "warning",
+        "success",
+        "promotion",
+        "maintenance",
+      ],
       attendance_type: ["FUNERAL", "CONDOLENCE_VISIT"],
       delivery_method: ["MAIL", "HAND", "DELIVERY", "OTHER"],
       invitation_status: [

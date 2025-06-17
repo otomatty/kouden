@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import type { CellValue } from "@/types/table";
+import type { CellValue } from "@/types/data-table/table";
 import type {
 	CreateEntryInput,
 	EntryResponse,

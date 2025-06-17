@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/select";
 import { PlusCircle } from "lucide-react";
 import { AddOptionInput } from "../form/add-option-input";
-import type { AdditionalSelectCellProps } from "@/types/additional-select";
+import type { AdditionalSelectCellProps } from "@/types/data-table/additional-select";
 
 export function AdditionalSelectCell({
 	options,

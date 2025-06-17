@@ -13,7 +13,7 @@ import {
 // types
 import type { KoudenPermission } from "@/types/role";
 import type { Relationship } from "@/types/relationships";
-import type { CellValue } from "@/types/table";
+import type { CellValue } from "@/types/data-table/table";
 // constants
 import { columnLabels } from "./constants";
 

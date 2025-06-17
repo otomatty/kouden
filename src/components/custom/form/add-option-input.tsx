@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X } from "lucide-react";
-import type { AddOptionInputProps, SelectOption } from "@/types/additional-select";
+import type { AddOptionInputProps, SelectOption } from "@/types/data-table/additional-select";
 
 export function AddOptionInput({
 	onSubmit,

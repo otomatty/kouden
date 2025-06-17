@@ -1,5 +1,5 @@
-import type { EditableColumnConfig } from "@/types/table";
-import type { SelectColorConfig } from "@/types/select-colors";
+import type { EditableColumnConfig } from "@/types/data-table/table";
+import type { SelectColorConfig } from "@/types/data-table/select-colors";
 
 // 返礼状況のマッピング
 export const returnStatusMap = {

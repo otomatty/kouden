@@ -24,7 +24,7 @@ import type {
 } from "@/types/return-records/return-records";
 import type { Relationship } from "@/types/relationships";
 import type { Entry } from "@/types/entries";
-import type { CellValue } from "@/types/table";
+import type { CellValue } from "@/types/data-table/table";
 
 // Server Actions
 import {

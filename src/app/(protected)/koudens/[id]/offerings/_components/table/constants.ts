@@ -1,6 +1,6 @@
 import { Flower2, Gift, Package } from "lucide-react";
 import type { OfferingType } from "@/types/offerings";
-import type { EditableColumnConfig } from "@/types/table";
+import type { EditableColumnConfig } from "@/types/data-table/table";
 import type { LucideIcon } from "lucide-react";
 
 export const typeIcons: Record<OfferingType, LucideIcon> = {

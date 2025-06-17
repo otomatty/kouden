@@ -1,4 +1,4 @@
-import type { EditableColumnConfig } from "@/types/table";
+import type { EditableColumnConfig } from "@/types/data-table/table";
 
 // カラムラベルの定義
 export const columnLabels: Record<string, string> = {
