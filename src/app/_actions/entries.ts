@@ -10,9 +10,6 @@ import type {
 	Entry,
 	AttendanceType,
 } from "@/types/entries";
-import type { Database } from "@/types/supabase";
-
-type KoudenEntry = Database["public"]["Tables"]["kouden_entries"]["Insert"];
 
 export async function createEntry(input: CreateEntryInput): Promise<EntryResponse> {
 	const supabase = await createClient();
@@ -25,37 +22,30 @@ export async function createEntry(input: CreateEntryInput): Promise<EntryRespons
 	}
 
 	try {
-		// 明示的にスネークケースでマッピング
-		const createData: KoudenEntry = {
-			kouden_id: input.koudenId,
-			name: input.name,
-			organization: input.organization,
-			position: input.position,
-			amount: input.amount,
-			postal_code: input.postalCode,
-			address: input.address,
-			phone_number: input.phoneNumber,
-			relationship_id: input.relationshipId,
-			attendance_type: input.attendanceType,
-			has_offering: input.hasOffering,
-			notes: input.notes,
-			created_by: user.id,
-		};
-
-		const { data, error } = await supabase
-			.from("kouden_entries")
-			.insert(createData)
-			.select("*")
-			.single();
+		// トランザクションを開始して香典エントリと返礼情報を同時に作成
+		const { data, error } = await supabase.rpc("create_entry_with_return_record", {
+			p_kouden_id: input.koudenId,
+			p_created_by: user.id,
+			p_name: input.name || undefined,
+			p_organization: input.organization || undefined,
+			p_position: input.position || undefined,
+			p_amount: input.amount,
+			p_postal_code: input.postalCode || undefined,
+			p_address: input.address || undefined,
+			p_phone_number: input.phoneNumber || undefined,
+			p_relationship_id: input.relationshipId || undefined,
+			p_attendance_type: input.attendanceType,
+			p_has_offering: input.hasOffering,
+			p_notes: input.notes || undefined,
+		});
 
 		if (error) {
 			// デバッグ: エラーの詳細情報をログ
-			console.error("[ERROR] Create Entry Failed:", {
+			console.error("[ERROR] Create Entry with Return Record Failed:", {
 				error,
 				errorCode: error.code,
 				errorMessage: error.message,
 				errorDetails: error.details,
-				createData,
 				input,
 				userId: user.id,
 			});
@@ -67,15 +57,24 @@ export async function createEntry(input: CreateEntryInput): Promise<EntryRespons
 			throw new Error("香典情報の作成に失敗しました");
 		}
 
+		if (!data || data.length === 0) {
+			throw new Error("香典情報の作成に失敗しました");
+		}
+
+		const entryData = data[0];
+		if (!entryData) {
+			throw new Error("香典情報の作成に失敗しました");
+		}
+
 		Promise.resolve().then(() => {
 			revalidatePath(`/koudens/${input.koudenId}`);
 		});
 
 		// スネークケースからキャメルケースへの変換
 		const response: EntryResponse = {
-			...data, // 元のスネークケースデータを使用
-			attendanceType: data.attendance_type as AttendanceType,
-			relationshipId: data.relationship_id,
+			...entryData, // 元のスネークケースデータを使用
+			attendanceType: entryData.attendance_type as AttendanceType,
+			relationshipId: entryData.relationship_id,
 		};
 
 		return response;

@@ -2812,6 +2812,45 @@ export type Database = {
         }
         Returns: string
       }
+      create_entry_with_return_record: {
+        Args: {
+          p_kouden_id: string
+          p_created_by: string
+          p_name?: string
+          p_organization?: string
+          p_position?: string
+          p_amount?: number
+          p_postal_code?: string
+          p_address?: string
+          p_phone_number?: string
+          p_relationship_id?: string
+          p_attendance_type?: string
+          p_has_offering?: boolean
+          p_notes?: string
+        }
+        Returns: {
+          id: string
+          kouden_id: string
+          name: string
+          organization: string
+          position: string
+          amount: number
+          postal_code: string
+          address: string
+          phone_number: string
+          relationship_id: string
+          attendance_type: string
+          has_offering: boolean
+          notes: string
+          created_at: string
+          updated_at: string
+          created_by: string
+          version: number
+          last_modified_at: string
+          last_modified_by: string
+          is_duplicate: boolean
+        }[]
+      }
       create_funeral_company_role: {
         Args: { p_kouden_id: string; p_created_by: string }
         Returns: string
