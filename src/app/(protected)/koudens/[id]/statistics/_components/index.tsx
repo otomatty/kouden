@@ -16,24 +16,63 @@ import {
 	Tooltip,
 } from "recharts";
 
+import type { ReturnStatus } from "@/components/ui/status-badge";
+import { returnStatusMap, returnStatusCustomColors } from "@/components/ui/status-badge";
+
 interface KoudenStatisticsProps {
 	totalAmount: number;
 	attendanceCounts: Record<"FUNERAL" | "CONDOLENCE_VISIT" | "ABSENT", number>;
-	returnProgress: { completed: number; pending: number };
+	returnStatusCounts?: Record<string, number>;
 	returnProgressPercentage: number;
+	completedCount?: number;
 	amountDistribution: { name: string; count: number }[];
 	attendanceData: { name: string; value: number; color: string }[];
+	// Admin用の互換性のため
+	returnProgress?: { completed: number; pending: number };
 }
 
 export const KoudenStatistics = memo(function KoudenStatistics({
 	totalAmount,
 	attendanceCounts,
-	returnProgress,
+	returnStatusCounts,
 	returnProgressPercentage,
+	completedCount,
 	amountDistribution,
 	attendanceData,
+	returnProgress,
 }: KoudenStatisticsProps) {
-	const totalCount = returnProgress.completed + returnProgress.pending;
+	// returnStatusCountsがない場合はreturnProgressから計算
+	const defaultStatusCounts: Record<string, number> = returnProgress
+		? {
+				COMPLETED: returnProgress.completed,
+				PENDING: returnProgress.pending,
+			}
+		: {};
+
+	const actualStatusCounts: Record<string, number> = returnStatusCounts || defaultStatusCounts;
+	const totalCount = Object.values(actualStatusCounts).reduce((sum, count) => sum + count, 0);
+	const actualCompletedCount = completedCount ?? returnProgress?.completed ?? 0;
+
+	// 返礼状況のセグメントデータを作成（順序: 完了系→未完了系）
+	const statusOrder: ReturnStatus[] = ["COMPLETED", "NOT_REQUIRED", "PARTIAL_RETURNED", "PENDING"];
+	const statusSegments = statusOrder
+		.filter((status) => actualStatusCounts[status] && actualStatusCounts[status] > 0)
+		.map((status) => {
+			const count = actualStatusCounts[status] || 0;
+			// PENDINGの場合はグレーに変更
+			const color =
+				status === "PENDING"
+					? "#6b7280" // グレー色
+					: returnStatusCustomColors[status]?.backgroundColor || "#000000";
+
+			return {
+				status,
+				count,
+				percentage: count ? (count / totalCount) * 100 : 0,
+				color,
+				label: returnStatusMap[status] || status,
+			};
+		});
 
 	return (
 		<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -70,10 +109,39 @@ export const KoudenStatistics = memo(function KoudenStatistics({
 					<div className="flex items-center justify-between">
 						<div className="text-2xl font-bold">{Math.round(returnProgressPercentage)}%</div>
 						<div className="text-xs text-muted-foreground">
-							{returnProgress.completed} / {totalCount}
+							{actualCompletedCount} / {totalCount}
 						</div>
 					</div>
-					<Progress value={returnProgressPercentage} className="mt-2" />
+					{/* セグメント化されたプログレスバー */}
+					<div className="mt-2 space-y-2">
+						<div className="flex bg-gray-200 rounded-full h-4 overflow-hidden">
+							{statusSegments.map((segment) => (
+								<div
+									key={segment.status}
+									className="h-full transition-all duration-300"
+									style={{
+										width: `${segment.percentage}%`,
+										backgroundColor: segment.color,
+									}}
+									title={`${segment.label}: ${segment.count}名 (${segment.percentage.toFixed(1)}%)`}
+								/>
+							))}
+						</div>
+						{/* ステータスの凡例 */}
+						<div className="flex flex-wrap gap-2 text-xs">
+							{statusSegments.map((segment) => (
+								<div key={segment.status} className="flex items-center gap-1">
+									<div
+										className="w-3 h-3 rounded-full"
+										style={{ backgroundColor: segment.color }}
+									/>
+									<span className="text-muted-foreground">
+										{segment.label}: {segment.count}名
+									</span>
+								</div>
+							))}
+						</div>
+					</div>
 				</CardContent>
 			</Card>
 

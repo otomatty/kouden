@@ -1,28 +1,13 @@
 import type { EditableColumnConfig } from "@/types/data-table/table";
 import type { SelectColorConfig } from "@/types/data-table/select-colors";
 
-// 返礼状況のマッピング
-export const returnStatusMap = {
-	PENDING: "未対応",
-	PARTIAL_RETURNED: "一部返礼",
-	COMPLETED: "完了",
-	NOT_REQUIRED: "返礼不要",
-} as const;
-
 // 返礼状況の優先順位（ソート用）
+// ※ マッピングと色設定は共通コンポーネント（StatusBadge）に移行
 export const returnStatusPriority = {
 	PENDING: 4,
 	PARTIAL_RETURNED: 3,
 	COMPLETED: 2,
 	NOT_REQUIRED: 1,
-} as const;
-
-// 返礼状況のバッジ色
-export const returnStatusBadgeVariant = {
-	PENDING: "outline",
-	PARTIAL_RETURNED: "secondary",
-	COMPLETED: "default",
-	NOT_REQUIRED: "destructive",
 } as const;
 
 /**

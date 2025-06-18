@@ -8,7 +8,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import type { ReturnStatus } from "@/types/return-records/return-records";
-import { returnStatusMap } from "../../table/constants";
+import { returnStatusMap } from "@/components/ui/status-badge";
 
 interface StatusSelectProps {
 	/** 現在の値 */
@@ -31,7 +31,7 @@ export function StatusSelect({ value, onValueChange, disabled = false }: StatusS
 			<SelectContent>
 				{Object.entries(returnStatusMap).map(([key, label]) => (
 					<SelectItem key={key} value={key}>
-						{label}
+						{String(label)}
 					</SelectItem>
 				))}
 			</SelectContent>

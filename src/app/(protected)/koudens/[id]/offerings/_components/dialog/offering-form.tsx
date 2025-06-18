@@ -12,7 +12,12 @@ import { useToast } from "@/hooks/use-toast";
 
 // types
 import type { Entry } from "@/types/entries";
-import type { Offering, OfferingType, BaseOffering, OfferingFormValues } from "@/types/offerings";
+import type {
+	OfferingWithKoudenEntries,
+	OfferingType,
+	BaseOffering,
+	OfferingFormValues,
+} from "@/types/offerings";
 import { offeringFormSchema } from "@/schemas/offerings";
 // components
 import { OfferingFormBasic } from "./offering-form-basic";
@@ -25,8 +30,8 @@ import { createOffering, updateOffering } from "@/app/_actions/offerings";
 interface OfferingFormProps {
 	koudenId: string;
 	entries: Entry[];
-	defaultValues?: Offering;
-	onSuccess?: (offering: Offering) => void;
+	defaultValues?: OfferingWithKoudenEntries;
+	onSuccess?: (offering: OfferingWithKoudenEntries) => void;
 }
 
 export function OfferingForm({ koudenId, entries, defaultValues, onSuccess }: OfferingFormProps) {
@@ -43,23 +48,22 @@ export function OfferingForm({ koudenId, entries, defaultValues, onSuccess }: Of
 					type: defaultValues.type as OfferingType,
 					description: defaultValues.description,
 					quantity: defaultValues.quantity,
-					price: defaultValues.price,
-					provider_name: defaultValues.provider_name,
+					price: defaultValues.price ?? undefined,
+					provider_name: defaultValues.providerName,
 					notes: defaultValues.notes,
-					kouden_entry_ids: [],
+					kouden_entry_ids:
+						defaultValues.offeringEntries?.map((oe) => oe.koudenEntry?.id).filter(Boolean) || [],
 					photos: [],
-					entries: [],
 				}
 			: {
 					type: "FLOWER",
 					description: null,
 					quantity: 1,
-					price: null,
+					price: undefined,
 					provider_name: "",
 					notes: null,
 					kouden_entry_ids: [],
 					photos: [],
-					entries: [],
 				},
 	});
 
@@ -77,7 +81,6 @@ export function OfferingForm({ koudenId, entries, defaultValues, onSuccess }: Of
 				notes: values.notes,
 				kouden_id: koudenId,
 				kouden_entry_ids: values.kouden_entry_ids || [],
-				photos: [],
 			};
 
 			const result = defaultValues
@@ -88,8 +91,8 @@ export function OfferingForm({ koudenId, entries, defaultValues, onSuccess }: Of
 				throw new Error("保存に失敗しました");
 			}
 
-			// Offering型に必要なプロパティを追加
-			const offering: Offering = {
+			// OfferingWithKoudenEntries型に必要なプロパティを追加
+			const offering: OfferingWithKoudenEntries = {
 				...result,
 				offeringPhotos: [],
 				offeringEntries: [],

@@ -43,7 +43,7 @@ export function OfferingFormBasic({ entries }: OfferingFormBasicProps) {
 				render={({ field }) => (
 					<FormItem>
 						<FormLabel required>種類</FormLabel>
-						<Select onValueChange={field.onChange} defaultValue={field.value}>
+						<Select onValueChange={field.onChange} value={field.value}>
 							<FormControl>
 								<SelectTrigger>
 									<SelectValue placeholder="種類を選択" />
@@ -53,6 +53,8 @@ export function OfferingFormBasic({ entries }: OfferingFormBasicProps) {
 								<SelectItem value="FLOWER">供花</SelectItem>
 								<SelectItem value="FOOD">供物</SelectItem>
 								<SelectItem value="OTHER">その他</SelectItem>
+								<SelectItem value="INCENSE">線香</SelectItem>
+								<SelectItem value="MONEY">御供物料</SelectItem>
 							</SelectContent>
 						</Select>
 						<FormMessage />

@@ -102,10 +102,13 @@ export async function updateOffering(id: string, input: UpdateOfferingInput) {
 			throw new Error("ユーザーが見つかりませんでした。");
 		}
 
+		// kouden_entry_ids を分離してお供物データのみを更新
+		const { kouden_entry_ids, ...offeringData } = input;
+
 		// データベースを更新
 		const { data, error } = await supabase
 			.from("offerings")
-			.update(input)
+			.update(offeringData)
 			.eq("id", id)
 			.select()
 			.single();
@@ -113,6 +116,38 @@ export async function updateOffering(id: string, input: UpdateOfferingInput) {
 		if (error) {
 			console.error("お供え物の更新に失敗しました:", error);
 			throw new Error("お供え物の更新に失敗しました。");
+		}
+
+		// 既存の関連付けを削除してから新しい関連付けを追加
+		if (kouden_entry_ids !== undefined) {
+			// 既存の関連付けを削除
+			const { error: deleteError } = await supabase
+				.from("offering_entries")
+				.delete()
+				.eq("offering_id", id);
+
+			if (deleteError) {
+				console.error("既存の香典エントリー関連付けの削除に失敗しました:", deleteError);
+				throw new Error("既存の香典エントリー関連付けの削除に失敗しました。");
+			}
+
+			// 新しい関連付けを追加
+			if (kouden_entry_ids.length > 0) {
+				const offeringEntries = kouden_entry_ids.map((koudenEntryId) => ({
+					offering_id: id,
+					kouden_entry_id: koudenEntryId,
+					created_by: user.id,
+				}));
+
+				const { error: insertError } = await supabase
+					.from("offering_entries")
+					.insert(offeringEntries);
+
+				if (insertError) {
+					console.error("香典エントリーの関連付けに失敗しました:", insertError);
+					throw new Error("香典エントリーの関連付けに失敗しました。");
+				}
+			}
 		}
 
 		// 香典の更新日時を更新

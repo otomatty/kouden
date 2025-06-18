@@ -6,6 +6,7 @@ import type { Relationship } from "@/types/relationships";
 import type { Entry } from "@/types/entries";
 // components
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge, type ReturnStatus } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -33,8 +34,7 @@ import type { CellValue } from "@/types/data-table/table";
 import { formatCurrency } from "@/utils/currency";
 // components
 import { ReturnDialog } from "../dialog/return-dialog";
-// constants
-import { returnStatusMap, returnStatusBadgeVariant } from "./constants";
+// 不要になったため削除（共通コンポーネントを使用）
 
 interface ColumnProps {
 	koudenId: string;
@@ -77,7 +77,8 @@ export function createColumns({
 						minute: "2-digit",
 					});
 				case "status":
-					return returnStatusMap[value as keyof typeof returnStatusMap] ?? String(value);
+					// 共通コンポーネントを使用するため、status formatは不要
+					return String(value);
 				case "profit_loss": {
 					const amount = Number(value);
 					return amount >= 0 ? `+${formatCurrency(amount)}` : formatCurrency(amount);
@@ -255,14 +256,8 @@ export function createColumns({
 				</Button>
 			),
 			cell: ({ row }: { row: Row<ReturnManagementSummary> }) => {
-				const status = row.getValue("returnStatus") as keyof typeof returnStatusMap;
-				const variant = returnStatusBadgeVariant[status] || "outline";
-
-				return (
-					<Badge variant={variant as "outline" | "secondary" | "default" | "destructive"}>
-						{returnStatusMap[status] || status}
-					</Badge>
-				);
+				const status = row.getValue("returnStatus") as ReturnStatus;
+				return <StatusBadge status={status} useCustomColors={true} />;
 			},
 			size: 120,
 		},

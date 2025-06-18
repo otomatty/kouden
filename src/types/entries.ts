@@ -27,6 +27,8 @@ export type Entry = Database["public"]["Tables"]["kouden_entries"]["Row"] & {
 	attendanceType: AttendanceType;
 	relationshipId: string | null;
 	relationship?: Relationship | null;
+	// 返礼管理の情報（return_entry_recordsテーブルから取得）
+	returnStatus?: ReturnStatus;
 	// 返礼管理の情報（return_management_summaryビューから取得）
 	return_status?: ReturnStatus;
 	status_display?: string;

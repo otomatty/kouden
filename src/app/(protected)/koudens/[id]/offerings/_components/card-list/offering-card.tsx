@@ -8,7 +8,7 @@ import { ChevronRight } from "lucide-react";
 import { Drawer, DrawerTrigger } from "@/components/ui/drawer";
 
 // types
-import type { Offering, OfferingType } from "@/types/offerings";
+import type { OfferingWithKoudenEntries, OfferingType } from "@/types/offerings";
 import type { Entry } from "@/types/entries";
 // utils
 import { formatCurrency } from "@/utils/currency";
@@ -26,7 +26,7 @@ const typeLabels: Record<OfferingType, string> = {
 };
 
 interface OfferingCardProps {
-	offering: Offering;
+	offering: OfferingWithKoudenEntries;
 	koudenId: string;
 	entries: Entry[];
 }

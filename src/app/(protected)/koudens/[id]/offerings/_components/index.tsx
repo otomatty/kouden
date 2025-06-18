@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 
 // types
-import type { Offering } from "@/types/offerings";
+import type { OfferingWithKoudenEntries } from "@/types/offerings";
 import type { Entry } from "@/types/entries"; //香典情報を参照するために必要
 // hooks
 import { useMediaQuery } from "@/hooks/use-media-query";
@@ -14,14 +14,14 @@ import { Loading } from "@/components/custom/loading";
 
 interface OfferingViewProps {
 	koudenId: string;
-	offerings: Offering[];
+	offerings: OfferingWithKoudenEntries[];
 	entries: Entry[];
 }
 
 // OfferingViewコンポーネント
 // 役割：お供物の表示
 export function OfferingView({ koudenId, entries, offerings }: OfferingViewProps) {
-	const [data, setData] = useState<Offering[]>(offerings || []);
+	const [data, setData] = useState<OfferingWithKoudenEntries[]>(offerings || []);
 	const isMobile = useMediaQuery("(max-width: 767px)");
 	const [isClient, setIsClient] = useState(false);
 	const [isLoading, setIsLoading] = useState(true);
@@ -54,7 +54,7 @@ export function OfferingView({ koudenId, entries, offerings }: OfferingViewProps
 			) : (
 				<DataTable
 					koudenId={koudenId}
-					offerings={Array.isArray(data) ? data : []}
+					offerings={data}
 					entries={Array.isArray(entries) ? entries : []}
 					onDataChange={setData}
 				/>

@@ -2,6 +2,7 @@
 import { ArrowUpDown, Trash2, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge, type ReturnStatus } from "@/components/ui/status-badge";
 import { SelectionColumn } from "@/components/custom/data-table/selection-column";
 import {
 	DropdownMenu,
@@ -22,7 +23,13 @@ import { formatPostalCode } from "@/utils/postal-code";
 // components
 import { EntryDialog } from "../dialog/entry-dialog";
 // constants
-import { attendanceTypeMap, attendanceTypePriority } from "./constants";
+import {
+	attendanceTypeMap,
+	attendanceTypePriority,
+	returnStatusPriority,
+	offeringMap,
+	offeringPriority,
+} from "./constants";
 
 interface ColumnProps {
 	koudenId: string;
@@ -226,25 +233,44 @@ export function createColumns({ onDeleteRows, relationships, permission, koudenI
 			),
 			cell: ({ row }: { row: Row<Entry> }) => {
 				const value = row.getValue("hasOffering") as boolean;
-				return value ? "あり" : "なし";
+				return (
+					<Badge variant={value ? "default" : "secondary"}>
+						{offeringMap[String(value) as keyof typeof offeringMap]}
+					</Badge>
+				);
 			},
+			sortingFn: (rowA: Row<Entry>, rowB: Row<Entry>) => {
+				const a = rowA.getValue("hasOffering") as boolean;
+				const b = rowB.getValue("hasOffering") as boolean;
+				return (
+					offeringPriority[String(b) as keyof typeof offeringPriority] -
+					offeringPriority[String(a) as keyof typeof offeringPriority]
+				);
+			},
+			size: 120,
 		},
 		{
-			accessorKey: "isReturnCompleted",
+			accessorKey: "returnStatus",
 			header: ({ column }: { column: Column<Entry> }) => (
 				<Button
 					variant="ghost"
 					className="hover:bg-transparent"
 					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
 				>
-					返礼
+					返礼状況
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			),
 			cell: ({ row }: { row: Row<Entry> }) => {
-				const value = row.getValue("isReturnCompleted") as boolean;
-				return <Badge variant={value ? "default" : "secondary"}>{value ? "完了" : "未完了"}</Badge>;
+				const status = row.getValue("returnStatus") as ReturnStatus;
+				return <StatusBadge status={status} useCustomColors={true} />;
 			},
+			sortingFn: (rowA: Row<Entry>, rowB: Row<Entry>) => {
+				const a = rowA.getValue("returnStatus") as keyof typeof returnStatusPriority;
+				const b = rowB.getValue("returnStatus") as keyof typeof returnStatusPriority;
+				return returnStatusPriority[b] - returnStatusPriority[a];
+			},
+			size: 120,
 		},
 		{
 			accessorKey: "notes",

@@ -33,7 +33,7 @@ import {
 	returnStatusMap,
 	returnStatusBadgeVariant,
 	returnStatusCustomColors,
-} from "@/app/(protected)/koudens/[id]/return_records/_components/table/constants";
+} from "@/components/ui/status-badge";
 
 /**
  * カスタマイズ可能なデータテーブルコンポーネント
@@ -168,11 +168,16 @@ export function DataTable<Data>({
 										| "secondary"
 										| "destructive"
 										| "outline",
-									colors: returnStatusCustomColors[opt]
+									colors: returnStatusCustomColors[opt as keyof typeof returnStatusCustomColors]
 										? {
-												background: returnStatusCustomColors[opt].background,
-												text: returnStatusCustomColors[opt].text,
-												border: returnStatusCustomColors[opt].border,
+												background:
+													returnStatusCustomColors[opt as keyof typeof returnStatusCustomColors]
+														.backgroundColor,
+												text: returnStatusCustomColors[opt as keyof typeof returnStatusCustomColors]
+													.color,
+												border:
+													returnStatusCustomColors[opt as keyof typeof returnStatusCustomColors]
+														.borderColor,
 											}
 										: undefined,
 								}))}

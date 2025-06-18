@@ -3,15 +3,15 @@
 import { OfferingForm } from "./offering-form";
 import { CrudDialog } from "@/components/custom/crud-dialog";
 import type { Entry } from "@/types/entries";
-import type { Offering } from "@/types/offerings";
+import type { OfferingWithKoudenEntries } from "@/types/offerings";
 
 export interface OfferingDialogProps {
 	koudenId: string;
 	entries: Entry[];
-	defaultValues?: Offering;
+	defaultValues?: OfferingWithKoudenEntries;
 	variant?: "create" | "edit" | undefined; // undefinedはボタンが表示されないことを表す
 	buttonClassName?: string;
-	onSuccess?: (offering: Offering) => void;
+	onSuccess?: (offering: OfferingWithKoudenEntries) => void;
 	trigger?: React.ReactNode;
 }
 
@@ -25,7 +25,7 @@ export function OfferingDialog({
 	trigger,
 }: OfferingDialogProps) {
 	return (
-		<CrudDialog<Offering>
+		<CrudDialog<OfferingWithKoudenEntries>
 			title={variant === "create" ? "お供え物を追加" : "お供え物の編集"}
 			variant={variant}
 			buttonClassName={buttonClassName}

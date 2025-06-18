@@ -22,17 +22,20 @@ export default async function StatisticsPage({ params }: StatisticsPageProps) {
 		},
 		{ FUNERAL: 0, CONDOLENCE_VISIT: 0, ABSENT: 0 } as Record<string, number>,
 	);
-	const returnProgress = entries.reduce(
+	// 返礼状況の集計：4つのステータスに対応
+	const returnStatusCounts = entries.reduce(
 		(acc, entry) => {
-			// 新しいreturn_statusがCOMPLETEDの場合、またはreturn_statusがなくis_return_completedがtrueの場合は完了
-			const isCompleted =
-				entry.return_status === "COMPLETED" || (!entry.return_status && entry.is_return_completed);
-			isCompleted ? acc.completed++ : acc.pending++;
+			const status = entry.returnStatus || "PENDING";
+			acc[status] = (acc[status] || 0) + 1;
 			return acc;
 		},
-		{ completed: 0, pending: 0 },
+		{ PENDING: 0, PARTIAL_RETURNED: 0, COMPLETED: 0, NOT_REQUIRED: 0 } as Record<string, number>,
 	);
-	const returnProgressPercentage = (returnProgress.completed / entries.length) * 100;
+
+	// 完了率の計算：COMPLETED と NOT_REQUIRED を完了とみなす
+	const completedCount =
+		(returnStatusCounts.COMPLETED || 0) + (returnStatusCounts.NOT_REQUIRED || 0);
+	const returnProgressPercentage = entries.length > 0 ? (completedCount / entries.length) * 100 : 0;
 	// 金額ごとに集計（基本的に1千円単位）
 	const amountDistribution = Object.entries(
 		entries.reduce(
@@ -58,8 +61,9 @@ export default async function StatisticsPage({ params }: StatisticsPageProps) {
 			<KoudenStatistics
 				totalAmount={totalAmount}
 				attendanceCounts={attendanceCounts}
-				returnProgress={returnProgress}
+				returnStatusCounts={returnStatusCounts}
 				returnProgressPercentage={returnProgressPercentage}
+				completedCount={completedCount}
 				amountDistribution={amountDistribution}
 				attendanceData={attendanceData}
 			/>

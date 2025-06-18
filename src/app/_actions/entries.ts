@@ -113,10 +113,16 @@ export async function getEntries(
 		// エントリー情報の取得
 		const from = (page - 1) * pageSize;
 		const to = from + pageSize - 1;
-		// Build base query and apply optional user filter
+		// Build base query with return status join
 		let query = supabase
 			.from("kouden_entries")
-			.select("*", { count: "exact" })
+			.select(
+				`
+				*,
+				return_entry_records:return_entry_records(return_status)
+			`,
+				{ count: "exact" },
+			)
 			.eq("kouden_id", koudenId);
 		// Filter by duplicate flag if requested
 		if (showDuplicates) {
@@ -184,6 +190,9 @@ export async function getEntries(
 			attendanceType: entry.attendance_type as AttendanceType,
 			relationshipId: entry.relationship_id,
 			relationship: relationships.find((r) => r.id === entry.relationship_id) || null,
+			returnStatus: Array.isArray(entry.return_entry_records)
+				? entry.return_entry_records[0]?.return_status || "PENDING"
+				: (entry.return_entry_records as { return_status?: string })?.return_status || "PENDING",
 		}));
 
 		return { entries: entriesWithRelationships as Entry[], count: count ?? 0 };
@@ -222,10 +231,16 @@ export async function getEntriesForAdmin(
 		// エントリー情報の取得
 		const from = (page - 1) * pageSize;
 		const to = from + pageSize - 1;
-		// Build base query and apply optional user filter
+		// Build base query with return status join
 		let query = supabase
 			.from("kouden_entries")
-			.select("*", { count: "exact" })
+			.select(
+				`
+				*,
+				return_entry_records:return_entry_records(return_status)
+			`,
+				{ count: "exact" },
+			)
 			.eq("kouden_id", koudenId);
 		// Filter by duplicate flag if requested
 		if (showDuplicates) {
@@ -293,6 +308,9 @@ export async function getEntriesForAdmin(
 			attendanceType: entry.attendance_type as AttendanceType,
 			relationshipId: entry.relationship_id,
 			relationship: relationships.find((r) => r.id === entry.relationship_id) || null,
+			returnStatus: Array.isArray(entry.return_entry_records)
+				? entry.return_entry_records[0]?.return_status || "PENDING"
+				: (entry.return_entry_records as { return_status?: string })?.return_status || "PENDING",
 		}));
 
 		return { entries: entriesWithRelationships as Entry[], count: count ?? 0 };

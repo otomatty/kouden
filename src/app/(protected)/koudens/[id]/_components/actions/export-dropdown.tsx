@@ -36,7 +36,7 @@ const ExportDropdown: React.FC<ExportDropdownProps> = ({ koudenId, enableExcel }
 			</Tooltip>
 			<DropdownMenuContent align="start">
 				{/* Excelオプション: 無料プラン時は無効化してツールチップで購入を促す */}
-				<DropdownMenuItem>
+				<DropdownMenuItem asChild>
 					<Tooltip>
 						<TooltipTrigger asChild>
 							{enableExcel ? (

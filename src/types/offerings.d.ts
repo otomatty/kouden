@@ -1,6 +1,8 @@
 import type { Database } from "@/types/supabase";
 import type { SnakeToCamelCaseNested } from "@/utils/case-converter";
 import type { KeysToCamelCase } from "@/utils/case-converter";
+import type { z } from "zod";
+import type { offeringFormSchema } from "@/schemas/offerings";
 
 export type OfferingType = Database["public"]["Enums"]["offering_type"];
 
@@ -48,7 +50,9 @@ export type CreateOfferingInput = Omit<
 	photos?: { storage_key: string; caption?: string }[];
 };
 
-export type UpdateOfferingInput = Database["public"]["Tables"]["offerings"]["Update"];
+export type UpdateOfferingInput = Database["public"]["Tables"]["offerings"]["Update"] & {
+	kouden_entry_ids?: string[];
+};
 export type UpdateOfferingEntryInput = Database["public"]["Tables"]["offering_entries"]["Update"];
 
 // 写真関連の入力型

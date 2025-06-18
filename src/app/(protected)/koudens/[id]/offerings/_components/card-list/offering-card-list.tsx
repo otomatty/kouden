@@ -2,14 +2,14 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useAtom } from "jotai";
-import type { Offering } from "@/types/offerings";
+import type { OfferingWithKoudenEntries } from "@/types/offerings";
 import type { Entry } from "@/types/entries";
 import { MobileFilters } from "./mobile-filters";
 import { OfferingCard } from "./offering-card";
 import { offeringsAtom } from "@/store/offerings";
 
 interface OfferingCardListProps {
-	offerings: Offering[];
+	offerings: OfferingWithKoudenEntries[];
 	koudenId: string;
 	entries: Entry[];
 }

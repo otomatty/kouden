@@ -80,19 +80,12 @@ export const editableColumns: Record<string, EditableColumnConfig> = {
 		type: "boolean",
 		options: ["true", "false"],
 	},
-	entries: {
-		type: "searchable-selector",
-		selectorItems: [],
-		selectorConfig: {
-			title: "関連する香典情報を選択",
-			description: "この供物に関連する香典情報を選択してください",
-			searchPlaceholder: "名前や所属で検索",
-		},
-	},
 	// 編集不可のカラム
 	select: { type: "readonly" },
 	actions: { type: "readonly" },
 	offeringPhotos: { type: "readonly" },
+	entries: { type: "readonly" },
+	offeringEntries: { type: "readonly" },
 } as const;
 
 export const OFFERING_TYPES = {

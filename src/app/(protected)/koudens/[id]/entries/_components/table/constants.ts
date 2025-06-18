@@ -14,6 +14,26 @@ export const attendanceTypePriority = {
 	ABSENT: 1,
 } as const;
 
+// 返礼状況の優先順位（ソート用）
+export const returnStatusPriority = {
+	PENDING: 4,
+	PARTIAL_RETURNED: 3,
+	COMPLETED: 2,
+	NOT_REQUIRED: 1,
+} as const;
+
+// お供物有無のマップ
+export const offeringMap = {
+	true: "あり",
+	false: "なし",
+} as const;
+
+// お供物の優先順位（ソート用）
+export const offeringPriority = {
+	true: 2,
+	false: 1,
+} as const;
+
 // カラムラベルの定義
 export const columnLabels: Record<string, string> = {
 	select: "選択",
@@ -28,7 +48,7 @@ export const columnLabels: Record<string, string> = {
 	phoneNumber: "電話番号",
 	attendanceType: "参列",
 	hasOffering: "供物",
-	isReturnCompleted: "返礼",
+	returnStatus: "返礼状況",
 	notes: "備考",
 	actions: "操作",
 };
@@ -55,7 +75,6 @@ export const defaultColumnVisibility = {
 	position: false,
 	phoneNumber: false,
 	attendanceType: false,
-	isReturnCompleted: false,
 	createdAt: false,
 };
 
@@ -85,11 +104,10 @@ export const editableColumns: Record<string, EditableColumnConfig> = {
 		type: "select",
 		options: ["FUNERAL", "CONDOLENCE_VISIT", "ABSENT"],
 	},
-
 	notes: { type: "text" },
 	// 編集不可のカラム
 	hasOffering: { type: "readonly" },
-	isReturnCompleted: { type: "readonly" },
+	returnStatus: { type: "readonly" },
 	select: { type: "readonly" },
 	actions: { type: "readonly" },
 	createdAt: { type: "readonly" },

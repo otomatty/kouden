@@ -16,7 +16,7 @@ import { SelectionColumn } from "@/components/custom/data-table/selection-column
 import type { KoudenPermission } from "@/types/role";
 import type { Table, Row, Column } from "@tanstack/react-table";
 import type { Entry } from "@/types/entries";
-import type { Offering, OfferingType, OfferingWithKoudenEntries } from "@/types/offerings";
+import type { OfferingType, OfferingWithKoudenEntries } from "@/types/offerings";
 import type { CellValue } from "@/types/data-table/table";
 // utils
 import { formatCurrency } from "@/utils/currency";
@@ -64,10 +64,13 @@ export function createColumns({ onDeleteRows, permission, koudenId, entries }: C
 	return [
 		{
 			id: "select",
-			header: ({ table }: { table: Table<Offering> }) => (
+			header: ({ table }: { table: Table<OfferingWithKoudenEntries> }) => (
 				<SelectionColumn table={table} permission={permission} />
 			),
-			cell: ({ row, table }: { row: Row<Offering>; table: Table<Offering> }) => (
+			cell: ({
+				row,
+				table,
+			}: { row: Row<OfferingWithKoudenEntries>; table: Table<OfferingWithKoudenEntries> }) => (
 				<SelectionColumn table={table} row={row} permission={permission} />
 			),
 			enableSorting: false,
@@ -75,7 +78,7 @@ export function createColumns({ onDeleteRows, permission, koudenId, entries }: C
 		},
 		{
 			accessorKey: "type",
-			header: ({ column }: { column: Column<Offering> }) => (
+			header: ({ column }: { column: Column<OfferingWithKoudenEntries> }) => (
 				<Button
 					variant="ghost"
 					className="hover:bg-transparent"
@@ -85,14 +88,14 @@ export function createColumns({ onDeleteRows, permission, koudenId, entries }: C
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			),
-			cell: ({ row }: { row: Row<Offering> }) => {
+			cell: ({ row }: { row: Row<OfferingWithKoudenEntries> }) => {
 				const value = row.getValue("type") as OfferingType;
 				return formatCell(value);
 			},
 		},
 		{
 			accessorKey: "providerName",
-			header: ({ column }: { column: Column<Offering> }) => (
+			header: ({ column }: { column: Column<OfferingWithKoudenEntries> }) => (
 				<Button
 					variant="ghost"
 					className="hover:bg-transparent"
@@ -102,14 +105,14 @@ export function createColumns({ onDeleteRows, permission, koudenId, entries }: C
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			),
-			cell: ({ row }: { row: Row<Offering> }) => {
+			cell: ({ row }: { row: Row<OfferingWithKoudenEntries> }) => {
 				return row.getValue("providerName");
 			},
 		},
 		{
 			accessorKey: "description",
 			header: "内容",
-			cell: ({ row }: { row: Row<Offering> }) => {
+			cell: ({ row }: { row: Row<OfferingWithKoudenEntries> }) => {
 				const quantity = row.original.quantity;
 				const description = row.getValue("description") as string | null;
 				return (
@@ -122,7 +125,7 @@ export function createColumns({ onDeleteRows, permission, koudenId, entries }: C
 		},
 		{
 			accessorKey: "price",
-			header: ({ column }: { column: Column<Offering> }) => (
+			header: ({ column }: { column: Column<OfferingWithKoudenEntries> }) => (
 				<Button
 					variant="ghost"
 					className="hover:bg-transparent"
@@ -132,19 +135,19 @@ export function createColumns({ onDeleteRows, permission, koudenId, entries }: C
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			),
-			cell: ({ row }: { row: Row<Offering> }) => {
+			cell: ({ row }: { row: Row<OfferingWithKoudenEntries> }) => {
 				const price = row.getValue("price") as number | null;
 				return formatCell(price, "currency");
 			},
 		},
 		{
-			accessorKey: "entries",
+			accessorKey: "offeringEntries",
 			id: "entries",
 			header: "関連する香典情報",
 			cell: ({ row }: { row: Row<OfferingWithKoudenEntries> }) => {
 				// 1. 必要なデータの取得
 				const offeringEntries = row.original.offeringEntries || [];
-				const relatedEntries = offeringEntries.map((oe) => oe.koudenEntry) || [];
+				const relatedEntries = offeringEntries.map((oe) => oe.koudenEntry).filter(Boolean);
 
 				// 2. entriesの存在チェック
 				if (!Array.isArray(entries)) {
@@ -170,7 +173,7 @@ export function createColumns({ onDeleteRows, permission, koudenId, entries }: C
 							const tooltipContent = [
 								entry.name && `ご芳名: ${entry.name}`,
 								entry.organization && `所属: ${entry.organization}`,
-								`金額: ¥${formatCurrency(entry.amount)}`,
+								`金額: ${formatCurrency(entry.amount)}`,
 							]
 								.filter(Boolean)
 								.join("\n");
@@ -195,7 +198,7 @@ export function createColumns({ onDeleteRows, permission, koudenId, entries }: C
 		{
 			accessorKey: "quantity",
 			header: "数量",
-			cell: ({ row }: { row: Row<Offering> }) => {
+			cell: ({ row }: { row: Row<OfferingWithKoudenEntries> }) => {
 				const quantity = row.getValue("quantity") as number;
 				return <Badge variant="secondary">{quantity}点</Badge>;
 			},
@@ -203,12 +206,12 @@ export function createColumns({ onDeleteRows, permission, koudenId, entries }: C
 		{
 			accessorKey: "notes",
 			header: "備考",
-			cell: ({ row }: { row: Row<Offering> }) => row.getValue("notes") || "-",
+			cell: ({ row }: { row: Row<OfferingWithKoudenEntries> }) => row.getValue("notes") || "-",
 		},
 		{
 			accessorKey: "offeringPhotos",
 			header: "写真",
-			cell: ({ row }: { row: Row<Offering> }) => {
+			cell: ({ row }: { row: Row<OfferingWithKoudenEntries> }) => {
 				const photos = row.original.offeringPhotos || [];
 
 				if (photos.length === 0) {
@@ -241,7 +244,7 @@ export function createColumns({ onDeleteRows, permission, koudenId, entries }: C
 		},
 		{
 			id: "actions",
-			cell: ({ row }: { row: Row<Offering> }) => {
+			cell: ({ row }: { row: Row<OfferingWithKoudenEntries> }) => {
 				const offering = row.original;
 				const hasPermission = permission === "owner" || permission === "editor";
 
@@ -269,28 +272,16 @@ export function createColumns({ onDeleteRows, permission, koudenId, entries }: C
 										/>
 									</DropdownMenuItem>
 									<DropdownMenuItem asChild>
-										<button
-											type="button"
+										<Button
+											variant="ghost"
 											onClick={() => onDeleteRows([offering.id])}
-											className="text-destructive w-full justify-start"
+											className="text-destructive w-full justify-start hover:text-destructive"
 										>
 											<Trash2 className="h-4 w-4" />
 											削除する
-										</button>
+										</Button>
 									</DropdownMenuItem>
 								</>
-							)}
-							{canEdit && (
-								<DropdownMenuItem asChild>
-									<button
-										type="button"
-										onClick={() => onDeleteRows([offering.id])}
-										className="text-destructive w-full justify-start"
-									>
-										<Trash2 className="h-4 w-4" />
-										削除する
-									</button>
-								</DropdownMenuItem>
 							)}
 						</DropdownMenuContent>
 					</DropdownMenu>

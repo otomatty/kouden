@@ -29,7 +29,11 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { X, Trash2 } from "lucide-react";
 // types
-import type { Offering, OptimisticOffering, OfferingType } from "@/types/offerings";
+import type {
+	OfferingWithKoudenEntries,
+	OptimisticOffering,
+	OfferingType,
+} from "@/types/offerings";
 import type { Entry } from "@/types/entries";
 // stores
 import { permissionAtom, canUpdateData, canDeleteData } from "@/store/permission";
@@ -42,7 +46,7 @@ import { formatCurrency } from "@/utils/currency";
 import { typeLabels } from "../table/constants";
 
 interface OfferingDrawerContentProps {
-	offering: Offering;
+	offering: OfferingWithKoudenEntries;
 	koudenId: string;
 	onClose: () => void;
 }
@@ -57,7 +61,7 @@ export function OfferingDrawerContent({ offering, koudenId, onClose }: OfferingD
 	const { toast } = useToast();
 
 	const handleUpdateField = async (
-		field: keyof Offering,
+		field: keyof OfferingWithKoudenEntries,
 		value: string | boolean | number | null,
 	) => {
 		try {
