@@ -1,7 +1,6 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import ms from "ms";
 import type { Database } from "@/types/supabase";
@@ -81,9 +80,6 @@ export async function getInvitation(token: string) {
 			data: { user },
 		} = await supabase.auth.getUser();
 
-		console.log("[DEBUG] getInvitation called with token:", token);
-		console.log("[DEBUG] Current user:", user?.id || "not authenticated");
-
 		// 招待情報を取得
 		const query = supabase
 			.from("kouden_invitations")
@@ -118,15 +114,6 @@ export async function getInvitation(token: string) {
 			throw new Error("招待情報が見つかりません");
 		}
 
-		console.log("[DEBUG] Invitation found:", {
-			id: invitation.id,
-			kouden_id: invitation.kouden_id,
-			status: invitation.status,
-			expires_at: invitation.expires_at,
-			used_count: invitation.used_count,
-			max_uses: invitation.max_uses,
-		});
-
 		// 作成者の情報を取得
 		const { data: creatorProfile, error: creatorError } = await supabase
 			.from("profiles")
@@ -153,7 +140,6 @@ export async function getInvitation(token: string) {
 			}
 
 			isExistingMember = !!existingMember;
-			console.log("[DEBUG] User existing member check:", isExistingMember);
 		}
 
 		// 全ての情報を結合して返す
@@ -163,12 +149,6 @@ export async function getInvitation(token: string) {
 			kouden_data: invitation.kouden_data,
 			isExistingMember,
 		};
-
-		console.log("[DEBUG] getInvitation result:", {
-			hasKoudenData: !!result.kouden_data,
-			hasCreator: !!result.creator,
-			isExistingMember: result.isExistingMember,
-		});
 
 		return result;
 	} catch (error) {
@@ -183,9 +163,6 @@ export async function acceptInvitation(token: string) {
 		const {
 			data: { user },
 		} = await supabase.auth.getUser();
-
-		console.log("[DEBUG] acceptInvitation called with token:", token);
-		console.log("[DEBUG] Current user:", user?.id || "not authenticated");
 
 		if (!user) {
 			throw new Error("認証が必要です");
@@ -210,15 +187,6 @@ export async function acceptInvitation(token: string) {
 			console.error("[ERROR] No invitation found for token:", token);
 			throw new Error("招待が見つかりません");
 		}
-
-		console.log("[DEBUG] Found invitation:", {
-			id: invitation.id,
-			kouden_id: invitation.kouden_id,
-			status: invitation.status,
-			expires_at: invitation.expires_at,
-			used_count: invitation.used_count,
-			max_uses: invitation.max_uses,
-		});
 
 		// 2. 招待の有効性チェック
 		if (invitation.status !== "pending") {
@@ -262,8 +230,6 @@ export async function acceptInvitation(token: string) {
 			throw new Error("すでにメンバーとして参加しています");
 		}
 
-		console.log("[DEBUG] All validation checks passed, adding member...");
-
 		// 4. メンバー追加
 		const { error: memberError } = await supabase.from("kouden_members").insert({
 			kouden_id: invitation.kouden_id,
@@ -277,8 +243,6 @@ export async function acceptInvitation(token: string) {
 			console.error("[ERROR] Failed to add member:", memberError);
 			throw new Error("メンバーの追加に失敗しました");
 		}
-
-		console.log("[DEBUG] Member added successfully");
 
 		// 5. 招待のステータスと使用回数を更新
 		const { error: updateError } = await supabase
@@ -294,10 +258,8 @@ export async function acceptInvitation(token: string) {
 			// メンバー追加は成功しているので、招待の更新失敗は警告レベル
 			console.warn("[WARN] Member was added but invitation update failed");
 		} else {
-			console.log("[DEBUG] Invitation updated successfully");
 		}
 
-		console.log("[SUCCESS] Invitation accepted successfully for user:", user.id);
 		return { success: true };
 	} catch (error) {
 		console.error("[ERROR] Error in acceptInvitation:", error);

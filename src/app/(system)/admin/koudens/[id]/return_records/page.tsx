@@ -4,6 +4,7 @@ import { getReturnEntriesByKoudenPaginated } from "@/app/_actions/return-records
 import { getKoudenForAdmin } from "@/app/_actions/koudens/read";
 import { getEntriesForAdmin } from "@/app/_actions/entries";
 import { getRelationshipsForAdmin } from "@/app/_actions/relationships";
+import { getReturnItems } from "@/app/_actions/return-records/return-items";
 import ReturnRecordsPageClient from "@/app/(protected)/koudens/[id]/return_records/ReturnRecordsPageClient";
 import type {
 	ReturnItem,
@@ -43,10 +44,11 @@ export default async function AdminReturnRecordsPage({
 	}
 
 	// 必要なデータを並列取得（管理者用関数を使用）
-	const [returnEntriesResult, { entries }, relationships] = await Promise.all([
+	const [returnEntriesResult, { entries }, relationships, returnItems] = await Promise.all([
 		getReturnEntriesByKoudenPaginated(koudenId, 100, undefined, { search, status }),
 		getEntriesForAdmin(koudenId),
 		getRelationshipsForAdmin(koudenId),
+		getReturnItems(koudenId),
 	]);
 
 	const returnEntries: ReturnEntryRecordWithKoudenEntry[] = returnEntriesResult.data;
@@ -90,6 +92,7 @@ export default async function AdminReturnRecordsPage({
 				relationships={relationships}
 				initialHasMore={returnEntriesResult.hasMore}
 				initialCursor={returnEntriesResult.nextCursor}
+				returnItems={returnItems}
 			/>
 		</div>
 	);

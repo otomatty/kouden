@@ -13,10 +13,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { ReturnItemCard } from "./return-item-card";
-import type { ReturnItem } from "@/types/return-records";
-
-// TODO: 型定義を実装後にimport
-// import type { ReturnItem } from "@/types/return-items";
+import type { ReturnItem } from "@/types/return-records/return-items";
 
 interface ReturnItemsGridProps {
 	items: ReturnItem[];
@@ -24,6 +21,7 @@ interface ReturnItemsGridProps {
 	onDelete: (itemId: string) => void;
 	onToggleActive: (itemId: string, isActive: boolean) => void;
 	isLoading?: boolean;
+	koudenId?: string;
 }
 
 type SortOption = "name" | "price" | "category" | "sort_order";
@@ -40,6 +38,7 @@ export function ReturnItemsGrid({
 	onDelete,
 	onToggleActive,
 	isLoading = false,
+	koudenId,
 }: ReturnItemsGridProps) {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -94,8 +93,8 @@ export function ReturnItemsGrid({
 					bValue = b.price;
 					break;
 				case "category":
-					aValue = a.category;
-					bValue = b.category;
+					aValue = a.category || "";
+					bValue = b.category || "";
 					break;
 				case "sort_order":
 					aValue = a.sort_order;
@@ -289,6 +288,7 @@ export function ReturnItemsGrid({
 							onEdit={onEdit}
 							onDelete={onDelete}
 							onToggleActive={onToggleActive}
+							koudenId={koudenId}
 						/>
 					))}
 				</div>

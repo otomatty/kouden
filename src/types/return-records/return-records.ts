@@ -71,8 +71,7 @@ export interface UpdateReturnEntryInput {
 	arrangement_date?: string | null;
 	/** 葬儀ギフト金額 */
 	funeral_gift_amount?: number;
-	/** 追加返礼金額 */
-	additional_return_amount?: number | null;
+	// additional_return_amount は生成カラムのため更新対象外
 	/** 備考 */
 	remarks?: string | null;
 }

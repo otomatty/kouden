@@ -426,10 +426,6 @@ export function createColumns({
 			cell: ({ row }: { row: Row<ReturnManagementSummary> }) => {
 				const returnRecord = row.original;
 
-				const handleViewDetails = () => {
-					console.log("詳細表示:", returnRecord);
-				};
-
 				const handleDelete = () => {
 					if (canDelete) {
 						onDeleteRows([returnRecord.koudenEntryId]);
@@ -445,10 +441,6 @@ export function createColumns({
 							</Button>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="end">
-							<DropdownMenuItem onClick={handleViewDetails}>
-								<Eye className="mr-2 h-4 w-4" />
-								詳細表示
-							</DropdownMenuItem>
 							{canEdit && (
 								<DropdownMenuItem asChild>
 									<ReturnDialog

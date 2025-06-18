@@ -23,7 +23,7 @@ interface ReturnFormData {
 	kouden_entry_id: string;
 	return_status: ReturnStatus;
 	funeral_gift_amount: number;
-	additional_return_amount?: number;
+	// additional_return_amount は生成カラムのため除外
 	return_method?: string;
 	arrangement_date?: string;
 	remarks?: string;
@@ -155,25 +155,7 @@ export function ReturnFormBasic({ form, relationships, selectedEntry }: ReturnFo
 				)}
 			/>
 
-			{/* 追加返礼金額 */}
-			<FormField
-				control={form.control}
-				name="additional_return_amount"
-				render={({ field }) => (
-					<FormItem>
-						<FormLabel optional>追加返礼金額</FormLabel>
-						<FormControl>
-							<Input
-								type="number"
-								placeholder="0"
-								{...field}
-								onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-							/>
-						</FormControl>
-						<FormMessage />
-					</FormItem>
-				)}
-			/>
+			{/* 追加返礼金額は生成カラムのため入力フィールドを削除 */}
 
 			{/* 返礼方法 */}
 			<FormField

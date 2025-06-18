@@ -3,6 +3,7 @@ import { getReturnEntriesByKoudenPaginated } from "@/app/_actions/return-records
 import { getKouden } from "@/app/_actions/koudens";
 import { getEntries } from "@/app/_actions/entries";
 import { getRelationships } from "@/app/_actions/relationships";
+import { getReturnItems } from "@/app/_actions/return-records/return-items";
 import ReturnRecordsPageClient from "./ReturnRecordsPageClient";
 import type {
 	ReturnManagementSummary,
@@ -36,12 +37,14 @@ export default async function ReturnRecordsPage({ params, searchParams }: Return
 
 	try {
 		// 並行データ取得
-		const [koudenDetails, entriesResult, relationships, initialReturns] = await Promise.all([
-			getKouden(koudenId),
-			getEntries(koudenId),
-			getRelationships(koudenId),
-			getReturnEntriesByKoudenPaginated(koudenId, 100, undefined, initialFilters),
-		]);
+		const [koudenDetails, entriesResult, relationships, initialReturns, returnItems] =
+			await Promise.all([
+				getKouden(koudenId),
+				getEntries(koudenId),
+				getRelationships(koudenId),
+				getReturnEntriesByKoudenPaginated(koudenId, 100, undefined, initialFilters),
+				getReturnItems(koudenId),
+			]);
 
 		if (!koudenDetails) {
 			notFound();
@@ -100,6 +103,7 @@ export default async function ReturnRecordsPage({ params, searchParams }: Return
 					relationships={relationships || []}
 					initialHasMore={initialReturns.hasMore}
 					initialCursor={initialReturns.nextCursor}
+					returnItems={returnItems}
 				/>
 			</div>
 		);

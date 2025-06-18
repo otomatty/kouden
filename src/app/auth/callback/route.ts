@@ -56,13 +56,10 @@ export async function GET(request: Request) {
 		// Handle invitation acceptance if token is present
 		if (finalInvitationToken) {
 			try {
-				console.log("[DEBUG] Processing invitation with token:", finalInvitationToken);
 				await acceptInvitation(finalInvitationToken);
 
 				// Clean up cookies after successful invitation acceptance
 				cookieStore.delete("invitation_token");
-
-				console.log("[SUCCESS] Invitation accepted successfully");
 
 				// Redirect to koudens page with success message
 				return Response.redirect(new URL("/koudens?invitation=accepted", requestUrl.origin));

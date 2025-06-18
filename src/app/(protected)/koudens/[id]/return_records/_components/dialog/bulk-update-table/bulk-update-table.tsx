@@ -5,6 +5,7 @@ import { formatCurrency } from "@/utils/currency";
 import { calculateGroupStatistics } from "@/utils/bulk-update-helpers";
 import type { AmountGroupData, ReturnItemMaster } from "@/types/return-records/bulk-update";
 import { AmountGroupRow } from "./amount-group-row";
+import { SelectAllCheckbox } from "./select-all-checkbox";
 
 interface BulkUpdateTableProps {
 	/** 金額グループデータ配列 */
@@ -71,9 +72,18 @@ export function BulkUpdateTable({
 							<th className="p-4 text-center font-medium">件数</th>
 							{availableReturnItems.map((item) => (
 								<th key={item.id} className="p-2 text-center font-medium border-l min-w-[100px]">
-									<div className="text-xs">
-										<div className="font-medium truncate" title={item.name}>
-											{item.name}
+									<div className="text-xs space-y-1">
+										<div
+											className="truncate flex items-center justify-center gap-1"
+											title={item.name}
+										>
+											<SelectAllCheckbox
+												returnItem={item}
+												amountGroups={amountGroups}
+												onUpdateGroups={onUpdateGroups}
+												disabled={disabled}
+											/>
+											<div className="text-md truncate">{item.name}</div>
 										</div>
 										<div className="text-muted-foreground">{formatCurrency(item.price)}</div>
 									</div>

@@ -1,10 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Edit, Trash2, Eye, EyeOff, Package, JapaneseYen } from "lucide-react";
+import {
+	MoreHorizontal,
+	Edit,
+	Trash2,
+	Eye,
+	EyeOff,
+	Package,
+	JapaneseYen,
+	ExternalLink,
+} from "lucide-react";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -12,21 +22,29 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { ReturnItem } from "@/types/return-records";
+import type { ReturnItem } from "@/types/return-records/return-items";
 
 interface ReturnItemCardProps {
 	item: ReturnItem;
 	onEdit: (item: ReturnItem) => void;
 	onDelete: (itemId: string) => void;
 	onToggleActive: (itemId: string, isActive: boolean) => void;
+	koudenId?: string;
 }
 
 /**
  * 返礼品カードコンポーネント
  * 役割：個別の返礼品情報をカード形式で表示
  */
-export function ReturnItemCard({ item, onEdit, onDelete, onToggleActive }: ReturnItemCardProps) {
+export function ReturnItemCard({
+	item,
+	onEdit,
+	onDelete,
+	onToggleActive,
+	koudenId,
+}: ReturnItemCardProps) {
 	const [imageError, setImageError] = useState(false);
+	const router = useRouter();
 
 	// カテゴリの表示名を取得
 	const getCategoryLabel = (category: string) => {
@@ -54,10 +72,10 @@ export function ReturnItemCard({ item, onEdit, onDelete, onToggleActive }: Retur
 
 	// 推奨金額の表示
 	const getRecommendedAmountText = () => {
-		if (item.recommended_amount_max) {
+		if (item.recommended_amount_max && item.recommended_amount_min) {
 			return `${item.recommended_amount_min.toLocaleString()}円 〜 ${item.recommended_amount_max.toLocaleString()}円`;
 		}
-		return `${item.recommended_amount_min.toLocaleString()}円 〜`;
+		return `${item.recommended_amount_min?.toLocaleString()}円 〜`;
 	};
 
 	return (
@@ -84,6 +102,14 @@ export function ReturnItemCard({ item, onEdit, onDelete, onToggleActive }: Retur
 						</Button>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="end">
+						{koudenId && (
+							<DropdownMenuItem
+								onClick={() => router.push(`/koudens/${koudenId}/return_records/items/${item.id}`)}
+							>
+								<ExternalLink className="h-4 w-4 mr-2" />
+								詳細を見る
+							</DropdownMenuItem>
+						)}
 						<DropdownMenuItem onClick={() => onEdit(item)}>
 							<Edit className="h-4 w-4 mr-2" />
 							編集
@@ -128,8 +154,11 @@ export function ReturnItemCard({ item, onEdit, onDelete, onToggleActive }: Retur
 				</div>
 
 				{/* カテゴリバッジ */}
-				<Badge variant="secondary" className={`w-fit text-xs ${getCategoryColor(item.category)}`}>
-					{getCategoryLabel(item.category)}
+				<Badge
+					variant="secondary"
+					className={`w-fit text-xs ${getCategoryColor(item.category || "")}`}
+				>
+					{getCategoryLabel(item.category || "")}
 				</Badge>
 			</CardHeader>
 
@@ -155,9 +184,21 @@ export function ReturnItemCard({ item, onEdit, onDelete, onToggleActive }: Retur
 			</CardContent>
 
 			<CardFooter className="pt-0">
-				<Button variant="outline" size="sm" className="w-full" onClick={() => onEdit(item)}>
-					詳細・編集
-				</Button>
+				{koudenId ? (
+					<Button
+						variant="outline"
+						size="sm"
+						className="w-full"
+						onClick={() => router.push(`/koudens/${koudenId}/return_records/items/${item.id}`)}
+					>
+						<ExternalLink className="h-4 w-4 mr-2" />
+						詳細を見る
+					</Button>
+				) : (
+					<Button variant="outline" size="sm" className="w-full" onClick={() => onEdit(item)}>
+						詳細・編集
+					</Button>
+				)}
 			</CardFooter>
 		</Card>
 	);

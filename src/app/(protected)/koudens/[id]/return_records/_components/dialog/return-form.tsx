@@ -1,7 +1,7 @@
 "use client";
 
 // library
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 // types
-import type { ReturnManagementSummary, ReturnStatus } from "@/types/return-records/return-records";
+import type { ReturnManagementSummary } from "@/types/return-records/return-records";
 import type { Entry } from "@/types/entries";
 import type { Relationship } from "@/types/relationships";
 // actions
@@ -28,7 +28,7 @@ const returnFormSchema = z.object({
 	return_status: z.enum(["PENDING", "PARTIAL_RETURNED", "COMPLETED", "NOT_REQUIRED"]),
 	return_method: z.string().optional(),
 	funeral_gift_amount: z.number().min(0, "金額は0以上で入力してください"),
-	additional_return_amount: z.number().optional(),
+	// additional_return_amount は生成カラムのため除外
 	arrangement_date: z.string().optional(),
 	remarks: z.string().optional(),
 	return_items: z
@@ -101,7 +101,7 @@ export function ReturnForm({
 		return_status: defaultValues.returnStatus,
 		return_method: defaultValues.returnMethod || "",
 		funeral_gift_amount: defaultValues.funeralGiftAmount || 0,
-		additional_return_amount: defaultValues.additionalReturnAmount || 0,
+		// additional_return_amount は生成カラムのため除外
 		arrangement_date: defaultValues.arrangementDate || "",
 		remarks: defaultValues.remarks || "",
 		return_items: defaultValues.returnItems || [],
@@ -124,7 +124,7 @@ export function ReturnForm({
 				return_status: data.return_status,
 				return_method: data.return_method || null,
 				funeral_gift_amount: data.funeral_gift_amount,
-				additional_return_amount: data.additional_return_amount || null,
+				// additional_return_amount は生成カラムのため除外
 				arrangement_date: data.arrangement_date || null,
 				remarks: data.remarks || null,
 				return_items: data.return_items,
@@ -136,12 +136,12 @@ export function ReturnForm({
 				returnStatus: data.return_status,
 				returnMethod: data.return_method || "",
 				funeralGiftAmount: data.funeral_gift_amount,
-				additionalReturnAmount: data.additional_return_amount || 0,
+				additionalReturnAmount: defaultValues.additionalReturnAmount, // 生成カラムは既存値を保持
 				arrangementDate: data.arrangement_date || "",
 				remarks: data.remarks || "",
 				returnItems: data.return_items || [],
 				returnRecordUpdated: new Date().toISOString(),
-				needsAdditionalReturn: (data.additional_return_amount || 0) > 0,
+				needsAdditionalReturn: defaultValues.additionalReturnAmount > 0, // 生成カラムを参照
 			};
 
 			// 成功時の処理
@@ -192,7 +192,7 @@ export function ReturnForm({
 						<TabsTrigger value="additional">詳細・備考</TabsTrigger>
 					</TabsList>
 
-					<TabsContent value="basic" className="space-y-4 mt-4">
+					<TabsContent value="basic" className="space-y-4 mt-4 overflow-y-auto">
 						<ReturnFormBasic
 							form={form}
 							entries={entries}
@@ -201,11 +201,11 @@ export function ReturnForm({
 						/>
 					</TabsContent>
 
-					<TabsContent value="items" className="space-y-4 mt-4">
-						<ReturnFormItems form={form} selectedEntry={selectedEntry} />
+					<TabsContent value="items" className="space-y-4 mt-4 overflow-y-auto max-h-[60vh]">
+						<ReturnFormItems form={form} selectedEntry={selectedEntry} koudenId={koudenId} />
 					</TabsContent>
 
-					<TabsContent value="additional" className="space-y-4 mt-4">
+					<TabsContent value="additional" className="space-y-4 mt-4 overflow-y-auto">
 						<ReturnFormAdditional form={form} />
 					</TabsContent>
 				</Tabs>

@@ -22,7 +22,7 @@ interface ReturnFormData {
 	kouden_entry_id: string;
 	return_status: "PENDING" | "PARTIAL_RETURNED" | "COMPLETED" | "NOT_REQUIRED";
 	funeral_gift_amount: number;
-	additional_return_amount?: number;
+	// additional_return_amount は生成カラムのため除外
 	return_method?: string;
 	arrangement_date?: string;
 	remarks?: string;
