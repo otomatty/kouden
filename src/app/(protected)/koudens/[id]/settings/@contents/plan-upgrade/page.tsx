@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getPlans } from "@/app/_actions/plans";
 import { getKoudenWithPlan } from "@/app/_actions/koudens";
-import PurchasePageClient from "../../../purchase/_components/PurchasePageClient";
+import PurchasePageClient from "../../../../../purchase/[id]/_components/PurchasePageClient";
 import { checkKoudenPermission } from "@/app/_actions/permissions";
 import { notFound } from "next/navigation";
 

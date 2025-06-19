@@ -1,15 +1,8 @@
-import type { Metadata } from "next";
 import { getPlans } from "@/app/_actions/plans";
 import { getKouden, getKoudenWithPlan } from "@/app/_actions/koudens";
 import PurchasePageClient from "./_components/PurchasePageClient";
 import { checkKoudenPermission } from "@/app/_actions/permissions";
 import { notFound } from "next/navigation";
-import type { KoudenPermission } from "@/types/role";
-
-export const metadata: Metadata = {
-	title: "プラン購入 - 香典帳アプリ",
-	description: "プランを購入して香典帳の続きをご覧ください",
-};
 
 interface PurchasePageProps {
 	params: Promise<{ id: string }>;

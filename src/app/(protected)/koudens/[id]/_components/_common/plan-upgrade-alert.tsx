@@ -31,7 +31,7 @@ export default function PlanUpgradeAlert({
 			</div>
 			<div className="flex flex-col space-y-2 md:flex-row md:space-y-0 md:space-x-2">
 				<Button size="sm" asChild>
-					<Link href={`/koudens/${koudenId}/purchase`}>アップグレード</Link>
+					<Link href={`/purchase/${koudenId}`}>アップグレード</Link>
 				</Button>
 			</div>
 		</Alert>

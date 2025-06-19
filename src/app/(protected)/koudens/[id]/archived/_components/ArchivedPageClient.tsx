@@ -37,7 +37,7 @@ export default function ArchivedPageClient({
 					この香典帳の無料閲覧期間は終了しました。プランを購入して続きをご覧ください。
 				</p>
 				<Button asChild>
-					<a href={`/koudens/${id}/purchase`}>プランを購入する</a>
+					<a href={`/purchase/${id}`}>プランを購入する</a>
 				</Button>
 			</div>
 		</>

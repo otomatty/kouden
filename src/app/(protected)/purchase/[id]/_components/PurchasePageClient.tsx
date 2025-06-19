@@ -24,7 +24,7 @@ export default function PurchasePageClient({ id, plans, currentPlan }: PurchaseP
 				koudenId: id,
 				planCode,
 				expectedCount: planCode === "premium_full_support" ? expectedCount : undefined,
-				cancelPath: `/koudens/${id}/purchase`,
+				cancelPath: `/purchase/${id}`,
 			});
 			if (result.error) {
 				setError(result.error);
