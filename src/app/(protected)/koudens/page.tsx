@@ -8,10 +8,12 @@ import { Plus } from "lucide-react";
 import { getKoudens } from "@/app/_actions/koudens";
 import { InvitationSuccessAlert } from "./_components/invitation-success-alert";
 import { HeroAnnouncements } from "./_components/hero-announcements";
+import { ContextualInfoSection } from "./_components/contextual-info-section";
+import { QuickHelpArea } from "./_components/quick-help-area";
 import { getActiveAnnouncements } from "@/app/_actions/announcements";
 
 export const metadata: Metadata = {
-	title: "一覧 | 香典帳",
+	title: "香典帳一覧 | 香典帳",
 	description: "香典帳の一覧ページです",
 };
 
@@ -76,6 +78,15 @@ async function KoudensPageContent({
 			</div>
 
 			<KoudenList koudens={koudens || []} />
+
+			{/* 情報セクション */}
+			<div className="grid gap-6 lg:grid-cols-2">
+				{/* コンテキスト型インフォメーションセクション */}
+				<ContextualInfoSection koudens={koudens || []} />
+
+				{/* クイックヘルプエリア */}
+				<QuickHelpArea maxItems={6} />
+			</div>
 		</div>
 	);
 }

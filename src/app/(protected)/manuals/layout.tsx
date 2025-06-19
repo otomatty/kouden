@@ -1,20 +1,22 @@
 import { getAllDocs } from "@/lib/docs";
 import { DocsList } from "./_components/docs-list";
-import { DocsContent } from "./_components/docs-content";
+import Container from "@/components/ui/container";
 
-export default async function DocsPage() {
+export default async function ManualsLayout({
+	children,
+}: {
+	children: React.ReactNode;
+}) {
 	const docs = await getAllDocs();
 
 	return (
-		<div className="container mx-auto px-4 py-8">
+		<Container className="py-4 md:py-8">
 			<div className="flex flex-col md:flex-row gap-8">
 				<aside className="w-full md:w-64 shrink-0">
 					<DocsList docs={docs} />
 				</aside>
-				<main className="flex-1">
-					<DocsContent />
-				</main>
+				<main className="flex-1">{children}</main>
 			</div>
-		</div>
+		</Container>
 	);
 }

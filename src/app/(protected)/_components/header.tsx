@@ -17,7 +17,6 @@ import {
 	Settings,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { UserMenu } from "./user-menu";
 import { NotificationsPopover } from "./notifications-popover";
@@ -105,7 +104,7 @@ export function Header({ user, isAdmin, version, notifications }: HeaderProps) {
 											variant="ghost"
 											className="justify-start"
 											onClick={() => {
-												router.push("/guide/tour");
+												router.push("/manuals/tour");
 												setIsOpen(false);
 											}}
 										>
@@ -129,7 +128,7 @@ export function Header({ user, isAdmin, version, notifications }: HeaderProps) {
 											variant="ghost"
 											className="justify-start"
 											onClick={() => {
-												router.push("/guide/tour");
+												router.push("/manuals/tour");
 												setIsOpen(false);
 											}}
 										>
@@ -140,12 +139,12 @@ export function Header({ user, isAdmin, version, notifications }: HeaderProps) {
 											variant="ghost"
 											className="justify-start"
 											onClick={() => {
-												router.push("/guide/docs");
+												router.push("/manuals");
 												setIsOpen(false);
 											}}
 										>
 											<BookOpen className="mr-2 h-4 w-4" />
-											使い方ガイド
+											使い方マニュアル
 										</Button>
 									</div>
 									<div className="mt-auto flex flex-col gap-2">

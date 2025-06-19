@@ -2,6 +2,7 @@
 import { NavigationModeProvider } from "@/context/navigation-mode";
 import { BottomNavigation } from "@/components/custom/bottom-navigation";
 import { Header } from "./_components/header";
+import { AppFooter } from "./_components/app-footer";
 import { FeedbackButton } from "@/components/custom/feedback-button";
 import type { ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
@@ -28,19 +29,20 @@ export default function ProtectedClientLayout({
 	const isDetailPage = pathSegments[0] === "koudens" && pathSegments[1] !== undefined;
 	return (
 		<NavigationModeProvider value="global">
-			<div className="min-h-screen bg-muted">
+			<div className="min-h-screen bg-muted flex flex-col">
 				<Header
 					user={user}
 					isAdmin={isAdminUser}
 					version={version}
 					notifications={userNotifications}
 				/>
-				<div className="app-body container mx-auto px-4 py-8 md:my-12">
+				<div className="app-body container mx-auto px-4 py-8 md:my-12 flex-1">
 					<main>{children}</main>
 				</div>
 				<div className="fixed bottom-6 right-6 z-50 hidden md:block">
 					<FeedbackButton user={user} />
 				</div>
+				<AppFooter />
 				{!isDetailPage && <BottomNavigation />}
 			</div>
 		</NavigationModeProvider>

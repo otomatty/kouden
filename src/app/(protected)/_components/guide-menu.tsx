@@ -48,14 +48,14 @@ export function GuideMenu() {
 								</button>
 								<button
 									type="button"
-									onClick={() => router.push("/guide/docs")}
+									onClick={() => router.push("/manuals")}
 									className="w-full flex items-center space-x-2 hover:bg-accent hover:text-accent-foreground p-2 rounded-md transition-colors"
 								>
 									<div className="h-10 w-10 flex items-center justify-center rounded-md bg-primary/10">
 										<BookOpen className="h-6 w-6 text-primary" />
 									</div>
 									<div className="flex-1 text-left">
-										<h5 className="font-medium">使い方ガイド</h5>
+										<h5 className="font-medium">使い方マニュアル</h5>
 										<p className="text-sm text-muted-foreground">
 											詳細な機能説明とよくある質問を確認できます
 										</p>

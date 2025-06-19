@@ -9,17 +9,38 @@ const config: NextConfig = withPWA({
 })({
 	output: "standalone",
 	images: {
-		domains: ["tcqnsslsaizqwjuyvoyu.supabase.co"],
+		domains: [
+			"tcqnsslsaizqwjuyvoyu.supabase.co",
+			// スクリーンショットサービス
+			"gyazo.com",
+			"i.gyazo.com",
+			"imgur.com",
+			"i.imgur.com",
+			// その他の一般的な画像ホスティング
+			"github.com",
+			"raw.githubusercontent.com",
+		],
+		remotePatterns: [
+			{
+				protocol: "https",
+				hostname: "**.gyazo.com",
+				port: "",
+				pathname: "/**",
+			},
+			{
+				protocol: "https",
+				hostname: "**.imgur.com",
+				port: "",
+				pathname: "/**",
+			},
+		],
 		unoptimized: true, // Cloudflare Pages用の設定
 	},
 	// 本番環境での最適化設定
 	compress: true,
 	poweredByHeader: false,
 	reactStrictMode: true,
-	// Disable automatic Google Font optimization to avoid network fetches at build time
-	experimental: {
-		optimizeFonts: false,
-	},
+	// Next.js 15では不要な設定のため削除
 
 	// セキュリティヘッダーの設定
 	async headers() {

@@ -20,7 +20,13 @@ export default function Container({
 	maxWidthClassName = "",
 }: ContainerProps) {
 	return (
-		<div className={cn("container mx-auto max-w-7xl px-4 md:px-6", maxWidthClassName, className)}>
+		<div
+			className={cn(
+				"container mx-auto max-w-7xl px-2 md:px-4 lg:px-6",
+				maxWidthClassName,
+				className,
+			)}
+		>
 			{children}
 		</div>
 	);
