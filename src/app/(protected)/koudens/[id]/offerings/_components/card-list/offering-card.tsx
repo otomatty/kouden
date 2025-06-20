@@ -31,7 +31,7 @@ interface OfferingCardProps {
 	entries: Entry[];
 }
 
-export function OfferingCard({ offering: initialOffering, koudenId }: OfferingCardProps) {
+export function OfferingCard({ offering: initialOffering, koudenId, entries }: OfferingCardProps) {
 	const [isOpen, setIsOpen] = useState(false);
 	const mergedOfferings = useAtomValue(mergedOfferingsAtom);
 
@@ -75,6 +75,7 @@ export function OfferingCard({ offering: initialOffering, koudenId }: OfferingCa
 			<OfferingDrawerContent
 				offering={offering}
 				koudenId={koudenId}
+				entries={entries}
 				onClose={() => setIsOpen(false)}
 			/>
 		</Drawer>

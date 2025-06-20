@@ -23,7 +23,12 @@ import {
 	MapPin,
 	Phone,
 	DollarSign,
+	Users,
+	Calculator,
+	ChevronRight,
+	Package,
 } from "lucide-react";
+import { EntryAllocationDialog } from "@/components/custom/EntryAllocationDialog";
 import { SelectionColumn } from "@/components/custom/data-table/selection-column";
 
 // types
@@ -219,11 +224,62 @@ export function createColumns({
 		},
 		{
 			accessorKey: "offeringTotal",
-			header: "供物金額",
+			header: ({ column }: { column: Column<ReturnManagementSummary> }) => (
+				<Button
+					variant="ghost"
+					className="hover:bg-transparent"
+					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+				>
+					<Package className="mr-2 h-4 w-4" />
+					お供物配分
+					<ArrowUpDown className="ml-2 h-4 w-4" />
+				</Button>
+			),
 			cell: ({ row }: { row: Row<ReturnManagementSummary> }) => {
+				const returnRecord = row.original;
 				const value = row.getValue("offeringTotal") as number;
-				return value > 0 ? formatCell(value, "currency") : "-";
+				const offeringCount = returnRecord.offeringCount || 0;
+				const hasOffering = value > 0;
+
+				if (!hasOffering) {
+					return (
+						<div className="flex items-center gap-2 text-muted-foreground">
+							<Package className="h-4 w-4" />
+							<span className="text-sm">配分なし</span>
+						</div>
+					);
+				}
+
+				return (
+					<div className="space-y-1">
+						{/* 配分サマリー */}
+						<div className="flex items-center gap-2">
+							<Badge variant="secondary" className="text-xs">
+								{offeringCount}件
+							</Badge>
+							<span className="font-medium text-sm">{formatCell(value, "currency")}</span>
+						</div>
+
+						{/* 詳細表示ボタン */}
+						<EntryAllocationDialog
+							entryId={returnRecord.koudenEntryId}
+							entryName={returnRecord.entryName}
+							koudenAmount={returnRecord.koudenAmount}
+							offeringTotal={value}
+						>
+							<Button
+								variant="ghost"
+								size="sm"
+								className="h-6 px-2 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+							>
+								<ChevronRight className="h-3 w-3 mr-1" />
+								詳細を表示
+							</Button>
+						</EntryAllocationDialog>
+					</div>
+				);
 			},
+			size: 160,
 		},
 		{
 			accessorKey: "totalAmount",
@@ -344,6 +400,55 @@ export function createColumns({
 					</Badge>
 				);
 			},
+		},
+		{
+			id: "allocation_management",
+			header: ({ column }: { column: Column<ReturnManagementSummary> }) => (
+				<Button
+					variant="ghost"
+					className="hover:bg-transparent"
+					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+				>
+					<Calculator className="mr-2 h-4 w-4" />
+					配分管理
+				</Button>
+			),
+			cell: ({ row }: { row: Row<ReturnManagementSummary> }) => {
+				const returnRecord = row.original;
+				const entry = entries.find((e) => e.id === returnRecord.koudenEntryId);
+
+				if (!entry) return null;
+
+				// 価格が設定されていない場合は無効化
+				const isDisabled = !entry.amount || entry.amount <= 0;
+
+				// 権限チェック（owner または editor のみ）
+				const hasPermission = permission === "owner" || permission === "editor";
+
+				if (!hasPermission || isDisabled) {
+					return (
+						<div className="text-muted-foreground text-sm">
+							{!hasPermission ? "権限なし" : "金額未設定"}
+						</div>
+					);
+				}
+
+				return (
+					<EntryAllocationDialog
+						entryId={entry.id}
+						entryName={entry.name || ""}
+						koudenAmount={entry.amount}
+						offeringTotal={returnRecord.offeringTotal}
+					>
+						<Button variant="outline" size="sm" className="h-8">
+							<Users className="mr-1 h-3 w-3" />
+							配分詳細
+						</Button>
+					</EntryAllocationDialog>
+				);
+			},
+			enableSorting: false,
+			size: 120,
 		},
 		{
 			accessorKey: "shippingInfo",

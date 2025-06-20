@@ -17,6 +17,8 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 // actions
 import { getReturnEntriesByKoudenPaginated } from "@/app/_actions/return-records/return-records";
+// utils
+import { convertToReturnManagementSummaries } from "@/utils/return-records-helpers";
 // components
 import { DataTable } from "./table/data-table";
 import { ReturnCardList } from "./card-list/return-card-list";
@@ -64,47 +66,13 @@ export function ReturnRecordsView({
 
 			const result = await getReturnEntriesByKoudenPaginated(koudenId, 100, cursor, filters);
 
-			// データを ReturnManagementSummary 形式に変換
-			const summaries = result.data
-				.map((returnRecord: ReturnEntryRecord) => {
-					const entry = entries.find((e: Entry) => e.id === returnRecord.kouden_entry_id);
-					if (!entry) return null;
-
-					// return_itemsの型安全な変換
-					const returnItems: ReturnItem[] = Array.isArray(returnRecord.return_items)
-						? (returnRecord.return_items as unknown as ReturnItem[])
-						: [];
-
-					return {
-						koudenId: koudenId,
-						koudenEntryId: returnRecord.kouden_entry_id,
-						entryName: entry.name || "",
-						organization: entry.organization || "",
-						entryPosition: entry.position || "",
-						relationshipName: entry.relationship?.name || "",
-						koudenAmount: entry.amount || 0,
-						offeringCount: entry.has_offering ? 1 : 0,
-						offeringTotal: entry.has_offering ? 1000 : 0, // 仮の値
-						totalAmount: (entry.amount || 0) + (entry.has_offering ? 1000 : 0),
-						returnStatus: returnRecord.return_status as ReturnStatus,
-						funeralGiftAmount: returnRecord.funeral_gift_amount || 0,
-						additionalReturnAmount: returnRecord.additional_return_amount || 0,
-						returnMethod: returnRecord.return_method || "",
-						returnItems: returnItems,
-						arrangementDate: returnRecord.arrangement_date || "",
-						remarks: returnRecord.remarks || "",
-						returnRecordCreated: returnRecord.created_at,
-						returnRecordUpdated: returnRecord.updated_at,
-						statusDisplay: returnRecord.return_status,
-						needsAdditionalReturn: (returnRecord.additional_return_amount || 0) > 0,
-						shippingPostalCode: returnRecord.shipping_postal_code || undefined,
-						shippingAddress: returnRecord.shipping_address || undefined,
-						shippingPhoneNumber: returnRecord.shipping_phone_number || undefined,
-						returnItemsCost: returnRecord.return_items_cost || 0,
-						profitLoss: returnRecord.profit_loss || 0,
-					} satisfies ReturnManagementSummary;
-				})
-				.filter((item) => item !== null) as ReturnManagementSummary[];
+			// データを ReturnManagementSummary 形式に変換（実際のお供物配分金額を取得）
+			const summaries = await convertToReturnManagementSummaries(
+				result.data,
+				entries,
+				relationships,
+				koudenId,
+			);
 
 			return {
 				data: summaries,
@@ -112,7 +80,7 @@ export function ReturnRecordsView({
 				nextCursor: result.nextCursor,
 			};
 		},
-		[koudenId, entries, searchInput, statusFilter],
+		[koudenId, entries, searchInput, statusFilter, relationships],
 	);
 
 	const {

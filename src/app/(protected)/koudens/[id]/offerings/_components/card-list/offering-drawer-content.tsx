@@ -27,7 +27,7 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { X, Trash2 } from "lucide-react";
+import { X, Trash2, Users } from "lucide-react";
 // types
 import type {
 	OfferingWithKoudenEntries,
@@ -42,16 +42,23 @@ import { offeringsAtom, optimisticOfferingsAtom } from "@/store/offerings";
 import { updateOfferingField, deleteOffering } from "@/app/_actions/offerings";
 // components
 import { EditableField } from "@/components/custom/editable-field";
+import { OfferingAllocationDialog } from "@/components/custom/OfferingAllocationDialog";
 import { formatCurrency } from "@/utils/currency";
 import { typeLabels } from "../table/constants";
 
 interface OfferingDrawerContentProps {
 	offering: OfferingWithKoudenEntries;
 	koudenId: string;
+	entries: Entry[];
 	onClose: () => void;
 }
 
-export function OfferingDrawerContent({ offering, koudenId, onClose }: OfferingDrawerContentProps) {
+export function OfferingDrawerContent({
+	offering,
+	koudenId,
+	entries,
+	onClose,
+}: OfferingDrawerContentProps) {
 	const permission = useAtomValue(permissionAtom);
 	const canEdit = canUpdateData(permission);
 	const canDelete = canDeleteData(permission);
@@ -308,6 +315,27 @@ export function OfferingDrawerContent({ offering, koudenId, onClose }: OfferingD
 					</Tabs>
 
 					<DrawerFooter className="px-0 space-y-2">
+						{/* 配分管理ボタン */}
+						{offering.price && offering.price > 0 && canEdit && (
+							<OfferingAllocationDialog
+								offeringId={offering.id}
+								offeringType={typeLabels[offering.type as OfferingType]}
+								offeringPrice={offering.price}
+								providerName={offering.providerName}
+								availableEntries={entries.map((entry) => ({
+									id: entry.id,
+									name: entry.name || "名前なし",
+									amount: entry.amount,
+									organization: entry.organization || undefined,
+								}))}
+							>
+								<Button variant="outline" className="w-full">
+									<Users className="h-4 w-4 mr-2" />
+									配分管理
+								</Button>
+							</OfferingAllocationDialog>
+						)}
+
 						<div className="flex justify-between items-center gap-2 w-full">
 							{canDelete && (
 								<Button

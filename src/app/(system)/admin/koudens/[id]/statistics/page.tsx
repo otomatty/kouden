@@ -1,6 +1,7 @@
 import { checkAdminPermission } from "@/app/_actions/admin/permissions";
 
 import { getEntriesForAdmin } from "@/app/_actions/entries";
+import { calculateEntryTotalAmount } from "@/app/_actions/offerings/queries";
 import { KoudenStatistics } from "@/app/(protected)/koudens/[id]/statistics/_components";
 import type { Entry } from "@/types/entries";
 
@@ -10,10 +11,41 @@ interface AdminStatisticsPageProps {
 
 /**
  * エントリーデータから統計情報を計算する
+ * フェーズ7: 配分込み金額計算を含む
  */
-function calculateStatistics(entries: Entry[]) {
-	// 総額計算
-	const totalAmount = entries.reduce((sum, entry) => sum + (entry.amount || 0), 0);
+async function calculateStatistics(entries: Entry[]) {
+	// 🎯 フェーズ7実装: 配分込み金額計算
+	const entryTotalAmounts = await Promise.all(
+		entries.map(async (entry) => {
+			const result = await calculateEntryTotalAmount(entry.id);
+			return {
+				entryId: entry.id,
+				koudenAmount: entry.amount || 0,
+				offeringTotal: result.success ? result.data?.offering_total || 0 : 0,
+				calculatedTotal: result.success
+					? result.data?.calculated_total || entry.amount || 0
+					: entry.amount || 0,
+			};
+		}),
+	);
+
+	// 配分込み総額計算
+	const totalAmountWithAllocations = entryTotalAmounts.reduce(
+		(sum, entryData) => sum + entryData.calculatedTotal,
+		0,
+	);
+
+	// 香典のみの合計金額
+	const koudenOnlyTotal = entryTotalAmounts.reduce(
+		(sum, entryData) => sum + entryData.koudenAmount,
+		0,
+	);
+
+	// お供物配分の合計金額
+	const offeringAllocationsTotal = entryTotalAmounts.reduce(
+		(sum, entryData) => sum + entryData.offeringTotal,
+		0,
+	);
 
 	// 参列種別カウント
 	const attendanceCounts = entries.reduce(
@@ -34,7 +66,7 @@ function calculateStatistics(entries: Entry[]) {
 	const returnProgress = { completed, pending };
 	const returnProgressPercentage = entries.length > 0 ? (completed / entries.length) * 100 : 0;
 
-	// 金額別分布
+	// 配分込み金額別分布（より正確な分布計算）
 	const amountRanges = [
 		{ name: "～5,000円", min: 0, max: 5000 },
 		{ name: "5,001～10,000円", min: 5001, max: 10000 },
@@ -44,8 +76,8 @@ function calculateStatistics(entries: Entry[]) {
 
 	const amountDistribution = amountRanges.map((range) => ({
 		name: range.name,
-		count: entries.filter((entry) => {
-			const amount = entry.amount || 0;
+		count: entryTotalAmounts.filter((entryData) => {
+			const amount = entryData.calculatedTotal;
 			return amount >= range.min && amount <= range.max;
 		}).length,
 	}));
@@ -58,7 +90,9 @@ function calculateStatistics(entries: Entry[]) {
 	].filter((item) => item.value > 0);
 
 	return {
-		totalAmount,
+		totalAmount: totalAmountWithAllocations,
+		koudenOnlyTotal,
+		offeringAllocationsTotal,
 		attendanceCounts,
 		returnProgress,
 		returnProgressPercentage,
@@ -72,6 +106,7 @@ function calculateStatistics(entries: Entry[]) {
  * - 香典帳の統計情報を表示
  * - グラフや数値で表示
  * - 管理者権限でアクセス
+ * - フェーズ7: 配分込み金額計算を実装
  */
 export default async function AdminStatisticsPage({ params }: AdminStatisticsPageProps) {
 	const { id: koudenId } = await params;
@@ -82,8 +117,8 @@ export default async function AdminStatisticsPage({ params }: AdminStatisticsPag
 	// 統計情報の計算のため、全エントリーを取得
 	const { entries } = await getEntriesForAdmin(koudenId, 1, Number.MAX_SAFE_INTEGER);
 
-	// 統計データを計算
-	const statisticsData = calculateStatistics(entries);
+	// 統計データを計算（配分込み）
+	const statisticsData = await calculateStatistics(entries);
 
 	return (
 		<div className="container mx-auto py-6 space-y-6">

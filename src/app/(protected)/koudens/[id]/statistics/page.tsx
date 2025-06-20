@@ -1,4 +1,5 @@
 import { getEntries } from "@/app/_actions/entries";
+import { calculateEntryTotalAmount } from "@/app/_actions/offerings/queries";
 import { KoudenStatistics } from "./_components";
 
 interface StatisticsPageProps {
@@ -9,12 +10,44 @@ interface StatisticsPageProps {
  * 統計（statistics）のページコンポーネント
  * - 香典帳の統計情報を表示
  * - グラフや数値で表示
+ * - お供物配分込みの正確な金額計算を実装
  */
 export default async function StatisticsPage({ params }: StatisticsPageProps) {
 	const { id: koudenId } = await params;
 	const { entries } = await getEntries(koudenId, 1, Number.MAX_SAFE_INTEGER);
+
+	// 🎯 フェーズ7実装: 配分込み金額計算
+	// 各エントリーの配分込み総額を並列で取得
+	const entryTotalAmounts = await Promise.all(
+		entries.map(async (entry) => {
+			const result = await calculateEntryTotalAmount(entry.id);
+			return {
+				entryId: entry.id,
+				koudenAmount: entry.amount,
+				offeringTotal: result.success ? result.data?.offering_total || 0 : 0,
+				calculatedTotal: result.success
+					? result.data?.calculated_total || entry.amount
+					: entry.amount,
+			};
+		}),
+	);
+
+	// 配分込み合計金額の計算
+	const totalAmountWithAllocations = entryTotalAmounts.reduce(
+		(sum, entryData) => sum + entryData.calculatedTotal,
+		0,
+	);
+
+	// 香典のみの合計金額（従来）
+	const koudenOnlyTotal = entries.reduce((sum, entry) => sum + entry.amount, 0);
+
+	// お供物配分の合計金額
+	const offeringAllocationsTotal = entryTotalAmounts.reduce(
+		(sum, entryData) => sum + entryData.offeringTotal,
+		0,
+	);
+
 	// サーバーサイドで集計
-	const totalAmount = entries.reduce((sum, entry) => sum + entry.amount, 0);
 	const attendanceCounts = entries.reduce(
 		(acc, entry) => {
 			acc[entry.attendanceType] = (acc[entry.attendanceType] || 0) + 1;
@@ -22,6 +55,7 @@ export default async function StatisticsPage({ params }: StatisticsPageProps) {
 		},
 		{ FUNERAL: 0, CONDOLENCE_VISIT: 0, ABSENT: 0 } as Record<string, number>,
 	);
+
 	// 返礼状況の集計：4つのステータスに対応
 	const returnStatusCounts = entries.reduce(
 		(acc, entry) => {
@@ -36,11 +70,12 @@ export default async function StatisticsPage({ params }: StatisticsPageProps) {
 	const completedCount =
 		(returnStatusCounts.COMPLETED || 0) + (returnStatusCounts.NOT_REQUIRED || 0);
 	const returnProgressPercentage = entries.length > 0 ? (completedCount / entries.length) * 100 : 0;
-	// 金額ごとに集計（基本的に1千円単位）
+
+	// 配分込み金額ごとに集計（より正確な分布計算）
 	const amountDistribution = Object.entries(
-		entries.reduce(
-			(acc, entry) => {
-				const key = entry.amount;
+		entryTotalAmounts.reduce(
+			(acc, entryData) => {
+				const key = entryData.calculatedTotal;
 				acc[key] = (acc[key] || 0) + 1;
 				return acc;
 			},
@@ -50,6 +85,7 @@ export default async function StatisticsPage({ params }: StatisticsPageProps) {
 		.map(([amount, count]) => ({ amount: Number(amount), count }))
 		.sort((a, b) => b.amount - a.amount)
 		.map(({ amount, count }) => ({ name: `${amount}円`, count }));
+
 	const attendanceData = Object.entries(attendanceCounts).map(([key, value]) => ({
 		name: key,
 		value,
@@ -59,7 +95,9 @@ export default async function StatisticsPage({ params }: StatisticsPageProps) {
 	return (
 		<div className="mt-4">
 			<KoudenStatistics
-				totalAmount={totalAmount}
+				totalAmount={totalAmountWithAllocations}
+				koudenOnlyTotal={koudenOnlyTotal}
+				offeringAllocationsTotal={offeringAllocationsTotal}
 				attendanceCounts={attendanceCounts}
 				returnStatusCounts={returnStatusCounts}
 				returnProgressPercentage={returnProgressPercentage}

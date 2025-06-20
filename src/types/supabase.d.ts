@@ -1429,6 +1429,13 @@ export type Database = {
             foreignKeyName: "kouden_entry_audit_logs_entry_id_fkey"
             columns: ["entry_id"]
             isOneToOne: false
+            referencedRelation: "offering_consistency_check"
+            referencedColumns: ["kouden_entry_id"]
+          },
+          {
+            foreignKeyName: "kouden_entry_audit_logs_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
             referencedRelation: "return_management_summary"
             referencedColumns: ["kouden_entry_id"]
           },
@@ -1469,6 +1476,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "kouden_entries"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kouden_entry_locks_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "offering_consistency_check"
+            referencedColumns: ["kouden_entry_id"]
           },
           {
             foreignKeyName: "kouden_entry_locks_entry_id_fkey"
@@ -1834,6 +1848,74 @@ export type Database = {
           },
         ]
       }
+      offering_allocations: {
+        Row: {
+          allocated_amount: number
+          allocation_ratio: number
+          contribution_notes: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_primary_contributor: boolean | null
+          kouden_entry_id: string | null
+          offering_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          allocated_amount: number
+          allocation_ratio: number
+          contribution_notes?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_primary_contributor?: boolean | null
+          kouden_entry_id?: string | null
+          offering_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          allocated_amount?: number
+          allocation_ratio?: number
+          contribution_notes?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_primary_contributor?: boolean | null
+          kouden_entry_id?: string | null
+          offering_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offering_allocations_kouden_entry_id_fkey"
+            columns: ["kouden_entry_id"]
+            isOneToOne: false
+            referencedRelation: "kouden_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offering_allocations_kouden_entry_id_fkey"
+            columns: ["kouden_entry_id"]
+            isOneToOne: false
+            referencedRelation: "offering_consistency_check"
+            referencedColumns: ["kouden_entry_id"]
+          },
+          {
+            foreignKeyName: "offering_allocations_kouden_entry_id_fkey"
+            columns: ["kouden_entry_id"]
+            isOneToOne: false
+            referencedRelation: "return_management_summary"
+            referencedColumns: ["kouden_entry_id"]
+          },
+          {
+            foreignKeyName: "offering_allocations_offering_id_fkey"
+            columns: ["offering_id"]
+            isOneToOne: false
+            referencedRelation: "offerings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       offering_entries: {
         Row: {
           created_at: string
@@ -1863,6 +1945,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "kouden_entries"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offering_entries_kouden_entry_id_fkey"
+            columns: ["kouden_entry_id"]
+            isOneToOne: false
+            referencedRelation: "offering_consistency_check"
+            referencedColumns: ["kouden_entry_id"]
           },
           {
             foreignKeyName: "offering_entries_kouden_entry_id_fkey"
@@ -2201,6 +2290,13 @@ export type Database = {
             foreignKeyName: "return_entry_records_kouden_entry_id_fkey"
             columns: ["kouden_entry_id"]
             isOneToOne: true
+            referencedRelation: "offering_consistency_check"
+            referencedColumns: ["kouden_entry_id"]
+          },
+          {
+            foreignKeyName: "return_entry_records_kouden_entry_id_fkey"
+            columns: ["kouden_entry_id"]
+            isOneToOne: true
             referencedRelation: "return_management_summary"
             referencedColumns: ["kouden_entry_id"]
           },
@@ -2340,6 +2436,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "kouden_entries"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rrient_kouden_entry_fkey"
+            columns: ["kouden_entry_id"]
+            isOneToOne: false
+            referencedRelation: "offering_consistency_check"
+            referencedColumns: ["kouden_entry_id"]
           },
           {
             foreignKeyName: "rrient_kouden_entry_fkey"
@@ -2601,6 +2704,13 @@ export type Database = {
             foreignKeyName: "telegrams_kouden_entry_id_fkey"
             columns: ["kouden_entry_id"]
             isOneToOne: false
+            referencedRelation: "offering_consistency_check"
+            referencedColumns: ["kouden_entry_id"]
+          },
+          {
+            foreignKeyName: "telegrams_kouden_entry_id_fkey"
+            columns: ["kouden_entry_id"]
+            isOneToOne: false
             referencedRelation: "return_management_summary"
             referencedColumns: ["kouden_entry_id"]
           },
@@ -2727,6 +2837,16 @@ export type Database = {
         }
         Relationships: []
       }
+      offering_consistency_check: {
+        Row: {
+          has_offering: boolean | null
+          kouden_entry_id: string | null
+          name: string | null
+          offering_entries_count: number | null
+          status: string | null
+        }
+        Relationships: []
+      }
       return_management_summary: {
         Row: {
           additional_return_amount: number | null
@@ -2797,6 +2917,16 @@ export type Database = {
       calculate_total_amount: {
         Args: { p_kouden_entry_id: string }
         Returns: number
+      }
+      check_offering_allocation_integrity: {
+        Args: { p_offering_id?: string }
+        Returns: {
+          offering_id: string
+          total_allocated: number
+          offering_price: number
+          allocation_difference: number
+          ratio_sum: number
+        }[]
       }
       cleanup_expired_locks: {
         Args: Record<PropertyKey, never>

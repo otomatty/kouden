@@ -53,7 +53,7 @@ export const columnLabels: Record<string, string> = {
 	entryPosition: "役職",
 	relationshipName: "関係性",
 	koudenAmount: "香典金額",
-	offeringTotal: "供物金額",
+	offeringTotal: "お供物配分",
 	totalAmount: "合計金額",
 	returnStatus: "返礼状況",
 	funeralGiftAmount: "葬儀ギフト金額",

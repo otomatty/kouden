@@ -7,6 +7,8 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { convertToReturnManagementSummaries } from "@/utils/return-records-helpers";
+import type { Entry, AttendanceType } from "@/types/entries";
 import type {
 	ReturnManagementSummary,
 	BulkUpdateConfig,
@@ -47,9 +49,20 @@ export async function getAllReturnRecordsForBulkUpdate(
 					organization,
 					position,
 					amount,
+					postal_code,
+					address,
+					phone_number,
 					has_offering,
 					relationship_id,
-					attendance_type
+					attendance_type,
+					notes,
+					created_at,
+					updated_at,
+					created_by,
+					version,
+					last_modified_at,
+					last_modified_by,
+					is_duplicate
 				)
 			`)
 			.eq("kouden_entries.kouden_id", koudenId)
@@ -60,54 +73,34 @@ export async function getAllReturnRecordsForBulkUpdate(
 		}
 
 		// 関係性情報を別途取得
-		const { data: relationships, error: relationshipsError } = await supabase
+		const { data: relationshipsData, error: relationshipsError } = await supabase
 			.from("relationships")
-			.select("id, name")
+			.select("*")
 			.eq("kouden_id", koudenId);
+
+		const relationships = relationshipsData || [];
 
 		if (relationshipsError) {
 			throw relationshipsError;
 		}
 
-		// ReturnManagementSummary形式に変換
-		const summaries: ReturnManagementSummary[] = returnRecords.map((record) => {
-			const entry = record.kouden_entries;
-			const returnItems: ReturnItem[] = Array.isArray(record.return_items)
-				? (record.return_items as unknown as ReturnItem[])
-				: [];
+		// entriesをEntry型配列に変換
+		const entryList: Entry[] = returnRecords.map((record) => ({
+			...record.kouden_entries,
+			attendanceType: record.kouden_entries.attendance_type as AttendanceType,
+			relationshipId: record.kouden_entries.relationship_id,
+			// 型に合わせてデフォルト値を設定
+			updated_at: record.kouden_entries.updated_at || new Date().toISOString(),
+			entry_number: null, // Entry型にentry_numberは存在しないが、とりあえずnullで設定
+		}));
 
-			// 関係性名を取得
-			const relationship = relationships?.find((r) => r.id === entry.relationship_id);
-
-			return {
-				koudenId: koudenId,
-				koudenEntryId: record.kouden_entry_id,
-				entryName: entry.name || "",
-				organization: entry.organization || "",
-				entryPosition: entry.position || "",
-				relationshipName: relationship?.name || "",
-				koudenAmount: entry.amount || 0,
-				offeringCount: entry.has_offering ? 1 : 0,
-				offeringTotal: entry.has_offering ? 1000 : 0, // 仮の値
-				totalAmount: (entry.amount || 0) + (entry.has_offering ? 1000 : 0),
-				returnStatus: record.return_status as ReturnStatus,
-				funeralGiftAmount: record.funeral_gift_amount || 0,
-				additionalReturnAmount: record.additional_return_amount || 0,
-				returnMethod: record.return_method || "",
-				returnItems: returnItems,
-				arrangementDate: record.arrangement_date || "",
-				remarks: record.remarks || "",
-				returnRecordCreated: record.created_at,
-				returnRecordUpdated: record.updated_at,
-				statusDisplay: record.return_status,
-				needsAdditionalReturn: (record.additional_return_amount || 0) > 0,
-				shippingPostalCode: record.shipping_postal_code || undefined,
-				shippingAddress: record.shipping_address || undefined,
-				shippingPhoneNumber: record.shipping_phone_number || undefined,
-				returnItemsCost: record.return_items_cost || 0,
-				profitLoss: record.profit_loss || 0,
-			} satisfies ReturnManagementSummary;
-		});
+		// ReturnManagementSummary形式に変換（実際のお供物配分金額を取得）
+		const summaries = await convertToReturnManagementSummaries(
+			returnRecords,
+			entryList,
+			relationships,
+			koudenId,
+		);
 
 		return summaries;
 	} catch (error) {

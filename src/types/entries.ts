@@ -123,3 +123,60 @@ export interface ReturnManagementEntry {
 	status_display: string | null;
 	needs_additional_return: boolean | null;
 }
+
+// 改善された返礼品管理のための型定義
+export interface ImprovedReturnManagement {
+	// 基本情報
+	kouden_entry_id: string;
+	primary_recipient: boolean; // メイン受取人かどうか
+
+	// 新しいお供物配分情報（実装済み）
+	offering_allocations?: OfferingAllocation[];
+
+	// 返礼品共有情報（将来実装）
+	shared_return?: {
+		group_id: string; // 共有グループID
+		is_representative: boolean; // 代表者かどうか
+		shared_members: string[]; // 共有メンバーのkouden_entry_ids
+	};
+}
+
+// お供物の改善された関連付け型（実装済み）
+export interface OfferingAllocation {
+	id: string;
+	offering_id: string | null;
+	kouden_entry_id: string | null;
+	allocated_amount: number; // 配分金額（固定値）
+	allocation_ratio: number; // 配分比率（0.0-1.0）
+	is_primary_contributor: boolean | null; // 主要提供者かどうか
+	contribution_notes: string | null;
+	created_at: string | null;
+	updated_at: string | null;
+	created_by: string | null;
+}
+
+// 返礼管理の新しい総合型定義
+export interface EnhancedReturnManagement extends ReturnManagementEntry {
+	// 配分されたお供物情報
+	offering_allocations: OfferingAllocation[];
+
+	// 計算された合計金額（香典 + 配分されたお供物）
+	calculated_total_amount: number;
+
+	// 返礼品情報
+	return_calculation: {
+		base_amount: number; // 基本返礼金額
+		offering_portion: number; // お供物分の返礼金額
+		total_return_value: number; // 総返礼価値
+		recommended_items: ReturnItem[]; // 推奨返礼品
+	};
+}
+
+// お供物配分のための型定義
+export interface OfferingAllocationRequest {
+	offering_id: string;
+	kouden_entry_ids: string[];
+	allocation_method: "equal" | "weighted" | "manual";
+	manual_amounts?: number[]; // manual の場合のみ
+	primary_contributor_id?: string; // 主要提供者を指定
+}

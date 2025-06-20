@@ -10,13 +10,14 @@ import type { Relationship } from "@/types/relationships";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Pen, Eye } from "lucide-react";
+import { MoreHorizontal, Pen, Eye, Package, ChevronRight } from "lucide-react";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { EntryAllocationDialog } from "@/components/custom/EntryAllocationDialog";
 
 interface ReturnCardProps {
 	returnRecord: ReturnManagementSummary;
@@ -25,7 +26,7 @@ interface ReturnCardProps {
 }
 
 /**
- * 返礼状況のバッジ色を取得
+ * 返礼状況のバッジVariantを取得
  */
 function getStatusBadgeVariant(status: string) {
 	switch (status) {
@@ -33,12 +34,10 @@ function getStatusBadgeVariant(status: string) {
 			return "default";
 		case "PARTIAL_RETURNED":
 			return "secondary";
-		case "PENDING":
-			return "outline";
 		case "NOT_REQUIRED":
-			return "destructive";
-		default:
 			return "outline";
+		default:
+			return "destructive";
 	}
 }
 
@@ -51,10 +50,10 @@ function getStatusDisplayName(status: string) {
 			return "完了";
 		case "PARTIAL_RETURNED":
 			return "一部返礼";
-		case "PENDING":
-			return "未対応";
 		case "NOT_REQUIRED":
 			return "返礼不要";
+		case "PENDING":
+			return "未対応";
 		default:
 			return status;
 	}
@@ -63,6 +62,7 @@ function getStatusDisplayName(status: string) {
 /**
  * ReturnCardコンポーネント
  * 役割：個別の返礼情報カード表示
+ * 🎯 フェーズ7実装: お供物配分の詳細表示を追加
  */
 export function ReturnCard({ returnRecord, relationships, onEditReturn }: ReturnCardProps) {
 	// 関係性の表示名を取得
@@ -73,6 +73,10 @@ export function ReturnCard({ returnRecord, relationships, onEditReturn }: Return
 	// 金額の合計を計算
 	const totalGiftAmount =
 		returnRecord.funeralGiftAmount + (returnRecord.additionalReturnAmount || 0);
+
+	// 🎯 フェーズ7: お供物配分の状況判定
+	const hasOfferingAllocation = returnRecord.offeringTotal > 0;
+	const offeringCount = returnRecord.offeringCount || 0;
 
 	return (
 		<Card className="w-full">
@@ -116,12 +120,59 @@ export function ReturnCard({ returnRecord, relationships, onEditReturn }: Return
 					</div>
 					<div className="flex justify-between text-xs">
 						<span className="text-muted-foreground">香典金額</span>
-						<span>¥{returnRecord.totalAmount.toLocaleString()}</span>
+						<span>¥{returnRecord.koudenAmount.toLocaleString()}</span>
 					</div>
+
+					{/* 🎯 フェーズ7: お供物配分の詳細表示 */}
+					{hasOfferingAllocation ? (
+						<div className="space-y-1">
+							<div className="flex justify-between text-xs">
+								<span className="text-muted-foreground">お供物配分</span>
+								<div className="flex items-center gap-2">
+									<Badge variant="secondary" className="text-xs">
+										{offeringCount}件
+									</Badge>
+									<span className="font-medium text-green-600">
+										+¥{returnRecord.offeringTotal.toLocaleString()}
+									</span>
+								</div>
+							</div>
+							<div className="flex justify-between text-xs">
+								<span className="text-muted-foreground">合計金額</span>
+								<span className="font-medium">¥{returnRecord.totalAmount.toLocaleString()}</span>
+							</div>
+							{/* 配分詳細ダイアログへのアクセス */}
+							<div className="pt-1">
+								<EntryAllocationDialog
+									entryId={returnRecord.koudenEntryId}
+									entryName={returnRecord.entryName}
+									koudenAmount={returnRecord.koudenAmount}
+									offeringTotal={returnRecord.offeringTotal}
+								>
+									<Button
+										variant="ghost"
+										size="sm"
+										className="h-6 w-full text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 justify-start"
+									>
+										<Package className="h-3 w-3 mr-1" />
+										配分詳細を表示
+										<ChevronRight className="h-3 w-3 ml-auto" />
+									</Button>
+								</EntryAllocationDialog>
+							</div>
+						</div>
+					) : (
+						<div className="flex justify-between text-xs">
+							<span className="text-muted-foreground">合計金額</span>
+							<span>¥{returnRecord.totalAmount.toLocaleString()}</span>
+						</div>
+					)}
+
 					<div className="flex justify-between text-xs">
 						<span className="text-muted-foreground">返礼金額</span>
 						<span>¥{totalGiftAmount.toLocaleString()}</span>
 					</div>
+
 					{returnRecord.returnMethod && (
 						<div className="flex justify-between text-xs">
 							<span className="text-muted-foreground">返礼方法</span>

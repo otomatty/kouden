@@ -21,6 +21,8 @@ import { returnStatusMap, returnStatusCustomColors } from "@/components/ui/statu
 
 interface KoudenStatisticsProps {
 	totalAmount: number;
+	koudenOnlyTotal?: number; // 🎯 フェーズ7: 香典のみの合計
+	offeringAllocationsTotal?: number; // 🎯 フェーズ7: お供物配分の合計
 	attendanceCounts: Record<"FUNERAL" | "CONDOLENCE_VISIT" | "ABSENT", number>;
 	returnStatusCounts?: Record<string, number>;
 	returnProgressPercentage: number;
@@ -33,6 +35,8 @@ interface KoudenStatisticsProps {
 
 export const KoudenStatistics = memo(function KoudenStatistics({
 	totalAmount,
+	koudenOnlyTotal,
+	offeringAllocationsTotal,
 	attendanceCounts,
 	returnStatusCounts,
 	returnProgressPercentage,
@@ -74,15 +78,41 @@ export const KoudenStatistics = memo(function KoudenStatistics({
 			};
 		});
 
+	// 🎯 フェーズ7: 配分情報の可視化データ
+	const hasAllocationData = koudenOnlyTotal !== undefined && offeringAllocationsTotal !== undefined;
+	const actualKoudenTotal = koudenOnlyTotal || totalAmount;
+	const actualOfferingTotal = offeringAllocationsTotal || 0;
+
 	return (
-		<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-			{/* 総額 */}
-			<Card>
+		<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+			{/* 配分込み総額 */}
+			<Card className="md:col-span-2">
 				<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-					<CardTitle className="text-sm font-medium">香典総額</CardTitle>
+					<CardTitle className="text-sm font-medium">
+						{hasAllocationData ? "合計金額（配分込み）" : "香典総額"}
+					</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<div className="text-2xl font-bold">{formatCurrency(totalAmount)}</div>
+					<div className="text-3xl font-bold mb-2">{formatCurrency(totalAmount)}</div>
+					{hasAllocationData && actualOfferingTotal > 0 && (
+						<div className="space-y-1 text-sm text-muted-foreground">
+							<div className="flex justify-between">
+								<span>香典:</span>
+								<span className="font-medium">{formatCurrency(actualKoudenTotal)}</span>
+							</div>
+							<div className="flex justify-between">
+								<span>お供物配分:</span>
+								<span className="font-medium text-green-600">
+									+{formatCurrency(actualOfferingTotal)}
+								</span>
+							</div>
+							<hr className="my-1" />
+							<div className="flex justify-between font-medium">
+								<span>合計:</span>
+								<span>{formatCurrency(totalAmount)}</span>
+							</div>
+						</div>
+					)}
 				</CardContent>
 			</Card>
 
@@ -180,7 +210,7 @@ export const KoudenStatistics = memo(function KoudenStatistics({
 				{/* 金額別分布 */}
 				<Card>
 					<CardHeader>
-						<CardTitle>金額別分布</CardTitle>
+						<CardTitle>金額別分布{hasAllocationData ? "（配分込み）" : ""}</CardTitle>
 					</CardHeader>
 					<CardContent className="h-[400px]">
 						<ResponsiveContainer width="100%" height="100%">

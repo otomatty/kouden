@@ -30,6 +30,7 @@ export const columnLabels: Record<string, string> = {
 	notes: "備考",
 	offeringPhotos: "写真",
 	actions: "操作",
+	allocation: "配分管理",
 };
 
 export const searchOptions = [
@@ -86,6 +87,7 @@ export const editableColumns: Record<string, EditableColumnConfig> = {
 	offeringPhotos: { type: "readonly" },
 	entries: { type: "readonly" },
 	offeringEntries: { type: "readonly" },
+	allocation: { type: "readonly" },
 } as const;
 
 export const OFFERING_TYPES = {

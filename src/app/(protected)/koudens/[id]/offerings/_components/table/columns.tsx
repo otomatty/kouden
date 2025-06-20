@@ -1,6 +1,6 @@
 import Image from "next/image";
 // ui
-import { ArrowUpDown, Trash2, MoreHorizontal, ImageIcon } from "lucide-react";
+import { ArrowUpDown, Trash2, MoreHorizontal, ImageIcon, Users, Calculator } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -22,6 +22,7 @@ import type { CellValue } from "@/types/data-table/table";
 import { formatCurrency } from "@/utils/currency";
 // components
 import { OfferingDialog } from "../dialog/offering-dialog";
+import { OfferingAllocationDialog } from "@/components/custom/OfferingAllocationDialog";
 // constants
 import { typeLabels } from "./constants";
 
@@ -239,6 +240,49 @@ export function createColumns({ onDeleteRows, permission, koudenId, entries }: C
 						</button>
 						<Badge variant="secondary">{photos.length}枚</Badge>
 					</div>
+				);
+			},
+		},
+		{
+			id: "allocation",
+			header: "配分管理",
+			cell: ({ row }: { row: Row<OfferingWithKoudenEntries> }) => {
+				const offering = row.original;
+				const hasPermission = permission === "owner" || permission === "editor";
+
+				// 価格が設定されていない場合は配分管理を無効化
+				if (!offering.price || offering.price <= 0) {
+					return <div className="text-muted-foreground text-sm">価格未設定</div>;
+				}
+
+				// 編集権限がない場合は表示のみ
+				if (!hasPermission) {
+					return (
+						<Button variant="ghost" size="sm" disabled>
+							<Calculator className="h-4 w-4 mr-1" />
+							配分確認
+						</Button>
+					);
+				}
+
+				return (
+					<OfferingAllocationDialog
+						offeringId={offering.id}
+						offeringType={typeLabels[offering.type as OfferingType]}
+						offeringPrice={offering.price}
+						providerName={offering.providerName}
+						availableEntries={entries.map((entry) => ({
+							id: entry.id,
+							name: entry.name || "名前なし",
+							amount: entry.amount,
+							organization: entry.organization || undefined,
+						}))}
+					>
+						<Button variant="outline" size="sm">
+							<Users className="h-4 w-4 mr-1" />
+							配分管理
+						</Button>
+					</OfferingAllocationDialog>
 				);
 			},
 		},
