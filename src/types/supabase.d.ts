@@ -1040,22 +1040,34 @@ export type Database = {
       admin_users: {
         Row: {
           created_at: string | null
+          failed_login_attempts: number | null
           id: string
+          last_login_at: string | null
           role: string
+          two_factor_enabled: boolean | null
+          two_factor_secret: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
           created_at?: string | null
+          failed_login_attempts?: number | null
           id?: string
+          last_login_at?: string | null
           role?: string
+          two_factor_enabled?: boolean | null
+          two_factor_secret?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
           created_at?: string | null
+          failed_login_attempts?: number | null
           id?: string
+          last_login_at?: string | null
           role?: string
+          two_factor_enabled?: boolean | null
+          two_factor_secret?: string | null
           updated_at?: string | null
           user_id?: string
         }
@@ -1304,6 +1316,69 @@ export type Database = {
           is_system?: boolean
           kouden_id?: string
           name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      file_upload_restrictions: {
+        Row: {
+          created_at: string
+          description: string | null
+          file_extension: string
+          id: string
+          is_allowed: boolean
+          max_file_size: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          file_extension: string
+          id?: string
+          is_allowed?: boolean
+          max_file_size?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          file_extension?: string
+          id?: string
+          is_allowed?: boolean
+          max_file_size?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ip_restrictions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          ip_address: unknown
+          reason: string | null
+          restriction_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          ip_address: unknown
+          reason?: string | null
+          restriction_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          ip_address?: unknown
+          reason?: string | null
+          restriction_type?: string
           updated_at?: string
         }
         Relationships: []
@@ -1782,6 +1857,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      login_attempts: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          id: string
+          ip_address: unknown
+          last_attempt_at: string
+          locked_until: string | null
+          user_id: string | null
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          id?: string
+          ip_address: unknown
+          last_attempt_at?: string
+          locked_until?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          id?: string
+          ip_address?: unknown
+          last_attempt_at?: string
+          locked_until?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       notification_types: {
         Row: {
@@ -2571,6 +2676,42 @@ export type Database = {
           },
         ]
       }
+      security_logs: {
+        Row: {
+          created_at: string
+          details: Json | null
+          event_type: string
+          id: string
+          ip_address: unknown | null
+          request_path: string | null
+          severity: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          event_type: string
+          id?: string
+          ip_address?: unknown | null
+          request_path?: string | null
+          severity?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          event_type?: string
+          id?: string
+          ip_address?: unknown | null
+          request_path?: string | null
+          severity?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       support_tickets: {
         Row: {
           assigned_to: string | null
@@ -3006,6 +3147,10 @@ export type Database = {
         }
         Returns: string
       }
+      detect_suspicious_activity: {
+        Args: { p_user_id: string; p_ip_address: unknown; p_event_type: string }
+        Returns: boolean
+      }
       get_kouden_return_summary: {
         Args: { kouden_id_param: string }
         Returns: {
@@ -3083,6 +3228,18 @@ export type Database = {
       }
       log_debug: {
         Args: { p_action: string; p_details: Json }
+        Returns: string
+      }
+      log_security_event: {
+        Args: {
+          p_event_type: string
+          p_user_id?: string
+          p_ip_address?: unknown
+          p_user_agent?: string
+          p_request_path?: string
+          p_details?: Json
+          p_severity?: string
+        }
         Returns: string
       }
       migrate_return_entries: {

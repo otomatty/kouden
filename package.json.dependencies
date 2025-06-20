@@ -1,0 +1,20 @@
+# 以下のパッケージを追加する必要があります：
+
+# 二要素認証（TOTP）
+speakeasy: "^2.0.0"
+qrcode: "^1.5.3"
+@types/qrcode: "^1.5.5"
+
+# レート制限（本番環境推奨）
+@vercel/edge-config: "^0.4.1"
+
+# セキュリティヘッダー
+helmet: "^7.1.0"
+
+# 暗号化
+bcryptjs: "^2.4.3"
+@types/bcryptjs: "^2.4.6"
+
+# CSRFトークン（オプション）
+csrf: "^3.1.0"
+@types/csrf: "^3.1.7" 

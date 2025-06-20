@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/supabase/server";
+import { isTwoFactorEnabled } from "@/lib/security/two-factor-auth";
 
 export const metadata: Metadata = {
 	title: "管理画面 | 香典帳",
@@ -87,7 +88,22 @@ function DashboardSkeleton() {
 	);
 }
 
-export default function AdminDashboard() {
+export default async function AdminDashboard() {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	if (!user) {
+		redirect("/auth/login");
+	}
+
+	// 2FA必須チェック
+	const twoFactorEnabled = await isTwoFactorEnabled(user.id);
+	if (!twoFactorEnabled) {
+		redirect("/admin/settings/2fa/setup");
+	}
+
 	return (
 		<div className="space-y-4">
 			<h1 className="text-2xl font-bold">ダッシュボード</h1>

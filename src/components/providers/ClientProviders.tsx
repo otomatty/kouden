@@ -3,6 +3,7 @@
 import type React from "react";
 import { PermissionProvider } from "./permission-provider";
 import { NavigationModeProvider } from "@/context/navigation-mode";
+import { CSRFProvider } from "./csrf-provider";
 import type { KoudenPermission } from "@/types/role";
 
 interface ClientProvidersProps {
@@ -12,8 +13,10 @@ interface ClientProvidersProps {
 
 export default function ClientProviders({ permission, children }: ClientProvidersProps) {
 	return (
-		<PermissionProvider permission={permission}>
-			<NavigationModeProvider value="detail">{children}</NavigationModeProvider>
-		</PermissionProvider>
+		<CSRFProvider>
+			<PermissionProvider permission={permission}>
+				<NavigationModeProvider value="detail">{children}</NavigationModeProvider>
+			</PermissionProvider>
+		</CSRFProvider>
 	);
 }
