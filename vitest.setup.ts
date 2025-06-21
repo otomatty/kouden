@@ -1,6 +1,7 @@
 // vitest.setup.ts
 // This file is required by Vitest setupFiles configuration.
 // Add global test setup code here if needed.
+import "@testing-library/jest-dom";
 import PDFDocument from "pdfkit/js/pdfkit.standalone";
 
 // Stub out font loading in PDFKit to prevent font format errors in tests

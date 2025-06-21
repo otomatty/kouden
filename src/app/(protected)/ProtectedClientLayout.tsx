@@ -4,6 +4,7 @@ import { BottomNavigation } from "@/components/custom/bottom-navigation";
 import { Header } from "./_components/header";
 import { AppFooter } from "./_components/app-footer";
 import { FeedbackButton } from "@/components/custom/feedback-button";
+import { OneWeekSurveyTrigger } from "@/components/survey";
 import type { ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
 import type { NotificationItem } from "@/types/notifications";
@@ -44,6 +45,9 @@ export default function ProtectedClientLayout({
 				</div>
 				<AppFooter />
 				{!isDetailPage && <BottomNavigation />}
+
+				{/* 1週間経過後のアンケートトリガー */}
+				<OneWeekSurveyTrigger onShown={() => console.log("1週間後アンケート表示完了")} />
 			</div>
 		</NavigationModeProvider>
 	);

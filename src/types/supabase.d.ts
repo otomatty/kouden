@@ -2959,6 +2959,66 @@ export type Database = {
         }
         Relationships: []
       }
+      user_surveys: {
+        Row: {
+          additional_feedback: string | null
+          created_at: string | null
+          feature_excel_integration: boolean | null
+          feature_other: string | null
+          feature_photo_attachment: boolean | null
+          feature_print_layout: boolean | null
+          feature_voice_input: boolean | null
+          id: string
+          nps_score: number
+          overall_satisfaction: number
+          survey_trigger: string
+          updated_at: string | null
+          usability_better_ui: boolean | null
+          usability_easier_input: boolean | null
+          usability_faster_performance: boolean | null
+          usability_other: string | null
+          user_id: string
+        }
+        Insert: {
+          additional_feedback?: string | null
+          created_at?: string | null
+          feature_excel_integration?: boolean | null
+          feature_other?: string | null
+          feature_photo_attachment?: boolean | null
+          feature_print_layout?: boolean | null
+          feature_voice_input?: boolean | null
+          id?: string
+          nps_score: number
+          overall_satisfaction: number
+          survey_trigger: string
+          updated_at?: string | null
+          usability_better_ui?: boolean | null
+          usability_easier_input?: boolean | null
+          usability_faster_performance?: boolean | null
+          usability_other?: string | null
+          user_id: string
+        }
+        Update: {
+          additional_feedback?: string | null
+          created_at?: string | null
+          feature_excel_integration?: boolean | null
+          feature_other?: string | null
+          feature_photo_attachment?: boolean | null
+          feature_print_layout?: boolean | null
+          feature_voice_input?: boolean | null
+          id?: string
+          nps_score?: number
+          overall_satisfaction?: number
+          survey_trigger?: string
+          updated_at?: string | null
+          usability_better_ui?: boolean | null
+          usability_easier_input?: boolean | null
+          usability_faster_performance?: boolean | null
+          usability_other?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       kouden_return_summary: {

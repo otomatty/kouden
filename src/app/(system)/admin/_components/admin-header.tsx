@@ -15,7 +15,15 @@ import {
 import { Button } from "@/components/ui/button";
 import Container from "@/components/ui/container";
 import { AdminAppsMenu } from "./admin-apps-menu";
-import { LayoutDashboard, Briefcase, Users, FileText, LifeBuoy, BookOpen } from "lucide-react";
+import {
+	LayoutDashboard,
+	Briefcase,
+	Users,
+	FileText,
+	LifeBuoy,
+	BookOpen,
+	BarChart3,
+} from "lucide-react";
 
 interface AdminHeaderProps {
 	user: User;
@@ -27,6 +35,7 @@ const mainNavigation = [
 	{ name: "組織", href: "/admin/organizations", icon: Briefcase },
 	{ name: "ユーザー", href: "/admin/users", icon: Users },
 	{ name: "香典帳", href: "/admin/koudens", icon: BookOpen },
+	{ name: "アンケート分析", href: "/admin/analytics/surveys", icon: BarChart3 },
 	{ name: "オウンドメディア", href: "/admin/blog", icon: FileText },
 	{ name: "サポート", href: "/admin/support", icon: LifeBuoy },
 ];
