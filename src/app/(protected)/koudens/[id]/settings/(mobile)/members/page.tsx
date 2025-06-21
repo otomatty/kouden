@@ -1,5 +1,5 @@
 import React from "react";
-import { BackLink } from "@/components/custom/BackLink";
+import { BackLink } from "@/components/custom/back-link";
 import { MemberClientWrapper } from "./_components/member-client-wrapper";
 import { getMembers } from "@/app/_actions/members";
 

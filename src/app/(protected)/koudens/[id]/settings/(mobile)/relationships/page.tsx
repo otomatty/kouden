@@ -1,5 +1,5 @@
 import React from "react";
-import { BackLink } from "@/components/custom/BackLink";
+import { BackLink } from "@/components/custom/back-link";
 import { getRelationships } from "@/app/_actions/relationships";
 import { RelationshipCardList } from "./_components/relationship-card-list";
 

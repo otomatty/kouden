@@ -1,7 +1,6 @@
 "use client";
 
 import { ChevronLeft } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
@@ -31,10 +30,8 @@ interface BackLinkProps {
  * @param label - 表示するテキスト（デフォルト: "戻る"）
  */
 export function BackLink({ label = "戻る", href = "/" }: BackLinkProps) {
-	const router = useRouter();
-
 	return (
-		<Button variant="ghost" className="flex items-center gap-2 px-0" onClick={() => router.back()}>
+		<Button variant="ghost" asChild>
 			<Link
 				href={href}
 				className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group"

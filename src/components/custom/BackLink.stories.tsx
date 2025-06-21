@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { BackLink } from "./BackLink";
+import { BackLink } from "./back-link";
 
 const meta = {
 	title: "Components/BackLink",

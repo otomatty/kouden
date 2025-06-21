@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { BackLink } from "@/components/custom/BackLink";
+import { BackLink } from "@/components/custom/back-link";
 import Container from "@/components/ui/container";
 import {
 	HeroSection,
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default function DevelopersPage() {
 	return (
 		<Container className="py-8 max-w-5xl mx-auto">
-			<BackLink href="/" label="ホームに戻る" />
+			<BackLink href="/" label="トップページに戻る" />
 			<div className="mt-8 space-y-8">
 				<HeroSection />
 				<DevelopmentStorySection />

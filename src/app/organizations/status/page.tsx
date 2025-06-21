@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import Container from "@/components/ui/container";
 import StatusCardList from "./_components/StatusCardList";
 import ContactSection from "@/app/organizations/_components/ContactSection";
-import { BackLink } from "@/components/custom/BackLink";
+import { BackLink } from "@/components/custom/back-link";
 
 interface OrgStatus {
 	id: string;

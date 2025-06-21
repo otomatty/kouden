@@ -1,12 +1,11 @@
 "use client";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+
 import { KoudenTitle } from "./kouden-title";
 import { KoudenActionsMenu } from "../actions/kouden-actions-menu";
 import type { KoudenPermission } from "@/types/role";
 import { useState } from "react";
 import PlanUpgradeAlert from "./plan-upgrade-alert";
-import { BackLink } from "@/components/custom/BackLink";
+import { BackLink } from "@/components/custom/back-link";
 
 interface KoudenHeaderProps {
 	koudenId: string;
@@ -35,7 +34,7 @@ export default function KoudenHeader({
 	enableExcel,
 	remainingDays,
 	backLinkHref = "/koudens",
-	backLinkText = "一覧に戻る",
+	backLinkText = "香典帳一覧に戻る",
 }: KoudenHeaderProps) {
 	const [showAlert, setShowAlert] = useState(true);
 

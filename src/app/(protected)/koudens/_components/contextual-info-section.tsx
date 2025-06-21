@@ -19,6 +19,7 @@ import {
 import Link from "next/link";
 import type { Database } from "@/types/supabase";
 import type { Post } from "@/schemas/posts";
+import { RecentBookmarks } from "./recent-bookmarks";
 
 // 拡張した香典帳型（既存の型定義を参考）
 type Plan = Database["public"]["Tables"]["plans"]["Row"];
@@ -297,6 +298,9 @@ export const ContextualInfoSection = memo(function ContextualInfoSection({
 					</CardContent>
 				</Card>
 			)}
+
+			{/* 最近のブックマーク */}
+			<RecentBookmarks className="lg:col-span-2" />
 		</div>
 	);
 });
