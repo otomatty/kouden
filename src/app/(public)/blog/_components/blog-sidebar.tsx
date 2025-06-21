@@ -1,48 +1,23 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PopularPosts } from "@/components/blog/popular-posts";
+import { Eye, Bookmark, Calendar } from "lucide-react";
 import type { TPost } from "@/types/post";
 
 interface BlogSidebarProps {
-	popularPosts?: TPost[];
 	recentPosts?: TPost[];
 }
 
 /**
  * ブログサイドバーコンポーネント
+ * 人気記事、最新記事、カテゴリ一覧を表示
  */
-export function BlogSidebar({ popularPosts = [], recentPosts = [] }: BlogSidebarProps) {
+export function BlogSidebar({ recentPosts = [] }: BlogSidebarProps) {
 	return (
 		<aside className="space-y-6">
-			{/* 人気記事 */}
-			{popularPosts.length > 0 && (
-				<Card>
-					<CardHeader>
-						<CardTitle className="text-lg">人気記事</CardTitle>
-					</CardHeader>
-					<CardContent className="space-y-4">
-						{popularPosts.slice(0, 5).map((post, index) => (
-							<Link
-								key={post.id}
-								href={`/blog/${post.slug}`}
-								className="block hover:bg-muted/50 p-2 rounded transition-colors"
-							>
-								<div className="flex items-start gap-3">
-									<span className="text-lg font-bold text-primary mt-1 min-w-[24px]">
-										{index + 1}
-									</span>
-									<div className="flex-1 min-w-0">
-										<h3 className="font-medium line-clamp-2 text-sm mb-1">{post.title}</h3>
-										<p className="text-xs text-muted-foreground">
-											{post.published_at && new Date(post.published_at).toLocaleDateString("ja-JP")}
-										</p>
-									</div>
-								</div>
-							</Link>
-						))}
-					</CardContent>
-				</Card>
-			)}
+			{/* 人気記事 - 統計情報付き */}
+			<PopularPosts limit={5} showTabs={false} defaultPeriod="week" className="w-full" />
 
 			{/* 最新記事 */}
 			{recentPosts.length > 0 && (
@@ -55,13 +30,35 @@ export function BlogSidebar({ popularPosts = [], recentPosts = [] }: BlogSidebar
 							<Link
 								key={post.id}
 								href={`/blog/${post.slug}`}
-								className="block hover:bg-muted/50 p-2 rounded transition-colors"
+								className="block hover:bg-muted/50 p-3 rounded-lg transition-colors"
 							>
-								<h3 className="font-medium line-clamp-2 text-sm mb-2">{post.title}</h3>
-								<div className="flex items-center gap-2">
-									<span className="text-xs text-muted-foreground">
-										{post.published_at && new Date(post.published_at).toLocaleDateString("ja-JP")}
-									</span>
+								<h3 className="font-medium line-clamp-2 text-sm mb-2 leading-tight">
+									{post.title}
+								</h3>
+
+								{post.excerpt && (
+									<p className="text-xs text-muted-foreground line-clamp-2 mb-2">{post.excerpt}</p>
+								)}
+
+								<div className="flex items-center justify-between">
+									<div className="flex items-center gap-2">
+										{post.category && (
+											<Badge variant="outline" className="text-xs px-2 py-0.5">
+												{post.category}
+											</Badge>
+										)}
+										{post.published_at && (
+											<div className="flex items-center gap-1 text-xs text-muted-foreground">
+												<Calendar className="h-3 w-3" />
+												<span>
+													{new Date(post.published_at).toLocaleDateString("ja-JP", {
+														month: "short",
+														day: "numeric",
+													})}
+												</span>
+											</div>
+										)}
+									</div>
 								</div>
 							</Link>
 						))}
@@ -78,25 +75,25 @@ export function BlogSidebar({ popularPosts = [], recentPosts = [] }: BlogSidebar
 					<div className="space-y-2">
 						<Link
 							href="/blog?category=manners"
-							className="block text-sm hover:text-primary transition-colors"
+							className="block text-sm hover:text-primary transition-colors py-1"
 						>
 							香典のマナー
 						</Link>
 						<Link
 							href="/blog?category=funeral"
-							className="block text-sm hover:text-primary transition-colors"
+							className="block text-sm hover:text-primary transition-colors py-1"
 						>
 							葬儀の準備
 						</Link>
 						<Link
 							href="/blog?category=ceremony"
-							className="block text-sm hover:text-primary transition-colors"
+							className="block text-sm hover:text-primary transition-colors py-1"
 						>
 							法要について
 						</Link>
 						<Link
 							href="/blog?category=app"
-							className="block text-sm hover:text-primary transition-colors"
+							className="block text-sm hover:text-primary transition-colors py-1"
 						>
 							アプリの使い方
 						</Link>

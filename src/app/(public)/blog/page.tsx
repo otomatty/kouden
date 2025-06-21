@@ -50,7 +50,6 @@ export default async function BlogPage() {
 
 	// 記事を分類
 	const featuredPosts = posts.slice(0, 3); // 注目記事
-	const popularPosts = posts.slice(0, 5); // 人気記事（とりあえず最新5件）
 	const recentPosts = posts.slice(0, 8); // 最新記事
 	const allPosts = posts.slice(3); // その他の記事
 
@@ -88,7 +87,7 @@ export default async function BlogPage() {
 
 					{/* サイドバー */}
 					<div className="lg:col-span-1">
-						<BlogSidebar popularPosts={popularPosts} recentPosts={recentPosts} />
+						<BlogSidebar recentPosts={recentPosts} />
 					</div>
 				</div>
 			</Container>

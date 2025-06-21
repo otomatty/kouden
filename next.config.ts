@@ -39,7 +39,7 @@ const config: NextConfig = withPWA({
 	// 本番環境での最適化設定
 	compress: true,
 	poweredByHeader: false,
-	reactStrictMode: true,
+	reactStrictMode: false, // 一時的に無効化（デバッグ用）
 	// Next.js 15では不要な設定のため削除
 
 	// セキュリティヘッダーの設定

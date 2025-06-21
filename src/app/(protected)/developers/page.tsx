@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default function DevelopersPage() {
 	return (
 		<Container className="py-8 max-w-5xl mx-auto">
-			<BackLink />
+			<BackLink href="/" label="ホームに戻る" />
 			<div className="mt-8 space-y-8">
 				<HeroSection />
 				<DevelopmentStorySection />

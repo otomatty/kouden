@@ -28,9 +28,9 @@ export function SurveyTrigger({ trigger, shouldShow = false, onShown }: SurveyTr
 
 		isCheckingRef.current = true;
 		try {
-			// 既に回答済みかチェック
-			const surveyStatus = await getUserSurveyStatus();
-			if (surveyStatus.hasAnswered) {
+			// 既に回答済みかスキップ済みかチェック
+			const surveyStatus = await getUserSurveyStatus(trigger);
+			if (surveyStatus.hasAnswered || surveyStatus.isSkipped) {
 				return false;
 			}
 

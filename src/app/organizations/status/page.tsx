@@ -54,7 +54,7 @@ export default async function StatusPage() {
 
 	return (
 		<Container className="py-8">
-			<BackLink href="/organizations" />
+			<BackLink href="/organizations" label="組織一覧に戻る" />
 			<h1 className="text-xl font-bold mb-4">組織申請状況</h1>
 			<StatusCardList data={rows} />
 			<ContactSection />

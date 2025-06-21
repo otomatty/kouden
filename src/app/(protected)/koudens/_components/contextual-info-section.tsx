@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { Database } from "@/types/supabase";
+import type { Post } from "@/schemas/posts";
 
 // 拡張した香典帳型（既存の型定義を参考）
 type Plan = Database["public"]["Tables"]["plans"]["Row"];
@@ -31,6 +32,7 @@ type KoudenWithPlan = Database["public"]["Tables"]["koudens"]["Row"] & {
 
 interface ContextualInfoSectionProps {
 	koudens: KoudenWithPlan[];
+	blogPosts: Post[];
 	className?: string;
 }
 
@@ -61,37 +63,9 @@ interface InfoContent {
  */
 export const ContextualInfoSection = memo(function ContextualInfoSection({
 	koudens,
+	blogPosts,
 	className = "",
 }: ContextualInfoSectionProps) {
-	// モックデータ（実際の実装時はAPIから取得）
-	const mockBlogPosts = [
-		{
-			id: "1",
-			title: "香典の相場とマナー｜関係性別金額ガイド",
-			excerpt:
-				"親族、友人、職場関係など、故人との関係性に応じた香典の相場をわかりやすく解説します。",
-			category: "マナー",
-			href: "/blog/kouden-souba-manner",
-			publishedAt: "2024-01-15",
-		},
-		{
-			id: "2",
-			title: "返礼品の選び方｜予算別おすすめアイテム",
-			excerpt: "香典返しで喜ばれる返礼品の選び方と、予算に応じたおすすめ商品をご紹介します。",
-			category: "返礼品",
-			href: "/blog/henreihin-erabikata",
-			publishedAt: "2024-01-10",
-		},
-		{
-			id: "3",
-			title: "お礼状の正しい書き方｜文例付き完全ガイド",
-			excerpt: "心のこもったお礼状の書き方を、具体的な文例とともに詳しく解説します。",
-			category: "お礼状",
-			href: "/blog/oreijotext-kakikata",
-			publishedAt: "2024-01-05",
-		},
-	];
-
 	// コンテキストに応じたコンテンツを決定
 	const contextualContent = useMemo((): InfoContent => {
 		// 1. 香典帳がない場合 - はじめてガイド（最優先）
@@ -173,10 +147,23 @@ export const ContextualInfoSection = memo(function ContextualInfoSection({
 		};
 
 		const relevantCategories = categoryMap[contextualContent.type] || ["マナー"];
-		return mockBlogPosts
-			.filter((post) => relevantCategories.some((category) => post.category.includes(category)))
-			.slice(0, 2);
-	}, [contextualContent.type]);
+
+		// 実際のブログ記事データから関連記事を取得
+		return blogPosts
+			.filter(
+				(post) =>
+					post.category && relevantCategories.some((category) => post.category?.includes(category)),
+			)
+			.slice(0, 2)
+			.map((post) => ({
+				id: post.id,
+				title: post.title,
+				excerpt: post.excerpt || "",
+				category: post.category || "未分類",
+				href: `/blog/${post.slug}`,
+				publishedAt: post.published_at || post.created_at,
+			}));
+	}, [contextualContent.type, blogPosts]);
 
 	const getVariantStyles = (variant: InfoContent["variant"]) => {
 		switch (variant) {

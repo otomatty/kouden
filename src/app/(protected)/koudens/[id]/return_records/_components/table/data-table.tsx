@@ -18,10 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 
 // types
-import type {
-	ReturnManagementSummary,
-	BulkUpdateConfig,
-} from "@/types/return-records/return-records";
+import type { ReturnManagementSummary } from "@/types/return-records/return-records";
 import type { Relationship } from "@/types/relationships";
 import type { Entry } from "@/types/entries";
 import type { CellValue } from "@/types/data-table/table";
@@ -30,7 +27,6 @@ import type { CellValue } from "@/types/data-table/table";
 import {
 	deleteReturnRecords,
 	updateReturnRecordFieldByKoudenEntryId,
-	bulkUpdateReturnRecords,
 } from "@/app/_actions/return-records/return-records";
 
 // hooks

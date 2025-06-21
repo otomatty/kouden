@@ -123,9 +123,10 @@ export async function createUserSurvey(formData: UserSurveyFormInput, trigger: S
 
 /**
  * ユーザーのアンケート回答状況を取得
+ * @param trigger 特定のトリガーのスキップ状況もチェックする場合に指定
  * @returns アンケート回答状況
  */
-export async function getUserSurveyStatus(): Promise<SurveyStatus> {
+export async function getUserSurveyStatus(trigger?: SurveyTrigger): Promise<SurveyStatus> {
 	try {
 		const supabase = await createClient();
 
@@ -168,32 +169,38 @@ export async function getUserSurveyStatus(): Promise<SurveyStatus> {
 			return { hasAnswered: false };
 		}
 
-		if (!survey) {
-			return { hasAnswered: false };
+		if (survey) {
+			return {
+				hasAnswered: true,
+				surveyData: {
+					id: survey.id,
+					userId: survey.user_id,
+					surveyTrigger: survey.survey_trigger as SurveyTrigger,
+					overallSatisfaction: survey.overall_satisfaction,
+					npsScore: survey.nps_score,
+					usabilityEasierInput: survey.usability_easier_input ?? false,
+					usabilityBetterUi: survey.usability_better_ui ?? false,
+					usabilityFasterPerformance: survey.usability_faster_performance ?? false,
+					usabilityOther: survey.usability_other,
+					featureVoiceInput: survey.feature_voice_input ?? false,
+					featurePhotoAttachment: survey.feature_photo_attachment ?? false,
+					featureExcelIntegration: survey.feature_excel_integration ?? false,
+					featurePrintLayout: survey.feature_print_layout ?? false,
+					featureOther: survey.feature_other,
+					additionalFeedback: survey.additional_feedback,
+					createdAt: survey.created_at,
+					updatedAt: survey.updated_at,
+				},
+			};
 		}
 
-		return {
-			hasAnswered: true,
-			surveyData: {
-				id: survey.id,
-				userId: survey.user_id,
-				surveyTrigger: survey.survey_trigger as SurveyTrigger,
-				overallSatisfaction: survey.overall_satisfaction,
-				npsScore: survey.nps_score,
-				usabilityEasierInput: survey.usability_easier_input ?? false,
-				usabilityBetterUi: survey.usability_better_ui ?? false,
-				usabilityFasterPerformance: survey.usability_faster_performance ?? false,
-				usabilityOther: survey.usability_other,
-				featureVoiceInput: survey.feature_voice_input ?? false,
-				featurePhotoAttachment: survey.feature_photo_attachment ?? false,
-				featureExcelIntegration: survey.feature_excel_integration ?? false,
-				featurePrintLayout: survey.feature_print_layout ?? false,
-				featureOther: survey.feature_other,
-				additionalFeedback: survey.additional_feedback,
-				createdAt: survey.created_at,
-				updatedAt: survey.updated_at,
-			},
-		};
+		// 特定のトリガーが指定されている場合、スキップ状況もチェック
+		if (trigger) {
+			const isSkipped = await checkSurveySkipStatus(trigger);
+			return { hasAnswered: false, isSkipped };
+		}
+
+		return { hasAnswered: false };
 	} catch (error) {
 		console.error("アンケート状況確認エラー:", error);
 		return { hasAnswered: false };
@@ -202,8 +209,8 @@ export async function getUserSurveyStatus(): Promise<SurveyStatus> {
 
 /**
  * ユーザーがオーナーとして作成した香典帳で1週間経過したものがあるかチェック
- * かつ、まだアンケートに未回答かチェック
- * @returns 1週間経過した香典帳があり、アンケート未回答の場合true
+ * かつ、まだアンケートに未回答かつスキップしていないかチェック
+ * @returns 1週間経過した香典帳があり、アンケート未回答・未スキップの場合true
  */
 export async function checkOneWeekOwnershipSurvey(): Promise<boolean> {
 	try {
@@ -218,9 +225,9 @@ export async function checkOneWeekOwnershipSurvey(): Promise<boolean> {
 			return false;
 		}
 
-		// 既にアンケートに回答済みかチェック
-		const surveyStatus = await getUserSurveyStatus();
-		if (surveyStatus.hasAnswered) {
+		// 既にアンケートに回答済みかスキップ済みかチェック
+		const surveyStatus = await getUserSurveyStatus("one_week_usage");
+		if (surveyStatus.hasAnswered || surveyStatus.isSkipped) {
 			return false;
 		}
 
@@ -324,5 +331,121 @@ export async function getAdminSurveyAnalytics() {
 			success: false,
 			error: "予期しないエラーが発生しました",
 		};
+	}
+}
+
+/**
+ * アンケートスキップ記録を作成
+ * @param trigger アンケートトリガー種別
+ * @returns 成功/エラー結果
+ */
+export async function createSurveySkip(trigger: SurveyTrigger) {
+	try {
+		const supabase = await createClient();
+
+		// 認証確認
+		const {
+			data: { user },
+			error: authError,
+		} = await supabase.auth.getUser();
+		if (authError || !user) {
+			return {
+				success: false,
+				error: "認証が必要です。ログインしてからお試しください。",
+			};
+		}
+
+		// 有効期限内のスキップ記録があるかチェック
+		const { data: existingSkip, error: checkError } = await supabase
+			.from("user_survey_skips")
+			.select("id, expires_at")
+			.eq("user_id", user.id)
+			.eq("survey_trigger", trigger)
+			.gt("expires_at", new Date().toISOString())
+			.single();
+
+		if (checkError && checkError.code !== "PGRST116") {
+			console.error("既存スキップ記録確認エラー:", checkError);
+			return {
+				success: false,
+				error: "スキップ記録の確認に失敗しました。時間を置いてお試しください。",
+			};
+		}
+
+		if (existingSkip) {
+			return {
+				success: true,
+				message: "既にスキップ記録が存在します。",
+			};
+		}
+
+		// スキップ記録を作成
+		const { data: newSkip, error: insertError } = await supabase
+			.from("user_survey_skips")
+			.insert({
+				user_id: user.id,
+				survey_trigger: trigger,
+			})
+			.select()
+			.single();
+
+		if (insertError) {
+			console.error("スキップ記録作成エラー:", insertError);
+			return {
+				success: false,
+				error: "スキップ記録の作成に失敗しました。時間を置いてお試しください。",
+			};
+		}
+
+		return {
+			success: true,
+			data: newSkip,
+			message: "アンケートをスキップしました。1日後に再度表示される場合があります。",
+		};
+	} catch (error) {
+		console.error("アンケートスキップエラー:", error);
+		return {
+			success: false,
+			error: "予期しないエラーが発生しました。時間を置いてお試しください。",
+		};
+	}
+}
+
+/**
+ * ユーザーのアンケートスキップ状況をチェック
+ * @param trigger アンケートトリガー種別
+ * @returns スキップ中の場合true
+ */
+export async function checkSurveySkipStatus(trigger: SurveyTrigger): Promise<boolean> {
+	try {
+		const supabase = await createClient();
+
+		// 認証確認
+		const {
+			data: { user },
+			error: authError,
+		} = await supabase.auth.getUser();
+		if (authError || !user) {
+			return false;
+		}
+
+		// 有効期限内のスキップ記録があるかチェック
+		const { data: skipRecord, error: fetchError } = await supabase
+			.from("user_survey_skips")
+			.select("id, expires_at")
+			.eq("user_id", user.id)
+			.eq("survey_trigger", trigger)
+			.gt("expires_at", new Date().toISOString())
+			.single();
+
+		if (fetchError && fetchError.code !== "PGRST116") {
+			console.error("スキップ状況確認エラー:", fetchError);
+			return false;
+		}
+
+		return !!skipRecord;
+	} catch (error) {
+		console.error("スキップ状況チェックエラー:", error);
+		return false;
 	}
 }

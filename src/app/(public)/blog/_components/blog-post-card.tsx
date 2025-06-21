@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Calendar } from "lucide-react";
 import type { TPost } from "@/types/post";
 
 interface BlogPostCardProps {
@@ -42,9 +43,12 @@ export function BlogPostCard({ post, variant = "default", className = "" }: Blog
 					</div>
 				</CardHeader>
 				<CardContent className={variant === "compact" ? "pt-0" : ""}>
-					<p className="text-sm text-muted-foreground">
-						{post.published_at && new Date(post.published_at).toLocaleDateString("ja-JP")}
-					</p>
+					<div className="flex items-center gap-1 text-sm text-muted-foreground">
+						<Calendar className="h-4 w-4" />
+						<span>
+							{post.published_at && new Date(post.published_at).toLocaleDateString("ja-JP")}
+						</span>
+					</div>
 				</CardContent>
 			</Card>
 		</Link>

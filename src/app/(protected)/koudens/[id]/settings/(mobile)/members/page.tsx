@@ -13,7 +13,7 @@ export default async function MembersPage({ params }: MembersPageProps) {
 
 	return (
 		<div className="mx-auto py-4 space-y-4">
-			<BackLink href={`/koudens/${id}/settings`} />
+			<BackLink href={`/koudens/${id}/settings`} label="設定に戻る" />
 			<div>
 				<h2 className="text-2xl font-bold tracking-tight">メンバー設定</h2>
 				<p className="text-sm text-muted-foreground">メンバーの管理と権限の設定を行います</p>

@@ -17,8 +17,6 @@ import {
 import {
 	ArrowUpDown,
 	MoreHorizontal,
-	Eye,
-	Pen,
 	Trash,
 	MapPin,
 	Phone,
@@ -367,7 +365,7 @@ export function createColumns({
 				);
 			},
 			enableSorting: false,
-			size: 300,
+			size: 240,
 		},
 		{
 			accessorKey: "returnItemsCost",
@@ -400,6 +398,7 @@ export function createColumns({
 					</Badge>
 				);
 			},
+			size: 120,
 		},
 		{
 			id: "allocation_management",
@@ -448,7 +447,7 @@ export function createColumns({
 				);
 			},
 			enableSorting: false,
-			size: 120,
+			size: 160,
 		},
 		{
 			accessorKey: "shippingInfo",
@@ -518,7 +517,7 @@ export function createColumns({
 				);
 			},
 			enableSorting: false,
-			size: 300,
+			size: 280,
 		},
 		{
 			id: "actions",
@@ -564,7 +563,7 @@ export function createColumns({
 			},
 			enableSorting: false,
 			enableHiding: false,
-			size: 100,
+			size: 60,
 		},
 	];
 }

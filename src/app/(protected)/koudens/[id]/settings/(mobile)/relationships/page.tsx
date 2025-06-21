@@ -13,7 +13,7 @@ export default async function RelationshipsPage({ params }: RelationshipsPagePro
 
 	return (
 		<div className="container max-w-2xl mx-auto p-4 space-y-4">
-			<BackLink href={`/koudens/${id}/settings`} />
+			<BackLink href={`/koudens/${id}/settings`} label="設定に戻る" />
 			<div>
 				<h2 className="text-2xl font-bold tracking-tight">関係性設定</h2>
 				<p className="text-sm text-muted-foreground">香典帳の関係性の設定を管理します</p>

@@ -2202,6 +2202,105 @@ export type Database = {
         }
         Relationships: []
       }
+      post_bookmarks: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_bookmarks_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_stats: {
+        Row: {
+          bookmark_count: number
+          last_viewed_at: string | null
+          post_id: string
+          updated_at: string
+          view_count: number
+        }
+        Insert: {
+          bookmark_count?: number
+          last_viewed_at?: string | null
+          post_id: string
+          updated_at?: string
+          view_count?: number
+        }
+        Update: {
+          bookmark_count?: number
+          last_viewed_at?: string | null
+          post_id?: string
+          updated_at?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_stats_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: true
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_views: {
+        Row: {
+          id: string
+          ip_address: unknown | null
+          post_id: string
+          session_id: string | null
+          user_agent: string | null
+          user_id: string | null
+          viewed_at: string
+        }
+        Insert: {
+          id?: string
+          ip_address?: unknown | null
+          post_id: string
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+          viewed_at?: string
+        }
+        Update: {
+          id?: string
+          ip_address?: unknown | null
+          post_id?: string
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_views_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       posts: {
         Row: {
           author_id: string
@@ -2210,10 +2309,13 @@ export type Database = {
           created_at: string
           excerpt: string | null
           id: string
+          is_featured: boolean | null
+          meta_description: string | null
           organization_id: string
           published_at: string | null
           slug: string
           status: Database["public"]["Enums"]["post_status"]
+          tags: string[] | null
           title: string
           updated_at: string
         }
@@ -2224,10 +2326,13 @@ export type Database = {
           created_at?: string
           excerpt?: string | null
           id?: string
+          is_featured?: boolean | null
+          meta_description?: string | null
           organization_id: string
           published_at?: string | null
           slug: string
           status?: Database["public"]["Enums"]["post_status"]
+          tags?: string[] | null
           title: string
           updated_at?: string
         }
@@ -2238,10 +2343,13 @@ export type Database = {
           created_at?: string
           excerpt?: string | null
           id?: string
+          is_featured?: boolean | null
+          meta_description?: string | null
           organization_id?: string
           published_at?: string | null
           slug?: string
           status?: Database["public"]["Enums"]["post_status"]
+          tags?: string[] | null
           title?: string
           updated_at?: string
         }
@@ -2959,6 +3067,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_survey_skips: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          skipped_at: string
+          survey_trigger: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          skipped_at?: string
+          survey_trigger: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          skipped_at?: string
+          survey_trigger?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_surveys: {
         Row: {
           additional_feedback: string | null
@@ -3130,6 +3265,10 @@ export type Database = {
         }[]
       }
       cleanup_expired_locks: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      cleanup_expired_survey_skips: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }

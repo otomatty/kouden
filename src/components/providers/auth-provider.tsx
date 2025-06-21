@@ -5,7 +5,7 @@ import type { User } from "@supabase/supabase-js";
 import { userAtom, isLoadingUserAtom } from "@/store/auth";
 
 interface AuthProviderProps {
-	initialUser: User;
+	initialUser: User | null;
 	children: ReactNode;
 }
 

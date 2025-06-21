@@ -1,6 +1,9 @@
 import { Header } from "./_components/header";
 import { Footer } from "./_components/footer";
 import { MobileBottomNavigation } from "./_components/mobile-bottom-navigation";
+import { Provider } from "jotai";
+import { AuthProvider } from "@/components/providers/auth-provider";
+import { createClient } from "@/lib/supabase/server";
 import type { Metadata } from "next";
 
 // Version fetched from environment variable
@@ -12,13 +15,21 @@ export const metadata: Metadata = {
 		"香典帳は、香典や供物の記録、返礼品の管理をサポートするアプリです。家族との情報共有や、返礼品の相場確認、進捗管理など、大切な方への感謝の気持ちを形にするお手伝いをします。",
 };
 
-export default function PublicLayout({ children }: { children: React.ReactNode }) {
+export default async function PublicLayout({ children }: { children: React.ReactNode }) {
+	// 認証状態を取得（ログインしていなくても null を返すだけでエラーにはならない）
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
 	return (
-		<>
-			<Header version={version} />
-			<main className="mt-16 min-h-screen overflow-x-hidden">{children}</main>
-			<Footer />
-			<MobileBottomNavigation />
-		</>
+		<Provider>
+			<AuthProvider initialUser={user}>
+				<Header version={version} />
+				<main className="mt-16 min-h-screen">{children}</main>
+				<Footer />
+				<MobileBottomNavigation />
+			</AuthProvider>
+		</Provider>
 	);
 }

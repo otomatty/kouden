@@ -285,6 +285,7 @@ export function createColumns({ onDeleteRows, permission, koudenId, entries }: C
 					</OfferingAllocationDialog>
 				);
 			},
+			size: 160,
 		},
 		{
 			id: "actions",

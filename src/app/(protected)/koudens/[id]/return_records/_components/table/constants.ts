@@ -68,6 +68,7 @@ export const columnLabels: Record<string, string> = {
 	returnRecordUpdated: "更新日時",
 	remarks: "備考",
 	actions: "操作",
+	allocation_management: "配分管理",
 };
 
 // 検索オプションの定義

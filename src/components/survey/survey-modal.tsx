@@ -33,7 +33,7 @@ import {
 	type UserSurveyFormInput,
 	type SurveyTrigger,
 } from "@/schemas/user-surveys";
-import { createUserSurvey } from "@/app/_actions/user-surveys";
+import { createUserSurvey, createSurveySkip } from "@/app/_actions/user-surveys";
 
 interface SurveyModalProps {
 	trigger: SurveyTrigger;
@@ -185,6 +185,25 @@ export function SurveyModal({ trigger, isOpen, onClose, onSuccess }: SurveyModal
 		} catch (error) {
 			console.error("アンケート送信エラー:", error);
 			toast.error("送信中にエラーが発生しました。時間を置いてお試しください。");
+		} finally {
+			setIsSubmitting(false);
+		}
+	};
+
+	const handleSkip = async () => {
+		setIsSubmitting(true);
+		try {
+			const result = await createSurveySkip(trigger);
+
+			if (result.success) {
+				toast.success(result.message);
+				onClose();
+			} else {
+				toast.error(result.error);
+			}
+		} catch (error) {
+			console.error("アンケートスキップエラー:", error);
+			toast.error("スキップ中にエラーが発生しました。時間を置いてお試しください。");
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -474,8 +493,15 @@ export function SurveyModal({ trigger, isOpen, onClose, onSuccess }: SurveyModal
 									前へ
 								</Button>
 							) : (
-								<Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>
-									スキップ
+								<Button type="button" variant="ghost" onClick={handleSkip} disabled={isSubmitting}>
+									{isSubmitting ? (
+										<>
+											<Loader2 className="h-4 w-4 animate-spin" />
+											スキップ中...
+										</>
+									) : (
+										"スキップ"
+									)}
 								</Button>
 							)}
 

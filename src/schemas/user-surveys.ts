@@ -89,6 +89,7 @@ export type SurveyTrigger = "pdf_export" | "one_week_usage";
 // 回答状況の型定義
 export type SurveyStatus = {
 	hasAnswered: boolean;
+	isSkipped?: boolean;
 	surveyData?: UserSurveyInput & {
 		id: string;
 		userId: string;
