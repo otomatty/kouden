@@ -57,8 +57,9 @@ export const TourGuide = ({ children }: { children: React.ReactNode }) => {
 				smoothScroll: true,
 				overlayColor: "rgba(0, 0, 0, 0.6)",
 				progressText: "{{current}} / {{total}}",
-				nextBtnText: "次へ(→)",
-				prevBtnText: "(←)戻る",
+				nextBtnText: "次へ→",
+				prevBtnText: "←戻る",
+				doneBtnText: "終了",
 				allowClose: true,
 			});
 		} catch (error) {

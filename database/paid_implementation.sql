@@ -81,48 +81,48 @@ CREATE POLICY "public_select_plans" ON plans
   USING (true);
 CREATE POLICY "service_role_manage_plans" ON plans
   FOR ALL
-  USING (auth.role() = 'service_role');
+  USING ((select auth.role()) = 'service_role');
 
 -- 7. kouden_purchasesテーブルにRLSポリシーを設定
 ALTER TABLE kouden_purchases ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "select_own_purchases" ON kouden_purchases
   FOR SELECT
-  USING (user_id = auth.uid());
+  USING (user_id = (select auth.uid()));
 CREATE POLICY "insert_own_purchase" ON kouden_purchases
   FOR INSERT
-  WITH CHECK (user_id = auth.uid());
+  WITH CHECK (user_id = (select auth.uid()));
 CREATE POLICY "service_role_update_purchases" ON kouden_purchases
   FOR UPDATE
-  USING (auth.role() = 'service_role');
+  USING ((select auth.role()) = 'service_role');
 
 CREATE POLICY "service_role_delete_purchases" ON kouden_purchases
   FOR DELETE
-  USING (auth.role() = 'service_role');
+  USING ((select auth.role()) = 'service_role');
 
 -- 8. notificationsテーブルにRLSポリシーを設定
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "select_own_notifications" ON notifications
   FOR SELECT
-  USING (user_id = auth.uid());
+  USING (user_id = (select auth.uid()));
 CREATE POLICY "service_role_insert_notifications" ON notifications
   FOR INSERT
-  WITH CHECK (auth.role() = 'service_role');
+  WITH CHECK ((select auth.role()) = 'service_role');
 CREATE POLICY "service_role_update_notifications" ON notifications
   FOR UPDATE
-  USING (auth.role() = 'service_role');
+  USING ((select auth.role()) = 'service_role');
 
 CREATE POLICY "service_role_delete_notifications" ON notifications
   FOR DELETE
-  USING (auth.role() = 'service_role');
+  USING ((select auth.role()) = 'service_role');
 
 -- notification_typesテーブルにRLSポリシーを設定
 ALTER TABLE public.notification_types ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "select_notification_types_for_authenticated" ON public.notification_types
   FOR SELECT
-  USING (auth.role() = 'authenticated');
+  USING ((select auth.role()) = 'authenticated');
 CREATE POLICY "service_role_manage_notification_types" ON public.notification_types
   FOR ALL
-  USING (auth.role() = 'service_role');
+  USING ((select auth.role()) = 'service_role');
 
 -- 9. plansテーブル 初期データシード
 INSERT INTO plans (code, name, description, price) VALUES
