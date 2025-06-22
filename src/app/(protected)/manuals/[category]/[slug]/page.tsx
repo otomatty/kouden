@@ -56,7 +56,7 @@ export default async function DocsPage({
 					<hr className="my-4" />
 					{hasContent ? (
 						<>
-							<MDXRemote source={content} options={{ mdxOptions }} components={mdxComponents} />
+							<MDXRemote source={content} options={mdxOptions} components={mdxComponents} />
 
 							{/* 前/次ナビゲーション */}
 							<DocNavigation prevDoc={prevDoc} nextDoc={nextDoc} />
