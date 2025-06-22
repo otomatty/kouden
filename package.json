@@ -1,6 +1,6 @@
 {
 	"name": "kouden",
-	"version": "0.1.0",
+	"version": "0.1.3",
 	"private": true,
 	"scripts": {
 		"dev": "next dev -p 8788",
@@ -8,6 +8,10 @@
 		"start": "next start -p 8788",
 		"lint": "biome check",
 		"test": "vitest",
+		"test:cli": "vitest scripts",
+		"test:watch": "vitest --watch",
+		"test:coverage": "vitest --coverage",
+		"test:ui": "vitest --ui",
 		"db:types": "supabase gen types typescript --project-id tcqnsslsaizqwjuyvoyu --schema public,common,gift,funeral > src/types/supabase.d.ts",
 		"db:pull": "supabase db pull --project-id tcqnsslsaizqwjuyvoyu",
 		"db:push": "supabase db push --project-id tcqnsslsaizqwjuyvoyu",
@@ -15,7 +19,15 @@
 		"db:diff": "supabase db diff --project-id tcqnsslsaizqwjuyvoyu",
 		"storybook": "storybook dev -p 6006",
 		"build-storybook": "storybook build",
-		"test-storybook": "test-storybook"
+		"test-storybook": "test-storybook",
+		"docs": "bun scripts/docs-manager.js",
+		"changelog:create": "bun scripts/changelog-manager.js create",
+		"changelog:generate": "bun scripts/changelog-manager.js generate",
+		"changelog:generate-simple": "bun scripts/changelog-manager.js generate-simple",
+		"changelog:template": "bun scripts/changelog-manager.js template",
+		"milestone:create": "bun scripts/milestone-manager.js create",
+		"milestone:interactive": "bun scripts/milestone-manager.js interactive",
+		"milestone:template": "bun scripts/milestone-manager.js template"
 	},
 	"dependencies": {
 		"@firebase/auth": "^1.10.6",

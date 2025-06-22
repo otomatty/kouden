@@ -1,4 +1,5 @@
 import type { BlogMetadata, AIResponse } from "@/types/blog-ai-agent";
+import { GeminiClient } from "@/lib/gemini";
 
 interface CallAIParams {
 	userMessage: string;
@@ -25,7 +26,7 @@ export async function callAI(params: CallAIParams): Promise<AIResponse> {
 
 	// リクエストボディを構築
 	const requestBody = {
-		model: "gemini-2.5-flash",
+		model: GeminiClient.MODELS.FLASH,
 		prompt: userMessage,
 		context: {
 			metadata: {

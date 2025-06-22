@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-const fs = require("fs");
-const path = require("path");
+import fs from "node:fs";
+import path from "node:path";
 
 /**
  * プレミアム機能への参照をコードから削除する
@@ -24,7 +24,7 @@ class PremiumRefRemover {
 
 		const files = fs.readdirSync(dir);
 
-		files.forEach((file) => {
+		for (const file of files) {
 			const filePath = path.join(dir, file);
 			const stat = fs.statSync(filePath);
 
@@ -34,7 +34,7 @@ class PremiumRefRemover {
 			} else if (this.shouldProcessFile(file)) {
 				this.processFile(filePath);
 			}
-		});
+		}
 	}
 
 	/**
@@ -94,25 +94,20 @@ class PremiumRefRemover {
 			/import.*from.*['"].*nodemailer.*['"];?\n/g,
 		];
 
-		premiumImportPatterns.forEach((pattern) => {
-			content = content.replace(pattern, "");
-		});
-
-		return content;
+		return premiumImportPatterns.reduce((result, pattern) => result.replace(pattern, ""), content);
 	}
 
 	/**
 	 * プレミアム機能のコードブロックを削除
 	 */
 	removePremiumBlocks(content) {
-		// PREMIUM_START/PREMIUM_END ブロックを削除
-		content = content.replace(/\/\* PREMIUM_START \*\/[\s\S]*?\/\* PREMIUM_END \*\//g, "");
-		content = content.replace(/\/\/ PREMIUM_START[\s\S]*?\/\/ PREMIUM_END/g, "");
+		const patterns = [
+			/\/\* PREMIUM_START \*\/[\s\S]*?\/\* PREMIUM_END \*\//g,
+			/\/\/ PREMIUM_START[\s\S]*?\/\/ PREMIUM_END/g,
+			/<!-- PREMIUM_START -->[\s\S]*?<!-- PREMIUM_END -->/g,
+		];
 
-		// HTML コメント形式も対応
-		content = content.replace(/<!-- PREMIUM_START -->[\s\S]*?<!-- PREMIUM_END -->/g, "");
-
-		return content;
+		return patterns.reduce((result, pattern) => result.replace(pattern, ""), content);
 	}
 
 	/**
@@ -142,11 +137,7 @@ class PremiumRefRemover {
 			},
 		];
 
-		replacements.forEach(({ from, to }) => {
-			content = content.replace(from, to);
-		});
-
-		return content;
+		return replacements.reduce((result, { from, to }) => result.replace(from, to), content);
 	}
 
 	/**
@@ -160,11 +151,11 @@ class PremiumRefRemover {
 			/process\.env\.STRIPE_[A-Z_]+/g,
 		];
 
-		stripePatterns.forEach((pattern) => {
-			content = content.replace(pattern, "/* Stripe functionality removed in OSS version */");
-		});
-
-		return content;
+		return stripePatterns.reduce(
+			(result, pattern) =>
+				result.replace(pattern, "/* Stripe functionality removed in OSS version */"),
+			content,
+		);
 	}
 
 	/**
@@ -178,11 +169,10 @@ class PremiumRefRemover {
 			/process\.env\.GEMINI_API_KEY/g,
 		];
 
-		aiPatterns.forEach((pattern) => {
-			content = content.replace(pattern, "/* AI functionality removed in OSS version */");
-		});
-
-		return content;
+		return aiPatterns.reduce(
+			(result, pattern) => result.replace(pattern, "/* AI functionality removed in OSS version */"),
+			content,
+		);
 	}
 
 	/**
@@ -195,11 +185,10 @@ class PremiumRefRemover {
 			/process\.env\.FIREBASE_[A-Z_]+/g,
 		];
 
-		firebasePatterns.forEach((pattern) => {
-			content = content.replace(pattern, "/* Firebase Admin removed in OSS version */");
-		});
-
-		return content;
+		return firebasePatterns.reduce(
+			(result, pattern) => result.replace(pattern, "/* Firebase Admin removed in OSS version */"),
+			content,
+		);
 	}
 
 	/**
@@ -215,17 +204,8 @@ class PremiumRefRemover {
 			}
 
 			// 他のJSONファイルからプレミアム関連の設定を削除
-			if (jsonData.premium) {
-				delete jsonData.premium;
-			}
-			if (jsonData.stripe) {
-				delete jsonData.stripe;
-			}
-			if (jsonData.ai) {
-				delete jsonData.ai;
-			}
-
-			return JSON.stringify(jsonData, null, 2);
+			const { premium, stripe, ai, ...cleanData } = jsonData;
+			return JSON.stringify(cleanData, null, 2);
 		} catch (error) {
 			console.log(`⚠️  Skipping JSON processing for ${filePath}: ${error.message}`);
 			return content;
@@ -239,7 +219,7 @@ class PremiumRefRemover {
 		console.log("\n📊 Processing Summary:");
 		console.log(`📁 Processed files: ${this.processedFiles}`);
 		console.log(`✏️  Modified files: ${this.modifiedFiles}`);
-		console.log(`✅ Premium references removed successfully`);
+		console.log("✅ Premium references removed successfully");
 	}
 }
 
@@ -264,8 +244,8 @@ function main() {
 }
 
 // スクリプトが直接実行された場合
-if (require.main === module) {
+if (import.meta.url === new URL(import.meta.url).href) {
 	main();
 }
 
-module.exports = { PremiumRefRemover };
+export { PremiumRefRemover };

@@ -1,9 +1,6 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { type NextRequest, NextResponse } from "next/server";
+import { getGeminiModel, isGeminiConfigured, GEMINI_CONFIGS } from "@/lib/gemini";
 import { isAbstractInput, generateClarifyingQuestions } from "@/utils/blog-ai-agent";
-
-// Gemini APIクライアントを初期化
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 interface SuggestionOption {
 	id: string;
@@ -328,7 +325,7 @@ ${
 export async function POST(request: NextRequest) {
 	try {
 		// APIキーの確認
-		if (!process.env.GEMINI_API_KEY) {
+		if (!isGeminiConfigured()) {
 			return NextResponse.json({ error: "Gemini API key is not configured" }, { status: 500 });
 		}
 
@@ -365,16 +362,18 @@ export async function POST(request: NextRequest) {
 		// システムプロンプトを生成
 		const systemPrompt = generateSystemPrompt(context, tools, thinkingConfig, prompt);
 
-		// Gemini モデルを取得（標準的なModelParams使用）
-		const modelConfig = {
+		// Gemini モデルを取得
+		const geminiModel = getGeminiModel(
 			model,
-			generationConfig:
-				thinkingConfig?.enabled && tools.includes("thinking")
-					? { maxOutputTokens: thinkingConfig.maxThinkingTokens || 8000 }
-					: undefined,
-		};
-
-		const geminiModel = genAI.getGenerativeModel(modelConfig);
+			thinkingConfig?.enabled && tools.includes("thinking")
+				? {
+						generationConfig: {
+							...GEMINI_CONFIGS.THINKING.generationConfig,
+							maxOutputTokens: thinkingConfig.maxThinkingTokens || 4000,
+						},
+					}
+				: GEMINI_CONFIGS.DEFAULT,
+		);
 
 		// 最終的なプロンプトを構築
 		const fullPrompt = `${systemPrompt}

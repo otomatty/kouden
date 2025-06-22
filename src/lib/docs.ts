@@ -19,7 +19,7 @@ import { getCategoryOrder, getDocOrder } from "./docs-config";
  * category: "ドキュメントのカテゴリ"
  */
 
-const docsDirectory = path.join(process.cwd(), "src/docs");
+const docsDirectory = path.join(process.cwd(), "src/docs/manuals");
 
 export interface DocMeta {
 	title: string;

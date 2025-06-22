@@ -1,8 +1,5 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { type NextRequest, NextResponse } from "next/server";
-
-// Gemini APIクライアントを初期化
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+import { getGeminiModel, isGeminiConfigured, GEMINI_CONFIGS } from "@/lib/gemini";
 
 interface TranslateRequestBody {
 	text: string;
@@ -12,7 +9,7 @@ interface TranslateRequestBody {
 export async function POST(request: NextRequest) {
 	try {
 		// APIキーの確認
-		if (!process.env.GEMINI_API_KEY) {
+		if (!isGeminiConfigured()) {
 			return NextResponse.json({ error: "Gemini API key is not configured" }, { status: 500 });
 		}
 
@@ -23,8 +20,8 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json({ error: "Text is required" }, { status: 400 });
 		}
 
-		// Gemini モデルを取得
-		const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+		// Gemini モデルを取得（翻訳には正確性重視の設定を使用）
+		const model = getGeminiModel(undefined, GEMINI_CONFIGS.PRECISE);
 
 		// 翻訳プロンプトを構築
 		const prompt = `以下の日本語テキストを英語に翻訳してください。翻訳結果のみを返してください。追加の説明は不要です。

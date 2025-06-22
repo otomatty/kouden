@@ -2,6 +2,7 @@ import type { MDXComponents } from "mdx/types";
 import type React from "react";
 import Image from "next/image";
 import { generateHeaderId } from "@/utils/markdown-utils";
+import { AccordionMDX } from "@/components/ui/accordion-mdx";
 
 // ページごとのID管理用（ページ遷移時にリセット）
 let currentPageUsedIds = new Set<string>();
@@ -77,6 +78,8 @@ export const mdxComponents: MDXComponents = {
 	h4: createHeading(4),
 	h5: createHeading(5),
 	h6: createHeading(6),
+	// カスタムコンポーネント
+	Accordion: AccordionMDX,
 	// その他のカスタムコンポーネントも必要に応じて追加可能
 	p: ({ children, ...props }) => (
 		<p className="mb-6 leading-relaxed text-base" {...props}>

@@ -11,16 +11,26 @@ import {
 	NavigationMenuLink,
 	navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
-import { Cloud, BarChart2, FileText, Monitor, Gift, Lock, LayoutDashboard } from "lucide-react";
+import {
+	Cloud,
+	BarChart2,
+	FileText,
+	Monitor,
+	Gift,
+	Lock,
+	LayoutDashboard,
+	Calendar,
+	Book,
+} from "lucide-react";
 
 /** サイトの機能とその詳細ページ */
-interface Feature {
+interface NavSubItem {
 	title: string;
 	href: string;
 	description: string;
 	icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
 }
-const features: Feature[] = [
+const features: NavSubItem[] = [
 	{
 		title: "クラウド同期",
 		href: "/features/cloud-sync",

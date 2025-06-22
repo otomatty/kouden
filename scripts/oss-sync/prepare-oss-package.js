@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-const fs = require("fs");
-const path = require("path");
+import fs from "node:fs";
+import path from "node:path";
 
 /**
  * OSS版用のpackage.jsonを準備する
@@ -24,7 +24,7 @@ function prepareOSSPackage() {
 	];
 
 	// 依存関係から削除
-	premiumDependencies.forEach((dep) => {
+	for (const dep of premiumDependencies) {
 		if (packageJson.dependencies && packageJson.dependencies[dep]) {
 			delete packageJson.dependencies[dep];
 			console.log(`❌ Removed premium dependency: ${dep}`);
