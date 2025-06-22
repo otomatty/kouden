@@ -88,6 +88,7 @@ export default function MobileNavigation({
 				<button
 					type="button"
 					onClick={onActionClick}
+					data-tour="add-entry-button"
 					className="bg-primary text-white p-4 rounded-full shadow-lg"
 				>
 					<Plus className="w-6 h-6" />

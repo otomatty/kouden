@@ -131,6 +131,7 @@ export function BottomNavigation({ id, entries = [], relationships = [] }: Botto
 						entries={localEntries}
 						relationships={localRelationships}
 						onEntryCreated={handleEntryCreated}
+						data-tour="add-entry-button"
 					/>
 				),
 				label: "香典を登録",
@@ -144,6 +145,7 @@ export function BottomNavigation({ id, entries = [], relationships = [] }: Botto
 						entries={localEntries}
 						relationships={localRelationships}
 						onEntryCreated={handleEntryCreated}
+						data-tour="add-offering-button"
 					/>
 				),
 				label: "供物を追加",
@@ -157,6 +159,7 @@ export function BottomNavigation({ id, entries = [], relationships = [] }: Botto
 						entries={localEntries}
 						relationships={localRelationships}
 						onEntryCreated={handleEntryCreated}
+						data-tour="add-telegram-button"
 					/>
 				),
 				label: "弔電を追加",
@@ -174,6 +177,7 @@ export function BottomNavigation({ id, entries = [], relationships = [] }: Botto
 							// TODO: 発送状況の確認機能の実装
 							console.log("発送状況の確認");
 						}}
+						data-tour="check-delivery-status-button"
 					>
 						<PackageCheck className="h-6 w-6" />
 					</Button>
@@ -191,6 +195,7 @@ export function BottomNavigation({ id, entries = [], relationships = [] }: Botto
 							// TODO: PDF出力機能の実装
 							console.log("PDF出力");
 						}}
+						data-tour="export-pdf-button"
 					>
 						<FileDown className="h-6 w-6" />
 					</Button>
@@ -208,6 +213,7 @@ export function BottomNavigation({ id, entries = [], relationships = [] }: Botto
 							// TODO: ヘルプ表示機能の実装
 							console.log("ヘルプ表示");
 						}}
+						data-tour="help-button"
 					>
 						<HelpCircle className="h-6 w-6" />
 					</Button>
@@ -240,6 +246,7 @@ export function BottomNavigation({ id, entries = [], relationships = [] }: Botto
 		return (
 			<Link
 				href={`${basePath}/${tab.id}`}
+				data-tour={tab.id === "entries" ? "bottom-nav-entries" : undefined}
 				className={cn(
 					"flex-1 flex flex-col items-center justify-center gap-1 rounded-lg transition-colors p-1",
 					isActive

@@ -26,7 +26,11 @@ const ExportDropdown: React.FC<ExportDropdownProps> = ({ koudenId, enableExcel }
 			<Tooltip>
 				<TooltipTrigger asChild>
 					<DropdownMenuTrigger asChild>
-						<Button variant="outline" className="flex items-center gap-1">
+						<Button
+							variant="outline"
+							className="flex items-center gap-1"
+							data-tour="export-dropdown"
+						>
 							<Download className="w-4 h-4" />
 							ダウンロード
 						</Button>

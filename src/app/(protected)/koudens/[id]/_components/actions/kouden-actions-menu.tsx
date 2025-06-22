@@ -98,7 +98,12 @@ export function KoudenActionsMenu({
 						<Tooltip>
 							<TooltipTrigger asChild>
 								<span>
-									<Button variant="outline" disabled className="flex items-center gap-2 text-sm">
+									<Button
+										variant="outline"
+										disabled
+										className="flex items-center gap-2 text-sm"
+										data-tour="share-button"
+									>
 										<UserPlus className="h-4 w-4" />
 										<span>共有</span>
 									</Button>
@@ -109,7 +114,7 @@ export function KoudenActionsMenu({
 					) : (
 						<Tooltip>
 							<TooltipTrigger asChild>
-								<Button variant="outline" asChild>
+								<Button variant="outline" asChild data-tour="share-button">
 									<Link href={`/koudens/${koudenId}/members`}>
 										<UserPlus className="h-4 w-4" />
 										共有
@@ -124,7 +129,7 @@ export function KoudenActionsMenu({
 						<Tooltip>
 							<TooltipTrigger asChild>
 								<PopoverTrigger asChild>
-									<Button variant="outline">
+									<Button variant="outline" data-tour="more-actions-button">
 										<EllipsisVertical className="h-4 w-4" />
 									</Button>
 								</PopoverTrigger>
@@ -181,7 +186,7 @@ export function KoudenActionsMenu({
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<PopoverTrigger asChild>
-							<Button variant="ghost" className="h-8 w-8 p-0">
+							<Button variant="ghost" className="h-8 w-8 p-0" data-tour="more-actions-button">
 								<EllipsisVertical className="h-6 w-6" />
 							</Button>
 						</PopoverTrigger>
@@ -252,6 +257,7 @@ export function KoudenActionsMenu({
 													variant="outline"
 													disabled
 													className="flex items-center gap-2 text-sm"
+													data-tour="share-button"
 												>
 													<UserPlus className="h-4 w-4" />
 													<span>共有</span>
@@ -263,7 +269,7 @@ export function KoudenActionsMenu({
 								) : (
 									<Tooltip>
 										<TooltipTrigger asChild>
-											<Button variant="outline" asChild>
+											<Button variant="outline" asChild data-tour="share-button">
 												<Link href={`/koudens/${koudenId}/members`}>
 													<UserPlus className="h-4 w-4" />
 													共有

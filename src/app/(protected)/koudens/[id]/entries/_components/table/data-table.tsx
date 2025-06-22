@@ -478,7 +478,7 @@ export function DataTable({
 							sortValue={sortValue}
 							onSortChange={onSortChange}
 						>
-							<div className="flex items-center justify-end">
+							<div className="flex items-center justify-end" data-tour="add-entry-button">
 								{!isMobile && (
 									<EntryDialog
 										koudenId={koudenId}

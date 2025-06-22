@@ -100,13 +100,13 @@ export function EntryView({
 	return (
 		<>
 			{isMobile ? (
-				<>
+				<div data-tour="entries-card-list">
 					<EntryCardList
 						entries={displayEntries}
 						koudenId={koudenId}
 						relationships={relationships}
 					/>
-				</>
+				</div>
 			) : (
 				<>
 					<div data-tour="entries-table">
