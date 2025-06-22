@@ -17,6 +17,8 @@ import {
 	Settings,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+
 import { useState } from "react";
 import { UserMenu } from "./user-menu";
 import { NotificationsPopover } from "./notifications-popover";
@@ -43,7 +45,7 @@ export function Header({ user, isAdmin, version, notifications }: HeaderProps) {
 	};
 
 	return (
-		<header className="bg-white shadow">
+		<header className="bg-white shadow" data-tour="header">
 			<div className="container mx-auto px-4 py-4">
 				<div className="flex items-center justify-between">
 					<Link href="/koudens" className="hover:opacity-80 transition-opacity">
@@ -56,8 +58,26 @@ export function Header({ user, isAdmin, version, notifications }: HeaderProps) {
 					{/* デスクトップ表示 */}
 					<div className="hidden md:flex items-center space-x-6">
 						<div className="flex items-center space-x-2">
-							<NotificationsPopover notifications={notifications} />
-							<GuideMenu />
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<span className="inline-block">
+										<NotificationsPopover notifications={notifications} />
+									</span>
+								</TooltipTrigger>
+								<TooltipContent>
+									<p>通知を確認できます</p>
+								</TooltipContent>
+							</Tooltip>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<span className="inline-block">
+										<GuideMenu />
+									</span>
+								</TooltipTrigger>
+								<TooltipContent>
+									<p>操作方法を確認できます</p>
+								</TooltipContent>
+							</Tooltip>
 						</div>
 						<UserMenu user={user} isAdmin={isAdmin} />
 					</div>

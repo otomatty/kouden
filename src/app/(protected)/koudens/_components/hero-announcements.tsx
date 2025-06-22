@@ -91,7 +91,7 @@ export function HeroAnnouncements({
 	}
 
 	return (
-		<div className="relative">
+		<div className="relative" data-tour="hero-announcements">
 			<AnnouncementCard
 				announcement={currentAnnouncement}
 				onDismiss={handleDismiss}

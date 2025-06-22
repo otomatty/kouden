@@ -35,14 +35,16 @@ export function CreateButtonContainer({
 		switch (segment) {
 			case "entries":
 				return (
-					<EntryDialog
-						variant="create"
-						koudenId={koudenId}
-						relationships={relationships}
-						defaultValues={undefined}
-						onSuccess={onEntryCreated}
-						trigger={<CreateButton />}
-					/>
+					<div data-tour="add-entry-button">
+						<EntryDialog
+							variant="create"
+							koudenId={koudenId}
+							relationships={relationships}
+							defaultValues={undefined}
+							onSuccess={onEntryCreated}
+							trigger={<CreateButton />}
+						/>
+					</div>
 				);
 			case "offerings":
 				return (

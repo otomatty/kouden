@@ -48,7 +48,7 @@ export default function KoudenHeader({
 					onClose={() => setShowAlert(false)}
 				/>
 			)}
-			<div className="flex items-center justify-between">
+			<div className="flex items-center justify-between" data-tour="kouden-detail">
 				<KoudenTitle koudenId={koudenId} title={title} description={description} />
 				<KoudenActionsMenu
 					koudenId={koudenId}

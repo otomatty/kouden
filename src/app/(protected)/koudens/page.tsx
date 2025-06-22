@@ -65,7 +65,7 @@ async function KoudensPageContent({
 			<div className="space-y-4">
 				<div className="flex justify-between items-center">
 					<h2 className="text-2xl font-bold">香典帳一覧</h2>
-					<div className="flex items-center">
+					<div className="flex items-center" data-tour="create-kouden-button">
 						{/* Mobile: default size, full label */}
 						<Button asChild size="sm" className="flex items-center gap-2 md:hidden">
 							<Link href="/koudens/new">
@@ -83,7 +83,9 @@ async function KoudensPageContent({
 					</div>
 				</div>
 
-				<KoudenList koudens={koudens || []} />
+				<div data-tour="kouden-list">
+					<KoudenList koudens={koudens || []} />
+				</div>
 			</div>
 
 			{/* 情報セクション */}

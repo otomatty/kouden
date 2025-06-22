@@ -109,28 +109,30 @@ export function EntryView({
 				</>
 			) : (
 				<>
-					<DataTable
-						koudenId={koudenId}
-						entries={displayEntries}
-						duplicateFilter={showDuplicates}
-						onDuplicateFilterChange={_setShowDuplicates}
-						relationships={Array.isArray(relationships) ? relationships : []}
-						onDataChange={() => {}}
-						currentPage={currentPage}
-						pageSize={pageSize}
-						totalCount={totalCount}
-						onPageChange={() => {}}
-						onPageSizeChange={() => {}}
-						searchValue={searchInput}
-						onSearchChange={setSearchInput}
-						sortValue={sortValue}
-						onSortChange={setSortValue}
-						// date filter props
-						showDateFilter={true}
-						dateRange={dateRange}
-						onDateRangeChange={setDateRange}
-						isAdminMode={isAdminMode}
-					/>
+					<div data-tour="entries-table">
+						<DataTable
+							koudenId={koudenId}
+							entries={displayEntries}
+							duplicateFilter={showDuplicates}
+							onDuplicateFilterChange={_setShowDuplicates}
+							relationships={Array.isArray(relationships) ? relationships : []}
+							onDataChange={() => {}}
+							currentPage={currentPage}
+							pageSize={pageSize}
+							totalCount={totalCount}
+							onPageChange={() => {}}
+							onPageSizeChange={() => {}}
+							searchValue={searchInput}
+							onSearchChange={setSearchInput}
+							sortValue={sortValue}
+							onSortChange={setSortValue}
+							// date filter props
+							showDateFilter={true}
+							dateRange={dateRange}
+							onDateRangeChange={setDateRange}
+							isAdminMode={isAdminMode}
+						/>
+					</div>
 					{!isAdminMode && (
 						<>
 							<div ref={loadMoreRef} className="h-1" />

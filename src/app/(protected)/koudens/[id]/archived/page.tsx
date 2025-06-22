@@ -1,6 +1,6 @@
 import { getKouden, getKoudenWithPlan } from "@/app/_actions/koudens";
 import { notFound } from "next/navigation";
-import ArchivedPageClient from "./_components/ArchivedPageClient";
+import ArchivedPageClient from "./_components/archived-page-client";
 import { checkKoudenPermission } from "@/app/_actions/permissions";
 import type { KoudenPermission } from "@/types/role";
 

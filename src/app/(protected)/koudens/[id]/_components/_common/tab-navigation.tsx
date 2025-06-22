@@ -40,7 +40,7 @@ export default function TabNavigation({ koudenId }: { koudenId: string }) {
 	const basePath = isAdminMode ? `/admin/koudens/${koudenId}` : `/koudens/${koudenId}`;
 
 	return (
-		<nav className="hidden md:flex space-x-4 border-b mb-4">
+		<nav className="hidden md:flex space-x-4 border-b mb-4" data-tour="navigation-tabs">
 			{tabs.map((tab) => {
 				const href = `${basePath}/${tab.key}`;
 				const active = pathname === href;

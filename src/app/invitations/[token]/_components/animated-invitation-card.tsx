@@ -15,7 +15,7 @@ import { CalendarDays, Users, Info } from "lucide-react";
 import { AcceptInvitationButton } from "./accept-invitation-button";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { AuthForm } from "@/components/custom/AuthForm";
+import { AuthForm } from "@/components/custom/auth-form";
 
 interface AnimatedInvitationCardProps {
 	title: string;

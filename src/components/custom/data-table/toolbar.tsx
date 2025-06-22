@@ -183,7 +183,7 @@ export function DataTableToolbar<TData>({
 	};
 
 	return (
-		<div className="flex flex-col lg:flex-row gap-4">
+		<div className="flex flex-col lg:flex-row gap-4" data-tour="data-table-toolbar">
 			{/* 検索セクション */}
 			{showSearch && searchOptions.length > 0 && (
 				<GuideCard
@@ -311,71 +311,72 @@ export function DataTableToolbar<TData>({
 									</div>
 								}
 							>
-								<div className="flex-1 hover:border-primary/50 transition-colors">
-									<Select
-										value={sortValue ?? "default"}
-										onValueChange={(value) => {
-											if (onSortChange) {
-												onSortChange(value);
-											} else {
-												if (value === "default") {
-													table.resetSorting();
-													return;
+								<div className="flex items-center space-x-2">
+									<div className="flex-1 hover:border-primary/50 transition-colors">
+										<Select
+											value={sortValue ?? "default"}
+											onValueChange={(value) => {
+												if (onSortChange) {
+													onSortChange(value);
+												} else {
+													if (value === "default") {
+														table.resetSorting();
+														return;
+													}
+													const [field, direction] = value.split("_");
+													table.setSorting([
+														{
+															id: field ?? "",
+															desc: direction === "desc",
+														},
+													]);
 												}
-												const [field, direction] = value.split("_");
-												table.setSorting([
-													{
-														id: field ?? "",
-														desc: direction === "desc",
-													},
-												]);
-											}
-										}}
-									>
-										<SelectTrigger className="w-[160px] bg-background">
-											<SelectValue placeholder="並び替え" />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="default">
-												<div className="flex items-center gap-2">
-													<ArrowUpDown className="h-4 w-4" />
-													<div>並び替え</div>
-												</div>
-											</SelectItem>
-											{sortOptions
-												.filter((option) => {
-													const columnId = option.value.split("_")[0];
-													const column = table.getAllColumns().find((col) => col.id === columnId);
-													return column?.getIsVisible?.() ?? false;
-												})
-												.map((option) => (
-													<SelectItem key={option.value} value={option.value}>
-														{option.label}
-													</SelectItem>
-												))}
-										</SelectContent>
-									</Select>
+											}}
+										>
+											<SelectTrigger className="w-[160px] bg-background">
+												<SelectValue placeholder="並び替え" />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="default">
+													<div className="flex items-center gap-2">
+														<ArrowUpDown className="h-4 w-4" />
+														<div>並び替え</div>
+													</div>
+												</SelectItem>
+												{sortOptions
+													.filter((option) => {
+														const columnId = option.value.split("_")[0];
+														const column = table.getAllColumns().find((col) => col.id === columnId);
+														return column?.getIsVisible?.() ?? false;
+													})
+													.map((option) => (
+														<SelectItem key={option.value} value={option.value}>
+															{option.label}
+														</SelectItem>
+													))}
+											</SelectContent>
+										</Select>
+									</div>
+									{showScopeSelection &&
+										onViewScopeChange &&
+										onMemberSelectionChange &&
+										members.length > 0 && (
+											<DisplaySettings
+												viewScope={viewScope}
+												onViewScopeChange={(scope) => onViewScopeChange?.(scope)}
+												members={members}
+												selectedMemberIds={selectedMemberIds}
+												onMemberSelectionChange={onMemberSelectionChange}
+												// 作成日フィルター
+												showDateFilter={showDateFilter}
+												dateRange={dateRange}
+												onDateRangeChange={onDateRangeChange}
+												// 複製エントリフィルター
+												duplicateFilter={duplicateFilter}
+												onDuplicateFilterChange={onDuplicateFilterChange}
+											/>
+										)}
 								</div>
-								{/* タグによる表示対象切り替えとメンバー選択 */}
-								{showScopeSelection &&
-									onViewScopeChange &&
-									onMemberSelectionChange &&
-									members.length > 0 && (
-										<DisplaySettings
-											viewScope={viewScope}
-											onViewScopeChange={(scope) => onViewScopeChange?.(scope)}
-											members={members}
-											selectedMemberIds={selectedMemberIds}
-											onMemberSelectionChange={onMemberSelectionChange}
-											// 作成日フィルター
-											showDateFilter={showDateFilter}
-											dateRange={dateRange}
-											onDateRangeChange={onDateRangeChange}
-											// 複製エントリフィルター
-											duplicateFilter={duplicateFilter}
-											onDuplicateFilterChange={onDuplicateFilterChange}
-										/>
-									)}
 							</GuideCard>
 						)}
 						{/* 表示列のカスタマイズ */}

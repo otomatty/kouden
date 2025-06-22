@@ -228,7 +228,7 @@ export const QuickHelpArea = memo(function QuickHelpArea({
 	};
 
 	return (
-		<Card className={cn("", className)}>
+		<Card data-tour="quick-help-area" className={cn("", className)}>
 			<CardHeader className="pb-4">
 				<CardTitle className="text-lg font-semibold flex items-center gap-2">
 					<HelpCircle className="h-5 w-5 text-primary" />

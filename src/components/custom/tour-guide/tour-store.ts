@@ -1,9 +1,5 @@
 import { atom } from "jotai";
-
-interface TourState {
-	isActive: boolean;
-	currentPage: string;
-}
+import type { TourState } from "@/types/tour";
 
 export const tourStateAtom = atom<TourState>({
 	isActive: false,

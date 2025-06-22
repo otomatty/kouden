@@ -65,7 +65,10 @@ export function InvitationSuccessAlert({ status }: InvitationSuccessAlertProps) 
 	};
 
 	return (
-		<Alert className="border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200">
+		<Alert
+			data-tour="invitation-success-alert"
+			className="border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200"
+		>
 			{content.icon}
 			<AlertTitle className="flex items-center justify-between">
 				{content.title}

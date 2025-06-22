@@ -193,7 +193,7 @@ export const ContextualInfoSection = memo(function ContextualInfoSection({
 	};
 
 	return (
-		<div className={`space-y-6 ${className}`}>
+		<div data-tour="contextual-info-section" className={`space-y-6 ${className}`}>
 			{/* メインコンテンツカード */}
 			<Card
 				className={`${getVariantStyles(contextualContent.variant)} transition-all duration-200`}

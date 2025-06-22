@@ -5,8 +5,8 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { getKoudenForAdmin, getKoudenWithPlanForAdmin } from "@/app/_actions/koudens/read";
 import { checkAdminPermission } from "@/app/_actions/admin/permissions";
-import KoudenHeader from "@/app/(protected)/koudens/[id]/_components/_common/KoudenHeader";
-import TabNavigation from "@/app/(protected)/koudens/[id]/_components/_common/TabNavigation";
+import KoudenHeader from "@/app/(protected)/koudens/[id]/_components/_common/kouden-header";
+import TabNavigation from "@/app/(protected)/koudens/[id]/_components/_common/tab-navigation";
 import type { Kouden } from "@/types/kouden";
 import type { KoudenPermission } from "@/types/role";
 

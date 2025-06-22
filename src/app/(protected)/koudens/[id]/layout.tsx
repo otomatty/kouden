@@ -7,8 +7,8 @@ import { getKouden, getKoudenWithPlan } from "@/app/_actions/koudens";
 // components
 import { notFound, redirect } from "next/navigation";
 import ArchivedPage from "./archived/page";
-import KoudenHeader from "./_components/_common/KoudenHeader";
-import TabNavigation from "./_components/_common/TabNavigation";
+import KoudenHeader from "./_components/_common/kouden-header";
+import TabNavigation from "./_components/_common/tab-navigation";
 import { BottomNavigation } from "@/components/custom/bottom-navigation";
 import type { Kouden } from "@/types/kouden";
 

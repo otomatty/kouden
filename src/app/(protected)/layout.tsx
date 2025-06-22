@@ -4,7 +4,8 @@ import { ensureProfile } from "@/app/_actions/auth";
 import { isAdmin } from "@/app/_actions/admin/permissions";
 import { getUserSettings } from "@/app/_actions/settings";
 import { InitializeGuideMode } from "@/components/providers/initialize-guide-mode";
-import { TourGuide } from "@/components/custom/TourGuide/TourGuide";
+import { TourGuide } from "@/components/custom/tour-guide";
+import { WelcomeTourInitializer } from "@/components/custom/tour-guide/welcome-tour-initializer";
 import { LoadingProvider } from "@/components/custom/loading-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { Provider } from "jotai";
@@ -55,9 +56,10 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
 	return (
 		<LoadingProvider>
 			<Toaster />
-			<InitializeGuideMode initialValue={guideMode}>
-				<TourGuide>
-					<Provider>
+			<Provider>
+				<InitializeGuideMode initialValue={guideMode}>
+					<TourGuide>
+						<WelcomeTourInitializer />
 						<AuthProvider initialUser={user}>
 							<ProtectedClientLayout
 								user={user}
@@ -68,9 +70,9 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
 								{children}
 							</ProtectedClientLayout>
 						</AuthProvider>
-					</Provider>
-				</TourGuide>
-			</InitializeGuideMode>
+					</TourGuide>
+				</InitializeGuideMode>
+			</Provider>
 		</LoadingProvider>
 	);
 }

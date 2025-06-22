@@ -1,6 +1,6 @@
 "use client";
 
-import { AuthForm } from "@/components/custom/AuthForm";
+import { AuthForm } from "@/components/custom/auth-form";
 import { useSearchParams } from "next/navigation";
 
 export function LoginForm() {
