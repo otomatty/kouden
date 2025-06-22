@@ -10,7 +10,7 @@ const footerLinks = {
 	],
 	info: [
 		{ name: "マイルストーン", href: "/milestones" },
-		{ name: "変更履歴", href: "/changelogs" },
+		{ name: "更新履歴", href: "/changelogs" },
 		{ name: "ブログ", href: "/blog" },
 	],
 	support: [
