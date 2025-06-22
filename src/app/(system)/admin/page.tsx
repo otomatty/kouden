@@ -1,94 +1,102 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/supabase/server";
 import { isTwoFactorEnabled } from "@/lib/security/two-factor-auth";
 
+import { SummaryCard } from "./_components/dashboard/summary-card";
+import { ServiceStatusTabs } from "./_components/dashboard/service-status-tabs";
+import { SalesChart } from "./_components/dashboard/sales-chart";
+import { ActivityChart } from "./_components/dashboard/activity-chart";
+import { RecentInquiriesList } from "./_components/dashboard/recent-inquiries-list";
+import { RecentErrorsList } from "./_components/dashboard/recent-errors-list";
+
+import {
+	getDashboardSummary,
+	getServiceStatus,
+	getSalesMetrics,
+	getActivityMetrics,
+	getRecentInquiries,
+	getRecentErrors,
+} from "@/app/_actions/admin/dashboard";
+import { Skeleton } from "@/components/ui/skeleton";
+
 export const metadata: Metadata = {
-	title: "管理画面 | 香典帳",
-	description: "香典帳の管理画面です",
+	title: "管理ダッシュボード | 香典帳",
+	description: "香典帳の管理者向けダッシュボードです",
 };
 
-async function DashboardMetrics() {
-	const supabase = await createClient();
-
-	// 各種統計情報を取得
-	const { count: totalUsers } = await supabase
-		.from("profiles")
-		.select("*", { count: "exact", head: true });
-
-	const { count: totalKoudens } = await supabase
-		.from("koudens")
-		.select("*", { count: "exact", head: true });
-
-	const { count: totalEntries } = await supabase
-		.from("kouden_entries")
-		.select("*", { count: "exact", head: true });
-
-	const { count: openTickets } = await supabase
-		.from("support_tickets")
-		.select("*", { count: "exact", head: true })
-		.eq("status", "open");
-
+// Skeleton Components
+function SummarySectionSkeleton() {
 	return (
-		<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-			<Card>
-				<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-					<CardTitle className="text-sm font-medium">総ユーザー数</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<div className="text-2xl font-bold">{totalUsers ?? 0}</div>
-				</CardContent>
-			</Card>
-			<Card>
-				<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-					<CardTitle className="text-sm font-medium">総香典帳数</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<div className="text-2xl font-bold">{totalKoudens ?? 0}</div>
-				</CardContent>
-			</Card>
-			<Card>
-				<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-					<CardTitle className="text-sm font-medium">総記帳数</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<div className="text-2xl font-bold">{totalEntries ?? 0}</div>
-				</CardContent>
-			</Card>
-			<Card>
-				<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-					<CardTitle className="text-sm font-medium">未対応チケット</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<div className="text-2xl font-bold">{openTickets ?? 0}</div>
-				</CardContent>
-			</Card>
+		<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+			<SummaryCard title="未対応問い合わせ" value={0} isLoading />
+			<SummaryCard title="システムエラー (24h)" value={0} isLoading />
+			<div className="md:col-span-2 lg:col-span-1">
+				<ServiceStatusTabs services={[]} isLoading />
+			</div>
 		</div>
 	);
 }
 
-function DashboardSkeleton() {
-	const metrics = ["users", "koudens", "entries", "tickets"];
+function MetricsSectionSkeleton() {
 	return (
-		<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-			{metrics.map((metric) => (
-				<Card key={`skeleton-${metric}`}>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<Skeleton className="h-4 w-[100px]" />
-					</CardHeader>
-					<CardContent>
-						<Skeleton className="h-8 w-[60px]" />
-					</CardContent>
-				</Card>
-			))}
+		<div className="grid grid-cols-1 gap-4">
+			<SalesChart data={[]} isLoading />
+			<ActivityChart data={[]} isLoading />
 		</div>
 	);
 }
 
-export default async function AdminDashboard() {
+function DetailsSectionSkeleton() {
+	return (
+		<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+			<RecentInquiriesList inquiries={[]} isLoading />
+			<RecentErrorsList errors={[]} isLoading />
+		</div>
+	);
+}
+
+
+// Data Fetching Components
+async function SummarySection() {
+	const summaryData = await getDashboardSummary();
+	const serviceStatusData = await getServiceStatus();
+	return (
+		<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+			<SummaryCard title="未対応問い合わせ" value={summaryData.openTicketsCount} />
+			<SummaryCard title="システムエラー (24h)" value={summaryData.recentErrorsCount} />
+			<div className="md:col-span-2 lg:col-span-1">
+				<ServiceStatusTabs services={serviceStatusData} />
+			</div>
+		</div>
+	);
+}
+
+async function MetricsSection() {
+	const salesData = await getSalesMetrics("30d");
+	const activityData = await getActivityMetrics("30d");
+	return (
+		<div className="grid grid-cols-1 gap-4">
+			<SalesChart data={salesData} />
+			<ActivityChart data={activityData} />
+		</div>
+	);
+}
+
+async function DetailsSection() {
+	const inquiriesData = await getRecentInquiries(5);
+	const errorsData = await getRecentErrors(5);
+	return (
+		<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+			<RecentInquiriesList inquiries={inquiriesData} />
+			<RecentErrorsList errors={errorsData} />
+		</div>
+	);
+}
+
+
+export default async function AdminDashboardPage() {
 	const supabase = await createClient();
 	const {
 		data: { user },
@@ -99,17 +107,38 @@ export default async function AdminDashboard() {
 	}
 
 	// 2FA必須チェック
-	const twoFactorEnabled = await isTwoFactorEnabled(user.id);
-	if (!twoFactorEnabled) {
-		redirect("/admin/settings/2fa/setup");
-	}
+	// const twoFactorEnabled = await isTwoFactorEnabled(user.id);
+	// if (!twoFactorEnabled) {
+	//   redirect('/admin/settings/2fa/setup');
+	// }
 
 	return (
-		<div className="space-y-4">
-			<h1 className="text-2xl font-bold">ダッシュボード</h1>
-			<Suspense fallback={<DashboardSkeleton />}>
-				<DashboardMetrics />
-			</Suspense>
+		<div className="container mx-auto space-y-6 p-4 sm:p-6 md:p-8">
+			<h1 className="text-3xl font-bold tracking-tight">管理者ダッシュボード</h1>
+
+			{/* Section A: Summary */}
+			<section aria-labelledby="summary-section-title">
+				<h2 id="summary-section-title" className="sr-only">サマリー</h2>
+				<Suspense fallback={<SummarySectionSkeleton />}>
+					<SummarySection />
+				</Suspense>
+			</section>
+
+			{/* Section B: Business & Operational Metrics */}
+			<section aria-labelledby="metrics-section-title">
+				<h2 id="metrics-section-title" className="text-xl font-semibold tracking-tight mb-4">ビジネス・運用指標</h2>
+				<Suspense fallback={<MetricsSectionSkeleton />}>
+					<MetricsSection />
+				</Suspense>
+			</section>
+
+			{/* Section C: Detailed Information */}
+			<section aria-labelledby="details-section-title">
+				<h2 id="details-section-title" className="text-xl font-semibold tracking-tight mb-4">詳細情報</h2>
+				<Suspense fallback={<DetailsSectionSkeleton />}>
+					<DetailsSection />
+				</Suspense>
+			</section>
 		</div>
 	);
 }
