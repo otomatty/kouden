@@ -1,18 +1,23 @@
 import type { MDXComponents } from "mdx/types";
 import type React from "react";
-import { useId } from "react";
 import Image from "next/image";
+import { generateHeaderId } from "@/utils/markdown-utils";
 
-/**
- * タイトルからヘッディングIDを生成する（toc.tsと同じロジック）
- */
-function generateHeadingId(title: string): string {
-	return title
-		.toLowerCase()
-		.replace(/[^\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s-]/g, "")
-		.replace(/\s+/g, "-")
-		.replace(/^-+|-+$/g, "")
-		.slice(0, 50);
+// ページごとのID管理用（ページ遷移時にリセット）
+let currentPageUsedIds = new Set<string>();
+
+// ページ遷移時のリセット用
+if (typeof window !== "undefined") {
+	// ページ遷移時にリセット
+	const resetIds = () => {
+		currentPageUsedIds = new Set<string>();
+	};
+
+	// popstateイベントでリセット
+	window.addEventListener("popstate", resetIds);
+
+	// ページロード時もリセット
+	window.addEventListener("load", resetIds);
 }
 
 /**
@@ -24,15 +29,25 @@ const createHeading = (level: 1 | 2 | 3 | 4 | 5 | 6) => {
 		...props
 	}: { children: React.ReactNode } & React.HTMLAttributes<HTMLHeadingElement>) => {
 		const Tag = `h${level}` as React.ElementType;
-		const uniqueId = useId();
 
-		// 一意のIDを生成（TOCと整合性を保つため、タイトル + uniqueIdを使用）
-		const baseId = typeof children === "string" ? generateHeadingId(children) : "heading";
-		const id = `${baseId}-${uniqueId.replace(/:/g, "-")}`;
+		// テキストコンテンツを抽出
+		const textContent = typeof children === "string" ? children : String(children);
+
+		// ブログ機能と同じID生成ロジックを使用
+		const baseId = generateHeaderId(textContent);
+		let uniqueId = baseId;
+		let counter = 1;
+
+		// 重複回避
+		while (currentPageUsedIds.has(uniqueId)) {
+			uniqueId = `${baseId}-${counter}`;
+			counter++;
+		}
+		currentPageUsedIds.add(uniqueId);
 
 		return (
 			<Tag
-				id={id}
+				id={uniqueId}
 				className={`scroll-mt-20 ${
 					level === 1
 						? "text-3xl font-bold mb-8 mt-8"

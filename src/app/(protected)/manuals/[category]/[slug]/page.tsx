@@ -5,7 +5,6 @@ import { mdxOptions } from "@/lib/mdx";
 import { BreadcrumbNav } from "../../_components/breadcrumb-nav";
 import { TableOfContents } from "../../_components/table-of-contents";
 import { DocNavigation } from "../../_components/doc-navigation";
-import { extractTocFromMdx, normalizeToc } from "@/lib/toc";
 import { mdxComponents } from "@/lib/mdx-components";
 
 type PageParams = Promise<{
@@ -42,9 +41,8 @@ export default async function DocsPage({
 	const prevDoc = currentIndex > 0 ? allDocs[currentIndex - 1] : null;
 	const nextDoc = currentIndex < allDocs.length - 1 ? allDocs[currentIndex + 1] : null;
 
-	// 目次を抽出
-	const rawToc = extractTocFromMdx(content);
-	const toc = normalizeToc(rawToc);
+	// コンテンツが空の場合の処理
+	const hasContent = content && content.trim().length > 0;
 
 	return (
 		<>
@@ -56,16 +54,27 @@ export default async function DocsPage({
 					<h1>{meta.title}</h1>
 					<p className="text-muted-foreground">{meta.description}</p>
 					<hr className="my-4" />
-					<MDXRemote source={content} options={{ mdxOptions }} components={mdxComponents} />
+					{hasContent ? (
+						<>
+							<MDXRemote source={content} options={{ mdxOptions }} components={mdxComponents} />
 
-					{/* 前/次ナビゲーション */}
-					<DocNavigation prevDoc={prevDoc} nextDoc={nextDoc} />
+							{/* 前/次ナビゲーション */}
+							<DocNavigation prevDoc={prevDoc} nextDoc={nextDoc} />
+						</>
+					) : (
+						<div className="text-center py-12">
+							<p className="text-muted-foreground text-lg">
+								マニュアルの内容がまだ準備されていません。
+							</p>
+							<p className="text-muted-foreground text-sm mt-2">しばらくお待ちください。</p>
+						</div>
+					)}
 				</article>
 
 				{/* 目次（デスクトップのみ） */}
-				{toc.length > 0 && (
-					<aside className="hidden lg:block w-64 shrink-0">
-						<TableOfContents toc={toc} />
+				{hasContent && (
+					<aside className="hidden lg:block lg:col-span-1 relative">
+						<TableOfContents content={content} className="sticky top-4 lg:top-8" />
 					</aside>
 				)}
 			</div>

@@ -2,15 +2,45 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { extractHeaders, type TocItem } from "@/utils/markdown-utils";
 
 interface UseTableOfContentsOptions {
-	content: string;
+	content?: string;
 	scrollOffset?: number;
+	extractFromDOM?: boolean;
+}
+
+/**
+ * DOMから見出しを抽出する関数（MDX用）
+ */
+function extractHeadersFromDOM(): TocItem[] {
+	const headingElements = document.querySelectorAll("h1, h2, h3, h4, h5, h6");
+	const headers: TocItem[] = [];
+
+	for (const element of headingElements) {
+		const level = Number.parseInt(element.tagName.charAt(1));
+		const text = element.textContent || "";
+		const id = element.id || "";
+
+		if (id && text && level >= 1 && level <= 3) {
+			// h1-h3のみ
+			headers.push({
+				id,
+				text,
+				level,
+			});
+		}
+	}
+
+	return headers;
 }
 
 /**
  * 目次機能のカスタムフック
  * スクロール同期とアクティブ項目の自動スクロール機能を提供
  */
-export function useTableOfContents({ content, scrollOffset = 100 }: UseTableOfContentsOptions) {
+export function useTableOfContents({
+	content = "",
+	scrollOffset = 100,
+	extractFromDOM = false,
+}: UseTableOfContentsOptions) {
 	const [tocItems, setTocItems] = useState<TocItem[]>([]);
 	const [activeId, setActiveId] = useState<string>("");
 	const tocContainerRef = useRef<HTMLDivElement>(null);
@@ -19,13 +49,28 @@ export function useTableOfContents({ content, scrollOffset = 100 }: UseTableOfCo
 	const isScrollingRef = useRef(false);
 	const isClickScrollingRef = useRef(false);
 
-	// ヘッダー抽出とスクロールイベントの設定
+	// ヘッダー抽出
 	useEffect(() => {
+		if (extractFromDOM || !content) {
+			// DOMから抽出（MDX用）
+			const timer = setTimeout(() => {
+				const headers = extractHeadersFromDOM();
+				setTocItems(headers);
+			}, 100);
+
+			return () => clearTimeout(timer);
+		}
+		// Markdownから抽出（ブログ用）
 		const headers = extractHeaders(content);
 		setTocItems(headers);
+	}, [content, extractFromDOM]);
+
+	// スクロールイベントの設定
+	useEffect(() => {
+		if (tocItems.length === 0) return;
 
 		const handleScroll = () => {
-			const headingElements = headers
+			const headingElements = tocItems
 				.map((item) => document.getElementById(item.id))
 				.filter(Boolean) as HTMLElement[];
 
@@ -54,7 +99,7 @@ export function useTableOfContents({ content, scrollOffset = 100 }: UseTableOfCo
 					!isScrollingRef.current &&
 					!isClickScrollingRef.current
 				) {
-					syncTocScroll(activeIndex, headers.length);
+					syncTocScroll(activeIndex, tocItems.length);
 				}
 			}
 		};
@@ -76,7 +121,7 @@ export function useTableOfContents({ content, scrollOffset = 100 }: UseTableOfCo
 				clearTimeout(scrollTimeoutRef.current);
 			}
 		};
-	}, [content, scrollOffset, activeId]);
+	}, [tocItems, scrollOffset, activeId]);
 
 	// 目次の同期スクロール関数
 	const syncTocScroll = useCallback((activeIndex: number, totalItems: number) => {
