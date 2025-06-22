@@ -84,7 +84,7 @@ export default async function KoudenLayout({ params, children }: KoudenLayoutPro
 							/>
 							{/* タブナビゲーション */}
 							<TabNavigation koudenId={kouden.id} />
-							<div className="mb-4 min-h-[calc(100vh-10rem)] pb-16">{children}</div>
+							<div className="mb-4 min-h-[calc(100vh-10rem)] lg:pb-16">{children}</div>
 						</div>
 					</div>
 				</div>

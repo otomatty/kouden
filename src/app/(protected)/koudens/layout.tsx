@@ -8,5 +8,5 @@ interface KoudensLayoutProps {
  * - 子コンポーネントのレイアウトを管理
  */
 export default async function KoudensLayout({ children }: KoudensLayoutProps) {
-	return <div className="space-y-12">{children}</div>;
+	return <>{children}</>;
 }

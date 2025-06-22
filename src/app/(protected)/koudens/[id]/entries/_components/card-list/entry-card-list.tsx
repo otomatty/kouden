@@ -91,7 +91,7 @@ export function EntryCardList({ koudenId, relationships }: EntryCardListProps) {
 				onFilterColumnChange={setFilterColumn}
 			/>
 			<div className="flex-1 overflow-auto">
-				<div className="space-y-2 py-4">
+				<div className="space-y-2 pt-4">
 					{filteredAndSortedData.map((entry) => (
 						<EntryCard
 							key={entry.id}

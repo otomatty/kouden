@@ -3,14 +3,13 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BookOpen, HelpCircle, Sparkles, Play } from "lucide-react";
+import { HelpCircle, Sparkles, Play } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import type { DocMeta } from "@/lib/docs";
 import { getCategoryName } from "@/lib/docs-config";
 import { DocsSearch } from "./docs-search";
 import { QuickStartGuide } from "./quick-start-guide";
-import { SearchHelper } from "./search-helper";
 import { GuidedTour } from "./guided-tour";
 
 interface DocsContentProps {
@@ -33,7 +32,7 @@ const categoryInfo = {
 export function DocsContent({ docs = [] }: DocsContentProps) {
 	const [showQuickStart, setShowQuickStart] = useState(false);
 	const [showTour, setShowTour] = useState(false);
-	const [searchQuery, setSearchQuery] = useState("");
+	const [searchQuery] = useState("");
 
 	// 初回訪問の判定
 	useEffect(() => {
@@ -52,10 +51,6 @@ export function DocsContent({ docs = [] }: DocsContentProps) {
 		acc[doc.category]?.push(doc);
 		return acc;
 	}, {});
-
-	const handleSearchFromHelper = (query: string) => {
-		setSearchQuery(query);
-	};
 
 	return (
 		<div className="max-w-4xl">
@@ -84,11 +79,6 @@ export function DocsContent({ docs = [] }: DocsContentProps) {
 			{/* 検索機能 */}
 			<div className="mb-8" data-tour="search">
 				<DocsSearch docs={docs} initialQuery={searchQuery} />
-			</div>
-
-			{/* 検索ヘルプ */}
-			<div className="mb-8">
-				<SearchHelper onSearch={handleSearchFromHelper} />
 			</div>
 
 			{/* カテゴリ別クイックアクセス */}

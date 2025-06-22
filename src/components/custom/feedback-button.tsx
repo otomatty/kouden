@@ -27,7 +27,7 @@ export function FeedbackButton({ user }: FeedbackButtonProps) {
 	) : (
 		<Button className="justify-start">
 			<MessageSquarePlus className="h-5 w-5" />
-			<span className="text-sm font-medium">不具合・ご要望はこちら</span>
+			<span className="text-sm font-medium">不具合・ご要望</span>
 		</Button>
 	);
 

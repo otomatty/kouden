@@ -88,7 +88,7 @@ export function OfferingCardList({
 				onSortOrderChange={setSortOrder}
 			/>
 			<div className="flex-1 overflow-auto">
-				<div className="space-y-2 py-4">
+				<div className="space-y-2 pt-4">
 					{filteredAndSortedData.map((offering) => (
 						<OfferingCard
 							key={offering.id}

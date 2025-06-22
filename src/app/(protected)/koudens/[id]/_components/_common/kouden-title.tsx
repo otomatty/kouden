@@ -39,7 +39,7 @@ export function KoudenTitle({
 
 	if (isEditing) {
 		return (
-			<div className="space-y-4 min-w-80">
+			<div className="space-y-4 min-w-80" data-tour="kouden-detail-edit">
 				<div className="space-y-2">
 					<Input
 						value={title}

@@ -40,6 +40,7 @@ export const TourGuide = ({ children }: { children: React.ReactNode }) => {
 				animate: true,
 				showProgress: true,
 				showButtons: ["next", "previous", "close"],
+				allowKeyboardControl: true,
 				steps,
 				onDestroyed: () => {
 					setTourState((prev) => ({ ...prev, isActive: false }));
@@ -56,9 +57,8 @@ export const TourGuide = ({ children }: { children: React.ReactNode }) => {
 				smoothScroll: true,
 				overlayColor: "rgba(0, 0, 0, 0.6)",
 				progressText: "{{current}} / {{total}}",
-				nextBtnText: "次へ",
-				prevBtnText: "戻る",
-				doneBtnText: "完了",
+				nextBtnText: "次へ(→)",
+				prevBtnText: "(←)戻る",
 				allowClose: true,
 			});
 		} catch (error) {
