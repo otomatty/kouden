@@ -9,7 +9,8 @@ const footerLinks = {
 		{ name: "使い方", href: "/guide" },
 	],
 	info: [
-		{ name: "更新情報", href: "/updates" },
+		{ name: "マイルストーン", href: "/milestones" },
+		{ name: "変更履歴", href: "/changelog" },
 		{ name: "ブログ", href: "/blog" },
 	],
 	support: [
