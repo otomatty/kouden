@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import ExpectedCountInput from "@/components/ui/ExpectedCountInput";
+import ExpectedCountInput from "@/components/custom/expected-count-input";
 import { calcSupportFee } from "@/utils/calcSupportFee";
 
 // Supabaseから取得するプラン型

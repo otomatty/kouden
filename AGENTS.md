@@ -133,6 +133,38 @@ async function createKoudenEntry(data: CreateKoudenEntryInput) {
 - **不要な再レンダリングを防ぐ**
 - **画像の最適化（next/image使用）**
 - **Suspenseとロケーティングスタイルを活用**
+- **スケルトンコンポーネントでkeyにindexを使用する場合は必ずuseMemoで最適化**
+
+```typescript
+// ✅ スケルトンコンポーネントの正しい実装例
+const SkeletonList: React.FC<{ count: number }> = ({ count }) => {
+  const skeletons = useMemo(
+    () => Array.from({ length: count }, (_, index) => (
+      <div key={index} className="animate-pulse">
+        <div className="h-4 bg-gray-200 rounded mb-2" />
+        <div className="h-3 bg-gray-200 rounded w-3/4" />
+      </div>
+    )),
+    [count]
+  );
+
+  return <div className="space-y-4">{skeletons}</div>;
+};
+
+// ❌ 悪い例（毎回新しい配列を生成）
+const BadSkeletonList: React.FC<{ count: number }> = ({ count }) => {
+  return (
+    <div className="space-y-4">
+      {Array.from({ length: count }, (_, index) => (
+        <div key={index} className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded mb-2" />
+          <div className="h-3 bg-gray-200 rounded w-3/4" />
+        </div>
+      ))}
+    </div>
+  );
+};
+```
 
 ### データベース・セキュリティ
 

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import type { Database } from "@/types/supabase";
 import { purchaseKouden } from "@/app/_actions/purchaseKouden";
 import { createKoudenWithPlan } from "@/app/_actions/koudens/create";
-import ExpectedCountInput from "@/components/ui/ExpectedCountInput";
+import ExpectedCountInput from "@/components/custom/expected-count-input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { calcSupportFee } from "@/utils/calcSupportFee";

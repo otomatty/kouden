@@ -135,8 +135,8 @@ describe("お供物配分システム統合テスト", () => {
 			// 3. 整合性チェック
 			const integrityResult = await checkOfferingAllocationIntegrity(offeringId);
 			expect(integrityResult.success).toBe(true);
-			expect(integrityResult.data?.[0].is_valid).toBe(true);
-			expect(integrityResult.data?.[0].total_allocated).toBe(offeringPrice);
+			expect(integrityResult.data?.[0]?.is_valid).toBe(true);
+			expect(integrityResult.data?.[0]?.total_allocated).toBe(offeringPrice);
 		});
 	});
 
@@ -246,11 +246,12 @@ describe("お供物配分システム統合テスト", () => {
 			expect(result.success).toBe(true);
 
 			// 挿入されたデータを確認
-			const insertedData = insertMock.mock.calls[0][0];
+			const insertedData = insertMock.mock.calls[0]?.[0];
 			expect(insertedData).toHaveLength(entryCount);
 
 			// 合計金額が正確に配分されていることを確認
 			const totalAllocated = insertedData.reduce(
+				// biome-ignore lint/suspicious/noExplicitAny: テスト用モック
 				(sum: number, data: any) => sum + data.allocated_amount,
 				0,
 			);
@@ -329,7 +330,7 @@ describe("お供物配分システム統合テスト", () => {
 
 			await allocateOfferingToEntries(equalRequest);
 
-			const equalData = equalInsertMock.mock.calls[0][0];
+			const equalData = equalInsertMock.mock.calls[0]?.[0];
 			expect(equalData[0].allocated_amount).toBe(3334); // 10000 / 3 + 余り1
 			expect(equalData[1].allocated_amount).toBe(3333);
 			expect(equalData[2].allocated_amount).toBe(3333);
@@ -361,7 +362,7 @@ describe("お供物配分システム統合テスト", () => {
 
 			await allocateOfferingToEntries(manualRequest);
 
-			const manualData = manualInsertMock.mock.calls[0][0];
+			const manualData = manualInsertMock.mock.calls[0]?.[0];
 			expect(manualData[0].allocated_amount).toBe(5000);
 			expect(manualData[1].allocated_amount).toBe(3000);
 			expect(manualData[2].allocated_amount).toBe(2000);

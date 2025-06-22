@@ -22,7 +22,7 @@ import type { CellValue } from "@/types/data-table/table";
 import { formatCurrency } from "@/utils/currency";
 // components
 import { OfferingDialog } from "../dialog/offering-dialog";
-import { OfferingAllocationDialog } from "@/components/custom/OfferingAllocationDialog";
+import { OfferingAllocationDialog } from "@/components/custom/offering-allocation-dialog";
 // constants
 import { typeLabels } from "./constants";
 

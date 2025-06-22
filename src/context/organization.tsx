@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
-import { useOrganizations } from "@/hooks/useOrganizations";
+import { useOrganizations } from "@/hooks/use-organizations";
 
 interface Org {
 	id: string;

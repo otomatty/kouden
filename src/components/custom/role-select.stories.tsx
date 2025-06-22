@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { RoleSelect } from "./RoleSelect";
+import { RoleSelect } from "./role-select";
 
 const meta = {
 	title: "Components/RoleSelect",
@@ -18,6 +18,7 @@ export const Default: Story = {
 		koudenId: "sample-kouden-id",
 		value: "",
 		onValueChange: (value) => {
+			// biome-ignore lint/suspicious/noConsoleLog: テスト用
 			console.log("Selected value:", value);
 		},
 	},
@@ -28,6 +29,7 @@ export const WithPreselectedValue: Story = {
 		koudenId: "sample-kouden-id",
 		value: "role-1",
 		onValueChange: (value) => {
+			// biome-ignore lint/suspicious/noConsoleLog: テスト用
 			console.log("Selected value:", value);
 		},
 	},

@@ -54,7 +54,7 @@ export function AdminHeader({ user }: AdminHeaderProps) {
 	return (
 		<header className="bg-white border-b border-gray-200">
 			{/* メインヘッダー */}
-			<Container className="flex h-16 items-center justify-between px-6">
+			<Container className="flex h-16 items-center justify-between">
 				{/* 左側：タイトル */}
 				<div className="flex items-center">
 					<h1 className="text-xl font-semibold text-gray-900">管理画面</h1>
@@ -81,7 +81,7 @@ export function AdminHeader({ user }: AdminHeaderProps) {
 
 			{/* ナビゲーションタブ */}
 			<div className="border-b border-gray-200">
-				<Container className="flex px-6">
+				<Container className="flex">
 					{mainNavigation.map((item) => {
 						const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
 						const Icon = item.icon;

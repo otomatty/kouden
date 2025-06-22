@@ -63,6 +63,7 @@ export function useTableOfContents({
 		// Markdownから抽出（ブログ用）
 		const headers = extractHeaders(content);
 		setTocItems(headers);
+		return undefined;
 	}, [content, extractFromDOM]);
 
 	// スクロールイベントの設定

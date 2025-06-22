@@ -19,7 +19,6 @@ import {
 	FileText,
 	Settings,
 	ArrowLeft,
-	MoreHorizontal,
 } from "lucide-react";
 
 const adminApps = [

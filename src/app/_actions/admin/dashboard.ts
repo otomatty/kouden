@@ -2,36 +2,37 @@
 
 import { unstable_cache as cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getContactRequestStats } from "./contact-requests";
+import { getCampaignApplicationStats } from "./campaign-applications";
 
 // 1. getDashboardSummary
 export async function getDashboardSummary() {
 	const supabase = await createClient();
-	// 未対応の問い合わせ数を取得 (support_ticketsテーブルのstatusが 'open' のもの)
-	const { count: openTicketsCount, error: openTicketsError } = await supabase
-		.from("support_tickets")
-		.select("*", { count: "exact", head: true })
-		.eq("status", "open");
 
-	if (openTicketsError) {
-		console.error("Error fetching open tickets count:", openTicketsError.message);
-		// エラー時はnullまたはエラーオブジェクトを返すなど、適切なエラーハンドリングを行う
+	// 未対応のお問い合わせ数を取得 (contact_requestsテーブルのstatusが 'new' または 'in_progress' のもの)
+	const { count: openContactsCount, error: openContactsError } = await supabase
+		.from("contact_requests")
+		.select("*", { count: "exact", head: true })
+		.in("status", ["new", "in_progress"]);
+
+	if (openContactsError) {
+		console.error("Error fetching open contacts count:", openContactsError.message);
 	}
 
-	// 過去24時間のエラー数を取得 (error_logsテーブルのcreated_atが24時間以内のもの)
-	// 注意: error_logs テーブルが存在しないため、一旦ダミーデータを返す
-	// const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-	// const { count: recentErrorsCount, error: recentErrorsError } = await supabase
-	//   .from('error_logs')
-	//   .select('*', { count: 'exact', head: true })
-	//   .gte('created_at', twentyFourHoursAgo);
+	// 過去24時間のエラー数を取得 (debug_logsテーブルのcreated_atが24時間以内のもの)
+	const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+	const { count: recentErrorsCount, error: recentErrorsError } = await supabase
+		.from("debug_logs")
+		.select("*", { count: "exact", head: true })
+		.gte("created_at", twentyFourHoursAgo);
 
-	// if (recentErrorsError) {
-	//   console.error('Error fetching recent errors count:', recentErrorsError.message);
-	// }
+	if (recentErrorsError) {
+		console.error("Error fetching recent errors count:", recentErrorsError.message);
+	}
 
 	return {
-		openTicketsCount: openTicketsCount ?? 0,
-		recentErrorsCount: 0, // ダミーデータ
+		openTicketsCount: openContactsCount ?? 0,
+		recentErrorsCount: recentErrorsCount ?? 0,
 	};
 }
 
@@ -45,7 +46,7 @@ const fetchServiceStatus = async (url: string, serviceName: string): Promise<any
 			console.warn(`Failed to fetch ${serviceName} status: ${response.status}`);
 			return { name: serviceName, status: "degraded" }; // または "outage"
 		}
-		const data = await response.json();
+		// const data = await response.json();
 
 		// Vercel のステータスページの例 (実際のエンドポイントとレスポンス構造に合わせる)
 		if (serviceName === "Vercel") {
@@ -85,35 +86,67 @@ export const getServiceStatus = cache(
 			fetchServiceStatus(stripeStatusUrl, "Stripe"),
 		]);
 
-		return [
-			vercel,
-			supabase,
-			stripe,
-		];
+		return [vercel, supabase, stripe];
 	},
 	["service-status"], // キャッシュキー
 	{ revalidate: 300 }, // 5分間キャッシュ (Next.js 13+ の App Router では fetch の revalidate を使う方が一般的)
 );
 
-
 // 3. getSalesMetrics
 export async function getSalesMetrics(range: "7d" | "30d" | "90d" = "30d") {
-	// 注意: 事前集計されたDBの売上テーブル (例: daily_sales) が必要
-	// この例ではダミーデータを生成
+	const supabase = await createClient();
 	const endDate = new Date();
 	let days = 30;
 	if (range === "7d") days = 7;
 	if (range === "90d") days = 90;
 
-	const data = Array.from({ length: days }).map((_, i) => {
-		const date = new Date();
-		date.setDate(endDate.getDate() - (days - 1 - i));
+	const startDate = new Date();
+	startDate.setDate(endDate.getDate() - (days - 1));
+
+	// kouden_purchases テーブルから日別の売上を集計
+	const { data, error } = await supabase
+		.from("kouden_purchases")
+		.select("amount_paid, purchased_at")
+		.gte("purchased_at", startDate.toISOString().split("T")[0])
+		.lte("purchased_at", endDate.toISOString().split("T")[0])
+		.order("purchased_at", { ascending: true });
+
+	if (error) {
+		console.error("Error fetching sales metrics:", error.message);
+		// エラー時は空のデータ配列を返す
+		return Array.from({ length: days }).map((_, i) => {
+			const date = new Date(startDate);
+			date.setDate(startDate.getDate() + i);
+			return {
+				date: date.toISOString().split("T")[0] as string,
+				sales: 0,
+			};
+		});
+	}
+
+	// 日別売上を集計
+	const salesByDate: Record<string, number> = {};
+	if (data) {
+		for (const purchase of data) {
+			const date = purchase.purchased_at.split("T")[0] || ""; // YYYY-MM-DD
+			if (date) {
+				salesByDate[date] = (salesByDate[date] || 0) + purchase.amount_paid;
+			}
+		}
+	}
+
+	// 指定期間の全日付をカバーする配列を生成
+	const metrics = Array.from({ length: days }).map((_, i) => {
+		const date = new Date(startDate);
+		date.setDate(startDate.getDate() + i);
+		const dateStr = date.toISOString().split("T")[0] as string;
 		return {
-			date: date.toISOString().split("T")[0], // YYYY-MM-DD
-			sales: Math.floor(Math.random() * 5000) + 1000, // 1000から5999のランダムな売上
+			date: dateStr,
+			sales: salesByDate[dateStr] || 0,
 		};
 	});
-	return data;
+
+	return metrics;
 }
 
 // 4. getActivityMetrics
@@ -127,31 +160,47 @@ export async function getActivityMetrics(range: "7d" | "30d" | "90d" = "30d") {
 	const startDate = new Date();
 	startDate.setDate(endDate.getDate() - (days - 1));
 
-	// kouden_entries テーブルから日別の作成数を集計
-	// kouden_entries には created_at があると仮定
-	const { data, error } = await supabase.rpc('get_daily_kouden_creation_counts', {
-		start_date: startDate.toISOString().split("T")[0],
-		end_date: endDate.toISOString().split("T")[0]
-	});
-
+	// koudens テーブルから日別の作成数を取得
+	const { data, error } = await supabase
+		.from("koudens")
+		.select("created_at")
+		.gte("created_at", startDate.toISOString().split("T")[0])
+		.lte("created_at", endDate.toISOString().split("T")[0])
+		.order("created_at", { ascending: true });
 
 	if (error) {
 		console.error("Error fetching activity metrics:", error.message);
-		// エラー時は空配列または適切なエラー情報を返す
-		return [];
+		// エラー時は空のデータ配列を返す
+		return Array.from({ length: days }).map((_, i) => {
+			const date = new Date(startDate);
+			date.setDate(startDate.getDate() + i);
+			const dateStr = date.toISOString().split("T")[0] as string;
+			return {
+				date: dateStr,
+				count: 0,
+			};
+		});
 	}
 
-	// データを整形して返す
+	// 日別作成数を集計
+	const countsByDate: Record<string, number> = {};
+	if (data) {
+		for (const kouden of data) {
+			const date = kouden.created_at.split("T")[0] || ""; // YYYY-MM-DD
+			if (date) {
+				countsByDate[date] = (countsByDate[date] || 0) + 1;
+			}
+		}
+	}
+
+	// 指定期間の全日付をカバーする配列を生成
 	const metrics = Array.from({ length: days }).map((_, i) => {
-		const d = new Date(startDate);
-		d.setDate(startDate.getDate() + i);
-		const dateStr = d.toISOString().split("T")[0];
-		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-		const found = data?.find((row: any) => row.creation_date === dateStr);
+		const date = new Date(startDate);
+		date.setDate(startDate.getDate() + i);
+		const dateStr = date.toISOString().split("T")[0] as string;
 		return {
 			date: dateStr,
-			// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-			count: found ? (found as any).count : 0,
+			count: countsByDate[dateStr] || 0,
 		};
 	});
 
@@ -162,8 +211,8 @@ export async function getActivityMetrics(range: "7d" | "30d" | "90d" = "30d") {
 export async function getRecentInquiries(limit = 5) {
 	const supabase = await createClient();
 	const { data, error } = await supabase
-		.from("support_tickets")
-		.select("id, subject, user_email, created_at, status") // user_emailはprofilesテーブルなどからJOINする必要があるかもしれない
+		.from("contact_requests")
+		.select("id, subject, category, name, email, created_at, status")
 		.order("created_at", { ascending: false })
 		.limit(limit);
 
@@ -176,46 +225,26 @@ export async function getRecentInquiries(limit = 5) {
 
 // 6. getRecentErrors
 export async function getRecentErrors(limit = 5) {
-	// 注意: error_logs テーブルが存在しないため、ダミーデータを返す
-	// const supabase = await createClient();
-	// const { data, error } = await supabase
-	//   .from('error_logs')
-	//   .select('id, message, path, created_at') // path はエラーが発生したURLなど
-	//   .order('created_at', { ascending: false })
-	//   .limit(limit);
+	const supabase = await createClient();
+	const { data, error } = await supabase
+		.from("debug_logs")
+		.select("id, action, details, created_at, user_id")
+		.order("created_at", { ascending: false })
+		.limit(limit);
 
-	// if (error) {
-	//   console.error('Error fetching recent errors:', error.message);
-	//   return [];
-	// }
-	// return data;
+	if (error) {
+		console.error("Error fetching recent errors:", error.message);
+		// エラー時は空配列を返す
+		return [];
+	}
 
-	// ダミーデータ
-	return Array.from({ length: limit }).map((_, i) => ({
-		id: `dummy-error-${i}`,
-		message: `This is a sample error message ${i + 1}`,
-		path: `/example/path/${i + 1}`,
-		created_at: new Date(Date.now() - i * 60 * 60 * 1000).toISOString(), // 1時間おきのエラー
-	}));
+	// debug_logsのデータを適切な形式に変換
+	return (
+		data?.map((log) => ({
+			id: log.id,
+			message: log.action || "Unknown error",
+			path: log.details ? JSON.stringify(log.details) : "No details",
+			created_at: log.created_at,
+		})) || []
+	);
 }
-
-// getActivityMetrics のためのDB関数 (SupabaseのSQLエディタで実行)
-/*
-CREATE OR REPLACE FUNCTION get_daily_kouden_creation_counts(start_date date, end_date date)
-RETURNS TABLE(creation_date date, count bigint) AS $$
-BEGIN
-  RETURN QUERY
-  SELECT
-    DATE(created_at) as creation_date,
-    COUNT(*) as count
-  FROM
-    public.kouden_entries -- kouden_entries テーブルを直接参照
-  WHERE
-    created_at >= start_date AND created_at < (end_date + INTERVAL '1 day')
-  GROUP BY
-    DATE(created_at)
-  ORDER BY
-    creation_date;
-END;
-$$ LANGUAGE plpgsql;
-*/

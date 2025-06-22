@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
-import { OrganizationSwitcher } from "@/components/ui/OrganizationSwitcher";
+import { OrganizationSwitcher } from "@/components/ui/organization-switcher";
 import { UserMenu } from "@/app/(protected)/_components/user-menu";
 import { SystemNavigation } from "@/components/ui/system-navigation";
 import { useOrganization } from "@/context/organization";

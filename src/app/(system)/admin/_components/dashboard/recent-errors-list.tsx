@@ -1,34 +1,33 @@
 import { RecentItemsList } from "./recent-items-list";
 
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-interface ErrorLog extends Record<string, any> {
-  id: string;
-  message: string;
-  path?: string;
-  created_at: string;
+interface DebugLog {
+	id: string;
+	message: string;
+	path: string;
+	created_at: string | null;
 }
 
 interface RecentErrorsListProps {
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  errors: ErrorLog[] | null | undefined;
-  isLoading?: boolean;
+	errors: DebugLog[] | null | undefined;
+	isLoading?: boolean;
 }
 
 export function RecentErrorsList({ errors, isLoading }: RecentErrorsListProps) {
-  const items = errors?.map(error => ({
-    id: error.id,
-    primaryText: error.message,
-    secondaryText: error.path ? `Path: ${error.path}` : undefined,
-    timestamp: new Date(error.created_at).toLocaleString(),
-  })) ?? [];
+	const items =
+		errors?.map((error) => ({
+			id: error.id,
+			primaryText: error.message,
+			secondaryText: error.path ? `Details: ${error.path}` : undefined,
+			timestamp: error.created_at ? new Date(error.created_at).toLocaleString() : "Unknown time",
+		})) ?? [];
 
-  return (
-    <RecentItemsList
-      title="最近のエラー"
-      description="最新5件のエラーログ"
-      items={items}
-      isLoading={isLoading}
-      itemLimit={5}
-    />
-  );
+	return (
+		<RecentItemsList
+			title="最近のエラー"
+			description="最新5件のデバッグログ"
+			items={items}
+			isLoading={isLoading}
+			itemLimit={5}
+		/>
+	);
 }

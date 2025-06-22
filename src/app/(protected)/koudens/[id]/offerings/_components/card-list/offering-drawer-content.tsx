@@ -42,7 +42,7 @@ import { offeringsAtom, optimisticOfferingsAtom } from "@/store/offerings";
 import { updateOfferingField, deleteOffering } from "@/app/_actions/offerings";
 // components
 import { EditableField } from "@/components/custom/editable-field";
-import { OfferingAllocationDialog } from "@/components/custom/OfferingAllocationDialog";
+import { OfferingAllocationDialog } from "@/components/custom/offering-allocation-dialog";
 import { formatCurrency } from "@/utils/currency";
 import { typeLabels } from "../table/constants";
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { purchaseKouden } from "@/app/_actions/purchaseKouden";
-import PlanCard, { type Plan } from "@/components/custom/PlanCard";
+import PlanCard, { type Plan } from "@/components/custom/plan-card";
 
 interface PurchasePageClientProps {
 	id: string;
