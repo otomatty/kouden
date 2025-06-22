@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getPostById } from "@/app/_actions/blog/posts";
 import { getAccessibleOrganizations } from "@/app/_actions/blog/organizations";
-import { BlogPostForm } from "@/components/blog/blog-post-form";
+import { BlogEditor } from "@/components/blog/blog-editor";
 
 interface AdminEditBlogPostPageProps {
 	params: Promise<{
@@ -21,15 +21,12 @@ export default async function AdminEditBlogPostPage({ params }: AdminEditBlogPos
 	}
 
 	return (
-		<div className="p-6">
-			<h1 className="text-2xl font-bold mb-6">記事を編集</h1>
-			<BlogPostForm
-				organizations={organizations}
-				defaultOrganizationId={null}
-				basePath="/admin"
-				post={post}
-				mode="admin"
-			/>
-		</div>
+		<BlogEditor
+			organizations={organizations}
+			defaultOrganizationId={null}
+			basePath="/admin"
+			post={post}
+			mode="admin"
+		/>
 	);
 }

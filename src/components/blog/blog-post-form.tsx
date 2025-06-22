@@ -149,14 +149,16 @@ export function BlogPostForm({
 							<Label htmlFor="organization">組織</Label>
 							{mode === "admin" ? (
 								<Select
-									value={organizationValue}
-									onValueChange={(value) => setValue("organization_id", value)}
+									value={organizationValue || "none"}
+									onValueChange={(value) =>
+										setValue("organization_id", value === "none" ? "" : value)
+									}
 								>
 									<SelectTrigger>
 										<SelectValue placeholder="組織を選択してください" />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value="">組織なし</SelectItem>
+										<SelectItem value="none">組織なし</SelectItem>
 										{organizations.map((org) => (
 											<SelectItem key={org.id} value={org.id}>
 												{org.name}

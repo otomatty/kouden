@@ -6,6 +6,7 @@ import rehypeHighlight from "rehype-highlight";
 import rehypeRaw from "rehype-raw";
 import "highlight.js/styles/github.css";
 import { extractHeaders, generateHeaderId, getUniqueHeaderId } from "@/utils/markdown-utils";
+import { COMMON_PROSE_CLASSES, BlogContentStyles } from "@/components/blog/blog-content-styles";
 
 interface MarkdownContentProps {
 	content: string;
@@ -14,6 +15,7 @@ interface MarkdownContentProps {
 /**
  * Markdownコンテンツを表示するコンポーネント
  * GitHub Flavored Markdownとシンタックスハイライトに対応
+ * 共通スタイル設定を使用して統一されたデザインを提供
  */
 export function MarkdownContent({ content }: MarkdownContentProps) {
 	// ヘッダー情報を事前に抽出してIDマッピングを作成
@@ -26,70 +28,65 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
 	}
 
 	return (
-		<div className="prose prose-gray dark:prose-invert max-w-none prose-headings:scroll-mt-20">
+		<div className={COMMON_PROSE_CLASSES}>
 			<ReactMarkdown
 				remarkPlugins={[remarkGfm]}
 				rehypePlugins={[rehypeHighlight, rehypeRaw]}
 				components={{
-					// カスタムコンポーネントの設定
+					// 共通スタイルコンポーネントを使用
 					h1: ({ children }) => {
 						const text = typeof children === "string" ? children : children?.toString() || "";
 						const id = headerIdMap.get(text) || generateHeaderId(text);
-						return (
-							<h1 id={id} className="text-3xl font-bold mt-8 mb-4 first:mt-0">
-								{children}
-							</h1>
-						);
+						return <BlogContentStyles.h1 id={id}>{children}</BlogContentStyles.h1>;
 					},
 					h2: ({ children }) => {
 						const text = typeof children === "string" ? children : children?.toString() || "";
 						const id = headerIdMap.get(text) || generateHeaderId(text);
-						return (
-							<h2 id={id} className="text-2xl font-semibold mt-6 mb-3 border-b border-border pb-2">
-								{children}
-							</h2>
-						);
+						return <BlogContentStyles.h2 id={id}>{children}</BlogContentStyles.h2>;
 					},
 					h3: ({ children }) => {
 						const text = typeof children === "string" ? children : children?.toString() || "";
 						const id = headerIdMap.get(text) || generateHeaderId(text);
+						return <BlogContentStyles.h3 id={id}>{children}</BlogContentStyles.h3>;
+					},
+					h4: ({ children }) => {
+						const text = typeof children === "string" ? children : children?.toString() || "";
+						const id = headerIdMap.get(text) || generateHeaderId(text);
+						return <BlogContentStyles.h4 id={id}>{children}</BlogContentStyles.h4>;
+					},
+					h5: ({ children }) => {
+						const text = typeof children === "string" ? children : children?.toString() || "";
+						const id = headerIdMap.get(text) || generateHeaderId(text);
+						return <BlogContentStyles.h5 id={id}>{children}</BlogContentStyles.h5>;
+					},
+					h6: ({ children }) => {
+						const text = typeof children === "string" ? children : children?.toString() || "";
+						const id = headerIdMap.get(text) || generateHeaderId(text);
+						return <BlogContentStyles.h6 id={id}>{children}</BlogContentStyles.h6>;
+					},
+					code: ({ className, children }) => {
 						return (
-							<h3 id={id} className="text-xl font-semibold mt-5 mb-2">
-								{children}
-							</h3>
+							<BlogContentStyles.code className={className}>{children}</BlogContentStyles.code>
 						);
 					},
-					code: ({ className, children, ...props }) => {
-						const match = /language-(\w+)/.exec(className || "");
-						return match ? (
-							<code className={className} {...props}>
-								{children}
-							</code>
-						) : (
-							<code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono" {...props}>
-								{children}
-							</code>
-						);
-					},
-					pre: ({ children }) => (
-						<pre className="bg-muted p-4 rounded-lg overflow-x-auto">{children}</pre>
-					),
+					pre: ({ children }) => <BlogContentStyles.pre>{children}</BlogContentStyles.pre>,
 					blockquote: ({ children }) => (
-						<blockquote className="border-l-4 border-primary pl-4 italic text-muted-foreground">
-							{children}
-						</blockquote>
+						<BlogContentStyles.blockquote>{children}</BlogContentStyles.blockquote>
 					),
-					table: ({ children }) => (
-						<div className="overflow-x-auto">
-							<table className="w-full border-collapse border border-border">{children}</table>
-						</div>
+					table: ({ children }) => <BlogContentStyles.table>{children}</BlogContentStyles.table>,
+					th: ({ children }) => <BlogContentStyles.th>{children}</BlogContentStyles.th>,
+					td: ({ children }) => <BlogContentStyles.td>{children}</BlogContentStyles.td>,
+					ul: ({ children }) => <BlogContentStyles.ul>{children}</BlogContentStyles.ul>,
+					ol: ({ children }) => <BlogContentStyles.ol>{children}</BlogContentStyles.ol>,
+					li: ({ children }) => <BlogContentStyles.li>{children}</BlogContentStyles.li>,
+					p: ({ children }) => <BlogContentStyles.p>{children}</BlogContentStyles.p>,
+					a: ({ children, href }) => (
+						<BlogContentStyles.a href={href}>{children}</BlogContentStyles.a>
 					),
-					th: ({ children }) => (
-						<th className="border border-border bg-muted p-2 text-left font-semibold">
-							{children}
-						</th>
-					),
-					td: ({ children }) => <td className="border border-border p-2">{children}</td>,
+					img: ({ src, alt }) => <BlogContentStyles.img src={src || ""} alt={alt || ""} />,
+					hr: () => <BlogContentStyles.hr />,
+					strong: ({ children }) => <BlogContentStyles.strong>{children}</BlogContentStyles.strong>,
+					em: ({ children }) => <BlogContentStyles.em>{children}</BlogContentStyles.em>,
 				}}
 			>
 				{content}
