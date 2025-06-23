@@ -31,18 +31,34 @@ export async function getReturnEntriesByKoudenPaginated(
 	try {
 		const supabase = await createClient();
 
+		// 最初に香典エントリーIDを取得
+		const { data: koudenEntries, error: entriesError } = await supabase
+			.from("kouden_entries")
+			.select("id")
+			.eq("kouden_id", koudenId);
+
+		if (entriesError) {
+			throw entriesError;
+		}
+
+		if (!koudenEntries || koudenEntries.length === 0) {
+			return { data: [], hasMore: false };
+		}
+
+		const entryIds = koudenEntries.map((entry) => entry.id);
+
 		let query = supabase
 			.from("return_entry_records")
 			.select(`
 				*,
-				kouden_entries!inner (
+				kouden_entries (
 					kouden_id,
 					name,
 					organization,
 					position
 				)
 			`)
-			.eq("kouden_entries.kouden_id", koudenId)
+			.in("kouden_entry_id", entryIds)
 			.order("created_at", { ascending: false })
 			.limit(limit + 1); // 次のページがあるかチェックするため+1
 
@@ -56,11 +72,25 @@ export async function getReturnEntriesByKoudenPaginated(
 			query = query.eq("return_status", filters.status);
 		}
 
-		// 検索フィルター（エントリー名または組織名）
+		// 検索フィルター（エントリー名または組織名）は最初のクエリで処理する
 		if (filters?.search) {
-			query = query.or(
-				`kouden_entries.name.ilike.%${filters.search}%,kouden_entries.organization.ilike.%${filters.search}%`,
-			);
+			// 検索条件がある場合は、先に絞り込んだエントリーIDを取得し直す
+			const { data: filteredEntries, error: filterError } = await supabase
+				.from("kouden_entries")
+				.select("id")
+				.eq("kouden_id", koudenId)
+				.or(`name.ilike.%${filters.search}%,organization.ilike.%${filters.search}%`);
+
+			if (filterError) {
+				throw filterError;
+			}
+
+			const filteredIds = filteredEntries?.map((entry) => entry.id) || [];
+			if (filteredIds.length === 0) {
+				return { data: [], hasMore: false };
+			}
+
+			query = query.in("kouden_entry_id", filteredIds);
 		}
 
 		const { data, error } = await query;
