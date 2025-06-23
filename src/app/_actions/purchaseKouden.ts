@@ -88,7 +88,7 @@ export async function purchaseKouden({
 				? "http://localhost:8788"
 				: process.env.NEXT_PUBLIC_APP_URL;
 		const session = await stripe.checkout.sessions.create({
-			payment_method_types: ["card", "konbini"],
+			payment_method_types: ["card"],
 			customer_email: userEmail,
 			line_items: [
 				{

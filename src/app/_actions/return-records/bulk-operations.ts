@@ -12,8 +12,6 @@ import type { Entry, AttendanceType } from "@/types/entries";
 import type {
 	ReturnManagementSummary,
 	BulkUpdateConfig,
-	ReturnItem,
-	ReturnStatus,
 } from "@/types/return-records/return-records";
 
 /**
