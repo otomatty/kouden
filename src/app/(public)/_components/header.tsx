@@ -5,9 +5,22 @@ import { Button } from "@/components/ui/button";
 import { HeaderNavigation } from "./header-navigation";
 import Container from "@/components/ui/container";
 import { useAuth } from "@/hooks/use-auth";
+import { usePathname } from "next/navigation";
 
 export function Header({ version }: { version: string }) {
 	const { user, isLoading } = useAuth();
+	const pathname = usePathname();
+
+	// 保護されたページでのみ認証ローディングを表示
+	// (protected)ルートグループに属するページのみでローディングを表示
+	const isProtectedPage =
+		pathname.startsWith("/koudens") ||
+		pathname.startsWith("/profile") ||
+		pathname.startsWith("/settings") ||
+		pathname.startsWith("/manuals") ||
+		pathname.startsWith("/developers");
+
+	const showLoading = isLoading && isProtectedPage;
 
 	return (
 		<header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b">
@@ -24,7 +37,7 @@ export function Header({ version }: { version: string }) {
 					<Button variant="outline" className="hidden md:block">
 						<Link href="/contact">お問い合わせ</Link>
 					</Button>
-					{isLoading ? (
+					{showLoading ? (
 						<Button disabled>読み込み中...</Button>
 					) : user ? (
 						<Button asChild>

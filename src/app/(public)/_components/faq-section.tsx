@@ -9,12 +9,7 @@ import {
 } from "@/components/ui/accordion";
 import { SectionTitle } from "@/components/ui/section-title";
 import { Section } from "@/components/ui/section";
-
-interface FAQ {
-	id: string;
-	question: string;
-	answer: string | React.ReactNode;
-}
+import type { FAQ } from "@/types/faq";
 
 const defaultFaqs: FAQ[] = [
 	{

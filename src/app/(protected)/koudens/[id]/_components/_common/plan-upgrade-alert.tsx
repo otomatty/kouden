@@ -19,7 +19,7 @@ export default function PlanUpgradeAlert({
 		<Alert className="w-full flex flex-col space-y-4">
 			<div className="flex w-full items-start justify-between">
 				<div className="flex-1">
-					<AlertTitle>プランのアップグレード</AlertTitle>
+					<AlertTitle>プランの切り替え</AlertTitle>
 					<AlertDescription>
 						無料プランの残り期間はあと{remainingDays}
 						日です。期間内にデータを入力し、PDFをダウンロードできます。
@@ -31,7 +31,7 @@ export default function PlanUpgradeAlert({
 			</div>
 			<div className="flex flex-col space-y-2 md:flex-row md:space-y-0 md:space-x-2">
 				<Button size="sm" asChild>
-					<Link href={`/purchase/${koudenId}`}>アップグレード</Link>
+					<Link href={`/purchase/${koudenId}`}>プランを切り替える</Link>
 				</Button>
 			</div>
 		</Alert>

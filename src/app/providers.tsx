@@ -3,8 +3,15 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { OrganizationProvider } from "@/context/organization";
+import { AuthProvider } from "@/components/providers/auth-provider";
+import type { User } from "@supabase/supabase-js";
 
-export function Providers({ children }: { children: React.ReactNode }) {
+interface ProvidersProps {
+	children: React.ReactNode;
+	initialUser?: User | null;
+}
+
+export function Providers({ children, initialUser }: ProvidersProps) {
 	const [queryClient] = useState(
 		() =>
 			new QueryClient({
@@ -19,7 +26,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
 	return (
 		<QueryClientProvider client={queryClient}>
-			<OrganizationProvider>{children}</OrganizationProvider>
+			<AuthProvider initialUser={initialUser || null}>
+				<OrganizationProvider>{children}</OrganizationProvider>
+			</AuthProvider>
 		</QueryClientProvider>
 	);
 }

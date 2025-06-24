@@ -74,7 +74,7 @@ export function KoudenActionsMenu({
 						<TooltipTrigger asChild>
 							<ExportDropdown koudenId={koudenId} enableExcel={enableExcel} />
 						</TooltipTrigger>
-						<TooltipContent>ダウンロードオプションを表示</TooltipContent>
+						<TooltipContent>ファイルをダウンロード</TooltipContent>
 					</Tooltip>
 				)}
 
@@ -121,7 +121,7 @@ export function KoudenActionsMenu({
 									</Link>
 								</Button>
 							</TooltipTrigger>
-							<TooltipContent>共有設定を開く</TooltipContent>
+							<TooltipContent>香典帳を共有</TooltipContent>
 						</Tooltip>
 					))}
 				{canUpdateKouden(permission) && (
@@ -216,7 +216,7 @@ export function KoudenActionsMenu({
 								<TooltipTrigger asChild>
 									<ExportDropdown koudenId={koudenId} enableExcel={enableExcel} />
 								</TooltipTrigger>
-								<TooltipContent>ダウンロードオプションを表示</TooltipContent>
+								<TooltipContent>ファイルをダウンロード</TooltipContent>
 							</Tooltip>
 						)}
 						{canUpdateKouden(permission) && (
@@ -276,7 +276,7 @@ export function KoudenActionsMenu({
 												</Link>
 											</Button>
 										</TooltipTrigger>
-										<TooltipContent>共有設定を開く</TooltipContent>
+										<TooltipContent>香典帳を共有</TooltipContent>
 									</Tooltip>
 								)}
 								{isRestricted ? (

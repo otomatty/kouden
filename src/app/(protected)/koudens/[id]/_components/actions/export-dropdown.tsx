@@ -36,7 +36,7 @@ const ExportDropdown: React.FC<ExportDropdownProps> = ({ koudenId, enableExcel }
 						</Button>
 					</DropdownMenuTrigger>
 				</TooltipTrigger>
-				<TooltipContent>ダウンロードオプションを表示</TooltipContent>
+				<TooltipContent>ファイルをダウンロード</TooltipContent>
 			</Tooltip>
 			<DropdownMenuContent align="start">
 				{/* Excelオプション: 無料プラン時は無効化してツールチップで購入を促す */}

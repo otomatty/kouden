@@ -65,7 +65,7 @@ export function Header({ user, isAdmin, version, notifications }: HeaderProps) {
 									</span>
 								</TooltipTrigger>
 								<TooltipContent>
-									<p>通知を確認できます</p>
+									<p>通知</p>
 								</TooltipContent>
 							</Tooltip>
 							<Tooltip>
@@ -75,7 +75,7 @@ export function Header({ user, isAdmin, version, notifications }: HeaderProps) {
 									</span>
 								</TooltipTrigger>
 								<TooltipContent>
-									<p>操作方法を確認できます</p>
+									<p>操作方法</p>
 								</TooltipContent>
 							</Tooltip>
 						</div>

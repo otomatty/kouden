@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      background-color: #fff;
+      color: #222;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #fff;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .logo {
+      font-size: 28px;
+      font-weight: bold;
+      color: #222;
+      text-decoration: none;
+    }
+    .description {
+      font-size: 14px;
+      margin-bottom: 24px;
+      color: #222;
+    }
+    h1 {
+      font-size: 22px;
+      margin-bottom: 20px;
+    }
+    .otp-code {
+      display: inline-block;
+      background-color: #f5f5f5;
+      border: 2px solid #222;
+      color: #222;
+      padding: 16px 32px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 24px;
+      letter-spacing: 4px;
+      margin: 20px 0;
+      font-family: 'Courier New', monospace;
+    }
+    .otp-container {
+      text-align: center;
+      margin: 24px 0;
+    }
+    .expiry-notice {
+      background-color: #fff3cd;
+      border: 1px solid #ffeaa7;
+      color: #856404;
+      padding: 12px;
+      border-radius: 4px;
+      margin: 16px 0;
+      font-size: 14px;
+    }
+    a {
+      color: #222;
+      text-decoration: none;
+    }
+    .footer {
+      font-size: 12px;
+      color: #666;
+      margin-top: 24px;
+      border-top: 1px solid #eaeaea;
+      padding-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <a href="{{ .SiteURL }}" class="logo">香典帳アプリ</a>
+    </div>
+    <div class="description">
+      <p>{{ .Email }} 様、こちらはログイン認証コードです。</p>
+    </div>
+    <h1>香典帳アプリへのログイン</h1>
+    <p>下記の認証コードをアプリに入力してください：</p>
+    <div class="otp-container">
+      <div class="otp-code">{{ .Token }}</div>
+    </div>
+    <div class="expiry-notice">
+      <strong>重要：</strong> このコードは1時間で期限切れになります。期限内に入力してください。
+    </div>
+    <p>このコードは一度だけ使用できます。第三者と共有しないでください。</p>
+    <div class="footer">
+      <p>このメールに心当たりがない場合は、破棄してください。</p>
+      <p><a href="{{ .SiteURL }}">香典帳アプリ</a></p>
+    </div>
+  </div>
+</body>
+</html> 

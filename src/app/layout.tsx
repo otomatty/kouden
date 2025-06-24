@@ -6,6 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { notoSansJP, zenOldMincho } from "./fonts";
 import { Toaster } from "sonner";
+import { getUser } from "./_actions/user";
 
 export const viewport: Viewport = {
 	width: "device-width",
@@ -32,6 +33,8 @@ export default async function RootLayout({
 }: {
 	children: React.ReactNode;
 }) {
+	const user = await getUser();
+
 	return (
 		<html lang="ja" suppressHydrationWarning>
 			<head>
@@ -53,7 +56,7 @@ export default async function RootLayout({
 				suppressHydrationWarning
 			>
 				<TooltipProvider>
-					<Providers>
+					<Providers initialUser={user}>
 						{children}
 						<Toaster />
 					</Providers>

@@ -9,7 +9,6 @@ import { WelcomeTourInitializer } from "@/components/custom/tour-guide/welcome-t
 import { LoadingProvider } from "@/components/custom/loading-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { Provider } from "jotai";
-import { AuthProvider } from "@/components/providers/auth-provider";
 import { getNotifications } from "@/app/_actions/notifications";
 import ProtectedClientLayout from "./ProtectedClientLayout";
 
@@ -60,16 +59,14 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
 				<InitializeGuideMode initialValue={guideMode}>
 					<TourGuide>
 						<WelcomeTourInitializer />
-						<AuthProvider initialUser={user}>
-							<ProtectedClientLayout
-								user={user}
-								isAdminUser={isAdminUser}
-								version={version}
-								userNotifications={userNotifications || []}
-							>
-								{children}
-							</ProtectedClientLayout>
-						</AuthProvider>
+						<ProtectedClientLayout
+							user={user}
+							isAdminUser={isAdminUser}
+							version={version}
+							userNotifications={userNotifications || []}
+						>
+							{children}
+						</ProtectedClientLayout>
 					</TourGuide>
 				</InitializeGuideMode>
 			</Provider>
