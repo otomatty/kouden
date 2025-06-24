@@ -17,7 +17,7 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { transferKoudenOwnership } from "@/app/_actions/funeral/kouden/create";
 import { BookOpen, ExternalLink, Users, Gift, UserCheck, Mail, Loader2 } from "lucide-react";
 
@@ -48,7 +48,6 @@ export function KoudenManagementCard({ koudenCase }: KoudenManagementCardProps) 
 	const [transferDialogOpen, setTransferDialogOpen] = useState(false);
 	const [transferEmail, setTransferEmail] = useState("");
 	const [transferLoading, setTransferLoading] = useState(false);
-	const { toast } = useToast();
 
 	const getStatusBadge = (status: string) => {
 		switch (status) {
@@ -67,10 +66,8 @@ export function KoudenManagementCard({ koudenCase }: KoudenManagementCardProps) 
 		e.preventDefault();
 
 		if (!transferEmail.trim()) {
-			toast({
-				title: "エラー",
+			toast.error("エラー", {
 				description: "メールアドレスを入力してください",
-				variant: "destructive",
 			});
 			return;
 		}
@@ -81,8 +78,7 @@ export function KoudenManagementCard({ koudenCase }: KoudenManagementCardProps) 
 			const result = await transferKoudenOwnership(koudenCase.kouden_id, transferEmail.trim());
 
 			if (result.success) {
-				toast({
-					title: "所有権を移譲しました",
+				toast.success("所有権を移譲しました", {
 					description: "香典帳の所有権がご遺族に移譲されました",
 				});
 				setTransferDialogOpen(false);
@@ -90,18 +86,14 @@ export function KoudenManagementCard({ koudenCase }: KoudenManagementCardProps) 
 				// ページをリフレッシュして最新状態を取得
 				window.location.reload();
 			} else {
-				toast({
-					title: "エラー",
+				toast.error("エラー", {
 					description: result.error || "所有権の移譲に失敗しました",
-					variant: "destructive",
 				});
 			}
 		} catch (error) {
 			console.error("[ERROR] Failed to transfer ownership:", error);
-			toast({
-				title: "エラー",
+			toast.error("エラー", {
 				description: "予期せぬエラーが発生しました",
-				variant: "destructive",
 			});
 		} finally {
 			setTransferLoading(false);

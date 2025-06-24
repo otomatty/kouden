@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 
@@ -31,24 +31,21 @@ export function RelationshipDialog({
 	onSubmit,
 	isSubmitting = false,
 }: RelationshipDialogProps) {
-	const { toast } = useToast();
 	// フォームの送信ハンドラー
 	const handleSubmit = useCallback(
 		async (values: RelationshipFormValues) => {
 			try {
 				await onSubmit(values);
 				onOpenChange(false);
-				toast({
-					title: relationship ? "関係性を更新しました" : "関係性を作成しました",
-				});
+				toast.success(relationship ? "関係性を更新しました" : "関係性を作成しました");
 			} catch (error) {
 				console.error(error);
-				toast({
-					title: relationship ? "関係性の更新に失敗しました" : "関係性の作成に失敗しました",
+				toast.error(relationship ? "関係性の更新に失敗しました" : "関係性の作成に失敗しました", {
+					description: "しばらく時間をおいてから再度お試しください",
 				});
 			}
 		},
-		[onSubmit, onOpenChange, relationship, toast],
+		[onSubmit, onOpenChange, relationship],
 	);
 
 	return (
@@ -58,9 +55,7 @@ export function RelationshipDialog({
 			description="香典帳における故人との関係性を"
 			onSuccess={() => {
 				onOpenChange(false);
-				toast({
-					title: relationship ? "関係性を更新しました" : "関係性を作成しました",
-				});
+				toast.success(relationship ? "関係性を更新しました" : "関係性を作成しました");
 			}}
 		>
 			<RelationshipForm

@@ -1,6 +1,6 @@
 "use client";
 // library
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { useAtom } from "jotai";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useState } from "react";
@@ -8,14 +8,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 // types
 import type { Entry } from "@/types/entries";
 import type {
 	OfferingWithKoudenEntries,
 	OfferingType,
-	BaseOffering,
 	OfferingFormValues,
 } from "@/types/offerings";
 import { offeringFormSchema } from "@/schemas/offerings";
@@ -38,7 +37,7 @@ export function OfferingForm({ koudenId, entries, defaultValues, onSuccess }: Of
 	const [submissionState, setSubmissionState] = useAtom(formSubmissionStateAtom);
 	const [offerings, setOfferings] = useAtom(offeringsAtom);
 	const [optimisticOfferings, setOptimisticOfferings] = useAtom(optimisticOfferingsAtom);
-	const { toast } = useToast();
+
 	const [, setPhotos] = useState<File[]>([]);
 
 	const form = useForm<OfferingFormValues>({
@@ -109,9 +108,8 @@ export function OfferingForm({ koudenId, entries, defaultValues, onSuccess }: Of
 			setOptimisticOfferings(optimisticOfferings.filter((o) => o.id !== offering.id));
 
 			onSuccess?.(offering);
-			toast({
-				title: defaultValues ? "更新しました" : "登録しました",
-				description: `${result.description || "説明未設定"}を${defaultValues ? "更新" : "登録"}しました`,
+			toast.success(defaultValues ? "供花・供物を更新しました" : "供花・供物を登録しました", {
+				description: `${result.description || "説明未設定"}の処理が正常に完了しました`,
 			});
 
 			if (!defaultValues) {
@@ -119,10 +117,8 @@ export function OfferingForm({ koudenId, entries, defaultValues, onSuccess }: Of
 			}
 		} catch (error) {
 			console.error("[ERROR] Offering submission failed:", error);
-			toast({
-				variant: "destructive",
-				title: "エラーが発生しました",
-				description: error instanceof Error ? error.message : "予期せぬエラーが発生しました",
+			toast.error(error instanceof Error ? error.message : "予期せぬエラーが発生しました", {
+				description: "しばらく時間をおいてから再度お試しください",
 			});
 		} finally {
 			setSubmissionState({ isSubmitting: false, error: null });

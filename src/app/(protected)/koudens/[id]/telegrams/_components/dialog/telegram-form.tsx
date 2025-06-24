@@ -22,7 +22,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 // types
 import type { Entry } from "@/types/entries";
 import type { Telegram, TelegramFormValues, EditTelegramFormData } from "@/types/telegrams";
@@ -103,8 +103,7 @@ export function TelegramForm({
 			Promise.resolve().then(() => {
 				if (result) {
 					onSuccess?.(result);
-					toast({
-						title: defaultValues ? "更新しました" : "登録しました",
+					toast.success(defaultValues ? "更新しました" : "登録しました", {
 						description: `${result.senderName || "送信者名未設定"}を${defaultValues ? "更新" : "登録"}しました`,
 					});
 
@@ -118,10 +117,8 @@ export function TelegramForm({
 				isSubmitting: false,
 				error: error instanceof Error ? error.message : "保存に失敗しました",
 			});
-			toast({
-				title: "エラー",
+			toast.error("エラー", {
 				description: error instanceof Error ? error.message : "保存に失敗しました",
-				variant: "destructive",
 			});
 		} finally {
 			setSubmissionState((prev) => ({ ...prev, isSubmitting: false }));

@@ -16,7 +16,7 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 // ui
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 // types
 import type { Offering, OfferingWithKoudenEntries } from "@/types/offerings";
 import type { Entry } from "@/types/entries";
@@ -80,16 +80,13 @@ export function DataTable({ koudenId, entries, offerings, onDataChange }: DataTa
 				if (onDataChange) {
 					onDataChange(offerings.filter((offering) => !ids.includes(offering.id)));
 				}
-				toast({
-					title: "削除完了",
+				toast.success("削除完了", {
 					description: `${ids.length}件のデータを削除しました`,
 				});
 			} catch (error) {
 				console.error("[handleDeleteRows] Delete failed:", error);
-				toast({
-					title: "エラーが発生しました",
+				toast.error("エラーが発生しました", {
 					description: "データの削除に失敗しました",
-					variant: "destructive",
 				});
 			}
 		},
@@ -102,20 +99,16 @@ export function DataTable({ koudenId, entries, offerings, onDataChange }: DataTa
 			// インデックスからエントリーを取得
 			const offeringIndex = Number.parseInt(rowId, 10);
 			if (Number.isNaN(offeringIndex) || offeringIndex < 0 || offeringIndex >= offerings.length) {
-				toast({
-					title: "エラーが発生しました",
+				toast.error("エラーが発生しました", {
 					description: "無効な行インデックスです",
-					variant: "destructive",
 				});
 				return;
 			}
 
 			const targetOffering = offerings[offeringIndex];
 			if (!targetOffering) {
-				toast({
-					title: "エラーが発生しました",
+				toast.error("エラーが発生しました", {
 					description: "対象のお供え物が見つかりませんでした",
-					variant: "destructive",
 				});
 				return;
 			}
@@ -134,16 +127,13 @@ export function DataTable({ koudenId, entries, offerings, onDataChange }: DataTa
 					onDataChange(newOfferings);
 				}
 
-				toast({
-					title: "更新完了",
+				toast.success("更新完了", {
 					description: "データを更新しました",
 				});
 			} catch (error) {
 				console.error("[handleCellEdit] Update failed:", error);
-				toast({
-					title: "エラーが発生しました",
+				toast.error("エラーが発生しました", {
 					description: "データの更新に失敗しました",
-					variant: "destructive",
 				});
 			}
 		},

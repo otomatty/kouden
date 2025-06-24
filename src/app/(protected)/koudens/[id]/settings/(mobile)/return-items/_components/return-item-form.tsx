@@ -14,7 +14,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import type { ReturnItem } from "@/types/return-records/return-items";
 import { createReturnItem, updateReturnItem } from "@/app/_actions/return-records/return-items";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 const formSchema = z.object({
 	name: z.string().min(1, "返礼品名を入力してください"),
@@ -29,8 +29,6 @@ type Props = {
 };
 
 export function ReturnItemForm({ koudenId, returnItem, onSuccess }: Props) {
-	const { toast } = useToast();
-
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
@@ -48,24 +46,19 @@ export function ReturnItemForm({ koudenId, returnItem, onSuccess }: Props) {
 					kouden_id: koudenId,
 					...values,
 				});
-				toast({
-					title: "返礼品を更新しました",
-				});
+				toast.success("返礼品を更新しました");
 			} else {
 				await createReturnItem({
 					...values,
 					kouden_id: koudenId,
 				});
-				toast({
-					title: "返礼品を作成しました",
-				});
+				toast.success("返礼品を作成しました");
 			}
 			onSuccess?.();
 		} catch (error) {
 			console.error(error);
-			toast({
-				title: "エラーが発生しました",
-				variant: "destructive",
+			toast.error("返礼品の保存に失敗しました", {
+				description: "しばらく時間をおいてから再度お試しください",
 			});
 		}
 	}

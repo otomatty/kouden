@@ -17,7 +17,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import type { Member } from "./types";
 import { updateMemberRole, deleteMember } from "@/app/_actions/members";
 
@@ -29,7 +29,6 @@ interface MemberEditDrawerProps {
 }
 
 export function MemberEditDrawer({ member, isOpen, onClose, koudenId }: MemberEditDrawerProps) {
-	const { toast } = useToast();
 	const [isLoading, setIsLoading] = React.useState(false);
 
 	const handleRoleChange = async (roleId: string) => {
@@ -38,17 +37,12 @@ export function MemberEditDrawer({ member, isOpen, onClose, koudenId }: MemberEd
 		try {
 			setIsLoading(true);
 			await updateMemberRole(member.id, roleId, koudenId);
-			toast({
-				title: "ロールを変更しました",
-				description: `${member.profile?.display_name ?? "名前未設定"}のロールを変更しました`,
-			});
+			toast.success(`${member.profile?.display_name ?? "名前未設定"}のロールを変更しました`);
 			onClose();
 		} catch (error) {
 			console.error(error);
-			toast({
-				title: "エラーが発生しました",
-				description: "ロールの変更に失敗しました",
-				variant: "destructive",
+			toast.error("ロールの変更に失敗しました", {
+				description: "しばらく時間をおいてから再度お試しください",
 			});
 		} finally {
 			setIsLoading(false);
@@ -67,17 +61,12 @@ export function MemberEditDrawer({ member, isOpen, onClose, koudenId }: MemberEd
 		try {
 			setIsLoading(true);
 			await deleteMember(member.id, koudenId);
-			toast({
-				title: "メンバーを削除しました",
-				description: `${member.profile?.display_name ?? "名前未設定"}を削除しました`,
-			});
+			toast.success(`${member.profile?.display_name ?? "名前未設定"}を削除しました`);
 			onClose();
 		} catch (error) {
 			console.error(error);
-			toast({
-				title: "エラーが発生しました",
-				description: "メンバーの削除に失敗しました",
-				variant: "destructive",
+			toast.error("メンバーの削除に失敗しました", {
+				description: "しばらく時間をおいてから再度お試しください",
 			});
 		} finally {
 			setIsLoading(false);

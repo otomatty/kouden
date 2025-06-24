@@ -17,7 +17,7 @@ import { useAtomValue } from "jotai";
 // ui
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 // types
 import type { Telegram } from "@/types/telegrams";
 import type { CellValue } from "@/types/data-table/table";
@@ -81,7 +81,6 @@ export function DataTable({ koudenId, telegrams, entries, onDataChange }: DataTa
 	// 編集ダイアログの状態
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 	const [editingTelegram, setEditingTelegram] = useState<Telegram | undefined>();
-	const { toast } = useToast();
 
 	// 画面サイズが変更された時に列の表示状態を更新
 	useEffect(() => {
@@ -102,20 +101,17 @@ export function DataTable({ koudenId, telegrams, entries, onDataChange }: DataTa
 				if (onDataChange) {
 					onDataChange(normalizedTelegrams.filter((telegram) => !ids.includes(telegram.id)));
 				}
-				toast({
-					title: "削除完了",
-					description: `${ids.length}件のデータを削除しました`,
+				toast.success(`${ids.length}件のデータを削除しました`, {
+					description: "削除処理が正常に完了しました",
 				});
 			} catch (error) {
 				console.error("Failed to delete telegrams:", error);
-				toast({
-					title: "エラーが発生しました",
-					description: "データの削除に失敗しました",
-					variant: "destructive",
+				toast.error("データの削除に失敗しました", {
+					description: "しばらく時間をおいてから再度お試しください",
 				});
 			}
 		},
-		[normalizedTelegrams, onDataChange, toast, koudenId],
+		[normalizedTelegrams, onDataChange, koudenId],
 	);
 
 	// セルの編集
@@ -131,10 +127,8 @@ export function DataTable({ koudenId, telegrams, entries, onDataChange }: DataTa
 					index,
 					telegramsCount: normalizedTelegrams.length,
 				});
-				toast({
-					title: "エラーが発生しました",
-					description: "対象のデータが見つかりません",
-					variant: "destructive",
+				toast.error("対象のデータが見つかりません", {
+					description: "データが存在しないか、既に削除されている可能性があります",
 				});
 				return;
 			}
@@ -161,9 +155,8 @@ export function DataTable({ koudenId, telegrams, entries, onDataChange }: DataTa
 					onDataChange(newTelegrams);
 				}
 
-				toast({
-					title: "更新完了",
-					description: "データを更新しました",
+				toast.success("データを更新しました", {
+					description: "変更内容が正常に保存されました",
 				});
 			} catch (error) {
 				console.error("[ERROR] Update failed:", {
@@ -175,14 +168,12 @@ export function DataTable({ koudenId, telegrams, entries, onDataChange }: DataTa
 					fieldKey: columnId,
 					value,
 				});
-				toast({
-					title: "エラーが発生しました",
-					description: "データの更新に失敗しました",
-					variant: "destructive",
+				toast.error("データの更新に失敗しました", {
+					description: "しばらく時間をおいてから再度お試しください",
 				});
 			}
 		},
-		[normalizedTelegrams, onDataChange, toast],
+		[normalizedTelegrams, onDataChange],
 	);
 
 	// 編集ダイアログを開く
@@ -211,12 +202,11 @@ export function DataTable({ koudenId, telegrams, entries, onDataChange }: DataTa
 			}
 			setIsEditDialogOpen(false);
 			setEditingTelegram(undefined);
-			toast({
-				title: "更新完了",
-				description: "弔電記録を更新しました",
+			toast.success("弔電記録を更新しました", {
+				description: "変更内容が正常に保存されました",
 			});
 		},
-		[normalizedTelegrams, onDataChange, toast],
+		[normalizedTelegrams, onDataChange],
 	);
 
 	const columns = useMemo(

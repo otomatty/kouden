@@ -20,7 +20,7 @@ import StepSummary from "./step-summary";
 import { getPlaceholderByCategory } from "./category-placeholders";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
 
 interface ContactFormValues {
@@ -38,7 +38,6 @@ interface AppContactFormProps {
 }
 
 export default function AppContactForm({ user, onSuccess }: AppContactFormProps) {
-	const { toast } = useToast();
 	const form = useForm<ContactFormValues>({
 		defaultValues: {
 			category: "support",
@@ -102,8 +101,7 @@ export default function AppContactForm({ user, onSuccess }: AppContactFormProps)
 
 			await createContactRequest(formData);
 
-			toast({
-				title: "お問い合わせを送信しました",
+			toast.success("お問い合わせを送信しました", {
 				description: "ご連絡ありがとうございます。回答をお待ちください。",
 			});
 
@@ -115,10 +113,8 @@ export default function AppContactForm({ user, onSuccess }: AppContactFormProps)
 			onSuccess?.();
 		} catch (error) {
 			console.error("Failed to send contact:", error);
-			toast({
-				title: "送信に失敗しました",
+			toast.error("送信に失敗しました", {
 				description: "しばらく時間をおいて再度お試しください。",
-				variant: "destructive",
 			});
 		}
 	};

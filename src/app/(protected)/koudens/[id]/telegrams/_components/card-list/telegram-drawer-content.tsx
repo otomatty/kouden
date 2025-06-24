@@ -20,7 +20,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Pencil, Check, X, Trash2 } from "lucide-react";
 
 // types
@@ -56,7 +56,6 @@ export function TelegramDrawerContent({
 	const [telegrams, setTelegrams] = useAtom(telegramsAtom);
 	const [optimisticTelegrams, setOptimisticTelegrams] = useAtom(optimisticTelegramsAtom);
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-	const { toast } = useToast();
 
 	// 関連する香典情報(entries)を取得
 	const relatedEntry = entries.find((entry) => entry.id === telegram.koudenEntryId);
@@ -97,18 +96,15 @@ export function TelegramDrawerContent({
 			// 楽観的更新を削除
 			setOptimisticTelegrams(optimisticTelegrams.filter((t) => t.id !== telegram.id));
 
-			toast({
-				title: "更新完了",
-				description: "データを更新しました",
+			toast.success("データを更新しました", {
+				description: "変更内容が正常に保存されました",
 			});
 		} catch (error) {
 			console.error("Failed to update telegram:", error);
 			// エラーの場合は楽観的更新を削除
 			setOptimisticTelegrams(optimisticTelegrams.filter((t) => t.id !== telegram.id));
-			toast({
-				title: "エラーが発生しました",
-				description: "データの更新に失敗しました",
-				variant: "destructive",
+			toast.error("データの更新に失敗しました", {
+				description: "しばらく時間をおいてから再度お試しください",
 			});
 		}
 	};
@@ -131,19 +127,16 @@ export function TelegramDrawerContent({
 			// 楽観的更新を削除
 			setOptimisticTelegrams(optimisticTelegrams.filter((t) => t.id !== telegram.id));
 
-			toast({
-				title: "削除完了",
-				description: "データを削除しました",
+			toast.success("データを削除しました", {
+				description: "弔電情報が正常に削除されました",
 			});
 			onClose();
 		} catch (error) {
 			console.error("Failed to delete telegram:", error);
 			// エラーの場合は楽観的更新を削除
 			setOptimisticTelegrams(optimisticTelegrams.filter((t) => t.id !== telegram.id));
-			toast({
-				title: "エラーが発生しました",
-				description: "データの削除に失敗しました",
-				variant: "destructive",
+			toast.error("データの削除に失敗しました", {
+				description: "しばらく時間をおいてから再度お試しください",
 			});
 		} finally {
 			setIsDeleteDialogOpen(false);

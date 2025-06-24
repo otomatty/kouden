@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { updateAvatar } from "@/app/_actions/profiles";
 import { Camera } from "lucide-react";
@@ -25,11 +25,7 @@ interface AvatarUploadProps {
 	displayName: string;
 }
 
-export function AvatarUpload({
-	userId,
-	avatarUrl,
-	displayName,
-}: AvatarUploadProps) {
+export function AvatarUpload({ userId, avatarUrl, displayName }: AvatarUploadProps) {
 	const router = useRouter();
 	const [isOpen, setIsOpen] = useState(false);
 	const [isPending, setIsPending] = useState(false);
@@ -46,44 +42,30 @@ export function AvatarUpload({
 			const fileExt = file.name.split(".").pop();
 			const filePath = `${userId}/avatar.${fileExt}`;
 
-			const { error: uploadError } = await supabase.storage
-				.from("avatars")
-				.upload(filePath, file, {
-					upsert: true,
-				});
+			const { error: uploadError } = await supabase.storage.from("avatars").upload(filePath, file, {
+				upsert: true,
+			});
 
 			if (uploadError) {
 				throw uploadError;
 			}
 
 			// 公開URLを取得
-			const { data: publicUrl } = supabase.storage
-				.from("avatars")
-				.getPublicUrl(filePath);
+			const { data: publicUrl } = supabase.storage.from("avatars").getPublicUrl(filePath);
 
 			// プロフィールを更新
-			const { error: updateError } = await updateAvatar(
-				userId,
-				publicUrl.publicUrl,
-			);
+			const { error: updateError } = await updateAvatar(userId, publicUrl.publicUrl);
 
 			if (updateError) {
 				throw updateError;
 			}
 
-			toast({
-				title: "アバターを更新しました",
-			});
+			toast.success("アバターを更新しました");
 			router.refresh();
 			setIsOpen(false);
 		} catch (error) {
-			toast({
-				title: "エラー",
-				description:
-					error instanceof Error
-						? error.message
-						: "アバターの更新に失敗しました",
-				variant: "destructive",
+			toast.error("エラー", {
+				description: error instanceof Error ? error.message : "アバターの更新に失敗しました",
 			});
 		} finally {
 			setIsPending(false);
@@ -96,9 +78,7 @@ export function AvatarUpload({
 				<div className="relative group cursor-pointer">
 					<Avatar className="h-24 w-24">
 						<AvatarImage src={avatarUrl || undefined} />
-						<AvatarFallback>
-							{displayName.charAt(0).toUpperCase()}
-						</AvatarFallback>
+						<AvatarFallback>{displayName.charAt(0).toUpperCase()}</AvatarFallback>
 					</Avatar>
 					<div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
 						<Camera className="h-6 w-6 text-white" />
@@ -108,9 +88,7 @@ export function AvatarUpload({
 			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>アバターの変更</DialogTitle>
-					<DialogDescription>
-						プロフィール画像をアップロードしてください
-					</DialogDescription>
+					<DialogDescription>プロフィール画像をアップロードしてください</DialogDescription>
 				</DialogHeader>
 				<div className="grid gap-4 py-4">
 					<div className="grid gap-2">
@@ -124,11 +102,7 @@ export function AvatarUpload({
 						/>
 					</div>
 				</div>
-				<Button
-					variant="outline"
-					onClick={() => setIsOpen(false)}
-					disabled={isPending}
-				>
+				<Button variant="outline" onClick={() => setIsOpen(false)} disabled={isPending}>
 					キャンセル
 				</Button>
 			</DialogContent>

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getInitials } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { removeMember } from "@/app/_actions/roles";
@@ -28,7 +28,6 @@ interface RemoveMemberButtonProps {
 }
 
 export function RemoveMemberButton({ member, isSelf, membersAtom }: RemoveMemberButtonProps) {
-	const { toast } = useToast();
 	const router = useRouter();
 	const [isLoading, setIsLoading] = useState(false);
 	const [, setIsOpen] = useState(false);
@@ -43,8 +42,8 @@ export function RemoveMemberButton({ member, isSelf, membersAtom }: RemoveMember
 			// クライアントサイドで状態を更新
 			setMembersState((prev) => prev.filter((m) => m.id !== member.id));
 
-			toast({
-				title: isSelf ? "香典帳から退出しました" : "メンバーを削除しました",
+			toast.success(isSelf ? "香典帳から退出しました" : "メンバーを削除しました", {
+				description: isSelf ? "正常に退出処理が完了しました" : "メンバーが正常に削除されました",
 			});
 
 			// 自分自身が退出した場合は一覧ページにリダイレクト
@@ -52,16 +51,16 @@ export function RemoveMemberButton({ member, isSelf, membersAtom }: RemoveMember
 				router.push("/koudens");
 			}
 		} catch (error) {
-			toast({
-				title: "エラー",
-				description:
-					error instanceof Error
-						? error.message
-						: isSelf
-							? "退出に失敗しました"
-							: "メンバーの削除に失敗しました",
-				variant: "destructive",
-			});
+			toast.error(
+				error instanceof Error
+					? error.message
+					: isSelf
+						? "退出に失敗しました"
+						: "メンバーの削除に失敗しました",
+				{
+					description: "しばらく時間をおいてから再度お試しください",
+				},
+			);
 		} finally {
 			setIsLoading(false);
 			setIsOpen(false);

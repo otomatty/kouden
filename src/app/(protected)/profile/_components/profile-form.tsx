@@ -15,7 +15,7 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { updateProfile } from "@/app/_actions/profiles";
 
 const formSchema = z.object({
@@ -50,18 +50,11 @@ export function ProfileForm({ userId, initialData }: ProfileFormProps) {
 				throw new Error(error);
 			}
 
-			toast({
-				title: "プロフィールを更新しました",
-			});
+			toast.success("プロフィールを更新しました");
 			router.refresh();
 		} catch (error) {
-			toast({
-				title: "エラー",
-				description:
-					error instanceof Error
-						? error.message
-						: "プロフィールの更新に失敗しました",
-				variant: "destructive",
+			toast.error("エラー", {
+				description: error instanceof Error ? error.message : "プロフィールの更新に失敗しました",
 			});
 		} finally {
 			setIsPending(false);

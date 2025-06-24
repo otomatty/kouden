@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 import { createRelationship, updateRelationship } from "@/app/_actions/relationships";
 import type { Relationship } from "@/types/relationships";
@@ -18,7 +18,6 @@ export function RelationshipDialog({
 	relationship,
 	onOpenChange,
 }: RelationshipDialogProps) {
-	const { toast } = useToast();
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	const handleSubmit = async (values: RelationshipFormValues) => {
@@ -29,28 +28,20 @@ export function RelationshipDialog({
 					name: values.name,
 					description: values.description ?? undefined,
 				});
-				toast({
-					title: "更新しました",
-					description: "関係性を更新しました",
-				});
+				toast.success("関係性を更新しました");
 			} else {
 				await createRelationship({
 					name: values.name,
 					description: values.description ?? undefined,
 					koudenId,
 				});
-				toast({
-					title: "作成しました",
-					description: "関係性を作成しました",
-				});
+				toast.success("関係性を作成しました");
 			}
 			onOpenChange(false);
 		} catch (error) {
 			console.error(error);
-			toast({
-				title: "エラーが発生しました",
-				description: "関係性の保存に失敗しました",
-				variant: "destructive",
+			toast.error("関係性の保存に失敗しました", {
+				description: "しばらく時間をおいてから再度お試しください",
 			});
 		} finally {
 			setIsSubmitting(false);

@@ -7,7 +7,7 @@ import { InitializeGuideMode } from "@/components/providers/initialize-guide-mod
 import { TourGuide } from "@/components/custom/tour-guide";
 import { WelcomeTourInitializer } from "@/components/custom/tour-guide/welcome-tour-initializer";
 import { LoadingProvider } from "@/components/custom/loading-provider";
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/sonner";
 import { Provider } from "jotai";
 import { getNotifications } from "@/app/_actions/notifications";
 import ProtectedClientLayout from "./ProtectedClientLayout";

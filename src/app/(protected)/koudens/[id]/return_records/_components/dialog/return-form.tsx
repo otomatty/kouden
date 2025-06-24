@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 // ui
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -94,7 +94,6 @@ export function ReturnForm({
 		isSubmitting: false,
 		error: null as string | null,
 	});
-	const { toast } = useToast();
 
 	const initialValues: ReturnFormData = {
 		kouden_entry_id: defaultValues.koudenEntryId,
@@ -146,8 +145,7 @@ export function ReturnForm({
 
 			// 成功時の処理
 			onSuccess(result);
-			toast({
-				title: "更新しました",
+			toast.success("返礼情報を更新しました", {
 				description: "返礼情報を更新しました",
 			});
 		} catch (error) {
@@ -163,10 +161,8 @@ export function ReturnForm({
 				isSubmitting: false,
 				error: error instanceof Error ? error.message : "保存に失敗しました",
 			});
-			toast({
-				title: "エラー",
-				description: error instanceof Error ? error.message : "保存に失敗しました",
-				variant: "destructive",
+			toast.error(error instanceof Error ? error.message : "保存に失敗しました", {
+				description: "しばらく時間をおいてから再度お試しください",
 			});
 		} finally {
 			setSubmissionState((prev) => ({ ...prev, isSubmitting: false }));

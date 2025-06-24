@@ -15,7 +15,7 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { createKoudenForCase } from "@/app/_actions/funeral/kouden/create";
 import { BookOpen, Loader2 } from "lucide-react";
 
@@ -30,16 +30,13 @@ export function CreateKoudenButton({ caseId, defaultTitle }: CreateKoudenButtonP
 	const [title, setTitle] = useState(defaultTitle);
 	const [description, setDescription] = useState("");
 	const router = useRouter();
-	const { toast } = useToast();
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 
 		if (!title.trim()) {
-			toast({
-				title: "エラー",
+			toast.error("エラー", {
 				description: "香典帳のタイトルを入力してください",
-				variant: "destructive",
 			});
 			return;
 		}
@@ -54,25 +51,20 @@ export function CreateKoudenButton({ caseId, defaultTitle }: CreateKoudenButtonP
 			});
 
 			if (result.success) {
-				toast({
-					title: "香典帳を作成しました",
+				toast.success("香典帳を作成しました", {
 					description: "香典帳が正常に作成されました",
 				});
 				setOpen(false);
 				router.refresh();
 			} else {
-				toast({
-					title: "エラー",
+				toast.error("エラー", {
 					description: result.error || "香典帳の作成に失敗しました",
-					variant: "destructive",
 				});
 			}
 		} catch (error) {
 			console.error("[ERROR] Failed to create kouden:", error);
-			toast({
-				title: "エラー",
+			toast.error("エラー", {
 				description: "予期せぬエラーが発生しました",
-				variant: "destructive",
 			});
 		} finally {
 			setLoading(false);

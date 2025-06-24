@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { acceptInvitation } from "@/app/_actions/invitations";
 import { Loader2, UserPlus } from "lucide-react";
 import { motion } from "framer-motion";
@@ -15,17 +15,14 @@ interface AcceptInvitationButtonProps {
 export function AcceptInvitationButton({ token }: AcceptInvitationButtonProps) {
 	const [loading, setLoading] = useState(false);
 	const router = useRouter();
-	const { toast } = useToast();
 
 	const handleAccept = async () => {
 		try {
 			setLoading(true);
 			await acceptInvitation(token);
 
-			toast({
-				title: "参加しました",
+			toast.success("参加しました", {
 				description: "香典帳のメンバーとして参加しました",
-				variant: "default",
 			});
 
 			router.push("/koudens");
@@ -41,33 +38,19 @@ export function AcceptInvitationButton({ token }: AcceptInvitationButtonProps) {
 					case "招待の有効期限が切れています":
 					case "この招待は既に使用されています":
 					case "招待の使用回数が上限に達しました":
-						toast({
-							title: "エラー",
-							description: error.message,
-							variant: "destructive",
-						});
+						toast.error(error.message);
 						router.refresh();
 						return;
 					case "すでにメンバーとして参加しています":
-						toast({
-							title: "既に参加済み",
-							description: error.message,
-							variant: "default",
-						});
+						toast.info(error.message);
 						router.push("/koudens");
 						return;
 					default:
-						toast({
-							title: "エラー",
-							description: error.message,
-							variant: "destructive",
-						});
+						toast.error(error.message);
 				}
 			} else {
-				toast({
-					title: "エラー",
-					description: "予期せぬエラーが発生しました",
-					variant: "destructive",
+				toast.error("予期せぬエラーが発生しました", {
+					description: "しばらく時間をおいてから再度お試しください",
 				});
 			}
 		} finally {

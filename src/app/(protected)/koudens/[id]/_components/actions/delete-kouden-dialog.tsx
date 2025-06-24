@@ -9,7 +9,7 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 import { deleteKouden } from "@/app/_actions/koudens";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 interface DeleteKoudenDialogProps {
 	koudenId: string;
@@ -22,7 +22,6 @@ export function DeleteKoudenDialog({ koudenId, koudenTitle }: DeleteKoudenDialog
 	const [confirmTitle, setConfirmTitle] = useState("");
 	const isDesktop = useMediaQuery("(min-width: 768px)");
 	const router = useRouter();
-	const { toast } = useToast();
 	const handleDelete = async () => {
 		if (confirmTitle !== koudenTitle) {
 			return;
@@ -31,17 +30,15 @@ export function DeleteKoudenDialog({ koudenId, koudenTitle }: DeleteKoudenDialog
 		try {
 			setIsDeleting(true);
 			await deleteKouden(koudenId);
-			toast({
-				title: "香典帳を削除しました",
+			toast.success("香典帳を削除しました", {
+				description: "香典帳が正常に削除されました",
 			});
 			router.replace("/koudens");
 		} catch (error) {
 			console.error("[DeleteKoudenDialog] deleteKouden threw error:", error);
 			console.error("Failed to delete kouden:", error);
-			toast({
-				title: "エラー",
-				description: "香典帳の削除に失敗しました",
-				variant: "destructive",
+			toast.error("香典帳の削除に失敗しました", {
+				description: "しばらく時間をおいてから再度お試しください",
 			});
 		} finally {
 			setIsDeleting(false);

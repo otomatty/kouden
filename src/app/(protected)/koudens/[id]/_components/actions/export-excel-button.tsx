@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { FileSpreadsheet } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { exportKoudenToExcel } from "@/app/_actions/export";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
@@ -14,7 +14,6 @@ interface ExportExcelButtonProps {
 
 export function ExportExcelButton({ koudenId }: ExportExcelButtonProps) {
 	const [isExporting, setIsExporting] = useState(false);
-	const { toast } = useToast();
 	// クライアントサイドでのみレンダリングするかどうかを管理 (SSR対策)
 	const [isClient, setIsClient] = useState(false);
 	// コンポーネントがマウントされたかどうかを管理 (マウント遅延対策)
@@ -57,15 +56,13 @@ export function ExportExcelButton({ koudenId }: ExportExcelButtonProps) {
 			document.body.removeChild(link);
 			window.URL.revokeObjectURL(url);
 
-			toast({
-				title: "Excelファイルを出力しました",
+			toast.success("Excelファイルを出力しました", {
 				description: `ファイル名: ${result.fileName}`,
 			});
 		} catch (error) {
-			toast({
-				title: "エラーが発生しました",
-				description: error instanceof Error ? error.message : "Excelファイルの出力に失敗しました",
-				variant: "destructive",
+			toast.error("Excelファイルの出力に失敗しました", {
+				description:
+					error instanceof Error ? error.message : "しばらく時間をおいてから再度お試しください",
 			});
 		} finally {
 			setIsExporting(false);

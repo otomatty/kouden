@@ -26,7 +26,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { X, Trash2, Users } from "lucide-react";
 // types
 import type {
@@ -65,7 +65,6 @@ export function OfferingDrawerContent({
 	const [offerings, setOfferings] = useAtom(offeringsAtom);
 	const [optimisticOfferings, setOptimisticOfferings] = useAtom(optimisticOfferingsAtom);
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-	const { toast } = useToast();
 
 	const handleUpdateField = async (
 		field: keyof OfferingWithKoudenEntries,
@@ -102,18 +101,13 @@ export function OfferingDrawerContent({
 			// 楽観的更新を削除
 			setOptimisticOfferings(optimisticOfferings.filter((o) => o.id !== offering.id));
 
-			toast({
-				title: "更新完了",
-				description: "データを更新しました",
-			});
+			toast.success("データを更新しました");
 		} catch (error) {
 			console.error("Failed to update offering:", error);
 			// エラーの場合は楽観的更新を削除
 			setOptimisticOfferings(optimisticOfferings.filter((o) => o.id !== offering.id));
-			toast({
-				title: "エラーが発生しました",
-				description: "データの更新に失敗しました",
-				variant: "destructive",
+			toast.error("データの更新に失敗しました", {
+				description: "しばらく時間をおいてから再度お試しください",
 			});
 		}
 	};
@@ -137,19 +131,14 @@ export function OfferingDrawerContent({
 			// 楽観的更新を削除
 			setOptimisticOfferings(optimisticOfferings.filter((o) => o.id !== offering.id));
 
-			toast({
-				title: "削除完了",
-				description: "データを削除しました",
-			});
+			toast.success("データを削除しました");
 			onClose();
 		} catch (error) {
 			console.error("Failed to delete offering:", error);
 			// エラーの場合は楽観的更新を削除
 			setOptimisticOfferings(optimisticOfferings.filter((o) => o.id !== offering.id));
-			toast({
-				title: "エラーが発生しました",
-				description: "データの削除に失敗しました",
-				variant: "destructive",
+			toast.error("データの削除に失敗しました", {
+				description: "しばらく時間をおいてから再度お試しください",
 			});
 		} finally {
 			setIsDeleteDialogOpen(false);

@@ -50,7 +50,7 @@ import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 export interface DeleteDialogProps {
 	/**
@@ -132,16 +132,12 @@ function DeleteDialogClient({
 		try {
 			setIsDeleting(true);
 			await onDelete();
-			toast({
-				title: successMessage,
-			});
+			toast.success(successMessage);
 			onSuccess?.();
 		} catch (error) {
 			console.error("Failed to delete:", error);
-			toast({
-				title: "エラー",
+			toast.error("エラー", {
 				description: errorMessage,
-				variant: "destructive",
 			});
 		} finally {
 			setIsDeleting(false);

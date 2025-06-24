@@ -3,7 +3,7 @@ import { getReturnItems, deleteReturnItem } from "@/app/_actions/return-records/
 import { ReturnItemDialog } from "./return-item-dialog";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 type Props = {
 	koudenId: string;
@@ -34,19 +34,14 @@ type ReturnItemCardProps = {
 };
 
 function ReturnItemCard({ returnItem, koudenId }: ReturnItemCardProps) {
-	const { toast } = useToast();
-
 	async function handleDelete() {
 		try {
 			await deleteReturnItem(returnItem.id, koudenId);
-			toast({
-				title: "返礼品を削除しました",
-			});
+			toast.success("返礼品を削除しました");
 		} catch (error) {
 			console.error(error);
-			toast({
-				title: "エラーが発生しました",
-				variant: "destructive",
+			toast.error("返礼品の削除に失敗しました", {
+				description: "しばらく時間をおいてから再度お試しください",
 			});
 		}
 	}

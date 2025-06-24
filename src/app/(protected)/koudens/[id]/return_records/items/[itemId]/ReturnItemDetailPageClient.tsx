@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import {
 	ArrowLeft,
 	Edit,
@@ -52,7 +52,6 @@ export function ReturnItemDetailPageClient({
 	const [isUpdating, setIsUpdating] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
 	const router = useRouter();
-	const { toast } = useToast();
 
 	// カテゴリの表示名を取得
 	const getCategoryLabel = (category: string | null) => {
@@ -97,11 +96,10 @@ export function ReturnItemDetailPageClient({
 	// 編集ページに遷移（将来実装予定）
 	const handleEdit = useCallback(() => {
 		// TODO: 編集ページへの遷移を実装
-		toast({
-			title: "編集機能",
+		toast.info("編集機能", {
 			description: "編集機能は次のステップで実装予定です",
 		});
-	}, [toast]);
+	}, []);
 
 	// アクティブ状態切り替え
 	const handleToggleActive = useCallback(async () => {
@@ -117,21 +115,18 @@ export function ReturnItemDetailPageClient({
 
 			setItem((prev) => ({ ...prev, is_active: newActiveState }));
 
-			toast({
-				title: "更新完了",
+			toast.success("更新完了", {
 				description: `返礼品を${newActiveState ? "表示" : "非表示"}に設定しました`,
 			});
 		} catch (error) {
 			console.error("[ERROR] Failed to toggle return item active:", error);
-			toast({
-				title: "更新エラー",
+			toast.error("更新エラー", {
 				description: "返礼品の状態更新に失敗しました",
-				variant: "destructive",
 			});
 		} finally {
 			setIsUpdating(false);
 		}
-	}, [item.id, item.is_active, koudenId, toast]);
+	}, [item.id, item.is_active, koudenId]);
 
 	// 削除処理
 	const handleDelete = useCallback(async () => {
@@ -140,8 +135,7 @@ export function ReturnItemDetailPageClient({
 
 			await deleteReturnItem(item.id, koudenId);
 
-			toast({
-				title: "削除完了",
+			toast.success("削除完了", {
 				description: "返礼品を削除しました",
 			});
 
@@ -149,14 +143,12 @@ export function ReturnItemDetailPageClient({
 			router.push(`/koudens/${koudenId}/return_records/items`);
 		} catch (error) {
 			console.error("[ERROR] Failed to delete return item:", error);
-			toast({
-				title: "削除エラー",
+			toast.error("削除エラー", {
 				description: "返礼品の削除に失敗しました",
-				variant: "destructive",
 			});
 			setIsDeleting(false);
 		}
-	}, [item.id, koudenId, router, toast]);
+	}, [item.id, koudenId, router]);
 
 	// 日時フォーマット
 	const formatDate = (dateString: string) => {

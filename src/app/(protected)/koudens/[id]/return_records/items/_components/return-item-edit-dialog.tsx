@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { ReturnItemForm } from "./return-item-form";
 import { updateReturnItem } from "@/app/_actions/return-records/return-items";
 import type { ReturnItem } from "@/types/return-records/return-items";
@@ -33,7 +33,6 @@ export function ReturnItemEditDialog({
 	onSuccess,
 }: ReturnItemEditDialogProps) {
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	const { toast } = useToast();
 
 	// 編集処理
 	const handleSubmit = useCallback(
@@ -58,8 +57,7 @@ export function ReturnItemEditDialog({
 
 				await updateReturnItem(updateData);
 
-				toast({
-					title: "更新完了",
+				toast.success("更新完了", {
 					description: "返礼品を更新しました",
 				});
 
@@ -67,16 +65,14 @@ export function ReturnItemEditDialog({
 				onSuccess?.();
 			} catch (error) {
 				console.error("[ERROR] Failed to update return item:", error);
-				toast({
-					title: "更新エラー",
+				toast.error("更新エラー", {
 					description: error instanceof Error ? error.message : "返礼品の更新に失敗しました",
-					variant: "destructive",
 				});
 			} finally {
 				setIsSubmitting(false);
 			}
 		},
-		[returnItem.id, koudenId, onClose, onSuccess, toast],
+		[returnItem.id, koudenId, onClose, onSuccess],
 	);
 
 	// キャンセル処理

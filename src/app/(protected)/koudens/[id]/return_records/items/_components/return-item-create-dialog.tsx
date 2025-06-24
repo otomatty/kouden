@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { ReturnItemForm } from "./return-item-form";
 import { createReturnItem } from "@/app/_actions/return-records/return-items";
 import type { ReturnItemFormData } from "@/schemas/return-items";
@@ -29,7 +29,6 @@ export function ReturnItemCreateDialog({
 	onSuccess,
 }: ReturnItemCreateDialogProps) {
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	const { toast } = useToast();
 
 	// 作成処理
 	const handleSubmit = useCallback(
@@ -53,8 +52,7 @@ export function ReturnItemCreateDialog({
 
 				await createReturnItem(createData);
 
-				toast({
-					title: "作成完了",
+				toast.success("作成完了", {
 					description: "返礼品を作成しました",
 				});
 
@@ -62,16 +60,14 @@ export function ReturnItemCreateDialog({
 				onSuccess?.();
 			} catch (error) {
 				console.error("[ERROR] Failed to create return item:", error);
-				toast({
-					title: "作成エラー",
+				toast.error("作成エラー", {
 					description: error instanceof Error ? error.message : "返礼品の作成に失敗しました",
-					variant: "destructive",
 				});
 			} finally {
 				setIsSubmitting(false);
 			}
 		},
-		[koudenId, onClose, onSuccess, toast],
+		[koudenId, onClose, onSuccess],
 	);
 
 	// キャンセル処理

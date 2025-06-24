@@ -12,7 +12,7 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Settings, Loader2, AlertTriangle } from "lucide-react";
 
 // types
@@ -51,7 +51,6 @@ export function BulkUpdateTableDialog({
 	onBulkUpdate,
 	trigger,
 }: BulkUpdateTableDialogProps) {
-	const { toast } = useToast();
 	const [open, setOpen] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
 	const [isLoadingData, setIsLoadingData] = useState(false);
@@ -84,10 +83,8 @@ export function BulkUpdateTableDialog({
 					console.error("データ初期化エラー:", error);
 					const errorMessage =
 						error instanceof Error ? error.message : "不明なエラーが発生しました";
-					toast({
-						title: "データ読み込みエラー",
-						description: `データの取得に失敗しました: ${errorMessage}`,
-						variant: "destructive",
+					toast.error(`データの取得に失敗しました: ${errorMessage}`, {
+						description: "しばらく時間をおいてから再度お試しください",
 					});
 				} finally {
 					setIsLoadingData(false);
@@ -96,7 +93,7 @@ export function BulkUpdateTableDialog({
 
 			initializeData();
 		}
-	}, [open, koudenId, toast]);
+	}, [open, koudenId]);
 
 	// ダイアログが閉じられた時のリセット
 	useEffect(() => {
@@ -116,10 +113,8 @@ export function BulkUpdateTableDialog({
 		);
 
 		if (groupsWithChanges.length === 0) {
-			toast({
-				title: "更新対象なし",
+			toast.info("変更する項目を選択してください", {
 				description: "変更する項目を選択してください",
-				variant: "destructive",
 			});
 			return;
 		}
@@ -133,8 +128,7 @@ export function BulkUpdateTableDialog({
 
 			// 成功した場合
 			if (result.successCount > 0) {
-				toast({
-					title: "一括更新完了",
+				toast.success("一括更新完了", {
 					description: `${result.successCount}件の返礼記録を更新しました${
 						result.failureCount > 0 ? ` (${result.failureCount}件失敗)` : ""
 					}`,
@@ -156,21 +150,18 @@ export function BulkUpdateTableDialog({
 				setLastUpdateErrors(result.errors);
 
 				if (result.failureCount > 0) {
-					toast({
-						title: "一部更新失敗",
-						description: `${result.failureCount}件の更新に失敗しました。詳細はダイアログ内のエラー表示をご確認ください。`,
-						variant: "destructive",
-					});
+					toast.error(
+						`${result.failureCount}件の更新に失敗しました。詳細はダイアログ内のエラー表示をご確認ください。`,
+						{
+							description: `${result.failureCount}件の更新に失敗しました。詳細はダイアログ内のエラー表示をご確認ください。`,
+						},
+					);
 				}
 			}
 
 			// 全て失敗した場合
 			if (result.successCount === 0 && result.failureCount > 0) {
-				toast({
-					title: "一括更新失敗",
-					description: "すべての更新に失敗しました。エラー詳細をご確認ください。",
-					variant: "destructive",
-				});
+				toast.error("すべての更新に失敗しました。エラー詳細をご確認ください。");
 			}
 		} catch (error) {
 			console.error("一括更新エラー:", error);
@@ -178,10 +169,8 @@ export function BulkUpdateTableDialog({
 
 			setLastUpdateErrors([`システムエラー: ${errorMessage}`]);
 
-			toast({
-				title: "一括更新エラー",
-				description: `一括更新に失敗しました: ${errorMessage}`,
-				variant: "destructive",
+			toast.error(`一括更新に失敗しました: ${errorMessage}`, {
+				description: "しばらく時間をおいてから再度お試しください",
 			});
 		} finally {
 			setIsLoading(false);

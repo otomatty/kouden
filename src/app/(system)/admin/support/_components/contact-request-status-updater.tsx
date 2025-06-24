@@ -10,7 +10,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { updateContactRequestStatus } from "@/app/_actions/admin/contact-requests";
 import { Loader2 } from "lucide-react";
 
@@ -31,7 +31,7 @@ export function ContactRequestStatusUpdater({
 }: ContactRequestStatusUpdaterProps) {
 	const [status, setStatus] = useState(currentStatus);
 	const [isUpdating, setIsUpdating] = useState(false);
-	const { toast } = useToast();
+
 	const router = useRouter();
 
 	const handleStatusUpdate = async (newStatus: string) => {
@@ -42,8 +42,7 @@ export function ContactRequestStatusUpdater({
 			await updateContactRequestStatus(requestId, newStatus as "new" | "in_progress" | "closed");
 
 			setStatus(newStatus);
-			toast({
-				title: "ステータスを更新しました",
+			toast.success("ステータスを更新しました", {
 				description: `ステータスを「${statusOptions.find((opt) => opt.value === newStatus)?.label}」に変更しました。`,
 			});
 
@@ -51,10 +50,8 @@ export function ContactRequestStatusUpdater({
 			router.refresh();
 		} catch (error) {
 			console.error("Failed to update status:", error);
-			toast({
-				title: "ステータスの更新に失敗しました",
+			toast.error("ステータスの更新に失敗しました", {
 				description: "しばらく時間をおいて再度お試しください。",
-				variant: "destructive",
 			});
 		} finally {
 			setIsUpdating(false);

@@ -5,7 +5,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { notoSansJP, zenOldMincho } from "./fonts";
-import { Toaster } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 import { getUser } from "./_actions/user";
 
 export const viewport: Viewport = {

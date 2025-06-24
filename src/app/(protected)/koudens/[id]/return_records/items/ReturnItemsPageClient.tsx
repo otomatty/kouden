@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, RefreshCw } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { ReturnItemsGrid } from "./_components/return-items-grid";
 import { ReturnItemCreateDialog } from "./_components/return-item-create-dialog";
 import { ReturnItemEditDialog } from "./_components/return-item-edit-dialog";
@@ -28,7 +28,6 @@ export function ReturnItemsPageClient({ koudenId }: ReturnItemsPageClientProps) 
 	const [showCreateDialog, setShowCreateDialog] = useState(false);
 	const [showEditDialog, setShowEditDialog] = useState(false);
 	const [selectedItem, setSelectedItem] = useState<ReturnItem | null>(null);
-	const { toast } = useToast();
 
 	// 初期データ取得
 	useEffect(() => {
@@ -39,10 +38,8 @@ export function ReturnItemsPageClient({ koudenId }: ReturnItemsPageClientProps) 
 				setItems(data);
 			} catch (error) {
 				console.error("[ERROR] Failed to load initial return items:", error);
-				toast({
-					title: "データ読み込みエラー",
+				toast.error("データ読み込みエラー", {
 					description: "返礼品データの読み込みに失敗しました",
-					variant: "destructive",
 				});
 			} finally {
 				setIsLoading(false);
@@ -50,7 +47,7 @@ export function ReturnItemsPageClient({ koudenId }: ReturnItemsPageClientProps) 
 		};
 
 		loadInitialData();
-	}, [koudenId, toast]);
+	}, [koudenId]);
 
 	// 返礼品データの再取得
 	const handleRefresh = useCallback(async () => {
@@ -59,21 +56,18 @@ export function ReturnItemsPageClient({ koudenId }: ReturnItemsPageClientProps) 
 			const data = await getReturnItems(koudenId);
 			setItems(data);
 
-			toast({
-				title: "更新完了",
+			toast.success("更新完了", {
 				description: "返礼品データを更新しました",
 			});
 		} catch (error) {
 			console.error("[ERROR] Failed to refresh return items:", error);
-			toast({
-				title: "更新エラー",
+			toast.error("更新エラー", {
 				description: "データの更新に失敗しました",
-				variant: "destructive",
 			});
 		} finally {
 			setIsLoading(false);
 		}
-	}, [koudenId, toast]);
+	}, [koudenId]);
 
 	// 返礼品作成ダイアログを開く
 	const handleCreateItem = useCallback(() => {
@@ -95,20 +89,17 @@ export function ReturnItemsPageClient({ koudenId }: ReturnItemsPageClientProps) 
 				// データを再取得してUIを更新
 				await handleRefresh();
 
-				toast({
-					title: "削除完了",
+				toast.success("削除完了", {
 					description: "返礼品を削除しました",
 				});
 			} catch (error) {
 				console.error("[ERROR] Failed to delete return item:", error);
-				toast({
-					title: "削除エラー",
+				toast.error("削除エラー", {
 					description: "返礼品の削除に失敗しました",
-					variant: "destructive",
 				});
 			}
 		},
-		[koudenId, handleRefresh, toast],
+		[koudenId, handleRefresh],
 	);
 
 	// 返礼品のアクティブ状態切り替え
@@ -123,20 +114,17 @@ export function ReturnItemsPageClient({ koudenId }: ReturnItemsPageClientProps) 
 				// データを再取得してUIを更新
 				await handleRefresh();
 
-				toast({
-					title: "更新完了",
+				toast.success("更新完了", {
 					description: `返礼品を${isActive ? "表示" : "非表示"}に設定しました`,
 				});
 			} catch (error) {
 				console.error("[ERROR] Failed to toggle return item active:", error);
-				toast({
-					title: "更新エラー",
+				toast.error("更新エラー", {
 					description: "返礼品の状態更新に失敗しました",
-					variant: "destructive",
 				});
 			}
 		},
-		[koudenId, handleRefresh, toast],
+		[koudenId, handleRefresh],
 	);
 
 	return (

@@ -5,7 +5,7 @@ import { Copy } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { duplicateKouden } from "@/app/_actions/koudens";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +17,6 @@ export function DuplicateKoudenButton({ koudenId }: DuplicateKoudenButtonProps) 
 	const router = useRouter();
 	const [loading, setLoading] = useState(false);
 	const isDesktop = useMediaQuery("(min-width: 768px)");
-	const { toast } = useToast();
 	const handleDuplicate = async () => {
 		try {
 			setLoading(true);
@@ -31,18 +30,16 @@ export function DuplicateKoudenButton({ koudenId }: DuplicateKoudenButtonProps) 
 				throw new Error("香典帳の複製に失敗しました");
 			}
 
-			toast({
-				title: "香典帳を複製しました",
+			toast.success("香典帳を複製しました", {
 				description: "新しい香典帳が作成されました",
 			});
 
 			router.push(`/koudens/${kouden.id}`);
 		} catch (error) {
 			console.error("Error:", error);
-			toast({
-				title: "エラー",
-				description: error instanceof Error ? error.message : "香典帳の複製に失敗しました",
-				variant: "destructive",
+			toast.error("香典帳の複製に失敗しました", {
+				description:
+					error instanceof Error ? error.message : "しばらく時間をおいてから再度お試しください",
 			});
 		} finally {
 			setLoading(false);

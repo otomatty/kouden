@@ -13,7 +13,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Plus, MailPlus, SendIcon, MailPlusIcon } from "lucide-react";
 import { sendBatchInvitationEmails } from "@/app/_actions/batch-invitations";
 import Link from "next/link";
@@ -37,19 +37,19 @@ export function InviteByEmailDialog({ koudenId, roles }: InviteByEmailDialogProp
 	const [loading, setLoading] = useState(false);
 	// 表示するメール入力欄の数を管理
 	const [numInputs, setNumInputs] = useState(1);
-	const { toast } = useToast();
 
 	const handleSend = async (formData: FormData) => {
 		setLoading(true);
 		try {
 			formData.append("koudenId", koudenId);
 			await sendBatchInvitationEmails(formData);
-			toast({ title: "招待メールを送信しました" });
+			toast.success("招待メールを送信しました", {
+				description: "招待メールが正常に送信されました",
+			});
 		} catch (error) {
-			toast({
-				title: "エラー",
-				description: error instanceof Error ? error.message : "メール送信に失敗しました",
-				variant: "destructive",
+			toast.error("招待メールの送信に失敗しました", {
+				description:
+					error instanceof Error ? error.message : "しばらく時間をおいてから再度お試しください",
 			});
 		} finally {
 			setLoading(false);

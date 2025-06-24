@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { createShareInvitation } from "@/app/_actions/invitations";
 import { Share2, Copy, QrCode, ChevronDown, ChevronUp } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
@@ -41,7 +41,6 @@ export function ShareLinkForm({ koudenId, roles }: ShareLinkFormProps) {
 	const [invitationLink, setInvitationLink] = useState<string>("");
 	const [copied, setCopied] = useState(false);
 	const [showQR, setShowQR] = useState(false);
-	const { toast } = useToast();
 
 	const handleCreateLink = async (formData: FormData) => {
 		try {
@@ -60,16 +59,13 @@ export function ShareLinkForm({ koudenId, roles }: ShareLinkFormProps) {
 			const link = `${window.location.origin}/invitations/${invitation.invitation_token}`;
 			setInvitationLink(link);
 
-			toast({
-				title: "招待リンクを作成しました",
+			toast.success("招待リンクを作成しました", {
 				description: "リンクをコピーして共有してください",
 			});
 		} catch (error) {
 			console.error("Error creating invitation:", error);
-			toast({
-				title: "エラー",
-				description: error instanceof Error ? error.message : "招待リンクの作成に失敗しました",
-				variant: "destructive",
+			toast.error(error instanceof Error ? error.message : "招待リンクの作成に失敗しました", {
+				description: "しばらく時間をおいてから再度お試しください",
 			});
 		} finally {
 			setLoading(false);
@@ -80,8 +76,7 @@ export function ShareLinkForm({ koudenId, roles }: ShareLinkFormProps) {
 		try {
 			await navigator.clipboard.writeText(invitationLink);
 			setCopied(true);
-			toast({
-				title: "コピーしました",
+			toast.success("コピーしました", {
 				description: "招待リンクをクリップボードにコピーしました",
 			});
 			setTimeout(() => {
@@ -89,10 +84,8 @@ export function ShareLinkForm({ koudenId, roles }: ShareLinkFormProps) {
 			}, 2000);
 		} catch (error) {
 			console.error("Error copying link:", error);
-			toast({
-				title: "エラー",
-				description: "リンクのコピーに失敗しました",
-				variant: "destructive",
+			toast.error("リンクのコピーに失敗しました", {
+				description: "しばらく時間をおいてから再度お試しください",
 			});
 		}
 	};

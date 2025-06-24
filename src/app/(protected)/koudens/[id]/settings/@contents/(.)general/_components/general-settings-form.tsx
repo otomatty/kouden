@@ -4,7 +4,7 @@ import { useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -41,7 +41,7 @@ interface GeneralSettingsFormProps {
  */
 export function GeneralSettingsForm({ koudenId, defaultValues }: GeneralSettingsFormProps) {
 	const [isPending, startTransition] = useTransition();
-	const { toast } = useToast();
+
 	const form = useForm<FormValues>({
 		resolver: zodResolver(formSchema),
 		defaultValues,
@@ -51,14 +51,13 @@ export function GeneralSettingsForm({ koudenId, defaultValues }: GeneralSettings
 		startTransition(async () => {
 			try {
 				await updateKouden(koudenId, values);
-				toast({
-					title: "設定を保存しました",
+				toast.success("設定を保存しました", {
+					description: "香典帳の基本情報が更新されました",
 				});
 			} catch (error) {
 				console.error(error);
-				toast({
-					title: "設定の保存に失敗しました",
-					description: "もう一度試してください",
+				toast.error("設定の保存に失敗しました", {
+					description: "しばらく時間をおいてから再度お試しください",
 				});
 			}
 		});

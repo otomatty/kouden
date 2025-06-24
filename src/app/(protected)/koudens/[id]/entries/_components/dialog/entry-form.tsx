@@ -8,7 +8,7 @@ import { useEffect } from "react";
 // ui
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Form } from "@/components/ui/form";
 
 // types
@@ -47,7 +47,7 @@ export interface EntryFormProps {
 
 export function EntryForm({ koudenId, relationships, defaultValues, onSuccess }: EntryFormProps) {
 	const [submissionState, setSubmissionState] = useAtom(formSubmissionStateAtom);
-	const { toast } = useToast();
+
 	const [draftValues, setDraftValues] = useAtom(entryFormDraftAtom);
 	const isCreate = defaultValues == null;
 
@@ -105,8 +105,7 @@ export function EntryForm({ koudenId, relationships, defaultValues, onSuccess }:
 
 			// 成功時の処理
 			onSuccess?.(result);
-			toast({
-				title: defaultValues ? "更新しました" : "登録しました",
+			toast.success(defaultValues ? "エントリーを更新しました" : "エントリーを登録しました", {
 				description: `${result.name || "名称未設定"}を${defaultValues ? "更新" : "登録"}しました`,
 			});
 
@@ -128,10 +127,9 @@ export function EntryForm({ koudenId, relationships, defaultValues, onSuccess }:
 				isSubmitting: false,
 				error: error instanceof Error ? error.message : "保存に失敗しました",
 			});
-			toast({
-				title: "エラー",
-				description: error instanceof Error ? error.message : "保存に失敗しました",
-				variant: "destructive",
+			toast.error("エントリーの保存に失敗しました", {
+				description:
+					error instanceof Error ? error.message : "しばらく時間をおいてから再度お試しください",
 			});
 		} finally {
 			setSubmissionState((prev) => ({ ...prev, isSubmitting: false }));

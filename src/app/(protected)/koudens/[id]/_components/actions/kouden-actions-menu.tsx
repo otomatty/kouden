@@ -12,7 +12,7 @@ import ExportDropdown from "./export-dropdown";
 import { useAtom, useAtomValue } from "jotai";
 import { canUpdateKouden, canDeleteKouden } from "@/store/permission";
 import type { KoudenPermission } from "@/types/role";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 import { duplicateEntriesAtom } from "@/store/duplicateEntries";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
@@ -40,7 +40,7 @@ export function KoudenActionsMenu({
 	const isDesktop = useMediaQuery("(min-width: 768px)");
 	const [, setDupResults] = useAtom(duplicateEntriesAtom);
 	const duplicateResults = useAtomValue(duplicateEntriesAtom);
-	const { toast } = useToast();
+
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const pathname = usePathname();
@@ -48,7 +48,9 @@ export function KoudenActionsMenu({
 
 	const handleClearDuplicates = () => {
 		setDupResults(null);
-		toast({ title: "通常表示に戻しました" });
+		toast.success("通常表示に戻しました", {
+			description: "重複表示を解除して通常の表示に戻りました",
+		});
 		const params = new URLSearchParams(searchParams.toString());
 		params.delete("isDuplicate");
 		router.push(`${pathname}?${params.toString()}`);

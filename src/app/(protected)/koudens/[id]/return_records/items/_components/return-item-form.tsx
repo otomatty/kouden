@@ -26,7 +26,7 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { returnItemFormSchema, type ReturnItemFormData } from "@/schemas/return-items";
 import type { ReturnItem, ReturnItemCategory } from "@/types/return-records/return-items";
 import { ReturnItemImageUploader } from "./return-item-image-uploader";
@@ -66,8 +66,6 @@ export function ReturnItemForm({
 	submitButtonText,
 	koudenId,
 }: ReturnItemFormProps) {
-	const { toast } = useToast();
-
 	// react-hook-formの設定
 	const form = useForm<ReturnItemFormData>({
 		resolver: zodResolver(returnItemFormSchema),
@@ -113,14 +111,12 @@ export function ReturnItemForm({
 				}
 			} catch (error) {
 				console.error("[ERROR] Image upload/delete failed:", error);
-				toast({
-					title: "画像処理エラー",
+				toast.error("画像処理エラー", {
 					description: error instanceof Error ? error.message : "画像の処理に失敗しました",
-					variant: "destructive",
 				});
 			}
 		},
-		[koudenId, form, toast],
+		[koudenId, form],
 	);
 
 	// 送信処理
@@ -130,14 +126,12 @@ export function ReturnItemForm({
 				await onSubmit(data);
 			} catch (error) {
 				console.error("[ERROR] Form submission failed:", error);
-				toast({
-					title: "送信エラー",
+				toast.error("送信エラー", {
 					description: "フォームの送信に失敗しました",
-					variant: "destructive",
 				});
 			}
 		},
-		[onSubmit, toast],
+		[onSubmit],
 	);
 
 	// 推奨金額の入力をクリア

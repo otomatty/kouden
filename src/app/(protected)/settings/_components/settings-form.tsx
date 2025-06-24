@@ -11,7 +11,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { updateUserSettings } from "@/app/_actions/settings";
 import { useSetAtom } from "jotai";
 import { guideModeAtom } from "@/store/guide";
@@ -41,16 +41,11 @@ export function SettingsForm({ userId, initialSettings }: SettingsFormProps) {
 			}
 
 			setGuideMode(checked);
-			toast({
-				title: "設定を更新しました",
-			});
+			toast.success("設定を更新しました");
 			router.refresh();
 		} catch (error) {
-			toast({
-				title: "エラー",
-				description:
-					error instanceof Error ? error.message : "設定の更新に失敗しました",
-				variant: "destructive",
+			toast.error(error instanceof Error ? error.message : "設定の更新に失敗しました", {
+				description: "しばらく時間をおいてから再度お試しください",
 			});
 		} finally {
 			setIsPending(false);
@@ -68,16 +63,11 @@ export function SettingsForm({ userId, initialSettings }: SettingsFormProps) {
 				throw new Error(error);
 			}
 
-			toast({
-				title: "設定を更新しました",
-			});
+			toast.success("設定を更新しました");
 			router.refresh();
 		} catch (error) {
-			toast({
-				title: "エラー",
-				description:
-					error instanceof Error ? error.message : "設定の更新に失敗しました",
-				variant: "destructive",
+			toast.error("エラー", {
+				description: error instanceof Error ? error.message : "設定の更新に失敗しました",
 			});
 		} finally {
 			setIsPending(false);

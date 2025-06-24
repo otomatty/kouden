@@ -6,7 +6,7 @@ import { ImagePlus, X, Upload } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 interface ReturnItemImageUploaderProps {
 	/** 現在の画像URL（編集時） */
@@ -32,7 +32,6 @@ export function ReturnItemImageUploader({
 }: ReturnItemImageUploaderProps) {
 	const [previewUrl, setPreviewUrl] = useState<string | null>(currentImageUrl || null);
 	const [isProcessing, setIsProcessing] = useState(false);
-	const { toast } = useToast();
 
 	// ファイル処理（WebP変換）
 	const processImageFile = useCallback(async (file: File): Promise<string> => {
@@ -113,22 +112,19 @@ export function ReturnItemImageUploader({
 				setPreviewUrl(processedImageUrl);
 				onImageChange(processedImageUrl);
 
-				toast({
-					title: "画像をアップロードしました",
+				toast.success("画像をアップロードしました", {
 					description: "フォームを保存すると画像が確定されます",
 				});
 			} catch (error) {
 				console.error("[ERROR] Image processing failed:", error);
-				toast({
-					title: "画像処理エラー",
+				toast.error("画像処理エラー", {
 					description: "画像の処理に失敗しました",
-					variant: "destructive",
 				});
 			} finally {
 				setIsProcessing(false);
 			}
 		},
-		[disabled, isUploading, processImageFile, onImageChange, toast],
+		[disabled, isUploading, processImageFile, onImageChange],
 	);
 
 	// Dropzone設定
@@ -149,10 +145,8 @@ export function ReturnItemImageUploader({
 		setPreviewUrl(null);
 		onImageChange(null);
 
-		toast({
-			title: "画像を削除しました",
-		});
-	}, [disabled, isUploading, onImageChange, toast]);
+		toast.success("画像を削除しました");
+	}, [disabled, isUploading, onImageChange]);
 
 	const displayImageUrl = previewUrl || currentImageUrl;
 	const isProcessingOrUploading = isProcessing || isUploading;

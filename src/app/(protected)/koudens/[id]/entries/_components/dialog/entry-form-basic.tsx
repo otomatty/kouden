@@ -5,7 +5,7 @@ import { useFormContext } from "react-hook-form";
 import { useSetAtom } from "jotai";
 import { FormControl, FormField, FormItem, FormMessage, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { formatCurrency, formatInputCurrency } from "@/utils/currency";
 import { formatPostalCode, searchAddress } from "./entry-form";
 import { addressSearchStateAtom } from "@/store/entries";
@@ -31,13 +31,11 @@ export function EntryFormBasic() {
 					const newAddress = await searchAddress(postalCode);
 					if (newAddress) {
 						form.setValue("address", newAddress);
-						toast({
-							title: "住所を自動入力しました",
+						toast.success("住所を自動入力しました", {
 							description: newAddress,
 						});
 					} else {
-						toast({
-							title: "住所が見つかりませんでした",
+						toast.warning("住所が見つかりませんでした", {
 							description: "郵便番号を確認してください",
 						});
 					}

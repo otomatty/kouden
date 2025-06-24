@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Plus, Pencil, Trash } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useAtomValue } from "jotai";
 import { permissionAtom } from "@/store/permission";
 import { RelationshipDialog } from "./relationship-dialog";
@@ -18,7 +18,7 @@ interface RelationshipCardListProps {
 
 export function RelationshipCardList({ koudenId, relationships }: RelationshipCardListProps) {
 	const permission = useAtomValue(permissionAtom);
-	const { toast } = useToast();
+
 	const [, setIsDialogOpen] = useState(false);
 	const [selectedRelationship, setSelectedRelationship] = useState<Relationship | undefined>();
 	const canEdit = permission === "owner" || permission === "editor";
@@ -36,16 +36,11 @@ export function RelationshipCardList({ koudenId, relationships }: RelationshipCa
 	const handleDelete = async (id: string) => {
 		try {
 			await deleteRelationship(id);
-			toast({
-				title: "削除しました",
-				description: "関係性を削除しました",
-			});
+			toast.success("関係性を削除しました");
 		} catch (error) {
 			console.error(error);
-			toast({
-				title: "エラーが発生しました",
-				description: "関係性の削除に失敗しました",
-				variant: "destructive",
+			toast.error("関係性の削除に失敗しました", {
+				description: "しばらく時間をおいてから再度お試しください",
 			});
 		}
 	};
@@ -57,10 +52,8 @@ export function RelationshipCardList({ koudenId, relationships }: RelationshipCa
 			});
 		} catch (error) {
 			console.error(error);
-			toast({
-				title: "エラーが発生しました",
-				description: "設定の更新に失敗しました",
-				variant: "destructive",
+			toast.error("設定の更新に失敗しました", {
+				description: "しばらく時間をおいてから再度お試しください",
 			});
 		}
 	};

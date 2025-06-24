@@ -26,7 +26,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { X, Trash2 } from "lucide-react";
 // types
 import type { Entry, OptimisticEntry } from "@/types/entries";
@@ -63,7 +63,6 @@ export function EntryDrawerContent({
 	const [entries, setEntries] = useAtom(entriesAtom);
 	const [optimisticEntries, setOptimisticEntries] = useAtom(optimisticEntriesAtom);
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-	const { toast } = useToast();
 
 	const handleUpdateField = async (field: keyof Entry, value: string | boolean) => {
 		try {
@@ -89,18 +88,15 @@ export function EntryDrawerContent({
 			// 楽観的更新を削除
 			setOptimisticEntries(optimisticEntries.filter((e) => e.id !== entry.id));
 
-			toast({
-				title: "更新完了",
+			toast.success("データを更新しました", {
 				description: "データを更新しました",
 			});
 		} catch (error) {
 			console.error("Failed to update entry:", error);
 			// エラーの場合は楽観的更新を削除
 			setOptimisticEntries(optimisticEntries.filter((e) => e.id !== entry.id));
-			toast({
-				title: "エラーが発生しました",
-				description: "データの更新に失敗しました",
-				variant: "destructive",
+			toast.error("データの更新に失敗しました", {
+				description: "しばらく時間をおいてから再度お試しください",
 			});
 		}
 	};
@@ -123,8 +119,7 @@ export function EntryDrawerContent({
 			// 楽観的更新を削除
 			setOptimisticEntries(optimisticEntries.filter((e) => e.id !== entry.id));
 
-			toast({
-				title: "削除完了",
+			toast.success("データを削除しました", {
 				description: "データを削除しました",
 			});
 			onClose();
@@ -132,10 +127,8 @@ export function EntryDrawerContent({
 			console.error("Failed to delete entry:", error);
 			// エラーの場合は楽観的更新を削除
 			setOptimisticEntries(optimisticEntries.filter((e) => e.id !== entry.id));
-			toast({
-				title: "エラーが発生しました",
-				description: "データの削除に失敗しました",
-				variant: "destructive",
+			toast.error("データの削除に失敗しました", {
+				description: "しばらく時間をおいてから再度お試しください",
 			});
 		} finally {
 			setIsDeleteDialogOpen(false);

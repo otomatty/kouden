@@ -16,7 +16,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { updateMemberRole } from "@/app/_actions/members";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import type { KoudenRole } from "@/types/role";
 
 const getRoleDisplayName = (roleName: string) => {
@@ -43,19 +43,15 @@ export const createColumns = ({
 	koudenId,
 	roles,
 }: CreateColumnsOptions): ColumnDef<KoudenMember>[] => {
-	const { toast } = useToast();
-
 	const handleRoleChange = async (userId: string, roleId: string) => {
 		try {
 			await updateMemberRole(koudenId, userId, roleId);
-			toast({
-				title: "ロールを更新しました",
+			toast.success("ロールを更新しました", {
+				description: "メンバーのロールが正常に変更されました",
 			});
 		} catch (error) {
-			toast({
-				title: "エラー",
-				description: error instanceof Error ? error.message : "ロールの更新に失敗しました",
-				variant: "destructive",
+			toast.error(error instanceof Error ? error.message : "ロールの更新に失敗しました", {
+				description: "しばらく時間をおいてから再度お試しください",
 			});
 		}
 	};

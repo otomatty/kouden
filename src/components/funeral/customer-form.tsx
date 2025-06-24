@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Loader2, Save, User, MapPin, Phone, Mail, FileText } from "lucide-react";
 import type {
 	Customer,
@@ -44,7 +44,6 @@ export function CustomerForm({
 	onCancel,
 	mode,
 }: CustomerFormProps) {
-	const { toast } = useToast();
 	const [isLoading, setIsLoading] = useState(false);
 
 	// フォーム状態
@@ -73,19 +72,15 @@ export function CustomerForm({
 		try {
 			// バリデーション
 			if (!formData.name.trim()) {
-				toast({
-					title: "エラー",
+				toast.error("エラー", {
 					description: "顧客名は必須です",
-					variant: "destructive",
 				});
 				return;
 			}
 
 			if (!formData.email.trim()) {
-				toast({
-					title: "エラー",
+				toast.error("エラー", {
 					description: "メールアドレスは必須です",
-					variant: "destructive",
 				});
 				return;
 			}
@@ -105,23 +100,18 @@ export function CustomerForm({
 			const result = await onSubmit(submitData);
 
 			if (result.success) {
-				toast({
-					title: "成功",
+				toast.success("成功", {
 					description: mode === "create" ? "顧客を登録しました" : "顧客情報を更新しました",
 				});
 			} else {
-				toast({
-					title: "エラー",
+				toast.error("エラー", {
 					description: result.error || "処理に失敗しました",
-					variant: "destructive",
 				});
 			}
 		} catch (error) {
 			console.error("フォーム送信エラー:", error);
-			toast({
-				title: "エラー",
+			toast.error("エラー", {
 				description: "システムエラーが発生しました",
-				variant: "destructive",
 			});
 		} finally {
 			setIsLoading(false);

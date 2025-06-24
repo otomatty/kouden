@@ -14,7 +14,7 @@ import {
 import { useAtomValue } from "jotai";
 
 // ui
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
 // types
@@ -105,7 +105,6 @@ export function DataTable({
 	);
 	const [rowSelection, setRowSelection] = useState({});
 	const [_, setSelectedRows] = useState<string[]>([]);
-	const { toast } = useToast();
 
 	// データの正規化
 	const normalizedReturns = useMemo(() => {
@@ -180,16 +179,13 @@ export function DataTable({
 						},
 					);
 
-					toast({
-						title: "更新完了",
+					toast.success("データを更新しました", {
 						description: `${columnLabels[columnId] || columnId}を更新しました`,
 					});
 				} catch (error) {
 					console.error("[ERROR] Optimistic cell edit failed:", error);
-					toast({
-						title: "更新エラー",
-						description: "データの更新に失敗しました",
-						variant: "destructive",
+					toast.error("データの更新に失敗しました", {
+						description: "しばらく時間をおいてから再度お試しください",
 					});
 				}
 			} else {
@@ -197,21 +193,18 @@ export function DataTable({
 				try {
 					await updateReturnRecordFieldByKoudenEntryId(rowId, dbFieldName, newValue);
 					onDataChange();
-					toast({
-						title: "更新完了",
+					toast.success("データを更新しました", {
 						description: `${columnLabels[columnId] || columnId}を更新しました`,
 					});
 				} catch (error) {
 					console.error("[ERROR] Cell edit failed:", error);
-					toast({
-						title: "更新エラー",
-						description: "データの更新に失敗しました",
-						variant: "destructive",
+					toast.error("データの更新に失敗しました", {
+						description: "しばらく時間をおいてから再度お試しください",
 					});
 				}
 			}
 		},
-		[onOptimisticUpdate, onDataChange, toast],
+		[onOptimisticUpdate, onDataChange],
 	);
 
 	// 行削除ハンドラー
@@ -222,20 +215,17 @@ export function DataTable({
 				onDataChange();
 				setRowSelection({});
 				setSelectedRows([]);
-				toast({
-					title: "削除完了",
-					description: `${rowIds.length}件の返礼記録を削除しました`,
+				toast.success(`${rowIds.length}件の返礼記録を削除しました`, {
+					description: "削除処理が正常に完了しました",
 				});
 			} catch (error) {
 				console.error("[ERROR] Row deletion failed:", error);
-				toast({
-					title: "削除エラー",
-					description: "データの削除に失敗しました",
-					variant: "destructive",
+				toast.error("データの削除に失敗しました", {
+					description: "しばらく時間をおいてから再度お試しください",
 				});
 			}
 		},
-		[onDataChange, toast],
+		[onDataChange],
 	);
 
 	// カラム定義の生成
