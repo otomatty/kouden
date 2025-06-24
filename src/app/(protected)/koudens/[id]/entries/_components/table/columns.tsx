@@ -10,6 +10,17 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 // types
 import type { KoudenPermission } from "@/types/role";
@@ -307,16 +318,35 @@ export function createColumns({ onDeleteRows, relationships, permission, koudenI
 										/>
 									</DropdownMenuItem>
 
-									<DropdownMenuItem asChild>
-										<button
-											type="button"
-											onClick={() => onDeleteRows([entry.id])}
-											className="text-destructive w-full justify-start"
-										>
-											<Trash2 className="h-4 w-4" />
-											削除する
-										</button>
-									</DropdownMenuItem>
+									<AlertDialog>
+										<AlertDialogTrigger asChild>
+											<DropdownMenuItem
+												className="text-destructive cursor-pointer"
+												onSelect={(e) => e.preventDefault()}
+											>
+												<Trash2 className="h-4 w-4 mr-2" />
+												削除する
+											</DropdownMenuItem>
+										</AlertDialogTrigger>
+										<AlertDialogContent>
+											<AlertDialogHeader>
+												<AlertDialogTitle>削除の確認</AlertDialogTitle>
+												<AlertDialogDescription>
+													「{entry.name}」のデータを削除します。
+													この操作は元に戻すことができません。 本当に削除してよろしいですか？
+												</AlertDialogDescription>
+											</AlertDialogHeader>
+											<AlertDialogFooter>
+												<AlertDialogCancel>キャンセル</AlertDialogCancel>
+												<AlertDialogAction
+													onClick={() => onDeleteRows([entry.id])}
+													className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+												>
+													削除する
+												</AlertDialogAction>
+											</AlertDialogFooter>
+										</AlertDialogContent>
+									</AlertDialog>
 								</>
 							)}
 						</DropdownMenuContent>

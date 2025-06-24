@@ -17,8 +17,19 @@ import { useSearchParams } from "next/navigation";
 
 // ui
 import { Trash2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 // types
 import type { Entry } from "@/types/entries";
 import type { Relationship } from "@/types/relationships";
@@ -129,7 +140,6 @@ export function DataTable({
 	const [relationshipOptions, setRelationshipOptions] = useState<Relationship[]>(relationships);
 	const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>(parsedMemberIds);
 	const [, setSelectedRows] = useState<string[]>([]);
-	const { toast } = useToast();
 
 	// 関係性データの正規化
 	const normalizedRelationships = useMemo(() => {
@@ -226,23 +236,21 @@ export function DataTable({
 			try {
 				await deleteEntries(ids, koudenId);
 				setSelectedRows([]);
+				setRowSelection({}); // 選択状態をリセット
 				if (onDataChange) {
 					onDataChange(normalizedEntries.filter((entry) => !ids.includes(entry.id)));
 				}
-				toast({
-					title: "削除完了",
-					description: `${ids.length}件のデータを削除しました`,
+				toast.success(`${ids.length}件のデータを削除しました`, {
+					description: "削除処理が正常に完了しました",
 				});
 			} catch (error) {
 				console.error("Failed to delete entries:", error);
-				toast({
-					title: "エラーが発生しました",
-					description: "データの削除に失敗しました",
-					variant: "destructive",
+				toast.error("削除処理に失敗しました", {
+					description: "しばらく時間をおいてから再度お試しください",
 				});
 			}
 		},
-		[koudenId, normalizedEntries, onDataChange, toast],
+		[koudenId, normalizedEntries, onDataChange],
 	);
 
 	// セルの編集
@@ -257,10 +265,8 @@ export function DataTable({
 					rowId,
 					entriesCount: normalizedEntries.length,
 				});
-				toast({
-					title: "エラーが発生しました",
-					description: "対象のデータが見つかりません",
-					variant: "destructive",
+				toast.error("対象のデータが見つかりません", {
+					description: "エントリーが存在しないか、既に削除されている可能性があります",
 				});
 				return;
 			}
@@ -288,9 +294,8 @@ export function DataTable({
 					onDataChange(newEntries);
 				}
 
-				toast({
-					title: "更新完了",
-					description: "データを更新しました",
+				toast.success("データを更新しました", {
+					description: "変更内容が正常に保存されました",
 				});
 			} catch (error) {
 				console.error("[ERROR] Update failed:", {
@@ -302,14 +307,12 @@ export function DataTable({
 					fieldKey: columnId === "relationshipId" ? "relationship_id" : columnId,
 					value,
 				});
-				toast({
-					title: "エラーが発生しました",
-					description: "データの更新に失敗しました",
-					variant: "destructive",
+				toast.error("データの更新に失敗しました", {
+					description: "しばらく時間をおいてから再度お試しください",
 				});
 			}
 		},
-		[normalizedEntries, onDataChange, toast],
+		[normalizedEntries, onDataChange],
 	);
 
 	// カラムの生成
@@ -492,15 +495,32 @@ export function DataTable({
 
 						{/* 削除ボタン */}
 						{selectedRowsIds.length > 0 && (
-							<Button
-								variant="destructive"
-								size="sm"
-								onClick={() => handleDeleteRows(selectedRowsIds)}
-								className="flex items-center gap-2"
-							>
-								<Trash2 className="h-4 w-4" />
-								<span>{selectedRowsIds.length}件を削除</span>
-							</Button>
+							<AlertDialog>
+								<AlertDialogTrigger asChild>
+									<Button variant="destructive" size="sm" className="flex items-center gap-2">
+										<Trash2 className="h-4 w-4" />
+										<span>{selectedRowsIds.length}件を削除</span>
+									</Button>
+								</AlertDialogTrigger>
+								<AlertDialogContent>
+									<AlertDialogHeader>
+										<AlertDialogTitle>削除の確認</AlertDialogTitle>
+										<AlertDialogDescription>
+											選択された{selectedRowsIds.length}件のデータを削除します。
+											この操作は元に戻すことができません。 本当に削除してよろしいですか？
+										</AlertDialogDescription>
+									</AlertDialogHeader>
+									<AlertDialogFooter>
+										<AlertDialogCancel>キャンセル</AlertDialogCancel>
+										<AlertDialogAction
+											onClick={() => handleDeleteRows(selectedRowsIds)}
+											className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+										>
+											削除する
+										</AlertDialogAction>
+									</AlertDialogFooter>
+								</AlertDialogContent>
+							</AlertDialog>
 						)}
 
 						<BaseDataTable
