@@ -32,9 +32,6 @@ const getRoleDisplayName = (roleName: string) => {
 	return roleMap[roleName] || "未設定";
 };
 
-// 固定数のメール入力フィールドのための安定したキー (この配列はもう使わないわ)
-// const emailInputKeys = ["email-input-field-1", "email-input-field-2", "email-input-field-3", "email-input-field-4", "email-input-field-5"];
-
 export function InviteByEmailDialog({ koudenId, roles }: InviteByEmailDialogProps) {
 	const isMobile = useMediaQuery("(max-width: 768px)");
 	const [loading, setLoading] = useState(false);

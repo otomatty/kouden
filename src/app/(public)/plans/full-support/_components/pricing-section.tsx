@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { DollarSign, Info } from "lucide-react";
+import { Section } from "@/components/ui/section";
+import { SectionTitle } from "@/components/ui/section-title";
 
 // これらの定数はコンポーネントの外に出すか、useMemoでメモ化することも検討できますが、
 // 今回はuseCallbackの依存配列から除外するだけでLinterエラーは解消されます。
@@ -132,8 +134,8 @@ export default function PricingSection() {
 	const sliderPercentage = kodenCount === "" ? 0 : (Number(kodenCount) / MAX_SLIDER_VALUE) * 100;
 
 	return (
-		<section className="mb-12 md:mb-16">
-			<h2 className="text-2xl md:text-3xl font-semibold mb-8 text-center">料金体系</h2>
+		<Section className="mb-12 md:mb-16">
+			<SectionTitle title="料金体系" subtitle="料金体系をご説明します。" className="mb-12" />
 			<div className="grid md:grid-cols-2 gap-8 mb-10">
 				<Card>
 					<CardHeader>
@@ -219,7 +221,7 @@ export default function PricingSection() {
 							/>
 							<div
 								className="absolute top-1/2 -translate-y-1/2 h-5 w-5 bg-primary rounded-full shadow-md border-2 border-background group-hover:scale-110 transition-transform duration-100 ease-out"
-								style={{ left: `calc(${sliderPercentage}% - 10px)` }}
+								style={{ left: `calc(${sliderPercentage}% - 1rem)` }}
 							/>
 						</div>
 					</div>
@@ -243,6 +245,6 @@ export default function PricingSection() {
 				詳細なお見積もりやご相談は、お気軽にお問い合わせください。
 				(この文言はCTAセクションにありますので、最終的に重複を避けるよう調整してください)
 			</p>
-		</section>
+		</Section>
 	);
 }

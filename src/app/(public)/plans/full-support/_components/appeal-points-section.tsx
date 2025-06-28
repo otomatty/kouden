@@ -1,9 +1,15 @@
 import { CheckCircle2 } from "lucide-react";
+import { Section } from "@/components/ui/section";
+import { SectionTitle } from "@/components/ui/section-title";
 
 export default function AppealPointsSection() {
 	return (
-		<section className="mb-12 md:mb-16 bg-primary-foreground p-6 md:p-8 rounded-lg">
-			<h2 className="text-2xl md:text-3xl font-semibold mb-6 text-center">このプランの魅力</h2>
+		<Section className="mb-12 md:mb-16 bg-primary-foreground p-6 md:p-8 rounded-lg">
+			<SectionTitle
+				title="このプランの魅力"
+				subtitle="「ITは分かるけど、今は誰かに頼りたい」「AIによる効率化」と「人の手による安心のサポート」のハイブリッドで、時間的・精神的負担を極限まで軽減します。"
+				className="mb-12"
+			/>
 			<div className="space-y-4">
 				<p className="text-center text-lg">
 					「ITは分かるけど、今は誰かに頼りたい」
@@ -37,6 +43,6 @@ export default function AppealPointsSection() {
 					</li>
 				</ul>
 			</div>
-		</section>
+		</Section>
 	);
 }

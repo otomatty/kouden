@@ -8,7 +8,6 @@ interface AccordionMDXProps {
 	title: string;
 	children: React.ReactNode;
 	defaultOpen?: boolean;
-	variant?: "default" | "bordered" | "filled";
 	className?: string;
 }
 
@@ -26,7 +25,6 @@ export function AccordionMDX({
 	title,
 	children,
 	defaultOpen = false,
-	variant = "default",
 	className,
 }: AccordionMDXProps) {
 	const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -49,12 +47,7 @@ export function AccordionMDX({
 	return (
 		<div
 			className={cn(
-				"rounded-lg mb-6 overflow-hidden",
-				{
-					"border border-border bg-background": variant === "default",
-					"border-2 border-primary/20 bg-primary/5": variant === "bordered",
-					"bg-muted/50 border border-muted-foreground/20": variant === "filled",
-				},
+				"rounded-lg mb-6 overflow-hidden border border-border bg-background",
 				className,
 			)}
 		>
@@ -62,14 +55,7 @@ export function AccordionMDX({
 			<button
 				type="button"
 				id={accordionId}
-				className={cn(
-					"w-full px-4 py-3 text-left font-medium flex items-center justify-between transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
-					{
-						"hover:bg-muted/50": variant === "default",
-						"hover:bg-primary/10": variant === "bordered",
-						"hover:bg-muted/70": variant === "filled",
-					},
-				)}
+				className="w-full px-4 py-3 text-left font-medium flex items-center justify-between transition-colors focus:outline-none hover:bg-muted/50"
 				onClick={handleToggle}
 				onKeyDown={handleKeyDown}
 				aria-expanded={isOpen}
@@ -89,11 +75,7 @@ export function AccordionMDX({
 			{isOpen && (
 				<section
 					id={contentId}
-					className={cn("px-4 pb-4 border-t animate-in slide-in-from-top-2 duration-200", {
-						"border-border": variant === "default",
-						"border-primary/20": variant === "bordered",
-						"border-muted-foreground/20": variant === "filled",
-					})}
+					className="px-4 pb-4 border-t border-border animate-in slide-in-from-top-2 duration-200"
 					aria-labelledby={accordionId}
 				>
 					<div className="pt-3 prose prose-sm max-w-none dark:prose-invert">{children}</div>

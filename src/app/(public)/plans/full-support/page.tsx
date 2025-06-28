@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 
 export default function FullSupportPage() {
 	return (
-		<main className="container mx-auto px-4 py-12 md:py-16">
+		<>
 			<PageHero
 				title="フルサポートプラン"
 				subtitle="専門家がマンツーマンでサポート。香典管理を安心して、確実に完了したいあなたのためのフルサポートプランです。"
@@ -26,6 +26,6 @@ export default function FullSupportPage() {
 			<HowItWorksSection />
 			<AppealPointsSection />
 			<CtaSection />
-		</main>
+		</>
 	);
 }

@@ -1,4 +1,6 @@
 import { HelpCircle, Users, ListChecks, ShieldCheck } from "lucide-react";
+import { Section } from "@/components/ui/section";
+import { SectionTitle } from "@/components/ui/section-title";
 
 const FullSupportBenefitItem = ({
 	icon: Icon,
@@ -20,10 +22,12 @@ const FullSupportBenefitItem = ({
 
 export default function TargetUsersSection() {
 	return (
-		<section className="mb-12 md:mb-16 bg-muted p-6 md:p-8 rounded-lg">
-			<h2 className="text-2xl md:text-3xl font-semibold mb-6 text-center">
-				こんな方におすすめです
-			</h2>
+		<Section className="mb-12 md:mb-16 bg-muted p-6 md:p-8 rounded-lg">
+			<SectionTitle
+				title="こんな方におすすめです"
+				subtitle="このプランは以下のような方におすすめです。"
+				className="mb-12"
+			/>
 			<div className="grid md:grid-cols-2 gap-6">
 				<FullSupportBenefitItem icon={Users} title="ITリテラシーはあるが、時間がない方">
 					普段PCは使うけれど、葬儀後の多忙な時期に新しいアプリの操作を覚える時間や精神的余裕がない。
@@ -38,6 +42,6 @@ export default function TargetUsersSection() {
 					AIによる効率化と、人の手による安心のサポートで、時間的・精神的負担を最大限に軽減したい。
 				</FullSupportBenefitItem>
 			</div>
-		</section>
+		</Section>
 	);
 }

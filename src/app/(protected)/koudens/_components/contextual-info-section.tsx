@@ -219,14 +219,14 @@ export const ContextualInfoSection = memo(function ContextualInfoSection({
 				<CardContent className="space-y-4">
 					{/* ポイント一覧 */}
 					{contextualContent.tips && contextualContent.tips.length > 0 && (
-						<div className="grid gap-2 md:grid-cols-3">
+						<ul className="grid gap-2 md:grid-cols-3">
 							{contextualContent.tips.map((tip) => (
-								<div key={tip} className="flex items-center space-x-2 text-sm">
+								<li key={tip} className="flex items-center space-x-2 text-sm">
 									<Lightbulb className="h-4 w-4 text-yellow-500 flex-shrink-0" />
 									<span className="text-muted-foreground">{tip}</span>
-								</div>
+								</li>
 							))}
-						</div>
+						</ul>
 					)}
 
 					{/* アクションボタン */}

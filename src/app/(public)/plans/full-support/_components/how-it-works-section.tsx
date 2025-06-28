@@ -1,7 +1,14 @@
+import { Section } from "@/components/ui/section";
+import { SectionTitle } from "@/components/ui/section-title";
+
 export default function HowItWorksSection() {
 	return (
-		<section className="mb-12 md:mb-16">
-			<h2 className="text-2xl md:text-3xl font-semibold mb-8 text-center">サポートの進め方</h2>
+		<Section className="mb-12 md:mb-16">
+			<SectionTitle
+				title="サポートの進め方"
+				subtitle="サポートの進め方をご説明します。"
+				className="mb-12"
+			/>
 			<ol className="space-y-8 relative before:absolute before:inset-0 before:ml-5 before:h-full before:w-0.5 before:bg-gray-200 before:self-start before:dark:bg-gray-700">
 				<li className="relative flex items-start">
 					<span className="absolute left-0 top-1 flex h-10 w-10 items-center justify-center rounded-full border-2 border-primary bg-background text-primary font-semibold">
@@ -44,6 +51,6 @@ export default function HowItWorksSection() {
 					</div>
 				</li>
 			</ol>
-		</section>
+		</Section>
 	);
 }

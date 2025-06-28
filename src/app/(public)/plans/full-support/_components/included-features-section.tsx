@@ -1,11 +1,17 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, HelpCircle } from "lucide-react";
+import { Section } from "@/components/ui/section";
+import { SectionTitle } from "@/components/ui/section-title";
 
 export default function IncludedFeaturesSection() {
 	return (
-		<section className="mb-12 md:mb-16">
-			<h2 className="text-2xl md:text-3xl font-semibold mb-6 text-center">プランに含まれるもの</h2>
+		<Section className="mb-12 md:mb-16">
+			<SectionTitle
+				title="プランに含まれるもの"
+				subtitle="フルサポートプランでは、以下の機能がご利用いただけます。"
+				className="mb-12"
+			/>
 			<div className="grid md:grid-cols-2 gap-8 items-start">
 				<Card className="shadow-lg">
 					<CardHeader>
@@ -49,6 +55,6 @@ export default function IncludedFeaturesSection() {
 					</CardContent>
 				</Card>
 			</div>
-		</section>
+		</Section>
 	);
 }
