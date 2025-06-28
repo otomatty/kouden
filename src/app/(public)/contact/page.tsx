@@ -9,7 +9,7 @@ export default function ContactPage() {
 				subtitle="ご質問・ご要望はこちらからどうぞ。"
 				className="bg-background"
 			/>
-			<div className="container mx-auto py-8 px-4">
+			<div className="md:container md:mx-auto my-8 px-0 md:px-4">
 				<ContactForm />
 			</div>
 		</>

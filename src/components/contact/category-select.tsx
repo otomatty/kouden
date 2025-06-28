@@ -76,7 +76,7 @@ export default function CategorySelect({
 	];
 
 	return (
-		<div className="grid grid-cols-2 gap-4">
+		<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 			{options.map((opt) => (
 				<button
 					key={opt.value}
@@ -91,13 +91,20 @@ export default function CategorySelect({
 							className={`w-6 h-6 ${value === opt.value ? "text-primary" : "text-muted-foreground"}`}
 						/>
 						<span
-							className={`text-xl font-semibold ${value === opt.value ? "text-primary" : "text-foreground"}`}
+							className={`text-lg md:text-xl font-semibold ${value === opt.value ? "text-primary" : "text-foreground"}`}
 						>
 							{opt.label}
 						</span>
 					</div>
-					<p className="text-base text-muted-foreground">{opt.description}</p>
-					<ul className="list-disc list-inside text-sm text-muted-foreground mt-2 mb-2">
+					<p className="text-sm md:text-base text-muted-foreground hidden md:block">
+						{opt.description}
+					</p>
+					<p className="text-sm text-muted-foreground md:hidden">
+						{opt.description.length > 30
+							? `${opt.description.substring(0, 30)}...`
+							: opt.description}
+					</p>
+					<ul className="list-disc list-inside text-sm text-muted-foreground mt-2 mb-2 hidden md:block">
 						{opt.examples.map((ex) => (
 							<li key={ex}>{ex}</li>
 						))}

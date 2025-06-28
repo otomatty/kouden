@@ -125,10 +125,12 @@ export function PainPointsSection() {
 			/>
 			<div className="grid gap-4 md:grid-cols-2">
 				{painPoints.map((point) => (
-					<Card key={point.id} className="p-8 space-y-6 hover:shadow-lg transition-shadow">
+					<Card key={point.id} className="p-4 md:p-8 space-y-6 hover:shadow-lg transition-shadow">
 						<div className="flex items-center gap-4">
 							<div className="p-2 bg-primary/10 rounded-lg">{point.icon}</div>
-							<h3 className={`text-3xl font-bold ${zenOldMincho.className}`}>{point.title}</h3>
+							<h3 className={`text-2xl md:text-3xl font-bold ${zenOldMincho.className}`}>
+								{point.title}
+							</h3>
 						</div>
 						<ul className="text-gray-500 dark:text-gray-400 space-y-4 list-disc pl-6">
 							{point.stories.map((story, index) => (

@@ -50,7 +50,11 @@ export default function AutoCalcGraphPage() {
 			</Section>
 
 			<Section>
-				<SectionTitle title="特徴" className="mb-8" />
+				<SectionTitle
+					title="特徴"
+					subtitle="自動計算とグラフ表示の詳細をご覧ください"
+					className="mb-8"
+				/>
 				<div className="grid md:grid-cols-3 gap-8">
 					{points.map((p) => (
 						<FeaturePointCard key={p.title} {...p} />
@@ -59,7 +63,11 @@ export default function AutoCalcGraphPage() {
 			</Section>
 
 			<Section>
-				<SectionTitle title="利用シーン" className="mb-8" />
+				<SectionTitle
+					title="利用シーン"
+					subtitle="香典帳の利用シーンをご覧ください"
+					className="mb-8"
+				/>
 				<ScenarioVideoWrapper />
 			</Section>
 

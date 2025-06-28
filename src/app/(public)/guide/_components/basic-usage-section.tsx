@@ -2,6 +2,7 @@
 
 import { Section } from "@/components/ui/section";
 import { SectionTitle } from "@/components/ui/section-title";
+import { VideoPlayer } from "@/components/custom/video-player";
 import Image from "next/image";
 
 /**
@@ -12,30 +13,26 @@ export function BasicUsageSection() {
 		{
 			number: "01",
 			title: "アカウント作成",
-			description: "メールアドレスでアカウントを作成します。すぐに利用を開始できます。",
-			imageSrc: "/screenshots/guide/step1-account.png",
-			alt: "アカウント作成画面",
+			description: "メールアドレス	でアカウントを作成します。すぐに利用を開始できます。",
+			videoSrc: "/videos/guide/step1-account.mp4",
 		},
 		{
 			number: "02",
 			title: "香典帳の作成",
 			description: "故人の情報や葬儀の詳細を入力して香典帳を作成します。",
-			imageSrc: "/screenshots/guide/step2-create.png",
-			alt: "香典帳作成画面",
+			videoSrc: "/videos/guide/step2-create.mp4",
 		},
 		{
 			number: "03",
 			title: "香典情報の記録",
 			description: "香典を贈った方の情報や金額を記録します。メモ機能で特記事項も残せます。",
-			imageSrc: "/screenshots/guide/step3-record.png",
-			alt: "香典情報記録画面",
+			videoSrc: "/videos/guide/step3-record.mp4",
 		},
 		{
 			number: "04",
 			title: "返礼品の管理",
 			description: "返礼品の選定や送付状況を管理します。地域に応じた相場も確認できます。",
-			imageSrc: "/screenshots/guide/step4-return.png",
-			alt: "返礼品管理画面",
+			videoSrc: "/videos/guide/step4-return.mp4",
 		},
 	];
 
@@ -59,16 +56,7 @@ export function BasicUsageSection() {
 							<p className="text-muted-foreground text-sm md:text-base">{step.description}</p>
 						</div>
 						<div className="flex-1 w-full max-w-[500px] mx-auto md:max-w-none">
-							<div className="rounded-lg overflow-hidden border shadow-sm">
-								<Image
-									src={step.imageSrc}
-									alt={step.alt}
-									width={600}
-									height={400}
-									className="w-full h-auto"
-									sizes="(max-width: 768px) 100vw, 50vw"
-								/>
-							</div>
+							<VideoPlayer src={step.videoSrc} title={step.title} />
 						</div>
 					</div>
 				))}

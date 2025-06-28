@@ -135,14 +135,14 @@ export default function ContactForm() {
 
 	return (
 		<Form {...form}>
-			<div className="max-w-4xl mx-auto p-4 mb-12 space-y-6">
+			<div className="space-y-6">
 				{/* ステップインジケータ */}
 				<StepIndicator currentStep={step} totalSteps={steps.length} steps={steps} />
 
 				<form
 					onSubmit={form.handleSubmit(onSubmit)}
 					encType="multipart/form-data"
-					className="space-y-6 bg-card p-6 rounded-lg border"
+					className="space-y-6 bg-card p-6 border"
 				>
 					{/* 前のステップの入力内容表示 */}
 					<StepSummary currentStep={step} formData={formValues} />

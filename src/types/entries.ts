@@ -5,6 +5,20 @@ import type { entrySchema, entryFormSchema } from "@/schemas/entries";
 // 基本的な型定義
 export type AttendanceType = "FUNERAL" | "CONDOLENCE_VISIT" | "ABSENT";
 
+// 参列種別の日本語マッピング
+export const attendanceTypeMap: Record<AttendanceType, string> = {
+	FUNERAL: "葬儀",
+	CONDOLENCE_VISIT: "弔問",
+	ABSENT: "香典のみ",
+} as const;
+
+// 参列種別の色定義（統計グラフ用）
+export const attendanceTypeColors: Record<AttendanceType, string> = {
+	FUNERAL: "#2563eb", // 青
+	CONDOLENCE_VISIT: "#16a34a", // 緑
+	ABSENT: "#dc2626", // 赤
+} as const;
+
 export interface Relationship {
 	id: string;
 	name: string;

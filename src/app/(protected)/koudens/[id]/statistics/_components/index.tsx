@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { formatCurrency } from "@/utils/currency";
-import { memo } from "react";
+import { memo, useState, useEffect } from "react";
 import {
 	PieChart,
 	Pie,
@@ -14,10 +14,12 @@ import {
 	XAxis,
 	YAxis,
 	Tooltip,
+	Legend,
 } from "recharts";
 
 import type { ReturnStatus } from "@/components/ui/status-badge";
 import { returnStatusMap, returnStatusCustomColors } from "@/components/ui/status-badge";
+import { attendanceTypeMap } from "@/types/entries";
 
 interface KoudenStatisticsProps {
 	totalAmount: number;
@@ -83,6 +85,26 @@ export const KoudenStatistics = memo(function KoudenStatistics({
 	const actualKoudenTotal = koudenOnlyTotal || totalAmount;
 	const actualOfferingTotal = offeringAllocationsTotal || 0;
 
+	// レスポンシブ対応のためのwindow幅チェック
+	const [isMobile, setIsMobile] = useState(false);
+
+	useEffect(() => {
+		const checkMobile = () => {
+			setIsMobile(window.innerWidth < 768);
+		};
+
+		checkMobile();
+		window.addEventListener("resize", checkMobile);
+
+		return () => window.removeEventListener("resize", checkMobile);
+	}, []);
+
+	// 円グラフ用のデータを日本語に変換（凡例表示用）
+	const pieChartData = attendanceData.map((entry) => ({
+		...entry,
+		name: attendanceTypeMap[entry.name as keyof typeof attendanceTypeMap] || entry.name,
+	}));
+
 	return (
 		<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
 			{/* 配分込み総額 */}
@@ -124,8 +146,9 @@ export const KoudenStatistics = memo(function KoudenStatistics({
 				<CardContent>
 					<div className="text-2xl font-bold">{totalCount}名</div>
 					<div className="text-xs text-muted-foreground">
-						葬儀: {attendanceCounts.FUNERAL}名 / 弔問: {attendanceCounts.CONDOLENCE_VISIT}名 / 欠席:{" "}
-						{attendanceCounts.ABSENT}名
+						{attendanceTypeMap.FUNERAL}: {attendanceCounts.FUNERAL}名 /{" "}
+						{attendanceTypeMap.CONDOLENCE_VISIT}: {attendanceCounts.CONDOLENCE_VISIT}名 /{" "}
+						{attendanceTypeMap.ABSENT}: {attendanceCounts.ABSENT}名
 					</div>
 				</CardContent>
 			</Card>
@@ -186,22 +209,34 @@ export const KoudenStatistics = memo(function KoudenStatistics({
 						<ResponsiveContainer width="100%" height="100%">
 							<PieChart>
 								<Pie
-									data={attendanceData}
+									data={pieChartData}
 									cx="50%"
 									cy="50%"
 									innerRadius={80}
 									outerRadius={120}
-									paddingAngle={5}
+									paddingAngle={2}
 									dataKey="value"
-									label={({ name, value, percent }) =>
-										`${name}: ${value}名 (${(percent * 100).toFixed(1)}%)`
+									// スマホではラベルを非表示、デスクトップでは表示
+									label={
+										!isMobile
+											? ({ value, percent }) => `${value}名 (${(percent * 100).toFixed(1)}%)`
+											: false
 									}
+									labelLine={false}
 								>
-									{attendanceData.map((entry) => (
+									{pieChartData.map((entry) => (
 										<Cell key={entry.name} fill={entry.color} />
 									))}
 								</Pie>
-								<Tooltip />
+								<Tooltip
+									formatter={(value, name) => [`${value}名`, name]}
+									labelFormatter={() => ""}
+								/>
+								<Legend
+									verticalAlign="bottom"
+									height={36}
+									formatter={(value, entry) => `${value}: ${entry.payload?.value}名`}
+								/>
 							</PieChart>
 						</ResponsiveContainer>
 					</CardContent>
