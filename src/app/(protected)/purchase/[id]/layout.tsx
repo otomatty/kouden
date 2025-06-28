@@ -47,6 +47,8 @@ export default async function PurchaseLayout({ params, children }: PurchaseLayou
 								permission={permission}
 								enableExcel={enableExcel}
 								remainingDays={remainingDays}
+								plan={plan}
+								expired={expired}
 								fullAccess={false} // 購入ページでは制限表示
 							/>
 							<div className="mb-4 min-h-[calc(100vh-8rem)] p-4">{children}</div>

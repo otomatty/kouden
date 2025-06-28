@@ -81,6 +81,8 @@ export default async function KoudenLayout({ params, children }: KoudenLayoutPro
 								permission={permission}
 								enableExcel={enableExcel}
 								remainingDays={remainingDays}
+								plan={plan}
+								expired={expired}
 							/>
 							{/* タブナビゲーション */}
 							<TabNavigation koudenId={kouden.id} />

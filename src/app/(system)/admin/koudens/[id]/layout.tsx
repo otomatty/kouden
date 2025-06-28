@@ -60,7 +60,7 @@ export default async function AdminKoudenLayout({ params, children }: AdminKoude
 			notFound();
 		}
 
-		const { remainingDays } = planInfo;
+		const { plan, expired, remainingDays } = planInfo;
 		// 管理者は全ての機能にアクセス可能
 		const enableExcel = true;
 
@@ -96,6 +96,8 @@ export default async function AdminKoudenLayout({ params, children }: AdminKoude
 							permission={adminPermission}
 							enableExcel={enableExcel}
 							remainingDays={remainingDays}
+							plan={plan}
+							expired={expired}
 						/>
 						{/* タブナビゲーション */}
 						<TabNavigation koudenId={kouden.id} />

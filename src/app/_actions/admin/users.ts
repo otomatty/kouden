@@ -630,13 +630,10 @@ export async function getAllKoudens(params: GetAdminKoudensParams = {}): Promise
 	} = params;
 	const offset = (page - 1) * limit;
 
-	console.log("getAllKoudens called with params:", params);
-
 	try {
 		// 管理者権限をチェック（通常のクライアントで）
 		const { isAdmin: isAdminUser } = await import("@/app/_actions/admin/permissions");
 		const adminCheck = await isAdminUser();
-		console.log("Admin check result:", adminCheck);
 
 		if (!adminCheck) {
 			console.error("Admin permission denied");
@@ -680,11 +677,6 @@ export async function getAllKoudens(params: GetAdminKoudensParams = {}): Promise
 		query = query.range(offset, offset + limit - 1);
 
 		const { data: koudens, error: koudensError, count } = await query;
-		console.log("Query result:", {
-			koudensCount: koudens?.length || 0,
-			totalCount: count,
-			error: koudensError?.message,
-		});
 
 		if (koudensError) {
 			console.error("Koudens query error:", koudensError);
@@ -692,7 +684,6 @@ export async function getAllKoudens(params: GetAdminKoudensParams = {}): Promise
 		}
 
 		if (!koudens || koudens.length === 0) {
-			console.log("No koudens found, returning empty result");
 			return { koudens: [], total: count || 0, hasMore: false };
 		}
 
@@ -753,12 +744,6 @@ export async function getAllKoudens(params: GetAdminKoudensParams = {}): Promise
 				return sortOrder === "asc" ? aCount - bCount : bCount - aCount;
 			});
 		}
-
-		console.log("Returning koudens:", {
-			koudensCount: koudensWithDetails.length,
-			total: count || 0,
-			hasMore: (count || 0) > offset + limit,
-		});
 
 		return {
 			koudens: koudensWithDetails,
