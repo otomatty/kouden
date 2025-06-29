@@ -5,6 +5,7 @@ import { BenefitsSection } from "./_components/benefits-section";
 import { HowItWorksSection } from "./_components/how-it-works";
 import { CTASection } from "./_components/cta-section";
 import { FAQSection } from "./_components/faq-section";
+import { KoudenAppStructuredData, OrganizationStructuredData } from "@/components/structured-data";
 
 // ホームページ固有のFAQデータ
 const homeFaqs = [
@@ -28,6 +29,8 @@ const homeFaqs = [
 export default function RootPage() {
 	return (
 		<>
+			<KoudenAppStructuredData />
+			<OrganizationStructuredData />
 			<HeroSection />
 			<PainPointsSection />
 			<FeaturesSection />

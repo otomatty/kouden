@@ -43,7 +43,6 @@ describe("funeral donations server actions", () => {
 		supabaseMock.select.mockReturnThis();
 		supabaseMock.single.mockResolvedValue({ data: fakeDonation, error: null });
 		const result = await recordDonation({
-			organizationId: "org",
 			caseId: "case-uuid",
 			donorName: "Bob",
 			amount: 100,
@@ -56,7 +55,7 @@ describe("funeral donations server actions", () => {
 	it("recordDonation throws on error", async () => {
 		supabaseMock.single.mockResolvedValue({ data: null, error: new Error("fail") });
 		await expect(
-			recordDonation({ organizationId: "org", caseId: "case-uuid", donorName: "Bob", amount: 100 }),
+			recordDonation({ caseId: "case-uuid", donorName: "Bob", amount: 100 }),
 		).rejects.toThrow("fail");
 	});
 

@@ -9,7 +9,7 @@ import { notFound, redirect } from "next/navigation";
 import ArchivedPage from "./archived/page";
 import KoudenHeader from "./_components/_common/kouden-header";
 import TabNavigation from "./_components/_common/tab-navigation";
-import { BottomNavigation } from "@/components/custom/bottom-navigation";
+import { BottomNavigation } from "@/app/(protected)/koudens/[id]/_components/_common/bottom-navigation";
 import type { Kouden } from "@/types/kouden";
 
 /**

@@ -1,6 +1,6 @@
 "use client";
 import { NavigationModeProvider } from "@/context/navigation-mode";
-import { BottomNavigation } from "@/components/custom/bottom-navigation";
+import { BottomNavigation } from "@/app/(protected)/koudens/[id]/_components/_common/bottom-navigation";
 import { Header } from "./_components/header";
 import { AppFooter } from "./_components/app-footer";
 import { FeedbackButton } from "@/components/custom/feedback-button";

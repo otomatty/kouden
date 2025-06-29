@@ -1,0 +1,27 @@
+User-agent: *
+Allow: /
+
+# サイトマップの場所
+Sitemap: https://kouden-app.com/sitemap.xml
+
+# 除外するディレクトリ
+Disallow: /api/
+Disallow: /_next/
+Disallow: /admin/
+Disallow: /auth/
+Disallow: /invitations/
+Disallow: /organizations/
+Disallow: /koudens/
+Disallow: /profile/
+Disallow: /settings/
+Disallow: /purchase/
+Disallow: /manuals/
+
+# 検索エンジンが見つけやすくするファイル
+Allow: /features/
+Allow: /pricing/
+Allow: /faq/
+Allow: /guide/
+Allow: /enterprise/
+Allow: /contact/
+Allow: /blog/ 

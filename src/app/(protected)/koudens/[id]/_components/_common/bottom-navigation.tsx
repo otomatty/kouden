@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CreateButtonContainer } from "@/app/(protected)/koudens/[id]/_components/_common/create-button-container";
+import { CreateButtonContainer } from "./create-button-container";
 import type { Entry } from "@/types/entries";
 import type { Relationship } from "@/types/relationships";
 import { Button } from "@/components/ui/button";
