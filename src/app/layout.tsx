@@ -62,7 +62,7 @@ export const metadata: Metadata = {
 		},
 	},
 	verification: {
-		google: "YOUR_GOOGLE_VERIFICATION_CODE",
+		google: "hY7LIXlVtyLJuBRuCAFomDF3JMV43pbzNURRoXDPkaQ",
 	},
 	appleWebApp: {
 		capable: true,
@@ -96,6 +96,10 @@ export default async function RootLayout({
 				<meta name="mobile-web-app-capable" content="yes" />
 				<meta name="theme-color" content="#000000" />
 				<link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+				<link rel="canonical" href={process.env.NEXT_PUBLIC_APP_URL} />
+				<meta name="msapplication-TileColor" content="#000000" />
+				<meta name="msapplication-config" content="/browserconfig.xml" />
+				<link rel="manifest" href="/manifest.json" />
 			</head>
 			<body
 				className={`${notoSansJP.className} ${zenOldMincho.className} antialiased bg-muted`}

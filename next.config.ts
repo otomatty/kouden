@@ -34,6 +34,9 @@ const config: NextConfig = withPWA({
 				pathname: "/**",
 			},
 		],
+		formats: ["image/webp", "image/avif"], // 次世代画像フォーマット対応
+		deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+		imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
 		unoptimized: true, // Cloudflare Pages用の設定
 	},
 	// 本番環境での最適化設定
