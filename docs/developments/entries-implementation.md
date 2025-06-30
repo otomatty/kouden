@@ -97,7 +97,7 @@ export const mergedEntriesAtom = atom((get) => {
 
 2. **インポート/エクスポート** 📅
    - CSVインポート
-   - エクセルエクスポート
+   - Excelエクスポート
 
 3. **履歴管理** 📅
    - 変更履歴の記録

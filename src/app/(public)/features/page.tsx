@@ -39,7 +39,7 @@ export default function FeaturesPage() {
 			id: "export",
 			icon: FileText,
 			title: "Excel/PDF出力",
-			description: "香典帳をエクセルやPDFで即エクスポート",
+			description: "香典帳をExcelやPDFで即エクスポート",
 		},
 		{
 			id: "multi-device",

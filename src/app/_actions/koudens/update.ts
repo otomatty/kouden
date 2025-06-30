@@ -10,14 +10,40 @@ import { KOUDEN_ROLES } from "@/types/role";
  * 香典帳の更新
  */
 export async function updateKouden(id: string, input: { title: string; description?: string }) {
-	if (!(await canEditKouden(id))) {
-		throw new Error("編集権限がありません");
+	// 入力バリデーション
+	if (!input.title?.trim()) {
+		throw new Error("タイトルを入力してください");
+	}
+
+	if (input.title.length > 100) {
+		throw new Error("タイトルは100文字以内で入力してください");
+	}
+
+	if (input.description && input.description.length > 500) {
+		throw new Error("説明は500文字以内で入力してください");
+	}
+
+	// 権限チェック（最適化版を使用）
+	const canEdit = await canEditKouden(id);
+	if (!canEdit) {
+		throw new Error("この香典帳を編集する権限がありません");
 	}
 
 	const supabase = await createClient();
-	const { error } = await supabase.from("koudens").update(input).eq("id", id);
 
-	if (error) throw error;
+	// データの整形
+	const updateData = {
+		title: input.title.trim(),
+		description: input.description?.trim() || null,
+	};
+
+	const { error } = await supabase.from("koudens").update(updateData).eq("id", id);
+
+	if (error) {
+		console.error("Failed to update kouden:", error);
+		throw new Error("香典帳の更新に失敗しました。しばらく経ってから再度お試しください。");
+	}
+
 	revalidatePath(`/koudens/${id}`);
 }
 

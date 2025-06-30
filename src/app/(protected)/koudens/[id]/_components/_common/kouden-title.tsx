@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Pencil } from "lucide-react";
 import { useAtomValue } from "jotai";
-import { permissionAtom } from "@/store/permission";
+import { permissionAtom, canUpdateKouden } from "@/store/permission";
 import { updateKouden } from "@/app/_actions/koudens";
+import { toast } from "sonner";
 
 interface KoudenTitleProps {
 	koudenId: string;
@@ -23,17 +24,29 @@ export function KoudenTitle({
 	const [isEditing, setIsEditing] = useState(false);
 	const [title, setTitle] = useState(initialTitle);
 	const [description, setDescription] = useState(initialDescription || "");
+	const [isLoading, setIsLoading] = useState(false);
 	const permission = useAtomValue(permissionAtom);
 
 	const handleSave = async () => {
+		if (!title.trim()) {
+			toast.error("タイトルを入力してください");
+			return;
+		}
+
+		setIsLoading(true);
 		try {
 			await updateKouden(koudenId, {
-				title,
-				description: description || undefined,
+				title: title.trim(),
+				description: description.trim() || undefined,
 			});
 			setIsEditing(false);
+			toast.success("香典帳の情報を更新しました");
 		} catch (error) {
 			console.error("Failed to update kouden:", error);
+			const errorMessage = error instanceof Error ? error.message : "更新に失敗しました";
+			toast.error(errorMessage);
+		} finally {
+			setIsLoading(false);
 		}
 	};
 
@@ -55,7 +68,9 @@ export function KoudenTitle({
 					/>
 				</div>
 				<div className="flex gap-2">
-					<Button onClick={handleSave}>保存</Button>
+					<Button onClick={handleSave} disabled={isLoading}>
+						{isLoading ? "保存中..." : "保存"}
+					</Button>
 					<Button
 						variant="outline"
 						onClick={() => {
@@ -63,6 +78,7 @@ export function KoudenTitle({
 							setDescription(initialDescription || "");
 							setIsEditing(false);
 						}}
+						disabled={isLoading}
 					>
 						キャンセル
 					</Button>
@@ -75,7 +91,7 @@ export function KoudenTitle({
 		<div className="group relative space-y-1">
 			<div className="flex items-center gap-2">
 				<h2 className="text-2xl font-bold">{title}</h2>
-				{permission === "owner" && (
+				{canUpdateKouden(permission) && (
 					<Button
 						variant="ghost"
 						size="icon"

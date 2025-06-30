@@ -17,7 +17,7 @@ const featuresList: FeatureItem[] = [
 		title: "自動計算＆グラフ表示",
 		description: "金額ミスを防ぎ、視覚的にデータを把握",
 	},
-	{ id: "export", title: "Excel/PDF出力", description: "香典帳をエクセルやPDFで即エクスポート" },
+	{ id: "export", title: "Excel/PDF出力", description: "香典帳をExcelやPDFで即エクスポート" },
 	{
 		id: "multi-device",
 		title: "あらゆる端末で使える",

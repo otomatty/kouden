@@ -8,6 +8,7 @@ import { useState } from "react";
 import PlanUpgradeAlert from "./plan-upgrade-alert";
 import { BackLink } from "@/components/custom/back-link";
 import { Badge } from "@/components/ui/badge";
+import { PlanHoverCard } from "@/components/custom/plan-hover-card";
 
 type Plan = Database["public"]["Tables"]["plans"]["Row"];
 
@@ -63,9 +64,10 @@ export default function KoudenHeader({
 					<KoudenTitle koudenId={koudenId} title={title} description={description} />
 					{plan && (
 						<div className="flex items-center space-x-2">
-							<Badge variant={plan.code === "free" ? "outline" : "default"}>
-								{plan.name}プラン
-							</Badge>
+							<PlanHoverCard
+								plan={plan}
+								badgeVariant={plan.code === "free" ? "outline" : "default"}
+							/>
 							{plan.code === "free" &&
 								(expired ? (
 									<Badge variant="destructive">期限切れ</Badge>

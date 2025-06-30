@@ -97,38 +97,7 @@ export const hasEditPermission = cache(async (koudenId: string): Promise<boolean
 });
 
 /**
- * ユーザーが香典帳にアクセスできるか確認
- * @param koudenId 香典帳ID
- * @returns アクセス可能な場合はtrue
- */
-export async function canAccessKouden(koudenId: string): Promise<boolean> {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-
-	if (!user) return false;
-
-	const { data: kouden } = await supabase
-		.from("koudens")
-		.select("owner_id")
-		.eq("id", koudenId)
-		.single();
-
-	if (kouden?.owner_id === user.id) return true;
-
-	const { data: member } = await supabase
-		.from("kouden_members")
-		.select("id")
-		.eq("kouden_id", koudenId)
-		.eq("user_id", user.id)
-		.single();
-
-	return !!member;
-}
-
-/**
- * ユーザーが香典帳を編集できるか確認
+ * ユーザーが香典帳を編集できるか確認（最適化版）
  * @param koudenId 香典帳ID
  * @returns 編集可能な場合はtrue
  */
@@ -140,30 +109,77 @@ export async function canEditKouden(koudenId: string): Promise<boolean> {
 
 	if (!user) return false;
 
-	const { data: kouden } = await supabase
+	// 1回のクエリで所有者チェックとメンバーロールチェックを実行
+	// RLS無限再帰を避けるため、直接JOINして権限を確認
+	const { data } = await supabase
 		.from("koudens")
-		.select("owner_id")
+		.select(`
+			owner_id,
+			created_by,
+			kouden_members!left (
+				role_id,
+				user_id,
+				kouden_roles (
+					name
+				)
+			)
+		`)
 		.eq("id", koudenId)
 		.single();
 
-	if (kouden?.owner_id === user.id) return true;
+	if (!data) return false;
 
-	const { data: member } = await supabase
-		.from("kouden_members")
-		.select("role_id")
-		.eq("kouden_id", koudenId)
-		.eq("user_id", user.id)
+	// 所有者または作成者の場合は編集可能
+	if (data.owner_id === user.id || data.created_by === user.id) {
+		return true;
+	}
+
+	// メンバーロールをチェック
+	const userMember = data.kouden_members?.find((member) => member.user_id === user.id);
+
+	if (!userMember?.kouden_roles) {
+		return false;
+	}
+
+	// editorロールの場合は編集可能
+	return userMember.kouden_roles.name === "editor";
+}
+
+/**
+ * ユーザーが香典帳にアクセスできるか確認（最適化版）
+ * @param koudenId 香典帳ID
+ * @returns アクセス可能な場合はtrue
+ */
+export async function canAccessKouden(koudenId: string): Promise<boolean> {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	if (!user) return false;
+
+	// 1回のクエリで所有者チェックとメンバーチェックを実行
+	const { data } = await supabase
+		.from("koudens")
+		.select(`
+			owner_id,
+			created_by,
+			kouden_members!left (
+				user_id
+			)
+		`)
+		.eq("id", koudenId)
 		.single();
 
-	if (!member) return false;
+	if (!data) return false;
 
-	const { data: role } = await supabase
-		.from("kouden_roles")
-		.select("name")
-		.eq("id", member.role_id)
-		.single();
+	// 所有者または作成者の場合はアクセス可能
+	if (data.owner_id === user.id || data.created_by === user.id) {
+		return true;
+	}
 
-	return role?.name === "editor";
+	// メンバーかどうかチェック
+	return !!data.kouden_members?.some((member) => member.user_id === user.id);
 }
 
 /**

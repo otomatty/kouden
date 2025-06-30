@@ -35,7 +35,7 @@ export default async function ApplicationSelectPage() {
 				{typeSlugs.includes("funeral_company") && (
 					<ApplicationCard
 						href="/funeral-management"
-						title="葬儀会社管理"
+						title="葬儀会社"
 						description="葬儀会社向けの管理画面にアクセスします。"
 						icon={Users}
 						iconColor="text-red-600"
@@ -44,7 +44,7 @@ export default async function ApplicationSelectPage() {
 				{typeSlugs.includes("gift_shop") && (
 					<ApplicationCard
 						href="/gift-management"
-						title="ギフトショップ管理"
+						title="ギフトショップ"
 						description="ギフトショップ向けの管理画面にアクセスします。"
 						icon={Gift}
 						iconColor="text-pink-600"
@@ -52,7 +52,7 @@ export default async function ApplicationSelectPage() {
 				)}
 				<ApplicationCard
 					href="/koudens"
-					title="香典帳アプリ"
+					title="香典帳"
 					description="通常の香典帳アプリ画面に戻ります。"
 					icon={BookOpen}
 					iconColor="text-blue-600"

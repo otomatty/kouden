@@ -16,7 +16,7 @@ on:
       force_sync:
         description: 'Force sync even without changes'
         required: false
-        default: 'false'
+        default: false
         type: boolean
 
 env:
