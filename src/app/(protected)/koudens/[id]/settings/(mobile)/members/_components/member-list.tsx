@@ -12,13 +12,22 @@ interface MemberListProps {
 }
 
 export function MemberList({ members, onMemberClick }: MemberListProps) {
+	const getRoleDisplayName = (roleName: string) => {
+		const roleMap: Record<string, string> = {
+			owner: "管理者",
+			editor: "編集者",
+			viewer: "閲覧者",
+		};
+		return roleMap[roleName] || "未設定";
+	};
+
 	const getRoleColor = (roleName: string) => {
-		switch (roleName.toUpperCase()) {
-			case "OWNER":
+		switch (roleName.toLowerCase()) {
+			case "owner":
 				return "text-purple-600 bg-purple-50";
-			case "EDITOR":
+			case "editor":
 				return "text-blue-600 bg-blue-50";
-			case "VIEWER":
+			case "viewer":
 				return "text-gray-600 bg-gray-50";
 			default:
 				return "text-gray-600 bg-gray-50";
@@ -56,15 +65,17 @@ export function MemberList({ members, onMemberClick }: MemberListProps) {
 							</p>
 						</div>
 					</div>
-					<div
-						className={cn(
-							"px-2.5 py-0.5 rounded-full text-xs font-medium",
-							getRoleColor(member.role.name),
-						)}
-					>
-						{member.role.name}
+					<div className="flex items-center gap-2">
+						<div
+							className={cn(
+								"px-2.5 py-0.5 rounded-full text-xs font-medium",
+								getRoleColor(member.role.name),
+							)}
+						>
+							{getRoleDisplayName(member.role.name)}
+						</div>
+						{member.canUpdateRole && <ChevronRight className="w-4 h-4 text-gray-500" />}
 					</div>
-					{member.canUpdateRole && <ChevronRight className="w-4 h-4 text-gray-500" />}
 				</button>
 			))}
 		</ul>

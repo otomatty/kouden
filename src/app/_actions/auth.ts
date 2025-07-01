@@ -43,3 +43,21 @@ export async function ensureProfile() {
 		return { error: "プロフィールの確認に失敗しました" };
 	}
 }
+
+/**
+ * 現在のユーザー情報を取得
+ * @returns ユーザー情報
+ */
+export async function getCurrentUser() {
+	try {
+		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
+
+		return user;
+	} catch (error) {
+		console.error("[ERROR] Error getting current user:", error);
+		return null;
+	}
+}

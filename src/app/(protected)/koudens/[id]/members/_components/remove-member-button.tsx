@@ -8,7 +8,7 @@ import { getInitials } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { removeMember } from "@/app/_actions/roles";
+import { removeMember, leaveMember } from "@/app/_actions/roles";
 import type { KoudenMember } from "@/types/member";
 import { type PrimitiveAtom, useSetAtom } from "jotai";
 
@@ -25,9 +25,15 @@ interface RemoveMemberButtonProps {
 	member: KoudenMember;
 	isSelf: boolean;
 	membersAtom: PrimitiveAtom<KoudenMember[]>;
+	variant?: "default" | "menuItem" | "standalone";
 }
 
-export function RemoveMemberButton({ member, isSelf, membersAtom }: RemoveMemberButtonProps) {
+export function RemoveMemberButton({
+	member,
+	isSelf,
+	membersAtom,
+	variant = "default",
+}: RemoveMemberButtonProps) {
 	const router = useRouter();
 	const [isLoading, setIsLoading] = useState(false);
 	const [, setIsOpen] = useState(false);
@@ -37,7 +43,14 @@ export function RemoveMemberButton({ member, isSelf, membersAtom }: RemoveMember
 	const handleRemove = async () => {
 		try {
 			setIsLoading(true);
-			await removeMember(member.kouden_id, member.user_id);
+
+			if (isSelf) {
+				// 自分自身の場合は leaveMember を使用
+				await leaveMember(member.kouden_id);
+			} else {
+				// 他のメンバーの場合は removeMember を使用
+				await removeMember(member.kouden_id, member.user_id);
+			}
 
 			// クライアントサイドで状態を更新
 			setMembersState((prev) => prev.filter((m) => m.id !== member.id));
@@ -72,17 +85,29 @@ export function RemoveMemberButton({ member, isSelf, membersAtom }: RemoveMember
 		return null;
 	}
 
+	const triggerButton =
+		variant === "menuItem" ? (
+			<button
+				type="button"
+				className={`w-full text-left px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground ${
+					isSelf ? "text-red-500 hover:text-red-600" : ""
+				}`}
+			>
+				{isSelf ? "退出する" : "削除"}
+			</button>
+		) : variant === "standalone" ? (
+			<Button variant="destructive" size="lg" className="w-full">
+				{isSelf ? "香典帳から退出する" : "メンバーを削除する"}
+			</Button>
+		) : (
+			<Button variant="ghost" size="sm" className={isSelf ? "text-red-500 hover:text-red-600" : ""}>
+				{isSelf ? "退出する" : "削除"}
+			</Button>
+		);
+
 	return (
 		<ResponsiveDialog
-			trigger={
-				<Button
-					variant="ghost"
-					size="sm"
-					className={isSelf ? "text-red-500 hover:text-red-600" : ""}
-				>
-					{isSelf ? "退出する" : "削除"}
-				</Button>
-			}
+			trigger={triggerButton}
 			title={isSelf ? "香典帳から退出" : "メンバーの削除"}
 			description={
 				isSelf

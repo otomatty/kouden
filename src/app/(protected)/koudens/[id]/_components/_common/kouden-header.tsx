@@ -60,8 +60,7 @@ export default function KoudenHeader({
 				/>
 			)}
 			<div className="flex items-center justify-between" data-tour="kouden-detail">
-				<div className="flex items-center gap-4">
-					<KoudenTitle koudenId={koudenId} title={title} description={description} />
+				<div className="space-y-2">
 					{plan && (
 						<div className="flex items-center space-x-2">
 							<PlanHoverCard
@@ -78,6 +77,7 @@ export default function KoudenHeader({
 								))}
 						</div>
 					)}
+					<KoudenTitle koudenId={koudenId} title={title} description={description} />
 				</div>
 				<KoudenActionsMenu
 					koudenId={koudenId}

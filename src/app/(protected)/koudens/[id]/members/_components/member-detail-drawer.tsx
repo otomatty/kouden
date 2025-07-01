@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import type React from "react";
+import { useState } from "react";
 import {
 	Drawer,
 	DrawerContent,
@@ -8,23 +9,30 @@ import {
 	DrawerTitle,
 	DrawerDescription,
 	DrawerFooter,
+	DrawerTrigger,
 } from "@/components/ui/drawer";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { toast } from "sonner";
 import { getInitials } from "@/lib/utils";
-import type { Member } from "./types";
-import { updateMemberRole, removeMember as deleteMember, leaveMember } from "@/app/_actions/roles";
+import { RemoveMemberButton } from "./remove-member-button";
+import { updateMemberRole } from "@/app/_actions/roles";
+import { toast } from "sonner";
+import type { KoudenMember } from "@/types/member";
+import type { KoudenRole, KoudenPermission } from "@/types/role";
+import type { PrimitiveAtom } from "jotai";
 
-interface MemberEditDrawerProps {
-	member: Member | null;
-	isOpen: boolean;
-	onClose: () => void;
+interface MemberDetailDrawerProps {
+	member: KoudenMember;
+	roles: KoudenRole[];
+	permission: KoudenPermission;
 	koudenId: string;
 	currentUserId?: string;
+	membersAtom: PrimitiveAtom<KoudenMember[]>;
+	trigger: React.ReactNode;
 }
 
 const getRoleDisplayName = (roleName: string) => {
@@ -32,9 +40,18 @@ const getRoleDisplayName = (roleName: string) => {
 		owner: "管理者",
 		editor: "編集者",
 		viewer: "閲覧者",
+		// 🐛 問題のある値への対応
 		unknown: "権限エラー",
 	};
-	return roleMap[roleName] || "未設定";
+
+	const result = roleMap[roleName] || "未設定";
+
+	// 🚨 予期しないロール名をアラートで報告
+	if (!["owner", "editor", "viewer"].includes(roleName)) {
+		console.warn(`🚨 予期しないロール名: "${roleName}"`);
+	}
+
+	return result;
 };
 
 const getRoleVariant = (roleName: string) => {
@@ -59,28 +76,21 @@ const getRoleDescription = (roleName: string) => {
 	return roleDescriptionMap[roleName] || "権限が設定されていません。";
 };
 
-// 利用可能なロール（固定）
-const availableRoles = [
-	{ id: "editor", name: "editor" },
-	{ id: "viewer", name: "viewer" },
-];
-
-export function MemberEditDrawer({
+export function MemberDetailDrawer({
 	member,
-	isOpen,
-	onClose,
+	roles,
+	permission,
 	koudenId,
 	currentUserId,
-}: MemberEditDrawerProps) {
+	membersAtom,
+	trigger,
+}: MemberDetailDrawerProps) {
+	const [open, setOpen] = useState(false);
 	const [isUpdatingRole, setIsUpdatingRole] = useState(false);
-	const [isDeleting, setIsDeleting] = useState(false);
-
-	if (!member) return null;
-
 	const isSelf = currentUserId === member.user_id;
 	const isOwner = member.role?.name === "owner";
-	const canChangeRole = !(isSelf || isOwner);
-	const canDelete = !isOwner;
+	const canChangeRole = permission === "owner" && !isSelf && !isOwner;
+	const canRemove = (permission === "owner" || isSelf) && !isOwner;
 
 	const handleRoleChange = async (roleId: string) => {
 		try {
@@ -89,7 +99,6 @@ export function MemberEditDrawer({
 			toast.success("ロールを更新しました", {
 				description: "メンバーのロールが正常に変更されました",
 			});
-			onClose();
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : "ロールの更新に失敗しました", {
 				description: "しばらく時間をおいてから再度お試しください",
@@ -99,46 +108,9 @@ export function MemberEditDrawer({
 		}
 	};
 
-	const handleDelete = async () => {
-		if (
-			!window.confirm(
-				`${member.profile?.display_name ?? "名前未設定"}を${isSelf ? "退出" : "削除"}してもよろしいですか？`,
-			)
-		) {
-			return;
-		}
-
-		try {
-			setIsDeleting(true);
-
-			if (isSelf) {
-				// 自分自身の場合は leaveMember を使用
-				await leaveMember(koudenId);
-			} else {
-				// 他のメンバーの場合は deleteMember を使用
-				await deleteMember(koudenId, member.user_id);
-			}
-
-			toast.success(
-				`${member.profile?.display_name ?? "名前未設定"}を${isSelf ? "退出" : "削除"}しました`,
-			);
-			onClose();
-		} catch (error) {
-			toast.error(
-				error instanceof Error
-					? error.message
-					: `メンバーの${isSelf ? "退出" : "削除"}に失敗しました`,
-				{
-					description: "しばらく時間をおいてから再度お試しください",
-				},
-			);
-		} finally {
-			setIsDeleting(false);
-		}
-	};
-
 	return (
-		<Drawer open={isOpen} onOpenChange={onClose}>
+		<Drawer open={open} onOpenChange={setOpen}>
+			<DrawerTrigger asChild>{trigger}</DrawerTrigger>
 			<DrawerContent>
 				<DrawerHeader className="text-left">
 					<DrawerTitle>メンバー詳細</DrawerTitle>
@@ -156,9 +128,7 @@ export function MemberEditDrawer({
 						</Avatar>
 						<div className="flex-1">
 							<div className="flex items-center gap-2 mb-1">
-								<h3 className="text-xl font-semibold">
-									{member.profile?.display_name ?? "名前未設定"}
-								</h3>
+								<h3 className="text-xl font-semibold">{member.profile?.display_name}</h3>
 								{isSelf && (
 									<Badge variant="outline" className="text-xs">
 										あなた
@@ -202,47 +172,45 @@ export function MemberEditDrawer({
 									<p className="text-xs text-muted-foreground">権限を更新しています...</p>
 								)}
 								<div className="space-y-2">
-									{availableRoles.map((role) => {
-										const isSelected = member.role?.name === role.name;
-										return (
-											<button
-												key={role.id}
-												type="button"
-												onClick={() => handleRoleChange(role.id)}
-												disabled={isUpdatingRole || isDeleting}
-												className={`w-full p-4 text-left rounded-lg border-2 transition-all ${
-													isSelected
-														? "border-primary bg-primary/5"
-														: "border-border hover:border-primary/50 hover:bg-muted/50"
-												} ${
-													isUpdatingRole || isDeleting
-														? "opacity-50 cursor-not-allowed"
-														: "cursor-pointer"
-												}`}
-											>
-												<div className="flex items-start justify-between">
-													<div className="flex-1">
-														<div className="flex items-center gap-2 mb-1">
-															<Badge variant={getRoleVariant(role.name)} className="text-sm">
-																{getRoleDisplayName(role.name)}
-															</Badge>
-															{isSelected && <div className="w-2 h-2 bg-primary rounded-full" />}
+									{roles
+										.filter((role) => role.name !== "owner")
+										.map((role) => {
+											const isSelected = member.role?.id === role.id;
+											return (
+												<button
+													key={role.id}
+													type="button"
+													onClick={() => handleRoleChange(role.id)}
+													disabled={isUpdatingRole}
+													className={`w-full p-4 text-left rounded-lg border-2 transition-all ${
+														isSelected
+															? "border-primary bg-primary/5"
+															: "border-border hover:border-primary/50 hover:bg-muted/50"
+													} ${isUpdatingRole ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+												>
+													<div className="flex items-start justify-between">
+														<div className="flex-1">
+															<div className="flex items-center gap-2 mb-1">
+																<Badge variant={getRoleVariant(role.name)} className="text-sm">
+																	{getRoleDisplayName(role.name)}
+																</Badge>
+																{isSelected && <div className="w-2 h-2 bg-primary rounded-full" />}
+															</div>
+															<p className="text-sm text-muted-foreground">
+																{getRoleDescription(role.name)}
+															</p>
 														</div>
-														<p className="text-sm text-muted-foreground">
-															{getRoleDescription(role.name)}
-														</p>
 													</div>
-												</div>
-											</button>
-										);
-									})}
+												</button>
+											);
+										})}
 								</div>
 							</div>
 						)}
 					</div>
 
 					{/* 削除・退出アクション */}
-					{canDelete && (
+					{canRemove && (
 						<>
 							<Separator />
 							<div className="space-y-3">
@@ -254,23 +222,19 @@ export function MemberEditDrawer({
 										? "この香典帳から退出すると、今後この香典帳にアクセスできなくなります。"
 										: "このメンバーを削除すると、今後この香典帳にアクセスできなくなります。"}
 								</p>
-								<Button
-									variant="destructive"
-									disabled={isUpdatingRole || isDeleting}
-									onClick={handleDelete}
-									className="w-full"
-								>
-									{isDeleting
-										? `${isSelf ? "退出" : "削除"}しています...`
-										: `メンバーを${isSelf ? "退出" : "削除"}`}
-								</Button>
+								<RemoveMemberButton
+									member={member}
+									isSelf={isSelf}
+									membersAtom={membersAtom}
+									variant="standalone"
+								/>
 							</div>
 						</>
 					)}
 				</div>
 
 				<DrawerFooter>
-					<Button variant="outline" onClick={onClose} disabled={isUpdatingRole || isDeleting}>
+					<Button variant="outline" onClick={() => setOpen(false)}>
 						閉じる
 					</Button>
 				</DrawerFooter>

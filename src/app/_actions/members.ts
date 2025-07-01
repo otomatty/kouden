@@ -1,71 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import type { KoudenRole } from "@/types/role";
-import { isKoudenOwner } from "./permissions";
-import { revalidatePath } from "next/cache";
 import { cache } from "react";
 import { KoudenError, withErrorHandling } from "@/lib/errors";
-
-// 香典帳のロール一覧を取得（キャッシュ対応）
-export const getKoudenRoles = cache(async (koudenId: string): Promise<KoudenRole[]> => {
-	return withErrorHandling(async () => {
-		const supabase = await createClient();
-		const { data: roles, error } = await supabase
-			.from("kouden_roles")
-			.select("id, name")
-			.eq("kouden_id", koudenId)
-			.order("name");
-
-		if (error) {
-			throw new KoudenError("ロール一覧の取得に失敗しました", "FETCH_ROLES_ERROR");
-		}
-
-		return roles;
-	}, "ロール一覧の取得");
-});
-
-// メンバーのロールを更新
-export async function updateMemberRole(koudenId: string, userId: string, roleId: string) {
-	const supabase = await createClient();
-
-	try {
-		// 管理者権限のチェック
-		const isOwner = await isKoudenOwner(koudenId);
-		if (!isOwner) {
-			throw new Error("権限がありません");
-		}
-
-		// オーナーのロールを変更しようとしていないかチェック
-		const { data: kouden } = await supabase
-			.from("koudens")
-			.select("owner_id")
-			.eq("id", koudenId)
-			.single();
-
-		if (kouden?.owner_id === userId) {
-			throw new Error("オーナーのロールは変更できません");
-		}
-
-		// RPC関数を使用してロールを更新
-		const { error } = await supabase.rpc("update_member_role", {
-			p_kouden_id: koudenId,
-			p_user_id: userId,
-			p_role_id: roleId,
-		});
-
-		if (error) {
-			console.error("[ERROR] Failed to update member role:", error);
-			throw new Error("ロールの更新に失敗しました");
-		}
-
-		// キャッシュを更新
-		revalidatePath(`/koudens/${koudenId}`);
-	} catch (error) {
-		console.error("[ERROR] Error in updateMemberRole:", error);
-		throw error;
-	}
-}
 
 /**
  * メンバー一覧を取得する（最適化版）
@@ -116,7 +53,7 @@ export const getMembers = cache(async (koudenId: string) => {
 			}
 		}
 
-		// メンバー一覧とロール情報を取得
+		// メンバー一覧とロール情報を取得（外部キー参照を使用）
 		const { data: members, error: membersError } = await supabase
 			.from("kouden_members")
 			.select(`
@@ -128,7 +65,7 @@ export const getMembers = cache(async (koudenId: string) => {
 				updated_at,
 				added_by,
 				invitation_id,
-				kouden_roles:kouden_roles (
+				kouden_roles!role_id (
 					id,
 					name
 				)
@@ -159,7 +96,8 @@ export const getMembers = cache(async (koudenId: string) => {
 		// メンバー情報の整形
 		return members.map((member) => {
 			const isOwnerUser = member.user_id === permission?.owner_id;
-			const roleData = Array.isArray(member.kouden_roles) ? member.kouden_roles[0] : null;
+			// 外部キー参照の結果を適切に処理
+			const roleData = member.kouden_roles;
 			const role = roleData || { id: member.role_id, name: "unknown" };
 			const profile = profiles?.find((p) => p.id === member.user_id) || {
 				id: member.user_id,
@@ -218,7 +156,7 @@ export const getMembersForAdmin = cache(async (koudenId: string) => {
 			throw new KoudenError("香典帳が見つかりません", "NOT_FOUND");
 		}
 
-		// メンバー一覧とロール情報を取得
+		// メンバー一覧とロール情報を取得（外部キー参照を使用）
 		const { data: members, error: membersError } = await supabase
 			.from("kouden_members")
 			.select(`
@@ -230,7 +168,7 @@ export const getMembersForAdmin = cache(async (koudenId: string) => {
 				updated_at,
 				added_by,
 				invitation_id,
-				kouden_roles:kouden_roles (
+				kouden_roles!role_id (
 					id,
 					name
 				)
@@ -261,7 +199,8 @@ export const getMembersForAdmin = cache(async (koudenId: string) => {
 		// メンバー情報の整形（管理者は全て閲覧可能だが編集権限は制限）
 		return members.map((member) => {
 			const isOwnerUser = member.user_id === kouden.owner_id;
-			const roleData = Array.isArray(member.kouden_roles) ? member.kouden_roles[0] : null;
+			// 外部キー参照の結果を適切に処理
+			const roleData = member.kouden_roles;
 			const role = roleData || { id: member.role_id, name: "unknown" };
 			const profile = profiles?.find((p) => p.id === member.user_id) || {
 				id: member.user_id,
@@ -286,44 +225,3 @@ export const getMembersForAdmin = cache(async (koudenId: string) => {
 		});
 	}, "管理者用メンバー一覧の取得");
 });
-
-// メンバーを削除
-export async function deleteMember(koudenId: string, userId: string) {
-	const supabase = await createClient();
-
-	try {
-		// 管理者権限のチェック
-		const isOwner = await isKoudenOwner(koudenId);
-		if (!isOwner) {
-			throw new Error("権限がありません");
-		}
-
-		// オーナーが自身を削除しようとしていないかチェック
-		const { data: kouden } = await supabase
-			.from("koudens")
-			.select("owner_id")
-			.eq("id", koudenId)
-			.single();
-
-		if (kouden?.owner_id === userId) {
-			throw new Error("オーナーは削除できません");
-		}
-
-		// RPC関数を使用してメンバーを削除
-		const { error } = await supabase.rpc("remove_member", {
-			p_kouden_id: koudenId,
-			p_user_id: userId,
-		});
-
-		if (error) {
-			console.error("[ERROR] Failed to delete member:", error);
-			throw new Error("メンバーの削除に失敗しました");
-		}
-
-		// キャッシュを更新
-		revalidatePath(`/koudens/${koudenId}`);
-	} catch (error) {
-		console.error("[ERROR] Error in deleteMember:", error);
-		throw error;
-	}
-}

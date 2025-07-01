@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
-import { useMediaQuery } from "@/hooks/use-media-query";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
 	Select,
 	SelectContent,
@@ -36,7 +36,7 @@ const getRoleDisplayName = (roleName: string) => {
 };
 
 export function ShareLinkForm({ koudenId, roles }: ShareLinkFormProps) {
-	const isMobile = useMediaQuery("(max-width: 768px)");
+	const isMobile = useIsMobile();
 	const [loading, setLoading] = useState(false);
 	const [invitationLink, setInvitationLink] = useState<string>("");
 	const [copied, setCopied] = useState(false);
@@ -95,7 +95,7 @@ export function ShareLinkForm({ koudenId, roles }: ShareLinkFormProps) {
 			trigger={
 				<Button
 					size={isMobile ? "lg" : "default"}
-					className={isMobile ? "w-full mx-4 flex items-center gap-2" : "flex items-center gap-2"}
+					className={isMobile ? "w-full flex items-center gap-2" : "flex items-center gap-2"}
 				>
 					<Share2 className="h-4 w-4" />
 					共有リンクを作成

@@ -8,7 +8,7 @@ import { getInitials } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { removeMember } from "@/app/_actions/roles";
+import { removeMember, leaveMember } from "@/app/_actions/roles";
 import type { KoudenMember } from "@/types/member";
 import { type PrimitiveAtom, useSetAtom } from "jotai";
 
@@ -37,7 +37,14 @@ export function RemoveMemberButton({ member, isSelf, membersAtom }: RemoveMember
 	const handleRemove = async () => {
 		try {
 			setIsLoading(true);
-			await removeMember(member.kouden_id, member.user_id);
+
+			if (isSelf) {
+				// 自分自身の場合は leaveMember を使用
+				await leaveMember(member.kouden_id);
+			} else {
+				// 他のメンバーの場合は removeMember を使用
+				await removeMember(member.kouden_id, member.user_id);
+			}
 
 			// クライアントサイドで状態を更新
 			setMembersState((prev) => prev.filter((m) => m.id !== member.id));

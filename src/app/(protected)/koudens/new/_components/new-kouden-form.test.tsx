@@ -1,7 +1,7 @@
 import React from "react";
 import { vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import NewKoudenForm from "./NewKoudenForm";
+import NewKoudenForm from "./new-kouden-form";
 import * as createModule from "@/app/_actions/koudens/create";
 import * as purchaseModule from "@/app/_actions/purchaseKouden";
 import { useRouter } from "next/navigation";

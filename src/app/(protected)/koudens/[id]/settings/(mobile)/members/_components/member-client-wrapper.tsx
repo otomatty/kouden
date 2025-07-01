@@ -8,9 +8,14 @@ import type { Member } from "./types";
 interface MemberClientWrapperProps {
 	members: Member[];
 	koudenId: string;
+	currentUserId?: string;
 }
 
-export function MemberClientWrapper({ members, koudenId }: MemberClientWrapperProps) {
+export function MemberClientWrapper({
+	members,
+	koudenId,
+	currentUserId,
+}: MemberClientWrapperProps) {
 	const [selectedMember, setSelectedMember] = React.useState<Member | null>(null);
 	const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
 
@@ -32,6 +37,7 @@ export function MemberClientWrapper({ members, koudenId }: MemberClientWrapperPr
 				isOpen={isDrawerOpen}
 				onClose={handleDrawerClose}
 				koudenId={koudenId}
+				currentUserId={currentUserId}
 			/>
 		</>
 	);

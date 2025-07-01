@@ -15,7 +15,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { updateMemberRole } from "@/app/_actions/members";
+import { updateMemberRole } from "@/app/_actions/roles";
 import { toast } from "sonner";
 import type { KoudenRole } from "@/types/role";
 

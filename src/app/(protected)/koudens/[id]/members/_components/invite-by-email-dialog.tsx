@@ -12,7 +12,7 @@ import {
 	SelectItem,
 	SelectValue,
 } from "@/components/ui/select";
-import { useMediaQuery } from "@/hooks/use-media-query";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { Plus, MailPlus, SendIcon, MailPlusIcon } from "lucide-react";
 import { sendBatchInvitationEmails } from "@/app/_actions/batch-invitations";
@@ -33,7 +33,7 @@ const getRoleDisplayName = (roleName: string) => {
 };
 
 export function InviteByEmailDialog({ koudenId, roles }: InviteByEmailDialogProps) {
-	const isMobile = useMediaQuery("(max-width: 768px)");
+	const isMobile = useIsMobile();
 	const [loading, setLoading] = useState(false);
 	// 表示するメール入力欄の数を管理
 	const [numInputs, setNumInputs] = useState(1);
@@ -61,7 +61,7 @@ export function InviteByEmailDialog({ koudenId, roles }: InviteByEmailDialogProp
 			trigger={
 				<Button
 					size={isMobile ? "lg" : "default"}
-					className={isMobile ? "w-full mx-4 flex items-center" : "flex items-center"}
+					className={isMobile ? "w-full flex items-center" : "flex items-center"}
 				>
 					<MailPlusIcon className="h-4 w-4" />
 					メールで招待

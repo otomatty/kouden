@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getPlans } from "@/app/_actions/plans";
-import NewKoudenForm from "./NewKoudenForm";
+import NewKoudenForm from "./_components/new-kouden-form";
 import { createClient } from "@/lib/supabase/server";
 export const metadata: Metadata = {
 	title: "新規香典帳作成",
@@ -19,7 +19,7 @@ export default async function NewKoudenPage() {
 	}
 
 	return (
-		<div className="max-w-2xl mx-auto p-4">
+		<div className="max-w-2xl mx-auto">
 			<h1 className="text-2xl font-bold mb-6">香典帳を作成する</h1>
 			<NewKoudenForm plans={plans} userId={user.id} />
 		</div>

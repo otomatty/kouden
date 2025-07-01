@@ -12,7 +12,7 @@ export default async function RelationshipsPage({ params }: RelationshipsPagePro
 	const relationships = await getRelationships(id);
 
 	return (
-		<div className="container max-w-2xl mx-auto p-4 space-y-4">
+		<div className="container max-w-2xl mx-auto space-y-4">
 			<BackLink href={`/koudens/${id}/settings`} label="設定に戻る" />
 			<div>
 				<h2 className="text-2xl font-bold tracking-tight">関係性設定</h2>

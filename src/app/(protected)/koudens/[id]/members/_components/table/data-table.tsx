@@ -27,7 +27,7 @@ import {
 	defaultColumnVisibility,
 	tabletColumnVisibility,
 } from "./columns";
-import { useMediaQuery } from "@/hooks/use-media-query";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface MembersTableProps {
 	columns: ColumnDef<KoudenMember>[];
@@ -46,7 +46,8 @@ export function MembersTable({
 	roles = [],
 	isLoading = false,
 }: MembersTableProps) {
-	const isTablet = useMediaQuery("(max-width: 1024px)");
+	const isMobile = useIsMobile();
+	const isTablet = isMobile; // 768px以下をタブレット扱いに統一
 	const [sorting, setSorting] = React.useState<SortingState>([]);
 	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
 	const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>(

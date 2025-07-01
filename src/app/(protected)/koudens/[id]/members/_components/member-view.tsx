@@ -4,7 +4,9 @@ import { useEffect, useRef, memo, useState } from "react";
 import { useSetAtom } from "jotai";
 import { membersAtom } from "@/store/members";
 import { MembersTable } from "./table/data-table";
+import { MobileMemberList } from "./mobile-member-list";
 import { createColumns } from "./table/columns";
+import { useIsMobile } from "@/hooks/use-mobile";
 import type { KoudenMember } from "@/types/member";
 import type { KoudenRole } from "@/types/role";
 import type { KoudenPermission } from "@/types/role";
@@ -28,6 +30,7 @@ function MemberViewComponent({
 	const [isLoading, setIsLoading] = useState(true);
 	const [isDataReady, setIsDataReady] = useState(false);
 	const previousMembersRef = useRef<KoudenMember[]>(members);
+	const isMobile = useIsMobile();
 
 	// データの初期化と準備
 	useEffect(() => {
@@ -62,14 +65,28 @@ function MemberViewComponent({
 	}
 
 	return (
-		<MembersTable
-			columns={columns}
-			data={members}
-			permission={permission}
-			koudenId={koudenId}
-			roles={roles}
-			isLoading={isLoading}
-		/>
+		<div className="space-y-4">
+			{/* メイン表示 */}
+			{isMobile ? (
+				<MobileMemberList
+					members={members}
+					roles={roles}
+					permission={permission}
+					koudenId={koudenId}
+					currentUserId={currentUserId}
+					membersAtom={membersAtom}
+				/>
+			) : (
+				<MembersTable
+					columns={columns}
+					data={members}
+					permission={permission}
+					koudenId={koudenId}
+					roles={roles}
+					isLoading={isLoading}
+				/>
+			)}
+		</div>
 	);
 }
 
