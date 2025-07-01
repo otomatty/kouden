@@ -6,7 +6,6 @@ import { useInfiniteEntries } from "@/hooks/use-infinite-entries";
 import { MobileFilters, filterOptions } from "./mobile-filters";
 import { EntryCard } from "./entry-card";
 import type { Relationship } from "@/types/relationships";
-import { ArrowDown } from "lucide-react";
 
 interface EntryCardListProps {
 	entries: Entry[];
@@ -109,7 +108,6 @@ export function EntryCardList({ koudenId, relationships }: EntryCardListProps) {
 								<br />
 								「香典を登録」ボタンをクリックして追加してください。
 							</span>
-							<ArrowDown className="h-8 w-8 mx-auto" />
 						</div>
 					)}
 				</div>

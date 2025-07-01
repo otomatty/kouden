@@ -37,7 +37,7 @@ export default function ProtectedClientLayout({
 					version={version}
 					notifications={userNotifications}
 				/>
-				<div className="app-body container mx-auto px-4 md:py-8 md:my-12 flex-1">
+				<div className="app-body container mx-auto px-4 pt-8 md:py-8 md:my-12 flex-1">
 					<main>{children}</main>
 				</div>
 				<div className="fixed bottom-6 right-6 z-50 hidden md:block">

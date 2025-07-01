@@ -14,14 +14,33 @@ import { toast } from "sonner";
 interface DeleteKoudenDialogProps {
 	koudenId: string;
 	koudenTitle: string;
+	/** Sheetを閉じるためのコールバック関数 */
+	onSheetClose?: () => void;
 }
 
-export function DeleteKoudenDialog({ koudenId, koudenTitle }: DeleteKoudenDialogProps) {
-	const [, setIsOpen] = useState(false);
+export function DeleteKoudenDialog({
+	koudenId,
+	koudenTitle,
+	onSheetClose,
+}: DeleteKoudenDialogProps) {
+	const [isOpen, setIsOpen] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [confirmTitle, setConfirmTitle] = useState("");
 	const isDesktop = useMediaQuery("(min-width: 768px)");
 	const router = useRouter();
+
+	const handleOpenChange = (open: boolean) => {
+		setIsOpen(open);
+		if (open && onSheetClose) {
+			// ダイアログを開く際に親のSheetを閉じる
+			onSheetClose();
+		}
+		if (!open) {
+			// ダイアログを閉じる際に入力をリセット
+			setConfirmTitle("");
+		}
+	};
+
 	const handleDelete = async () => {
 		if (confirmTitle !== koudenTitle) {
 			return;
@@ -58,17 +77,19 @@ export function DeleteKoudenDialog({ koudenId, koudenTitle }: DeleteKoudenDialog
 			<span>香典帳を削除する</span>
 		</Button>
 	) : (
-		<button
-			type="button"
-			className="flex flex-col items-center gap-1.5 min-w-[60px] py-2 px-3 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+		<Button
+			variant="ghost"
+			className="w-full flex items-center justify-start gap-3 h-12 text-left text-destructive hover:text-destructive"
 		>
 			<Trash2 className="h-5 w-5" />
-			<span className="text-sm font-medium">香典帳を削除する</span>
-		</button>
+			<span>香典帳を削除する</span>
+		</Button>
 	);
 
 	return (
 		<ResponsiveDialog
+			open={isOpen}
+			onOpenChange={handleOpenChange}
 			trigger={trigger}
 			title="香典帳の削除"
 			description="この操作は取り消せません。削除を確認するには、以下にタイトルを入力してください。"
