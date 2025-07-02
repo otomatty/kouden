@@ -7,7 +7,6 @@ import { entryFormDraftAtom } from "@/store/entries";
 import { useEffect } from "react";
 // ui
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Form } from "@/components/ui/form";
 
@@ -43,10 +42,21 @@ export interface EntryFormProps {
 	 * 成功時のコールバック
 	 */
 	onSuccess?: (entry: Entry) => void;
+
+	/**
+	 * 外部からフォーム送信をトリガーするための関数を渡すコールバック
+	 */
+	onFormReady?: (submitForm: () => void) => void;
 }
 
-export function EntryForm({ koudenId, relationships, defaultValues, onSuccess }: EntryFormProps) {
-	const [submissionState, setSubmissionState] = useAtom(formSubmissionStateAtom);
+export function EntryForm({
+	koudenId,
+	relationships,
+	defaultValues,
+	onSuccess,
+	onFormReady,
+}: EntryFormProps) {
+	const [, setSubmissionState] = useAtom(formSubmissionStateAtom);
 
 	const [draftValues, setDraftValues] = useAtom(entryFormDraftAtom);
 	const isCreate = defaultValues == null;
@@ -89,6 +99,15 @@ export function EntryForm({ koudenId, relationships, defaultValues, onSuccess }:
 		});
 		return () => subscription.unsubscribe();
 	}, [form, isCreate, setDraftValues]);
+
+	// 外部からフォーム送信をトリガーできるようにする
+	useEffect(() => {
+		if (onFormReady) {
+			onFormReady(() => {
+				form.handleSubmit(onSubmit)();
+			});
+		}
+	}, [form, onFormReady]);
 
 	const onSubmit = async (values: EntryFormValues) => {
 		try {
@@ -146,7 +165,7 @@ export function EntryForm({ koudenId, relationships, defaultValues, onSuccess }:
 						formState: form.formState,
 					});
 				})}
-				className="grid gap-4 py-4"
+				className="grid gap-4"
 			>
 				<Tabs defaultValue="basic" className="w-full">
 					<TabsList className="grid w-full grid-cols-2">
@@ -160,11 +179,6 @@ export function EntryForm({ koudenId, relationships, defaultValues, onSuccess }:
 						<EntryFormAdditional relationships={relationships} />
 					</TabsContent>
 				</Tabs>
-				<div className="flex justify-end gap-2">
-					<Button type="submit" disabled={submissionState.isSubmitting}>
-						{submissionState.isSubmitting ? "保存中..." : defaultValues ? "更新" : "追加"}
-					</Button>
-				</div>
 			</form>
 		</Form>
 	);

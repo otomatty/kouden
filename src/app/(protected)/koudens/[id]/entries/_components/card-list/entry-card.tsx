@@ -5,7 +5,6 @@ import { useAtomValue } from "jotai";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ChevronRight, Gift } from "lucide-react";
-import { Drawer, DrawerTrigger } from "@/components/ui/drawer";
 
 // types
 import type { Entry } from "@/types/entries";
@@ -13,7 +12,7 @@ import type { Relationship } from "@/types/relationships";
 // utils
 import { formatCurrency } from "@/utils/currency";
 // components
-import { EntryDrawerContent } from "./entry-drawer-content";
+import { EntryDialog } from "../dialog/entry-dialog";
 // stores
 import { mergedEntriesAtom } from "@/store/entries";
 
@@ -40,8 +39,14 @@ export function EntryCard({ entry: initialEntry, koudenId, relationships }: Entr
 	const returnStatusDisplay = entry.status_display || (isReturnCompleted ? "返礼済" : "未返礼");
 
 	return (
-		<Drawer open={isOpen} onOpenChange={setIsOpen}>
-			<DrawerTrigger asChild>
+		<EntryDialog
+			koudenId={koudenId}
+			relationships={relationships}
+			defaultValues={entry}
+			variant="edit"
+			open={isOpen}
+			onOpenChange={setIsOpen}
+			trigger={
 				<Card className="w-full hover:bg-accent/50 transition-colors cursor-pointer">
 					<CardContent className="p-4">
 						<div className="flex justify-between items-center">
@@ -80,14 +85,7 @@ export function EntryCard({ entry: initialEntry, koudenId, relationships }: Entr
 						</div>
 					</CardContent>
 				</Card>
-			</DrawerTrigger>
-
-			<EntryDrawerContent
-				entry={entry}
-				koudenId={koudenId}
-				relationships={relationships}
-				onClose={() => setIsOpen(false)}
-			/>
-		</Drawer>
+			}
+		/>
 	);
 }

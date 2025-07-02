@@ -18,6 +18,7 @@ import {
 	DrawerTitle,
 	DrawerTrigger,
 } from "@/components/ui/drawer";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface ResponsiveDialogProps {
@@ -36,6 +37,32 @@ interface ResponsiveDialogProps {
 	open?: boolean;
 	/** Controlled onOpenChange callback */
 	onOpenChange?: (open: boolean) => void;
+	/**
+	 * フォーム送信関数
+	 * モバイルでの固定ボタンから呼び出されます
+	 */
+	submitForm?: (() => void) | null;
+	/**
+	 * 送信中状態
+	 */
+	isSubmitting?: boolean;
+	/**
+	 * 送信ボタンのラベル
+	 */
+	submitButtonLabel?: string;
+	/**
+	 * 削除関数
+	 * モバイルでの固定ボタンから呼び出されます
+	 */
+	deleteForm?: (() => void) | null;
+	/**
+	 * 削除中状態
+	 */
+	isDeleting?: boolean;
+	/**
+	 * 削除ボタンのラベル
+	 */
+	deleteButtonLabel?: string;
 }
 
 export function ResponsiveDialog({
@@ -49,6 +76,12 @@ export function ResponsiveDialog({
 	contentClassName,
 	onSuccess,
 	shortcutKey,
+	submitForm,
+	isSubmitting = false,
+	submitButtonLabel = "保存",
+	deleteForm,
+	isDeleting = false,
+	deleteButtonLabel = "削除",
 }: ResponsiveDialogProps) {
 	const [internalOpen, setInternalOpen] = useState(false);
 	const open = openProp ?? internalOpen;
@@ -135,16 +168,43 @@ export function ResponsiveDialog({
 	return (
 		<Drawer open={open} onOpenChange={setOpen}>
 			<DrawerTrigger asChild>{trigger}</DrawerTrigger>
-			<DrawerContent forceMount>
+			<DrawerContent forceMount className="flex flex-col h-[95dvh]">
 				{(title || description) && (
-					<DrawerHeader className="text-left">
+					<DrawerHeader className="text-left flex-shrink-0">
 						{title && <DrawerTitle>{title}</DrawerTitle>}
 						{description && <DrawerDescription>{description}</DrawerDescription>}
 					</DrawerHeader>
 				)}
-				<div className="overflow-y-auto max-h-[calc(100dvh-1rem)] px-4">
+				<div className="flex-1 overflow-y-auto px-4 pb-4">
 					<div className={className}>{renderChildren()}</div>
 				</div>
+				{(submitForm || deleteForm) && (
+					<div className="flex-shrink-0 p-4 border-t bg-background">
+						<div className="flex gap-3">
+							{deleteForm && (
+								<Button
+									onClick={deleteForm}
+									disabled={isDeleting || isSubmitting}
+									variant="destructive"
+									className="flex-1"
+									size="lg"
+								>
+									{isDeleting ? "削除中..." : deleteButtonLabel}
+								</Button>
+							)}
+							{submitForm && (
+								<Button
+									onClick={submitForm}
+									disabled={isSubmitting || isDeleting}
+									className="flex-1"
+									size="lg"
+								>
+									{isSubmitting ? "保存中..." : submitButtonLabel}
+								</Button>
+							)}
+						</div>
+					</div>
+				)}
 			</DrawerContent>
 		</Drawer>
 	);

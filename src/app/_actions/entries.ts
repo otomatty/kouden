@@ -355,7 +355,6 @@ export async function updateEntry(id: string, input: UpdateEntryInput): Promise<
 			koudenId,
 			attendanceType,
 			hasOffering,
-			isReturnCompleted,
 			postalCode,
 			phoneNumber,
 			relationshipId,
@@ -366,7 +365,6 @@ export async function updateEntry(id: string, input: UpdateEntryInput): Promise<
 			kouden_id: koudenId,
 			attendance_type: attendanceType,
 			has_offering: hasOffering,
-			is_return_completed: isReturnCompleted,
 			postal_code: postalCode,
 			phone_number: phoneNumber,
 			relationship_id: relationshipId,
@@ -472,7 +470,6 @@ export async function updateEntryField(
 			phoneNumber: "phone_number",
 			relationshipId: "relationship_id",
 			hasOffering: "has_offering",
-			isReturnCompleted: "is_return_completed",
 			attendanceType: "attendance_type",
 		};
 

@@ -122,6 +122,38 @@ export interface CrudDialogProps<T = void> {
 
 	/** Controlled onOpenChange callback */
 	onOpenChange?: (open: boolean) => void;
+
+	/**
+	 * フォーム送信関数
+	 * モバイルでの固定ボタンから呼び出されます
+	 */
+	submitForm?: (() => void) | null;
+
+	/**
+	 * 送信中状態
+	 */
+	isSubmitting?: boolean;
+
+	/**
+	 * 送信ボタンのラベル
+	 */
+	submitButtonLabel?: string;
+
+	/**
+	 * 削除関数
+	 * モバイルでの固定ボタンから呼び出されます
+	 */
+	deleteForm?: (() => void) | null;
+
+	/**
+	 * 削除中状態
+	 */
+	isDeleting?: boolean;
+
+	/**
+	 * 削除ボタンのラベル
+	 */
+	deleteButtonLabel?: string;
 }
 
 export function CrudDialog<T = void>({
@@ -137,6 +169,12 @@ export function CrudDialog<T = void>({
 	children,
 	onSuccess,
 	shortcutKey,
+	submitForm,
+	isSubmitting = false,
+	submitButtonLabel = "保存",
+	deleteForm,
+	isDeleting = false,
+	deleteButtonLabel = "削除",
 }: CrudDialogProps<T>) {
 	const isMobile = useMediaQuery("(max-width: 768px)");
 	const [isMac, setIsMac] = useState(false);
@@ -212,6 +250,12 @@ export function CrudDialog<T = void>({
 			contentClassName={contentClassName}
 			onSuccess={onSuccess ? () => onSuccess({} as T) : undefined}
 			shortcutKey={shortcutKey}
+			submitForm={submitForm}
+			isSubmitting={isSubmitting}
+			submitButtonLabel={submitButtonLabel}
+			deleteForm={deleteForm}
+			isDeleting={isDeleting}
+			deleteButtonLabel={deleteButtonLabel}
 		>
 			{children}
 		</ResponsiveDialog>

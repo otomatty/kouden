@@ -25,7 +25,6 @@ export const handleEntrySubmission = async (
 		// relationshipIdが未設定の場合はnullを設定
 		relationshipId: values.relationshipId ?? null,
 		hasOffering: false,
-		isReturnCompleted: false,
 	};
 
 	const response = existingEntry?.id

@@ -25,7 +25,6 @@ export const entrySchema = z
 			),
 		attendanceType: z.enum(["FUNERAL", "CONDOLENCE_VISIT", "ABSENT"]).default("ABSENT"),
 		hasOffering: z.boolean().default(false),
-		isReturnCompleted: z.boolean().default(false),
 		notes: z.string().nullable(),
 		relationshipId: z.string().uuid("関係性IDが不正です").nullable(),
 	})
