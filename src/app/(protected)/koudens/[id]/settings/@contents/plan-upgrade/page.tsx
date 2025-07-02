@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getPlans } from "@/app/_actions/plans";
 import { getKoudenWithPlan } from "@/app/_actions/koudens";
-import PurchasePageClient from "../../../../../purchase/[id]/_components/PurchasePageClient";
+import { UpgradePlanSelector } from "@/components/custom/upgrade-plan-selector";
 import { checkKoudenPermission } from "@/app/_actions/permissions";
 import { notFound } from "next/navigation";
 
@@ -32,5 +32,12 @@ export default async function PlanUpgradePage({ params }: PlanUpgradePageProps) 
 
 	const currentPlan = planInfo.plan;
 
-	return <PurchasePageClient id={koudenId} plans={plans} currentPlan={currentPlan} />;
+	return (
+		<UpgradePlanSelector
+			koudenId={koudenId}
+			plans={plans}
+			currentPlan={currentPlan}
+			cancelPath={`/koudens/${koudenId}/settings`}
+		/>
+	);
 }

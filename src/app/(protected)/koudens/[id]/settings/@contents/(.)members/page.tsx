@@ -1,5 +1,6 @@
 import { MemberView } from "./_components/member-view";
-import { getMembers, getKoudenRoles } from "@/app/_actions/members";
+import { getMembers } from "@/app/_actions/members";
+import { getKoudenRoles } from "@/app/_actions/roles";
 import type { KoudenMember } from "@/types/member";
 import { checkKoudenPermission } from "@/app/_actions/permissions";
 import { SettingsHeader } from "../../_components/settings-header";

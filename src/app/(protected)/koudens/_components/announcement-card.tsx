@@ -86,61 +86,74 @@ export function AnnouncementCard({
 
 	return (
 		<Card className={cn("relative overflow-hidden", typeConfig.className)}>
-			<CardContent className="p-4 sm:p-6">
-				<div className="flex items-start gap-3">
-					{/* アイコンとバッジ */}
-					<div className="flex-shrink-0 pt-1">
-						<IconComponent className="h-5 w-5 text-current" />
+			<CardContent className="p-3 sm:p-4 md:p-6">
+				<div className="flex items-start gap-2 sm:gap-3">
+					{/* アイコン */}
+					<div className="flex-shrink-0 pt-0.5">
+						<IconComponent className="h-4 w-4 sm:h-5 sm:w-5 text-current" />
 					</div>
 
 					{/* メインコンテンツ */}
 					<div className="flex-1 min-w-0">
+						{/* ヘッダー部分 */}
 						<div className="flex items-start justify-between gap-2 mb-2">
-							<div className="flex items-center gap-2 flex-wrap">
-								<Badge variant={typeConfig.variant} className="text-xs">
-									{typeConfig.badge}
-								</Badge>
-								<h3 className="font-semibold text-sm sm:text-base leading-tight">
-									{announcement.title}
-								</h3>
+							<div className="flex-1 min-w-0">
+								<div className="flex items-start flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
+									<Badge variant={typeConfig.variant} className="text-xs flex-shrink-0">
+										{typeConfig.badge}
+									</Badge>
+									<h3 className="font-semibold text-sm sm:text-base leading-tight break-words">
+										{announcement.title}
+									</h3>
+								</div>
 							</div>
 							{showDismissButton && (
 								<Button
 									variant="ghost"
 									size="sm"
 									onClick={handleDismiss}
-									className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground flex-shrink-0"
+									className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground flex-shrink-0 -mt-0.5"
 									aria-label="お知らせを閉じる"
 								>
-									<X className="h-4 w-4" />
+									<X className="h-3 w-3 sm:h-4 sm:w-4" />
 								</Button>
 							)}
 						</div>
 
-						<p className="text-sm text-muted-foreground mb-3 leading-relaxed">
+						{/* 説明文 */}
+						<p className="text-xs sm:text-sm text-muted-foreground mb-3 leading-relaxed break-words">
 							{announcement.description}
 						</p>
 
 						{/* 画像 */}
 						{announcement.image_url && (
-							<div className="mb-3 rounded-md overflow-hidden">
+							<div className="mb-3 rounded-md overflow-hidden bg-muted">
 								<Image
 									src={announcement.image_url}
 									alt={announcement.title}
 									width={400}
 									height={200}
-									className="w-full h-auto object-cover"
+									className="w-full h-auto object-cover max-h-48 sm:max-h-56"
+									sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
 								/>
 							</div>
 						)}
 
 						{/* CTAボタン */}
 						{announcement.cta_label && announcement.cta_link && (
-							<div className="flex items-center gap-2">
-								<Button asChild size="sm" variant="outline">
-									<Link href={announcement.cta_link} className="flex items-center gap-1">
-										{announcement.cta_label}
-										<ExternalLink className="h-3 w-3" />
+							<div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+								<Button
+									asChild
+									size="sm"
+									variant="outline"
+									className="w-full sm:w-auto text-xs sm:text-sm"
+								>
+									<Link
+										href={announcement.cta_link}
+										className="flex items-center justify-center gap-1"
+									>
+										<span className="truncate">{announcement.cta_label}</span>
+										<ExternalLink className="h-3 w-3 flex-shrink-0" />
 									</Link>
 								</Button>
 							</div>

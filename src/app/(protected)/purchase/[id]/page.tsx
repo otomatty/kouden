@@ -1,6 +1,6 @@
 import { getPlans } from "@/app/_actions/plans";
 import { getKouden, getKoudenWithPlan } from "@/app/_actions/koudens";
-import PurchasePageClient from "./_components/PurchasePageClient";
+import { UpgradePlanSelector } from "@/components/custom/upgrade-plan-selector";
 import { checkKoudenPermission } from "@/app/_actions/permissions";
 import { notFound } from "next/navigation";
 
@@ -29,5 +29,15 @@ export default async function PurchasePage({ params }: PurchasePageProps) {
 	}
 	const currentPlan = planInfo.plan;
 
-	return <PurchasePageClient id={koudenId} plans={plans} currentPlan={currentPlan} />;
+	return (
+		<div className="py-8">
+			<h1 className="text-2xl font-bold mb-6">プランを選択</h1>
+			<UpgradePlanSelector
+				koudenId={koudenId}
+				plans={plans}
+				currentPlan={currentPlan}
+				cancelPath={`/purchase/${koudenId}`}
+			/>
+		</div>
+	);
 }

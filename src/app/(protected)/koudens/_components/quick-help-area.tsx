@@ -229,46 +229,49 @@ export const QuickHelpArea = memo(function QuickHelpArea({
 
 	return (
 		<Card data-tour="quick-help-area" className={cn("", className)}>
-			<CardHeader className="pb-4">
-				<CardTitle className="text-lg font-semibold flex items-center gap-2">
-					<HelpCircle className="h-5 w-5 text-primary" />
-					クイックヘルプ
-					<Badge variant="secondary" className="text-xs">
+			<CardHeader className="pb-3 sm:pb-4 p-3 sm:p-6">
+				<CardTitle className="text-base sm:text-lg font-semibold flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+					<div className="flex items-center gap-2">
+						<HelpCircle className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+						<span>クイックヘルプ</span>
+					</div>
+					<Badge variant="secondary" className="text-xs w-fit">
 						よくある質問
 					</Badge>
 				</CardTitle>
-				<p className="text-sm text-muted-foreground">
+				<p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
 					困ったときはここから。すぐに解決策を見つけられます。
 				</p>
 			</CardHeader>
 
-			<CardContent className="space-y-4">
+			<CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-6 pt-0">
 				{/* 検索とフィルター */}
 				{showSearch && (
-					<div className="space-y-3">
+					<div className="space-y-2 sm:space-y-3">
 						{/* 検索バー */}
 						<div className="relative">
-							<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+							<Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
 							<Input
 								placeholder="ヘルプを検索..."
 								value={searchQuery}
 								onChange={(e) => setSearchQuery(e.target.value)}
-								className="pl-10"
+								className="pl-8 sm:pl-10 text-xs sm:text-sm h-8 sm:h-10"
 							/>
 						</div>
 
 						{/* カテゴリフィルター */}
-						<div className="flex flex-wrap gap-2">
+						<div className="flex flex-wrap gap-1 sm:gap-2">
 							{categoryOptions.map((category) => (
 								<Button
 									key={category.value}
 									variant={selectedCategory === category.value ? "default" : "outline"}
 									size="sm"
 									onClick={() => setSelectedCategory(category.value)}
-									className="h-8 text-xs"
+									className="h-7 sm:h-8 text-xs px-2 sm:px-3"
 								>
-									<category.icon className="h-3 w-3 mr-1" />
-									{category.label}
+									<category.icon className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1" />
+									<span className="hidden xs:inline sm:inline">{category.label}</span>
+									<span className="xs:hidden sm:hidden">{category.label.slice(0, 2)}</span>
 								</Button>
 							))}
 						</div>
@@ -276,11 +279,11 @@ export const QuickHelpArea = memo(function QuickHelpArea({
 				)}
 
 				{/* ヘルプアイテム一覧 */}
-				<div className="space-y-3">
+				<div className="space-y-2 sm:space-y-3">
 					{displayItems.length === 0 ? (
-						<div className="text-center py-8 text-muted-foreground">
-							<HelpCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-							<p className="text-sm">該当するヘルプが見つかりませんでした</p>
+						<div className="text-center py-6 sm:py-8 text-muted-foreground">
+							<HelpCircle className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 opacity-50" />
+							<p className="text-xs sm:text-sm">該当するヘルプが見つかりませんでした</p>
 						</div>
 					) : (
 						displayItems.map((item) => {
@@ -289,40 +292,46 @@ export const QuickHelpArea = memo(function QuickHelpArea({
 								<Link
 									key={item.id}
 									href={item.actionHref}
-									className="block group p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all duration-200"
+									className="block group p-3 sm:p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all duration-200"
 								>
-									<div className="flex items-start justify-between">
-										<div className="flex items-start space-x-3 flex-1">
-											<div className="p-2 rounded-lg bg-muted group-hover:bg-background transition-colors">
-												<item.icon className="h-4 w-4 text-primary" />
+									<div className="flex items-start justify-between gap-2">
+										<div className="flex items-start space-x-2 sm:space-x-3 flex-1 min-w-0">
+											<div className="p-1.5 sm:p-2 rounded-lg bg-muted group-hover:bg-background transition-colors flex-shrink-0">
+												<item.icon className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
 											</div>
 											<div className="flex-1 min-w-0">
-												<div className="flex items-center gap-2 mb-1">
-													<h4 className="font-medium text-sm group-hover:text-primary transition-colors">
+												<div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
+													<h4 className="font-medium text-xs sm:text-sm group-hover:text-primary transition-colors break-words">
 														{item.title}
 													</h4>
-													{item.isPopular && (
-														<Badge variant="secondary" className="text-xs">
-															人気
+													<div className="flex items-center gap-1 flex-wrap">
+														{item.isPopular && (
+															<Badge variant="secondary" className="text-xs">
+																人気
+															</Badge>
+														)}
+														<Badge className={cn("text-xs", getCategoryColor(item.category))}>
+															{categoryOptions.find((c) => c.value === item.category)?.label}
 														</Badge>
-													)}
-													<Badge className={cn("text-xs", getCategoryColor(item.category))}>
-														{categoryOptions.find((c) => c.value === item.category)?.label}
-													</Badge>
+													</div>
 												</div>
-												<p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+												<p className="text-xs text-muted-foreground line-clamp-2 mb-2 leading-relaxed break-words">
 													{item.description}
 												</p>
-												<div className="flex items-center gap-2 text-xs text-muted-foreground">
-													<Clock className="h-3 w-3" />
-													<span>{item.estimatedTime}</span>
-													<span>•</span>
-													<span className="text-primary font-medium">{item.actionLabel}</span>
+												<div className="flex flex-col xs:flex-row xs:items-center gap-1 xs:gap-2 text-xs text-muted-foreground">
+													<div className="flex items-center gap-1">
+														<Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+														<span>{item.estimatedTime}</span>
+													</div>
+													<span className="hidden xs:inline">•</span>
+													<span className="text-primary font-medium truncate">
+														{item.actionLabel}
+													</span>
 												</div>
 											</div>
 										</div>
-										<div className="flex items-center ml-3">
-											<ActionIcon className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-200" />
+										<div className="flex items-center ml-2 sm:ml-3 flex-shrink-0">
+											<ActionIcon className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-200" />
 										</div>
 									</div>
 								</Link>
@@ -338,17 +347,17 @@ export const QuickHelpArea = memo(function QuickHelpArea({
 							variant="ghost"
 							size="sm"
 							onClick={() => setIsExpanded(!isExpanded)}
-							className="w-full justify-center"
+							className="w-full justify-center text-xs sm:text-sm h-8 sm:h-10"
 						>
 							{isExpanded ? (
 								<>
 									<span>少なく表示</span>
-									<ChevronUp className="h-4 w-4 ml-1" />
+									<ChevronUp className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
 								</>
 							) : (
 								<>
 									<span>さらに表示 ({filteredItems.length - maxItems}件)</span>
-									<ChevronDown className="h-4 w-4 ml-1" />
+									<ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
 								</>
 							)}
 						</Button>
@@ -356,12 +365,12 @@ export const QuickHelpArea = memo(function QuickHelpArea({
 				)}
 
 				{/* フッター */}
-				<div className="pt-3 mt-3 border-t border-border">
-					<div className="flex items-center justify-between text-xs text-muted-foreground">
-						<span>解決しない場合は</span>
-						<Button variant="ghost" size="sm" asChild>
-							<Link href="/contact" className="flex items-center gap-1">
-								<Mail className="h-3 w-3" />
+				<div className="pt-2 sm:pt-3 mt-2 sm:mt-3 border-t border-border">
+					<div className="flex flex-col xs:flex-row items-center justify-between gap-2 xs:gap-0 text-xs text-muted-foreground">
+						<span className="text-center xs:text-left">解決しない場合は</span>
+						<Button variant="ghost" size="sm" asChild className="w-full xs:w-auto h-8 text-xs">
+							<Link href="/contact" className="flex items-center justify-center gap-1">
+								<Mail className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
 								お問い合わせ
 							</Link>
 						</Button>

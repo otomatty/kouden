@@ -17,6 +17,8 @@ interface ExpectedCountInputProps {
 	max?: number;
 	/** Step value for slider and numeric input (default 1) */
 	step?: number;
+	/** Whether the input is disabled */
+	disabled?: boolean;
 }
 
 export default function ExpectedCountInput({
@@ -27,6 +29,7 @@ export default function ExpectedCountInput({
 	min = 0,
 	max = 1000,
 	step = 10,
+	disabled = false,
 }: ExpectedCountInputProps) {
 	const datalistId = `${id}-tickmarks`;
 	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,6 +49,7 @@ export default function ExpectedCountInput({
 					step={step}
 					value={value}
 					onChange={handleChange}
+					disabled={disabled}
 					className="w-20 text-right focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary"
 				/>
 			</div>
@@ -58,6 +62,7 @@ export default function ExpectedCountInput({
 				list={datalistId}
 				value={value}
 				onChange={handleChange}
+				disabled={disabled}
 				className="w-full accent-primary"
 			/>
 			<datalist id={datalistId}>

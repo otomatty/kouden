@@ -16,21 +16,26 @@ export default function PlanUpgradeAlert({
 	onClose,
 }: PlanUpgradeAlertProps) {
 	return (
-		<Alert className="w-full flex flex-col space-y-4">
-			<div className="flex w-full items-start justify-between">
-				<div className="flex-1">
-					<AlertTitle>プランの切り替え</AlertTitle>
-					<AlertDescription>
+		<Alert className="w-full p-3 sm:p-4">
+			<div className="flex items-start justify-between gap-2">
+				<div className="flex-1 min-w-0">
+					<AlertTitle className="text-sm sm:text-base">プランの切り替え</AlertTitle>
+					<AlertDescription className="mt-1 text-xs sm:text-sm leading-relaxed">
 						無料プランの残り期間はあと{remainingDays}
 						日です。期間内にデータを入力し、PDFをダウンロードできます。
 					</AlertDescription>
 				</div>
-				<Button variant="ghost" size="icon" onClick={onClose}>
-					<X className="h-4 w-4" />
+				<Button
+					variant="ghost"
+					size="icon"
+					onClick={onClose}
+					className="h-6 w-6 sm:h-8 sm:w-8 flex-shrink-0"
+				>
+					<X className="h-3 w-3 sm:h-4 sm:w-4" />
 				</Button>
 			</div>
-			<div className="flex flex-col space-y-2 md:flex-row md:space-y-0 md:space-x-2">
-				<Button size="sm" asChild>
+			<div className="mt-3 sm:mt-4">
+				<Button size="sm" asChild className="w-full sm:w-auto text-xs sm:text-sm">
 					<Link href={`/purchase/${koudenId}`}>プランを切り替える</Link>
 				</Button>
 			</div>

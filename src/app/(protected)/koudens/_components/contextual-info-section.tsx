@@ -193,57 +193,65 @@ export const ContextualInfoSection = memo(function ContextualInfoSection({
 	};
 
 	return (
-		<div data-tour="contextual-info-section" className={`space-y-6 ${className}`}>
+		<div data-tour="contextual-info-section" className={`space-y-4 sm:space-y-6 ${className}`}>
 			{/* メインコンテンツカード */}
 			<Card
 				className={`${getVariantStyles(contextualContent.variant)} transition-all duration-200`}
 			>
-				<CardHeader className="pb-3">
-					<div className="flex items-start space-x-3">
+				<CardHeader className="pb-2 sm:pb-3 p-3 sm:p-6">
+					<div className="flex items-start space-x-2 sm:space-x-3">
 						<div
-							className={`p-2 rounded-lg bg-background/50 ${getIconColor(contextualContent.variant)}`}
+							className={`p-1.5 sm:p-2 rounded-lg bg-background/50 flex-shrink-0 ${getIconColor(contextualContent.variant)}`}
 						>
-							<contextualContent.icon className="h-5 w-5" />
+							<contextualContent.icon className="h-4 w-4 sm:h-5 sm:w-5" />
 						</div>
-						<div className="flex-1">
-							<CardTitle className="text-lg font-semibold flex items-center gap-2">
-								{contextualContent.title}
-								<Badge variant="outline" className="text-xs">
+						<div className="flex-1 min-w-0">
+							<CardTitle className="text-base sm:text-lg font-semibold flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+								<span className="break-words">{contextualContent.title}</span>
+								<Badge variant="outline" className="text-xs w-fit">
 									おすすめ
 								</Badge>
 							</CardTitle>
-							<p className="text-sm text-muted-foreground mt-1">{contextualContent.description}</p>
+							<p className="text-xs sm:text-sm text-muted-foreground mt-1 leading-relaxed break-words">
+								{contextualContent.description}
+							</p>
 						</div>
 					</div>
 				</CardHeader>
-				<CardContent className="space-y-4">
+				<CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-6 pt-0">
 					{/* ポイント一覧 */}
 					{contextualContent.tips && contextualContent.tips.length > 0 && (
-						<ul className="grid gap-2 md:grid-cols-3">
+						<ul className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
 							{contextualContent.tips.map((tip) => (
-								<li key={tip} className="flex items-center space-x-2 text-sm">
-									<Lightbulb className="h-4 w-4 text-yellow-500 flex-shrink-0" />
-									<span className="text-muted-foreground">{tip}</span>
+								<li key={tip} className="flex items-start space-x-2 text-xs sm:text-sm">
+									<Lightbulb className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-500 flex-shrink-0 mt-0.5" />
+									<span className="text-muted-foreground leading-relaxed break-words">{tip}</span>
 								</li>
 							))}
 						</ul>
 					)}
 
 					{/* アクションボタン */}
-					<div className="flex items-center justify-between pt-2">
-						<Button asChild size="sm" className="flex items-center gap-2">
+					<div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-0 pt-2">
+						<Button
+							asChild
+							size="sm"
+							className="flex items-center justify-center gap-2 w-full sm:w-auto text-xs sm:text-sm"
+						>
 							<Link href={contextualContent.actionHref}>
-								{contextualContent.actionLabel}
+								<span className="truncate">{contextualContent.actionLabel}</span>
 								{contextualContent.isExternal ? (
-									<ExternalLink className="h-4 w-4" />
+									<ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
 								) : (
-									<ArrowRight className="h-4 w-4" />
+									<ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
 								)}
 							</Link>
 						</Button>
 
 						{contextualContent.variant === "warning" && (
-							<span className="text-xs text-muted-foreground">🚨 対応をお急ぎください</span>
+							<span className="text-xs text-muted-foreground text-center sm:text-right">
+								🚨 対応をお急ぎください
+							</span>
 						)}
 					</div>
 				</CardContent>
@@ -252,30 +260,30 @@ export const ContextualInfoSection = memo(function ContextualInfoSection({
 			{/* 関連記事セクション */}
 			{relevantPosts.length > 0 && (
 				<Card>
-					<CardHeader className="pb-4">
-						<CardTitle className="text-base font-medium flex items-center gap-2">
-							<FileText className="h-4 w-4" />
+					<CardHeader className="pb-3 sm:pb-4 p-3 sm:p-6">
+						<CardTitle className="text-sm sm:text-base font-medium flex items-center gap-2">
+							<FileText className="h-3 w-3 sm:h-4 sm:w-4" />
 							こちらもチェック
 						</CardTitle>
 					</CardHeader>
-					<CardContent>
-						<div className="space-y-3">
+					<CardContent className="p-3 sm:p-6 pt-0">
+						<div className="space-y-2 sm:space-y-3">
 							{relevantPosts.map((post) => (
 								<Link
 									key={post.id}
 									href={post.href}
-									className="block group p-3 rounded-lg border border-transparent hover:border-border hover:bg-muted/50 transition-all duration-200"
+									className="block group p-2 sm:p-3 rounded-lg border border-transparent hover:border-border hover:bg-muted/50 transition-all duration-200"
 								>
-									<div className="flex items-start justify-between">
-										<div className="flex-1">
-											<h4 className="font-medium text-sm group-hover:text-primary transition-colors">
+									<div className="flex items-start justify-between gap-2">
+										<div className="flex-1 min-w-0">
+											<h4 className="font-medium text-xs sm:text-sm group-hover:text-primary transition-colors break-words">
 												{post.title}
 											</h4>
-											<p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+											<p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
 												{post.excerpt}
 											</p>
 										</div>
-										<div className="flex items-center space-x-2 ml-3">
+										<div className="flex flex-col sm:flex-row items-end sm:items-center space-y-1 sm:space-y-0 sm:space-x-2 ml-2 sm:ml-3 flex-shrink-0">
 											<Badge variant="secondary" className="text-xs">
 												{post.category}
 											</Badge>
@@ -287,11 +295,16 @@ export const ContextualInfoSection = memo(function ContextualInfoSection({
 						</div>
 
 						{/* 全記事リンク */}
-						<div className="pt-3 mt-3 border-t border-border">
-							<Button variant="ghost" size="sm" asChild className="w-full justify-center">
+						<div className="pt-2 sm:pt-3 mt-2 sm:mt-3 border-t border-border">
+							<Button
+								variant="ghost"
+								size="sm"
+								asChild
+								className="w-full justify-center text-xs sm:text-sm"
+							>
 								<Link href="/blog" className="flex items-center gap-2">
 									<span>すべての記事を見る</span>
-									<TrendingUp className="h-4 w-4" />
+									<TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
 								</Link>
 							</Button>
 						</div>
