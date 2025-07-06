@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,41 +8,23 @@ import { Input } from "@/components/ui/input";
 import {
 	HelpCircle,
 	Search,
-	ArrowRight,
-	ExternalLink,
-	Gift,
-	FileText,
-	Users,
-	Mail,
-	CreditCard,
-	BookOpen,
 	Clock,
-	Settings,
 	ChevronDown,
 	ChevronUp,
+	Mail,
+	Loader2,
+	AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-
-interface QuickHelpItem {
-	id: string;
-	title: string;
-	description: string;
-	icon: React.ComponentType<{ className?: string }>;
-	category: "basic" | "advanced" | "troubleshooting" | "manners";
-	actionType: "guide" | "tool" | "external" | "modal";
-	actionHref: string;
-	actionLabel: string;
-	keywords: string[];
-	isPopular?: boolean;
-	estimatedTime?: string;
-}
+import type { QuickHelpItem } from "@/types/help";
+import { searchHelpItems } from "@/app/_actions/help/help-items";
+import { getIcon, getActionIcon } from "@/utils/help-icons";
 
 interface QuickHelpAreaProps {
 	className?: string;
 	showSearch?: boolean;
 	maxItems?: number;
-	categories?: string[];
 }
 
 /**
@@ -53,138 +35,49 @@ export const QuickHelpArea = memo(function QuickHelpArea({
 	className = "",
 	showSearch = true,
 	maxItems = 8,
-	categories = ["basic", "advanced", "troubleshooting", "manners"],
 }: QuickHelpAreaProps) {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [selectedCategory, setSelectedCategory] = useState<string>("all");
 	const [isExpanded, setIsExpanded] = useState(false);
-
-	// ヘルプアイテムのデータ（実際の実装時はAPIから取得）
-	const helpItems: QuickHelpItem[] = [
-		{
-			id: "create-kouden",
-			title: "香典帳を作成する",
-			description: "新しい香典帳の作成手順を3分で学習",
-			icon: BookOpen,
-			category: "basic",
-			actionType: "guide",
-			actionHref: "/manuals/getting-started/basic-usage",
-			actionLabel: "手順を見る",
-			keywords: ["作成", "新規", "はじめて", "スタート"],
-			isPopular: true,
-			estimatedTime: "3分",
-		},
-		{
-			id: "return-gifts",
-			title: "返礼品の選び方",
-			description: "予算別おすすめ返礼品と選定ポイント",
-			icon: Gift,
-			category: "basic",
-			actionType: "guide",
-			actionHref: "/manuals/features/offering-management",
-			actionLabel: "選び方ガイド",
-			keywords: ["返礼品", "お返し", "選び方", "予算"],
-			isPopular: true,
-			estimatedTime: "5分",
-		},
-		{
-			id: "thank-you-letter",
-			title: "お礼状の書き方",
-			description: "心のこもったお礼状の文例とマナー",
-			icon: FileText,
-			category: "manners",
-			actionType: "external",
-			actionHref: "/blog/oreijotext-kakikata",
-			actionLabel: "文例を見る",
-			keywords: ["お礼状", "文例", "書き方", "マナー"],
-			isPopular: true,
-			estimatedTime: "10分",
-		},
-		{
-			id: "invite-members",
-			title: "メンバーを招待する",
-			description: "家族や親族を香典帳に招待する方法",
-			icon: Users,
-			category: "basic",
-			actionType: "tool",
-			actionHref: "/koudens/new?step=invite",
-			actionLabel: "招待機能を使う",
-			keywords: ["招待", "メンバー", "共有", "家族"],
-			estimatedTime: "2分",
-		},
-		{
-			id: "email-templates",
-			title: "招待メールのマナー",
-			description: "適切な招待メールの送り方とテンプレート",
-			icon: Mail,
-			category: "manners",
-			actionType: "guide",
-			actionHref: "/manuals/features/invitation-management",
-			actionLabel: "テンプレート集",
-			keywords: ["メール", "招待", "テンプレート", "マナー"],
-			estimatedTime: "7分",
-		},
-		{
-			id: "kouden-manners",
-			title: "香典の相場とマナー",
-			description: "関係性別の香典金額と基本的なマナー",
-			icon: CreditCard,
-			category: "manners",
-			actionType: "external",
-			actionHref: "/blog/kouden-souba-manner",
-			actionLabel: "相場表を見る",
-			keywords: ["香典", "相場", "金額", "マナー", "関係性"],
-			isPopular: true,
-			estimatedTime: "8分",
-		},
-		{
-			id: "plan-upgrade",
-			title: "プランをアップグレード",
-			description: "より多くの機能を利用するための手順",
-			icon: Settings,
-			category: "advanced",
-			actionType: "tool",
-			actionHref: "/pricing",
-			actionLabel: "プラン比較",
-			keywords: ["プラン", "アップグレード", "機能", "料金"],
-			estimatedTime: "5分",
-		},
-		{
-			id: "data-export",
-			title: "データをエクスポート",
-			description: "香典帳データの書き出しと保存方法",
-			icon: ExternalLink,
-			category: "advanced",
-			actionType: "guide",
-			actionHref: "/manuals/advanced/data-export",
-			actionLabel: "手順を確認",
-			keywords: ["エクスポート", "データ", "保存", "バックアップ"],
-			estimatedTime: "3分",
-		},
-		{
-			id: "troubleshoot-invite",
-			title: "招待メールが届かない",
-			description: "招待メールの配信に関するトラブル解決",
-			icon: HelpCircle,
-			category: "troubleshooting",
-			actionType: "guide",
-			actionHref: "/manuals/troubleshooting/email-delivery",
-			actionLabel: "解決方法",
-			keywords: ["招待", "メール", "届かない", "トラブル"],
-			estimatedTime: "5分",
-		},
-	];
+	const [helpItems, setHelpItems] = useState<QuickHelpItem[]>([]);
+	const [isLoading, setIsLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 
 	// カテゴリ定義
 	const categoryOptions = [
 		{ value: "all", label: "すべて", icon: HelpCircle },
-		{ value: "basic", label: "基本操作", icon: BookOpen },
-		{ value: "manners", label: "マナー", icon: FileText },
-		{ value: "advanced", label: "応用機能", icon: Settings },
+		{ value: "basic", label: "基本操作", icon: getIcon("BookOpen") },
+		{ value: "manners", label: "マナー", icon: getIcon("FileText") },
+		{ value: "advanced", label: "応用機能", icon: getIcon("Settings") },
 		{ value: "troubleshooting", label: "トラブル", icon: HelpCircle },
 	];
 
-	// フィルタリング処理
+	// データ取得
+	useEffect(() => {
+		const fetchHelpItems = async () => {
+			try {
+				setIsLoading(true);
+				setError(null);
+
+				const result = await searchHelpItems({
+					query: "",
+					limit: maxItems * 2, // 余裕を持って取得
+					sortBy: "relevance",
+				});
+
+				setHelpItems(result.items);
+			} catch (err) {
+				console.error("Help items fetch error:", err);
+				setError("データの取得中にエラーが発生しました");
+			} finally {
+				setIsLoading(false);
+			}
+		};
+
+		fetchHelpItems();
+	}, [maxItems]);
+
+	// 検索とフィルタリング処理
 	const filteredItems = helpItems.filter((item) => {
 		const matchesCategory = selectedCategory === "all" || item.category === selectedCategory;
 		const matchesSearch =
@@ -193,24 +86,17 @@ export const QuickHelpArea = memo(function QuickHelpArea({
 			item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
 			item.keywords.some((keyword) => keyword.toLowerCase().includes(searchQuery.toLowerCase()));
 
-		return matchesCategory && matchesSearch && categories.includes(item.category);
+		return matchesCategory && matchesSearch;
 	});
 
 	// 表示アイテム数の制御
 	const displayItems = isExpanded ? filteredItems : filteredItems.slice(0, maxItems);
 
-	const getActionIcon = (actionType: QuickHelpItem["actionType"]) => {
-		switch (actionType) {
-			case "external":
-				return ExternalLink;
-			case "tool":
-				return Settings;
-			case "modal":
-				return HelpCircle;
-			default:
-				return ArrowRight;
-		}
-	};
+	const notLoading = !isLoading;
+	const noError = !error;
+	const isDataReady = notLoading && noError;
+	const shouldShowItems = isDataReady;
+	const shouldShowExpandButton = isDataReady && filteredItems.length > maxItems;
 
 	const getCategoryColor = (category: QuickHelpItem["category"]) => {
 		switch (category) {
@@ -256,6 +142,7 @@ export const QuickHelpArea = memo(function QuickHelpArea({
 								value={searchQuery}
 								onChange={(e) => setSearchQuery(e.target.value)}
 								className="pl-8 sm:pl-10 text-xs sm:text-sm h-8 sm:h-10"
+								disabled={isLoading}
 							/>
 						</div>
 
@@ -268,6 +155,7 @@ export const QuickHelpArea = memo(function QuickHelpArea({
 									size="sm"
 									onClick={() => setSelectedCategory(category.value)}
 									className="h-7 sm:h-8 text-xs px-2 sm:px-3"
+									disabled={isLoading}
 								>
 									<category.icon className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1" />
 									<span className="hidden xs:inline sm:inline">{category.label}</span>
@@ -278,70 +166,100 @@ export const QuickHelpArea = memo(function QuickHelpArea({
 					</div>
 				)}
 
-				{/* ヘルプアイテム一覧 */}
-				<div className="space-y-2 sm:space-y-3">
-					{displayItems.length === 0 ? (
-						<div className="text-center py-6 sm:py-8 text-muted-foreground">
-							<HelpCircle className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 opacity-50" />
-							<p className="text-xs sm:text-sm">該当するヘルプが見つかりませんでした</p>
+				{/* ローディング状態 */}
+				{isLoading && (
+					<div className="flex items-center justify-center py-8">
+						<Loader2 className="h-6 w-6 animate-spin text-primary" />
+						<span className="ml-2 text-sm text-muted-foreground">ヘルプ情報を読み込み中...</span>
+					</div>
+				)}
+
+				{/* エラー状態 */}
+				{error && (
+					<div className="flex items-center justify-center py-8 text-center">
+						<div className="space-y-2">
+							<AlertCircle className="h-6 w-6 text-destructive mx-auto" />
+							<p className="text-sm text-destructive">{error}</p>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => window.location.reload()}
+								className="text-xs"
+							>
+								再読み込み
+							</Button>
 						</div>
-					) : (
-						displayItems.map((item) => {
-							const ActionIcon = getActionIcon(item.actionType);
-							return (
-								<Link
-									key={item.id}
-									href={item.actionHref}
-									className="block group p-3 sm:p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all duration-200"
-								>
-									<div className="flex items-start justify-between gap-2">
-										<div className="flex items-start space-x-2 sm:space-x-3 flex-1 min-w-0">
-											<div className="p-1.5 sm:p-2 rounded-lg bg-muted group-hover:bg-background transition-colors flex-shrink-0">
-												<item.icon className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
-											</div>
-											<div className="flex-1 min-w-0">
-												<div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
-													<h4 className="font-medium text-xs sm:text-sm group-hover:text-primary transition-colors break-words">
-														{item.title}
-													</h4>
-													<div className="flex items-center gap-1 flex-wrap">
-														{item.isPopular && (
-															<Badge variant="secondary" className="text-xs">
-																人気
+					</div>
+				)}
+
+				{/* ヘルプアイテム一覧 */}
+				{shouldShowItems && (
+					<div className="space-y-2 sm:space-y-3">
+						{displayItems.length === 0 ? (
+							<div className="text-center py-6 sm:py-8 text-muted-foreground">
+								<HelpCircle className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 opacity-50" />
+								<p className="text-xs sm:text-sm">該当するヘルプが見つかりませんでした</p>
+							</div>
+						) : (
+							displayItems.map((item) => {
+								const ActionIcon = getActionIcon(item.actionType);
+								const ItemIcon = getIcon(item.icon || "HelpCircle");
+
+								return (
+									<Link
+										key={item.id}
+										href={item.actionHref}
+										className="block group p-3 sm:p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all duration-200"
+									>
+										<div className="flex items-start justify-between gap-2">
+											<div className="flex items-start space-x-2 sm:space-x-3 flex-1 min-w-0">
+												<div className="p-1.5 sm:p-2 rounded-lg bg-muted group-hover:bg-background transition-colors flex-shrink-0">
+													<ItemIcon className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
+												</div>
+												<div className="flex-1 min-w-0">
+													<div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
+														<h4 className="font-medium text-xs sm:text-sm group-hover:text-primary transition-colors break-words">
+															{item.title}
+														</h4>
+														<div className="flex items-center gap-1 flex-wrap">
+															{item.isPopular && (
+																<Badge variant="secondary" className="text-xs">
+																	人気
+																</Badge>
+															)}
+															<Badge className={cn("text-xs", getCategoryColor(item.category))}>
+																{categoryOptions.find((c) => c.value === item.category)?.label}
 															</Badge>
-														)}
-														<Badge className={cn("text-xs", getCategoryColor(item.category))}>
-															{categoryOptions.find((c) => c.value === item.category)?.label}
-														</Badge>
+														</div>
 													</div>
-												</div>
-												<p className="text-xs text-muted-foreground line-clamp-2 mb-2 leading-relaxed break-words">
-													{item.description}
-												</p>
-												<div className="flex flex-col xs:flex-row xs:items-center gap-1 xs:gap-2 text-xs text-muted-foreground">
-													<div className="flex items-center gap-1">
-														<Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-														<span>{item.estimatedTime}</span>
+													<p className="text-xs text-muted-foreground line-clamp-2 mb-2 leading-relaxed break-words">
+														{item.description}
+													</p>
+													<div className="flex flex-col xs:flex-row xs:items-center gap-1 xs:gap-2 text-xs text-muted-foreground">
+														<div className="flex items-center gap-1">
+															<Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+															<span>{item.estimatedTime}</span>
+														</div>
+														<span className="hidden xs:inline">•</span>
+														<span className="text-primary font-medium truncate">
+															{item.actionLabel}
+														</span>
 													</div>
-													<span className="hidden xs:inline">•</span>
-													<span className="text-primary font-medium truncate">
-														{item.actionLabel}
-													</span>
 												</div>
 											</div>
+											<div className="flex items-center ml-2 sm:ml-3 flex-shrink-0">
+												<ActionIcon className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-200" />
+											</div>
 										</div>
-										<div className="flex items-center ml-2 sm:ml-3 flex-shrink-0">
-											<ActionIcon className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-200" />
-										</div>
-									</div>
-								</Link>
-							);
-						})
-					)}
-				</div>
+									</Link>
+								);
+							})
+						)}
+					</div>
+				)}
 
 				{/* 展開/折りたたみボタン */}
-				{filteredItems.length > maxItems && (
+				{shouldShowExpandButton && (
 					<div className="pt-2 border-t border-border">
 						<Button
 							variant="ghost"
