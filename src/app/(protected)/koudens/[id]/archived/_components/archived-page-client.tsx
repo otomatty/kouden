@@ -12,14 +12,17 @@ interface ArchivedPageClientProps {
 	permission: KoudenPermission;
 	/** Excel出力が有効かどうか */
 	enableExcel: boolean;
+	/** CSV出力が有効かどうか */
+	enableCsv: boolean;
 }
 
-export default function ArchivedPageClient({
+export function ArchivedPageClient({
 	id,
 	title,
 	description,
 	permission,
 	enableExcel,
+	enableCsv,
 }: ArchivedPageClientProps) {
 	return (
 		<>
@@ -30,6 +33,7 @@ export default function ArchivedPageClient({
 				fullAccess={false}
 				permission={permission}
 				enableExcel={enableExcel}
+				enableCsv={enableCsv}
 			/>
 			<div className="flex flex-col items-center justify-center h-full p-8">
 				<h1 className="text-2xl font-bold mb-4">閲覧期限が切れています</h1>

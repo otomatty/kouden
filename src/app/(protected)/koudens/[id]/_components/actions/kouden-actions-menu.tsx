@@ -14,6 +14,8 @@ interface KoudenActionsMenuProps {
 	permission: KoudenPermission;
 	/** Excel出力が有効かどうか */
 	enableExcel: boolean;
+	/** CSV出力が有効かどうか */
+	enableCsv: boolean;
 }
 
 export function KoudenActionsMenu({
@@ -22,6 +24,7 @@ export function KoudenActionsMenu({
 	fullAccess = true,
 	permission,
 	enableExcel,
+	enableCsv,
 }: KoudenActionsMenuProps) {
 	const isDesktop = useMediaQuery("(min-width: 768px)");
 
@@ -33,6 +36,7 @@ export function KoudenActionsMenu({
 				fullAccess={fullAccess}
 				permission={permission}
 				enableExcel={enableExcel}
+				enableCsv={enableCsv}
 			/>
 		);
 	}
@@ -44,6 +48,7 @@ export function KoudenActionsMenu({
 			fullAccess={fullAccess}
 			permission={permission}
 			enableExcel={enableExcel}
+			enableCsv={enableCsv}
 		/>
 	);
 }

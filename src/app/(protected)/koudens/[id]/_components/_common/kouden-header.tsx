@@ -22,6 +22,8 @@ interface KoudenHeaderProps {
 	permission: KoudenPermission;
 	/** Excel出力が有効かどうか */
 	enableExcel: boolean;
+	/** CSV出力が有効かどうか（Excel出力と同じ制限を適用） */
+	enableCsv?: boolean;
 	/** 無料プランの残り日数（表示用） */
 	remainingDays?: number;
 	/** プラン情報 */
@@ -41,6 +43,7 @@ export default function KoudenHeader({
 	fullAccess = true,
 	permission,
 	enableExcel,
+	enableCsv,
 	remainingDays,
 	plan,
 	expired,
@@ -48,6 +51,9 @@ export default function KoudenHeader({
 	backLinkText = "香典帳一覧に戻る",
 }: KoudenHeaderProps) {
 	const [showAlert, setShowAlert] = useState(true);
+
+	// enableCsvが明示的に指定されていない場合はenableExcelと同じ値を使用
+	const csvEnabled = enableCsv ?? enableExcel;
 
 	return (
 		<div className="space-y-4 py-4">
@@ -85,6 +91,7 @@ export default function KoudenHeader({
 					fullAccess={fullAccess}
 					permission={permission}
 					enableExcel={enableExcel}
+					enableCsv={csvEnabled}
 				/>
 			</div>
 		</div>

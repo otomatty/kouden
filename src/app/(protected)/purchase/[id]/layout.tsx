@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { checkKoudenPermission } from "@/app/_actions/permissions";
 import ClientProviders from "@/components/providers/ClientProviders";
-import { getKouden, getKoudenWithPlan } from "@/app/_actions/koudens";
+import { getKouden, getKoudenWithPlan } from "@/app/_actions/koudens/read";
 import { notFound } from "next/navigation";
 import KoudenHeader from "../../koudens/[id]/_components/_common/kouden-header";
 
@@ -30,6 +30,7 @@ export default async function PurchaseLayout({ params, children }: PurchaseLayou
 		]);
 		const { plan, expired, remainingDays } = planInfo;
 		const enableExcel = plan.code !== "free" && !expired;
+		const enableCsv = plan.code !== "free" && !expired;
 
 		if (!kouden) {
 			notFound();
@@ -46,6 +47,7 @@ export default async function PurchaseLayout({ params, children }: PurchaseLayou
 								description={kouden.description}
 								permission={permission}
 								enableExcel={enableExcel}
+								enableCsv={enableCsv}
 								remainingDays={remainingDays}
 								plan={plan}
 								expired={expired}

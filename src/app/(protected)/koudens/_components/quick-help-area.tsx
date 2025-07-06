@@ -5,16 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import {
-	HelpCircle,
-	Search,
-	Clock,
-	ChevronDown,
-	ChevronUp,
-	Mail,
-	Loader2,
-	AlertCircle,
-} from "lucide-react";
+import { HelpCircle, Search, Clock, Mail, Loader2, AlertCircle, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type { QuickHelpItem } from "@/types/help";
@@ -34,11 +25,10 @@ interface QuickHelpAreaProps {
 export const QuickHelpArea = memo(function QuickHelpArea({
 	className = "",
 	showSearch = true,
-	maxItems = 8,
+	maxItems = 5,
 }: QuickHelpAreaProps) {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [selectedCategory, setSelectedCategory] = useState<string>("all");
-	const [isExpanded, setIsExpanded] = useState(false);
 	const [helpItems, setHelpItems] = useState<QuickHelpItem[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -89,14 +79,14 @@ export const QuickHelpArea = memo(function QuickHelpArea({
 		return matchesCategory && matchesSearch;
 	});
 
-	// 表示アイテム数の制御
-	const displayItems = isExpanded ? filteredItems : filteredItems.slice(0, maxItems);
+	// 表示用のアイテム（スクロール表示のため全て表示）
+	const displayItems = filteredItems;
 
 	const notLoading = !isLoading;
 	const noError = !error;
 	const isDataReady = notLoading && noError;
 	const shouldShowItems = isDataReady;
-	const shouldShowExpandButton = isDataReady && filteredItems.length > maxItems;
+	const hasMoreItems = filteredItems.length > maxItems;
 
 	const getCategoryColor = (category: QuickHelpItem["category"]) => {
 		switch (category) {
@@ -192,7 +182,7 @@ export const QuickHelpArea = memo(function QuickHelpArea({
 					</div>
 				)}
 
-				{/* ヘルプアイテム一覧 */}
+				{/* ヘルプアイテム一覧（スクロール可能） */}
 				{shouldShowItems && (
 					<div className="space-y-2 sm:space-y-3">
 						{displayItems.length === 0 ? (
@@ -201,83 +191,78 @@ export const QuickHelpArea = memo(function QuickHelpArea({
 								<p className="text-xs sm:text-sm">該当するヘルプが見つかりませんでした</p>
 							</div>
 						) : (
-							displayItems.map((item) => {
-								const ActionIcon = getActionIcon(item.actionType);
-								const ItemIcon = getIcon(item.icon || "HelpCircle");
+							<div className="max-h-96 overflow-y-auto pr-2 space-y-2 sm:space-y-3">
+								{displayItems.map((item) => {
+									const ActionIcon = getActionIcon(item.actionType);
+									const ItemIcon = getIcon(item.icon || "HelpCircle");
 
-								return (
-									<Link
-										key={item.id}
-										href={item.actionHref}
-										className="block group p-3 sm:p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all duration-200"
-									>
-										<div className="flex items-start justify-between gap-2">
-											<div className="flex items-start space-x-2 sm:space-x-3 flex-1 min-w-0">
-												<div className="p-1.5 sm:p-2 rounded-lg bg-muted group-hover:bg-background transition-colors flex-shrink-0">
-													<ItemIcon className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
-												</div>
-												<div className="flex-1 min-w-0">
-													<div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
-														<h4 className="font-medium text-xs sm:text-sm group-hover:text-primary transition-colors break-words">
-															{item.title}
-														</h4>
-														<div className="flex items-center gap-1 flex-wrap">
-															{item.isPopular && (
-																<Badge variant="secondary" className="text-xs">
-																	人気
+									return (
+										<Link
+											key={item.id}
+											href={item.actionHref}
+											className="block group p-3 sm:p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all duration-200"
+										>
+											<div className="flex items-start justify-between gap-2">
+												<div className="flex items-start space-x-2 sm:space-x-3 flex-1 min-w-0">
+													<div className="p-1.5 sm:p-2 rounded-lg bg-muted group-hover:bg-background transition-colors flex-shrink-0">
+														<ItemIcon className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
+													</div>
+													<div className="flex-1 min-w-0">
+														<div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
+															<h4 className="font-medium text-xs sm:text-sm group-hover:text-primary transition-colors break-words">
+																{item.title}
+															</h4>
+															<div className="flex items-center gap-1 flex-wrap">
+																{item.isPopular && (
+																	<Badge variant="secondary" className="text-xs">
+																		人気
+																	</Badge>
+																)}
+																<Badge className={cn("text-xs", getCategoryColor(item.category))}>
+																	{categoryOptions.find((c) => c.value === item.category)?.label}
 																</Badge>
-															)}
-															<Badge className={cn("text-xs", getCategoryColor(item.category))}>
-																{categoryOptions.find((c) => c.value === item.category)?.label}
-															</Badge>
+															</div>
 														</div>
-													</div>
-													<p className="text-xs text-muted-foreground line-clamp-2 mb-2 leading-relaxed break-words">
-														{item.description}
-													</p>
-													<div className="flex flex-col xs:flex-row xs:items-center gap-1 xs:gap-2 text-xs text-muted-foreground">
-														<div className="flex items-center gap-1">
-															<Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-															<span>{item.estimatedTime}</span>
+														<p className="text-xs text-muted-foreground line-clamp-2 mb-2 leading-relaxed break-words">
+															{item.description}
+														</p>
+														<div className="flex flex-col xs:flex-row xs:items-center gap-1 xs:gap-2 text-xs text-muted-foreground">
+															<div className="flex items-center gap-1">
+																<Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+																<span>{item.estimatedTime}</span>
+															</div>
+															<span className="hidden xs:inline">•</span>
+															<span className="text-primary font-medium truncate">
+																{item.actionLabel}
+															</span>
 														</div>
-														<span className="hidden xs:inline">•</span>
-														<span className="text-primary font-medium truncate">
-															{item.actionLabel}
-														</span>
 													</div>
 												</div>
+												<div className="flex items-center ml-2 sm:ml-3 flex-shrink-0">
+													<ActionIcon className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-200" />
+												</div>
 											</div>
-											<div className="flex items-center ml-2 sm:ml-3 flex-shrink-0">
-												<ActionIcon className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-200" />
-											</div>
-										</div>
-									</Link>
-								);
-							})
+										</Link>
+									);
+								})}
+							</div>
 						)}
 					</div>
 				)}
 
-				{/* 展開/折りたたみボタン */}
-				{shouldShowExpandButton && (
+				{/* 一覧ページへのリンクボタン */}
+				{shouldShowItems && hasMoreItems && (
 					<div className="pt-2 border-t border-border">
 						<Button
 							variant="ghost"
 							size="sm"
-							onClick={() => setIsExpanded(!isExpanded)}
+							asChild
 							className="w-full justify-center text-xs sm:text-sm h-8 sm:h-10"
 						>
-							{isExpanded ? (
-								<>
-									<span>少なく表示</span>
-									<ChevronUp className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
-								</>
-							) : (
-								<>
-									<span>さらに表示 ({filteredItems.length - maxItems}件)</span>
-									<ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
-								</>
-							)}
+							<Link href="/help" className="flex items-center gap-1">
+								<span>すべてのヘルプを表示</span>
+								<ExternalLink className="h-3 w-3 sm:h-4 sm:w-4" />
+							</Link>
 						</Button>
 					</div>
 				)}

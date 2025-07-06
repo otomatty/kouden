@@ -63,6 +63,7 @@ export default async function AdminKoudenLayout({ params, children }: AdminKoude
 		const { plan, expired, remainingDays } = planInfo;
 		// 管理者は全ての機能にアクセス可能
 		const enableExcel = true;
+		const enableCsv = true;
 
 		// 管理者は最高権限のownerとして扱う
 		const adminPermission: KoudenPermission = "owner";
@@ -95,6 +96,7 @@ export default async function AdminKoudenLayout({ params, children }: AdminKoude
 							description={kouden.description}
 							permission={adminPermission}
 							enableExcel={enableExcel}
+							enableCsv={enableCsv}
 							remainingDays={remainingDays}
 							plan={plan}
 							expired={expired}

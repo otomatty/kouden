@@ -3,6 +3,7 @@ import type React from "react";
 import Image from "next/image";
 import { generateHeaderId } from "@/utils/markdown-utils";
 import { AccordionMDX } from "@/components/ui/accordion-mdx";
+import { convertGyazoUrl, isGyazoUrl } from "@/utils/image-utils";
 
 // ページごとのID管理用（ページ遷移時にリセット）
 let currentPageUsedIds = new Set<string>();
@@ -116,18 +117,20 @@ export const mdxComponents: MDXComponents = {
 	}: { src?: string; alt?: string } & React.ImgHTMLAttributes<HTMLImageElement>) => {
 		if (!src) return null;
 
+		// Gyazo URLを画像URLに変換
+		const convertedSrc = convertGyazoUrl(src);
+
 		return (
-			<div className="my-6">
+			<>
 				<Image
-					src={src}
+					src={convertedSrc}
 					alt={alt || ""}
 					width={800}
 					height={600}
-					className="rounded-lg border border-border shadow-sm max-w-full h-auto"
+					className="rounded-lg border border-border shadow-sm max-w-full h-auto my-6"
 					unoptimized
 				/>
-				{alt && <p className="text-sm text-muted-foreground text-center mt-2 italic">{alt}</p>}
-			</div>
+			</>
 		);
 	},
 	code: ({ children, ...props }) => (

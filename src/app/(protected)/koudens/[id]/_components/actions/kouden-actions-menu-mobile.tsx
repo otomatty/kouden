@@ -22,7 +22,7 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useState } from "react";
 import { duplicateKouden } from "@/app/_actions/koudens/duplicate";
 import { validateDuplicateEntries } from "@/app/_actions/validateDuplicateEntries";
-import { exportKoudenToExcel } from "@/app/_actions/export";
+import { exportKoudenToExcel, exportKoudenToCsv } from "@/app/_actions/export";
 import { exportKoudenToPdf } from "@/app/_actions/exportPdf";
 import { pdf } from "@react-pdf/renderer";
 import KoudenPdfDocument from "@/components/pdf/KoudenPdfDocument";
@@ -38,6 +38,8 @@ interface KoudenActionsMenuMobileProps {
 	permission: KoudenPermission;
 	/** Excel出力が有効かどうか */
 	enableExcel: boolean;
+	/** CSV出力が有効かどうか */
+	enableCsv: boolean;
 }
 
 /**
@@ -50,40 +52,24 @@ export function KoudenActionsMenuMobile({
 	fullAccess = true,
 	permission,
 	enableExcel,
+	enableCsv,
 }: KoudenActionsMenuMobileProps) {
-	const [, setDupResults] = useAtom(duplicateEntriesAtom);
-	const duplicateResults = useAtomValue(duplicateEntriesAtom);
 	const [isOpen, setIsOpen] = useState(false);
+	const [duplicateResults] = useAtom(duplicateEntriesAtom);
 	const [isLoading, setIsLoading] = useState<string | null>(null);
 	const [showSurvey, setShowSurvey] = useState(false);
-
 	const router = useRouter();
-	const searchParams = useSearchParams();
-	const pathname = usePathname();
-	const isRestricted = fullAccess === false;
 
-	const handleClearDuplicates = () => {
-		setDupResults(null);
-		toast.success("通常表示に戻しました", {
-			description: "重複表示を解除して通常の表示に戻りました",
-		});
-		const params = new URLSearchParams(searchParams.toString());
-		params.delete("isDuplicate");
-		router.push(`${pathname}?${params.toString()}`);
-		setIsOpen(false);
-	};
+	const isRestricted = !fullAccess;
 
 	const handleDuplicateCheck = async () => {
 		setIsLoading("duplicate-check");
 		try {
 			const result = await validateDuplicateEntries(koudenId);
-			setDupResults(result);
-			const params = new URLSearchParams(searchParams.toString());
-			params.set("isDuplicate", "true");
-			router.push(`${pathname}?${params.toString()}`);
-			toast.success("重複チェックが完了しました", {
-				description: `${result.length}件の重複が見つかりました`,
-			});
+			// 重複検証結果をlocalStorageに保存
+			localStorage.setItem("duplicateEntries", JSON.stringify(result));
+			// ページをリロードして重複状態を反映
+			window.location.reload();
 		} catch (error) {
 			toast.error("重複チェックに失敗しました", {
 				description: error instanceof Error ? error.message : "エラーが発生しました",
@@ -92,6 +78,12 @@ export function KoudenActionsMenuMobile({
 			setIsLoading(null);
 			setIsOpen(false);
 		}
+	};
+
+	const handleClearDuplicates = () => {
+		// 重複表示をクリア
+		localStorage.removeItem("duplicateEntries");
+		window.location.reload();
 	};
 
 	const handleDuplicateKouden = async () => {
@@ -146,6 +138,40 @@ export function KoudenActionsMenuMobile({
 			});
 		} catch (error) {
 			toast.error("Excelファイルの出力に失敗しました", {
+				description:
+					error instanceof Error ? error.message : "しばらく時間をおいてから再度お試しください",
+			});
+		} finally {
+			setIsLoading(null);
+			setIsOpen(false);
+		}
+	};
+
+	const handleExportCsv = async () => {
+		setIsLoading("csv");
+		try {
+			const result = await exportKoudenToCsv(koudenId);
+
+			// CSV文字列からBlobを作成
+			const blob = new Blob([result.csvContent], {
+				type: "text/csv;charset=utf-8;",
+			});
+
+			// ダウンロードリンクを作成
+			const url = window.URL.createObjectURL(blob);
+			const link = document.createElement("a");
+			link.href = url;
+			link.download = result.fileName;
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+			window.URL.revokeObjectURL(url);
+
+			toast.success("CSVファイルを出力しました", {
+				description: `ファイル名: ${result.fileName}`,
+			});
+		} catch (error) {
+			toast.error("CSVファイルの出力に失敗しました", {
 				description:
 					error instanceof Error ? error.message : "しばらく時間をおいてから再度お試しください",
 			});
@@ -248,6 +274,43 @@ export function KoudenActionsMenuMobile({
 						</Button>
 					)}
 
+					{/* CSV出力 */}
+					{isRestricted ? (
+						<Button
+							variant="ghost"
+							disabled
+							className="w-full flex items-center justify-start gap-3 h-12 text-left"
+						>
+							<FileText className="h-5 w-5 text-muted-foreground" />
+							<div className="flex flex-col items-start">
+								<span className="text-muted-foreground">CSV(.csv)</span>
+								<span className="text-xs text-muted-foreground">有料プランで利用できます</span>
+							</div>
+						</Button>
+					) : enableCsv ? (
+						<Button
+							variant="ghost"
+							onClick={handleExportCsv}
+							disabled={isLoading === "csv"}
+							className="w-full flex items-center justify-start gap-3 h-12 text-left"
+						>
+							<FileText className="h-5 w-5 text-[#0066cc]" />
+							<span>{isLoading === "csv" ? "出力中..." : "CSV(.csv)"}</span>
+						</Button>
+					) : (
+						<Button
+							variant="ghost"
+							disabled
+							className="w-full flex items-center justify-start gap-3 h-12 text-left"
+						>
+							<FileText className="h-5 w-5 text-muted-foreground" />
+							<div className="flex flex-col items-start">
+								<span className="text-muted-foreground">CSV(.csv)</span>
+								<span className="text-xs text-muted-foreground">有料プランで利用できます</span>
+							</div>
+						</Button>
+					)}
+
 					{/* PDF出力 */}
 					<Button
 						variant="ghost"
@@ -255,12 +318,25 @@ export function KoudenActionsMenuMobile({
 						disabled={isLoading === "pdf"}
 						className="w-full flex items-center justify-start gap-3 h-12 text-left"
 					>
-						<FileText className="h-5 w-5 text-[#fb0c00]" />
-						<span>{isLoading === "pdf" ? "生成中..." : "PDF(.pdf)"}</span>
+						<FileText className="h-5 w-5 text-[#DC2626]" />
+						<span>{isLoading === "pdf" ? "出力中..." : "PDF(.pdf)"}</span>
 					</Button>
 
-					{/* 重複表示を解除 */}
-					{canUpdateKouden(permission) && duplicateResults !== null && (
+					{/* 重複チェック */}
+					{canUpdateKouden(permission) && duplicateResults === null && !isRestricted && (
+						<Button
+							variant="ghost"
+							onClick={handleDuplicateCheck}
+							disabled={isLoading === "duplicate-check"}
+							className="w-full flex items-center justify-start gap-3 h-12 text-left"
+						>
+							<XCircle className="h-5 w-5" />
+							<span>{isLoading === "duplicate-check" ? "チェック中..." : "重複チェック"}</span>
+						</Button>
+					)}
+
+					{/* 重複表示解除 */}
+					{canUpdateKouden(permission) && duplicateResults !== null && !isRestricted && (
 						<Button
 							variant="ghost"
 							onClick={handleClearDuplicates}
@@ -271,22 +347,7 @@ export function KoudenActionsMenuMobile({
 						</Button>
 					)}
 
-					{/* 重複をチェック */}
-					{canUpdateKouden(permission) && !isRestricted && duplicateResults === null && (
-						<Button
-							variant="ghost"
-							onClick={handleDuplicateCheck}
-							disabled={isLoading === "duplicate-check"}
-							className="w-full flex items-center justify-start gap-3 h-12 text-left"
-						>
-							<Copy className="h-5 w-5" />
-							<span>重複をチェック</span>
-						</Button>
-					)}
-
-					<Separator />
-
-					{/* 共有 */}
+					{/* 香典帳を共有する */}
 					{canUpdateKouden(permission) &&
 						(isRestricted ? (
 							<Button
@@ -342,18 +403,17 @@ export function KoudenActionsMenuMobile({
 				</div>
 
 				{/* 削除ボタン（下部固定） */}
-				{canDeleteKouden(permission) && (
-					<div className="mt-4 pt-4 border-t">
-						<DeleteKoudenDialog
-							koudenId={koudenId}
-							koudenTitle={koudenTitle}
-							onSheetClose={() => setIsOpen(false)}
-						/>
-					</div>
-				)}
+				<div className="mt-auto border-t pt-4">
+					{canDeleteKouden(permission) && (
+						<DeleteKoudenDialog koudenId={koudenId} koudenTitle={koudenTitle} />
+					)}
+				</div>
 			</SheetContent>
-			{/* PDF出力成功後のアンケート表示 */}
-			<PdfExportSurveyTrigger showSurvey={showSurvey} onShown={() => setShowSurvey(false)} />
+
+			{/* PDF出力後のアンケート */}
+			{showSurvey && (
+				<PdfExportSurveyTrigger showSurvey={showSurvey} onShown={() => setShowSurvey(false)} />
+			)}
 		</Sheet>
 	);
 }

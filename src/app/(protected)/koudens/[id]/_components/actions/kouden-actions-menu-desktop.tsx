@@ -26,6 +26,8 @@ interface KoudenActionsMenuDesktopProps {
 	permission: KoudenPermission;
 	/** Excel出力が有効かどうか */
 	enableExcel: boolean;
+	/** CSV出力が有効かどうか */
+	enableCsv: boolean;
 }
 
 /**
@@ -38,6 +40,7 @@ export function KoudenActionsMenuDesktop({
 	fullAccess = true,
 	permission,
 	enableExcel,
+	enableCsv,
 }: KoudenActionsMenuDesktopProps) {
 	const [, setDupResults] = useAtom(duplicateEntriesAtom);
 	const duplicateResults = useAtomValue(duplicateEntriesAtom);
@@ -74,7 +77,7 @@ export function KoudenActionsMenuDesktop({
 			) : (
 				<Tooltip>
 					<TooltipTrigger asChild>
-						<ExportDropdown koudenId={koudenId} enableExcel={enableExcel} />
+						<ExportDropdown koudenId={koudenId} enableExcel={enableExcel} enableCsv={enableCsv} />
 					</TooltipTrigger>
 					<TooltipContent>ファイルをダウンロード</TooltipContent>
 				</Tooltip>

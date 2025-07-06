@@ -59,6 +59,8 @@ export default async function KoudenLayout({ params, children }: KoudenLayoutPro
 		const { plan, expired, remainingDays } = planInfo;
 		// Excel出力は有料プランかつ期限切れでない場合のみ有効
 		const enableExcel = plan.code !== "free" && !expired;
+		// CSV出力もExcel出力と同じ制限を適用
+		const enableCsv = plan.code !== "free" && !expired;
 
 		// koudenが見つからない場合は404エラーを投げる
 		if (!kouden) {
@@ -80,6 +82,7 @@ export default async function KoudenLayout({ params, children }: KoudenLayoutPro
 								description={kouden.description}
 								permission={permission}
 								enableExcel={enableExcel}
+								enableCsv={enableCsv}
 								remainingDays={remainingDays}
 								plan={plan}
 								expired={expired}
