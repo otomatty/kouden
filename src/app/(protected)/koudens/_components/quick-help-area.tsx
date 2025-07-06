@@ -104,7 +104,7 @@ export const QuickHelpArea = memo(function QuickHelpArea({
 	};
 
 	return (
-		<Card data-tour="quick-help-area" className={cn("", className)}>
+		<Card data-tour="quick-help-area" className={cn("flex flex-col", className)}>
 			<CardHeader className="pb-3 sm:pb-4 p-3 sm:p-6">
 				<CardTitle className="text-base sm:text-lg font-semibold flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
 					<div className="flex items-center gap-2">
@@ -120,10 +120,10 @@ export const QuickHelpArea = memo(function QuickHelpArea({
 				</p>
 			</CardHeader>
 
-			<CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-6 pt-0">
+			<CardContent className="flex flex-col flex-1 p-3 sm:p-6 pt-0">
 				{/* 検索とフィルター */}
 				{showSearch && (
-					<div className="space-y-2 sm:space-y-3">
+					<div className="space-y-2 sm:space-y-3 mb-3 sm:mb-4">
 						{/* 検索バー */}
 						<div className="relative">
 							<Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
@@ -156,103 +156,107 @@ export const QuickHelpArea = memo(function QuickHelpArea({
 					</div>
 				)}
 
-				{/* ローディング状態 */}
-				{isLoading && (
-					<div className="flex items-center justify-center py-8">
-						<Loader2 className="h-6 w-6 animate-spin text-primary" />
-						<span className="ml-2 text-sm text-muted-foreground">ヘルプ情報を読み込み中...</span>
-					</div>
-				)}
-
-				{/* エラー状態 */}
-				{error && (
-					<div className="flex items-center justify-center py-8 text-center">
-						<div className="space-y-2">
-							<AlertCircle className="h-6 w-6 text-destructive mx-auto" />
-							<p className="text-sm text-destructive">{error}</p>
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => window.location.reload()}
-								className="text-xs"
-							>
-								再読み込み
-							</Button>
+				{/* コンテンツエリア */}
+				<div className="flex-1 min-h-0">
+					{/* ローディング状態 */}
+					{isLoading && (
+						<div className="flex items-center justify-center py-8">
+							<Loader2 className="h-6 w-6 animate-spin text-primary" />
+							<span className="ml-2 text-sm text-muted-foreground">ヘルプ情報を読み込み中...</span>
 						</div>
-					</div>
-				)}
+					)}
 
-				{/* ヘルプアイテム一覧（スクロール可能） */}
-				{shouldShowItems && (
-					<div className="space-y-2 sm:space-y-3">
-						{displayItems.length === 0 ? (
-							<div className="text-center py-6 sm:py-8 text-muted-foreground">
-								<HelpCircle className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 opacity-50" />
-								<p className="text-xs sm:text-sm">該当するヘルプが見つかりませんでした</p>
+					{/* エラー状態 */}
+					{error && (
+						<div className="flex items-center justify-center py-8 text-center">
+							<div className="space-y-2">
+								<AlertCircle className="h-6 w-6 text-destructive mx-auto" />
+								<p className="text-sm text-destructive">{error}</p>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => window.location.reload()}
+									className="text-xs"
+								>
+									再読み込み
+								</Button>
 							</div>
-						) : (
-							<div className="max-h-96 overflow-y-auto pr-2 space-y-2 sm:space-y-3">
-								{displayItems.map((item) => {
-									const ActionIcon = getActionIcon(item.actionType);
-									const ItemIcon = getIcon(item.icon || "HelpCircle");
+						</div>
+					)}
 
-									return (
-										<Link
-											key={item.id}
-											href={item.actionHref}
-											className="block group p-3 sm:p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all duration-200"
-										>
-											<div className="flex items-start justify-between gap-2">
-												<div className="flex items-start space-x-2 sm:space-x-3 flex-1 min-w-0">
-													<div className="p-1.5 sm:p-2 rounded-lg bg-muted group-hover:bg-background transition-colors flex-shrink-0">
-														<ItemIcon className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
-													</div>
-													<div className="flex-1 min-w-0">
-														<div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
-															<h4 className="font-medium text-xs sm:text-sm group-hover:text-primary transition-colors break-words">
-																{item.title}
-															</h4>
-															<div className="flex items-center gap-1 flex-wrap">
-																{item.isPopular && (
-																	<Badge variant="secondary" className="text-xs">
-																		人気
+					{/* ヘルプアイテム一覧（スクロール可能） */}
+					{shouldShowItems && (
+						<div className="h-full">
+							{displayItems.length === 0 ? (
+								<div className="text-center py-6 sm:py-8 text-muted-foreground">
+									<HelpCircle className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 opacity-50" />
+									<p className="text-xs sm:text-sm">該当するヘルプが見つかりませんでした</p>
+								</div>
+							) : (
+								<div className="h-full overflow-y-auto pr-2 space-y-2 sm:space-y-3">
+									{displayItems.slice(0, maxItems).map((item) => {
+										const ActionIcon = getActionIcon(item.actionType);
+										const ItemIcon = getIcon(item.icon || "HelpCircle");
+
+										return (
+											<Link
+												key={item.id}
+												href={item.actionHref}
+												className="block group p-3 sm:p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all duration-200"
+											>
+												<div className="flex items-start justify-between gap-2">
+													<div className="flex items-start space-x-2 sm:space-x-3 flex-1 min-w-0">
+														<div className="p-1.5 sm:p-2 rounded-lg bg-muted group-hover:bg-background transition-colors flex-shrink-0">
+															<ItemIcon className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
+														</div>
+														<div className="flex-1 min-w-0">
+															<div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
+																<h4 className="font-medium text-xs sm:text-sm group-hover:text-primary transition-colors break-words">
+																	{item.title}
+																</h4>
+																<div className="flex items-center gap-1 flex-wrap">
+																	{item.isPopular && (
+																		<Badge variant="secondary" className="text-xs">
+																			人気
+																		</Badge>
+																	)}
+																	<Badge className={cn("text-xs", getCategoryColor(item.category))}>
+																		{categoryOptions.find((c) => c.value === item.category)?.label}
 																	</Badge>
-																)}
-																<Badge className={cn("text-xs", getCategoryColor(item.category))}>
-																	{categoryOptions.find((c) => c.value === item.category)?.label}
-																</Badge>
+																</div>
 															</div>
-														</div>
-														<p className="text-xs text-muted-foreground line-clamp-2 mb-2 leading-relaxed break-words">
-															{item.description}
-														</p>
-														<div className="flex flex-col xs:flex-row xs:items-center gap-1 xs:gap-2 text-xs text-muted-foreground">
-															<div className="flex items-center gap-1">
-																<Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-																<span>{item.estimatedTime}</span>
+															<p className="text-xs text-muted-foreground line-clamp-2 mb-2 leading-relaxed break-words">
+																{item.description}
+															</p>
+															<div className="flex flex-col xs:flex-row xs:items-center gap-1 xs:gap-2 text-xs text-muted-foreground">
+																<div className="flex items-center gap-1">
+																	<Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+																	<span>{item.estimatedTime}</span>
+																</div>
+																<span className="hidden xs:inline">•</span>
+																<span className="text-primary font-medium truncate">
+																	{item.actionLabel}
+																</span>
 															</div>
-															<span className="hidden xs:inline">•</span>
-															<span className="text-primary font-medium truncate">
-																{item.actionLabel}
-															</span>
 														</div>
 													</div>
+													<div className="flex items-center ml-2 sm:ml-3 flex-shrink-0">
+														<ActionIcon className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-200" />
+													</div>
 												</div>
-												<div className="flex items-center ml-2 sm:ml-3 flex-shrink-0">
-													<ActionIcon className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-200" />
-												</div>
-											</div>
-										</Link>
-									);
-								})}
-							</div>
-						)}
-					</div>
-				)}
+											</Link>
+										);
+									})}
+								</div>
+							)}
+						</div>
+					)}
+				</div>
 
-				{/* 一覧ページへのリンクボタン */}
-				{shouldShowItems && hasMoreItems && (
-					<div className="pt-2 border-t border-border">
+				{/* 固定ボタンエリア */}
+				<div className="mt-4 space-y-2 pt-3 border-t border-border">
+					{/* 一覧ページへのリンクボタン */}
+					{shouldShowItems && hasMoreItems && (
 						<Button
 							variant="ghost"
 							size="sm"
@@ -264,11 +268,9 @@ export const QuickHelpArea = memo(function QuickHelpArea({
 								<ExternalLink className="h-3 w-3 sm:h-4 sm:w-4" />
 							</Link>
 						</Button>
-					</div>
-				)}
+					)}
 
-				{/* フッター */}
-				<div className="pt-2 sm:pt-3 mt-2 sm:mt-3 border-t border-border">
+					{/* お問い合わせボタン */}
 					<div className="flex flex-col xs:flex-row items-center justify-between gap-2 xs:gap-0 text-xs text-muted-foreground">
 						<span className="text-center xs:text-left">解決しない場合は</span>
 						<Button variant="ghost" size="sm" asChild className="w-full xs:w-auto h-8 text-xs">
