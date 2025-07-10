@@ -150,6 +150,14 @@ export async function middleware(request: NextRequest) {
 		// IP制限チェック
 		if (!isAllowedAdminIP(request)) {
 			// IP制限に引っかかった場合はベーシック認証を要求
+			const authHeader = request.headers.get("authorization");
+			
+			// Authorizationヘッダーがない場合（認証をキャンセルした場合）は香典帳アプリトップへリダイレクト
+			if (!authHeader) {
+				return NextResponse.redirect(new URL("/koudens", request.url));
+			}
+			
+			// 認証ヘッダーはあるが認証に失敗した場合は401を返す
 			if (!verifyBasicAuth(request)) {
 				return new NextResponse("Unauthorized", {
 					status: 401,
