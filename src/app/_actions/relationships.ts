@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/supabase";
 import { revalidatePath } from "next/cache";
+import logger from "@/lib/logger";
 
 // すべての関係性を取得
 export async function getAllRelationships() {
@@ -35,13 +36,20 @@ export async function getRelationships(koudenId: string) {
 			.eq("kouden_id", koudenId);
 
 		if (countError) {
-			console.error("[ERROR] Failed to count relationships:", countError);
+			logger.error(
+				{
+					error: countError.message,
+					code: countError.code,
+					koudenId,
+				},
+				"Failed to count relationships",
+			);
 			throw countError;
 		}
 
 		// 関係性が存在しない場合はすぐに空配列を返す
 		if (count === 0) {
-			console.warn(`[WARN] No relationships found for kouden ${koudenId}`);
+			logger.warn({ koudenId }, "No relationships found for kouden");
 			return [];
 		}
 
@@ -64,18 +72,31 @@ export async function getRelationships(koudenId: string) {
 			.order("name");
 
 		if (error) {
-			console.error("[ERROR] Failed to fetch relationships:", error);
+			logger.error(
+				{
+					error: error.message,
+					code: error.code,
+					koudenId,
+				},
+				"Failed to fetch relationships",
+			);
 			throw error;
 		}
 
 		if (!data || data.length === 0) {
-			console.warn(`[WARN] No relationships data returned for kouden ${koudenId}`);
+			logger.warn({ koudenId }, "No relationships data returned for kouden");
 			return [];
 		}
 
 		return data;
 	} catch (error) {
-		console.error("[ERROR] Error in getRelationships:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenId,
+			},
+			"Error in getRelationships",
+		);
 		throw error;
 	}
 }
@@ -103,13 +124,20 @@ export async function getRelationshipsForAdmin(koudenId: string) {
 			.eq("kouden_id", koudenId);
 
 		if (countError) {
-			console.error("[ERROR] Failed to count relationships for admin:", countError);
+			logger.error(
+				{
+					error: countError.message,
+					code: countError.code,
+					koudenId,
+				},
+				"Failed to count relationships for admin",
+			);
 			throw countError;
 		}
 
 		// 関係性が存在しない場合はすぐに空配列を返す
 		if (count === 0) {
-			console.warn(`[WARN] No relationships found for kouden ${koudenId}`);
+			logger.warn({ koudenId }, "No relationships found for kouden");
 			return [];
 		}
 
@@ -132,18 +160,31 @@ export async function getRelationshipsForAdmin(koudenId: string) {
 			.order("name");
 
 		if (error) {
-			console.error("[ERROR] Failed to fetch relationships for admin:", error);
+			logger.error(
+				{
+					error: error.message,
+					code: error.code,
+					koudenId,
+				},
+				"Failed to fetch relationships for admin",
+			);
 			throw error;
 		}
 
 		if (!data || data.length === 0) {
-			console.warn(`[WARN] No relationships data returned for kouden ${koudenId}`);
+			logger.warn({ koudenId }, "No relationships data returned for kouden");
 			return [];
 		}
 
 		return data;
 	} catch (error) {
-		console.error("[ERROR] Error in getRelationshipsForAdmin:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenId,
+			},
+			"Error in getRelationshipsForAdmin",
+		);
 		throw error;
 	}
 }
@@ -246,7 +287,13 @@ export async function initializeDefaultRelationships(koudenId: string) {
 		if (error) throw error;
 		revalidatePath(`/koudens/${koudenId}`);
 	} catch (error) {
-		console.error("[ERROR] Error initializing default relationships:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenId,
+			},
+			"Error initializing default relationships",
+		);
 		throw new Error("デフォルトの関係性の初期化に失敗しました");
 	}
 }

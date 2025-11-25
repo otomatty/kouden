@@ -1,3 +1,5 @@
+import logger from "./logger";
+
 // カスタムエラークラスの定義
 export class KoudenError extends Error {
 	constructor(
@@ -18,7 +20,15 @@ export const withErrorHandling = async <T>(
 	try {
 		return await action();
 	} catch (error) {
-		console.error(`[ERROR] ${errorContext}:`, error);
+		logger.error(
+			{
+				errorContext,
+				error: error instanceof Error ? error.message : String(error),
+				errorStack: error instanceof Error ? error.stack : undefined,
+				errorCode: error instanceof KoudenError ? error.code : undefined,
+			},
+			`[ERROR] ${errorContext}`,
+		);
 		if (error instanceof KoudenError) {
 			throw error;
 		}

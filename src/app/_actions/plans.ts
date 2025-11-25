@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/supabase";
+import logger from "@/lib/logger";
 
 type Plan = Database["public"]["Tables"]["plans"]["Row"];
 
@@ -17,7 +18,13 @@ export async function getPlans(): Promise<{ plans?: Plan[]; error?: string }> {
 		.order("price", { ascending: true });
 
 	if (error) {
-		console.error("[ERROR] Error fetching plans:", error);
+		logger.error(
+			{
+				error: error.message,
+				code: error.code,
+			},
+			"[ERROR] Error fetching plans",
+		);
 		return { error: "プラン一覧の取得に失敗しました" };
 	}
 	return { plans: data };

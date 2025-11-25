@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import type { Customer } from "@/types/funeral-management";
+import logger from "@/lib/logger";
 
 /**
  * IDで顧客を取得する（詳細情報も含む）
@@ -23,7 +24,15 @@ export async function getCustomer(id: string): Promise<{
 			.single();
 
 		if (customerError) {
-			console.error("顧客基本情報取得エラー:", customerError);
+			logger.error(
+				{
+					error: customerError.message,
+					code: customerError.code,
+					details: customerError.details,
+					customerId: id,
+				},
+				"顧客基本情報取得エラー",
+			);
 			return {
 				success: false,
 				error: "顧客が見つかりません",
@@ -39,7 +48,15 @@ export async function getCustomer(id: string): Promise<{
 			.single();
 
 		if (detailsError && detailsError.code !== "PGRST116") {
-			console.error("顧客詳細情報取得エラー:", detailsError);
+			logger.error(
+				{
+					error: detailsError.message,
+					code: detailsError.code,
+					details: detailsError.details,
+					customerId: id,
+				},
+				"顧客詳細情報取得エラー",
+			);
 			// 詳細情報がない場合は基本情報のみ返す
 		}
 
@@ -68,7 +85,13 @@ export async function getCustomer(id: string): Promise<{
 			data: result,
 		};
 	} catch (error) {
-		console.error("顧客取得中の予期しないエラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				customerId: id,
+			},
+			"顧客取得中の予期しないエラー",
+		);
 		return {
 			success: false,
 			error: "システムエラーが発生しました",

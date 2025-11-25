@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getWeeklyAvailability } from "@/app/_actions/calendar";
+import logger from "@/lib/logger";
 
 export async function GET(request: Request) {
 	const { searchParams } = new URL(request.url);
@@ -11,7 +12,13 @@ export async function GET(request: Request) {
 		const availability = await getWeeklyAvailability(weekStart);
 		return NextResponse.json(availability);
 	} catch (err: unknown) {
-		console.error("Error fetching availability", err);
+		logger.error(
+			{
+				error: err instanceof Error ? err.message : String(err),
+				weekStart,
+			},
+			"Error fetching availability",
+		);
 		const message = err instanceof Error ? err.message : String(err);
 		return NextResponse.json({ error: message }, { status: 500 });
 	}

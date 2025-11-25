@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { requireOrganizationAccess } from "@/lib/access";
+import logger from "@/lib/logger";
 
 export interface CreateKoudenForCaseInput {
 	caseId: string;
@@ -84,7 +85,17 @@ export async function createKoudenForCase(
 		);
 
 		if (createError) {
-			console.error("[ERROR] Failed to create kouden for case:", createError);
+			logger.error(
+				{
+					error: createError.message,
+					code: createError.code,
+					details: createError.details,
+					caseId: input.caseId,
+					organizationId: orgData.organization_id,
+					userId: user.id,
+				},
+				"Failed to create kouden for case",
+			);
 			return { success: false, error: "香典帳の作成に失敗しました" };
 		}
 
@@ -93,7 +104,13 @@ export async function createKoudenForCase(
 			koudenId: koudenId as string,
 		};
 	} catch (error) {
-		console.error("[ERROR] Error in createKoudenForCase:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				caseId: input.caseId,
+			},
+			"Error in createKoudenForCase",
+		);
 		return { success: false, error: "予期せぬエラーが発生しました" };
 	}
 }
@@ -172,7 +189,13 @@ export async function getKoudenForCase(caseId: string) {
 			koudens: koudenDetails || null,
 		};
 	} catch (error) {
-		console.error("[ERROR] Error in getKoudenForCase:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				caseId,
+			},
+			"Error in getKoudenForCase",
+		);
 		throw error;
 	}
 }
@@ -212,13 +235,30 @@ export async function transferKoudenOwnership(koudenId: string, newOwnerEmail: s
 		});
 
 		if (transferError) {
-			console.error("[ERROR] Failed to transfer ownership:", transferError);
+			logger.error(
+				{
+					error: transferError.message,
+					code: transferError.code,
+					details: transferError.details,
+					koudenId,
+					newOwnerEmail,
+					userId: user.id,
+				},
+				"Failed to transfer ownership",
+			);
 			return { success: false, error: "所有権の移譲に失敗しました" };
 		}
 
 		return { success: true };
 	} catch (error) {
-		console.error("[ERROR] Error in transferKoudenOwnership:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenId,
+				newOwnerEmail,
+			},
+			"Error in transferKoudenOwnership",
+		);
 		return { success: false, error: "予期せぬエラーが発生しました" };
 	}
 }

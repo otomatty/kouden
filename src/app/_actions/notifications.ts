@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import type { NotificationItem } from "@/types/notifications";
+import logger from "@/lib/logger";
 
 /**
  * 通知一覧取得
@@ -37,7 +38,14 @@ export async function getNotifications(): Promise<{
 		.eq("user_id", user.id)
 		.order("created_at", { ascending: false });
 	if (error) {
-		console.error("[ERROR] Error fetching notifications:", error);
+		logger.error(
+			{
+				error: error.message,
+				code: error.code,
+				userId: user.id,
+			},
+			"Error fetching notifications",
+		);
 		return { error: "通知一覧の取得に失敗しました" };
 	}
 	return { notifications: data as NotificationItem[] };
@@ -61,7 +69,14 @@ export async function markNotificationRead(): Promise<{ error?: string }> {
 		.eq("user_id", user.id)
 		.eq("is_read", false);
 	if (error) {
-		console.error("[ERROR] Error marking notifications as read:", error);
+		logger.error(
+			{
+				error: error.message,
+				code: error.code,
+				userId: user.id,
+			},
+			"Error marking notifications as read",
+		);
 		return { error: "通知既読設定に失敗しました" };
 	}
 	return {};

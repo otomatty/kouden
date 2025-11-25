@@ -4,6 +4,7 @@
  */
 
 import type { NextRequest } from "next/server";
+import logger from "@/lib/logger";
 
 // 許可されたIPアドレスのリスト（環境変数から取得）
 const ALLOWED_ADMIN_IPS = process.env.ALLOWED_ADMIN_IPS?.split(",").map((ip) => ip.trim()) || [];
@@ -23,20 +24,20 @@ export function isAllowedAdminIP(request: NextRequest): boolean {
 	const clientIP = getClientIP(request);
 
 	if (!clientIP) {
-		console.warn("Could not determine client IP address");
+		logger.warn({}, "Could not determine client IP address");
 		return false;
 	}
 
 	// 許可されたIPリストが設定されていない場合は拒否
 	if (ALLOWED_ADMIN_IPS.length === 0) {
-		console.error("ALLOWED_ADMIN_IPS environment variable not configured");
+		logger.error({}, "ALLOWED_ADMIN_IPS environment variable not configured");
 		return false;
 	}
 
 	const isAllowed = ALLOWED_ADMIN_IPS.includes(clientIP);
 
 	if (!isAllowed) {
-		console.warn(`Admin access denied for IP: ${clientIP}`);
+		logger.warn({ ipAddress: clientIP }, "Admin access denied for IP");
 	}
 
 	return isAllowed;
@@ -85,7 +86,7 @@ export function verifyBasicAuth(request: NextRequest): boolean {
 	const adminPassword = process.env.ADMIN_BASIC_PASSWORD;
 
 	if (!(adminUsername && adminPassword)) {
-		console.error("ADMIN_BASIC_USERNAME or ADMIN_BASIC_PASSWORD not configured");
+		logger.error({}, "ADMIN_BASIC_USERNAME or ADMIN_BASIC_PASSWORD not configured");
 		return false;
 	}
 

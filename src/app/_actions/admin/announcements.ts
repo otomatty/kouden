@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import logger from "@/lib/logger";
 
 export type Announcement = {
 	id: string;
@@ -84,14 +85,17 @@ export async function createAnnouncement({
 
 	if (error) {
 		// デバッグ: エラーの詳細をログ出力
-		console.error("Failed to create announcement:", {
-			error,
-			requestData,
-			user: {
-				id: user.id,
-				email: user.email,
+		logger.error(
+			{
+				error: error.message,
+				code: error.code,
+				details: error.details,
+				requestData,
+				userId: user.id,
+				userEmail: user.email,
 			},
-		});
+			"Failed to create announcement",
+		);
 		throw error;
 	}
 

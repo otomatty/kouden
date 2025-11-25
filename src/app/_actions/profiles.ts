@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import logger from "@/lib/logger";
 
 interface UpdateProfileParams {
 	display_name: string;
@@ -23,7 +24,13 @@ export async function getProfile(userId: string) {
 
 		return { profile, error: null };
 	} catch (error) {
-		console.error("Error:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				userId,
+			},
+			"Error getting profile",
+		);
 		return {
 			profile: null,
 			error: "プロフィールの取得に失敗しました",
@@ -44,11 +51,10 @@ export async function getActivityStats(userId: string) {
 		if (ownedError) throw ownedError;
 
 		// 参加している香典帳の数を取得
-		const { count: participatingKoudensCount, error: participatingError } =
-			await supabase
-				.from("kouden_members")
-				.select("*", { count: "exact", head: true })
-				.eq("user_id", userId);
+		const { count: participatingKoudensCount, error: participatingError } = await supabase
+			.from("kouden_members")
+			.select("*", { count: "exact", head: true })
+			.eq("user_id", userId);
 
 		if (participatingError) throw participatingError;
 
@@ -83,7 +89,13 @@ export async function getActivityStats(userId: string) {
 			error: null,
 		};
 	} catch (error) {
-		console.error("Error:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				userId,
+			},
+			"Error getting activity stats",
+		);
 		return {
 			stats: null,
 			error: "活動統計の取得に失敗しました",
@@ -91,10 +103,7 @@ export async function getActivityStats(userId: string) {
 	}
 }
 
-export async function updateProfile(
-	userId: string,
-	params: UpdateProfileParams,
-) {
+export async function updateProfile(userId: string, params: UpdateProfileParams) {
 	try {
 		const supabase = await createClient();
 
@@ -115,7 +124,14 @@ export async function updateProfile(
 		revalidatePath("/profile");
 		return { profile, error: null };
 	} catch (error) {
-		console.error("Error:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				userId,
+				params,
+			},
+			"Error updating profile",
+		);
 		return {
 			profile: null,
 			error: "プロフィールの更新に失敗しました",
@@ -144,7 +160,14 @@ export async function updateAvatar(userId: string, avatarUrl: string) {
 		revalidatePath("/profile");
 		return { profile, error: null };
 	} catch (error) {
-		console.error("Error:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				userId,
+				avatarUrl,
+			},
+			"Error updating avatar",
+		);
 		return {
 			profile: null,
 			error: "アバターの更新に失敗しました",

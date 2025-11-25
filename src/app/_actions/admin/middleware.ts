@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { createAuditLog } from "./audit-logs";
+import logger from "@/lib/logger";
 
 export async function withAdmin<T>(action: () => Promise<T>): Promise<T> {
 	const supabase = await createClient();
@@ -34,7 +35,15 @@ export async function withAdmin<T>(action: () => Promise<T>): Promise<T> {
 					error: error.message,
 					stack: error.stack,
 				},
-			}).catch(console.error); // 監査ログの記録に失敗してもメインの処理には影響を与えない
+			}).catch((err) => {
+				logger.error(
+					{
+						error: err instanceof Error ? err.message : String(err),
+						userId: user.id,
+					},
+					"監査ログの記録に失敗",
+				);
+			}); // 監査ログの記録に失敗してもメインの処理には影響を与えない
 		}
 		throw error;
 	}
@@ -73,7 +82,15 @@ export async function withSuperAdmin<T>(action: () => Promise<T>): Promise<T> {
 					error: error.message,
 					stack: error.stack,
 				},
-			}).catch(console.error);
+			}).catch((err) => {
+				logger.error(
+					{
+						error: err instanceof Error ? err.message : String(err),
+						userId: user.id,
+					},
+					"監査ログの記録に失敗",
+				);
+			});
 		}
 		throw error;
 	}

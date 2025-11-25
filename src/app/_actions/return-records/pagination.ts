@@ -7,6 +7,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import type { ReturnEntryRecordWithKoudenEntry } from "@/types/return-records/return-records";
+import logger from "@/lib/logger";
 
 /**
  * 香典帳IDに紐づく返礼情報をページング付きで取得する（無限スクロール用）
@@ -110,7 +111,16 @@ export async function getReturnEntriesByKoudenPaginated(
 			nextCursor,
 		};
 	} catch (error) {
-		console.error("返礼情報一覧の取得エラー（ページング）:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenId,
+				limit,
+				cursor,
+				filters,
+			},
+			"返礼情報一覧の取得エラー（ページング）",
+		);
 		throw error;
 	}
 }

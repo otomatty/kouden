@@ -12,6 +12,7 @@ import type {
 	ReturnStatus,
 	UpdateReturnEntryInput,
 } from "@/types/return-records/return-records";
+import logger from "@/lib/logger";
 
 /**
  * 返礼記録の更新可能フィールドの値の型定義
@@ -76,7 +77,14 @@ export async function updateReturnEntry(
 
 		return data as ReturnEntryRecord;
 	} catch (error) {
-		console.error("返礼情報の更新エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenEntryId: input.kouden_entry_id,
+				koudenId: input.kouden_id,
+			},
+			"返礼情報の更新エラー",
+		);
 		throw error;
 	}
 }
@@ -126,7 +134,15 @@ export async function updateReturnEntryStatus(
 
 		return data as ReturnEntryRecord;
 	} catch (error) {
-		console.error("返礼情報のステータス更新エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenEntryId,
+				status,
+				koudenId,
+			},
+			"返礼情報のステータス更新エラー",
+		);
 		throw error;
 	}
 }
@@ -205,7 +221,14 @@ export async function updateReturnRecordField(
 			revalidatePath(`/koudens/${recordData.kouden_entries.kouden_id}`);
 		}
 	} catch (error) {
-		console.error("返礼記録フィールドの更新エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				returnRecordId,
+				fieldName,
+			},
+			"返礼記録フィールドの更新エラー",
+		);
 		throw error;
 	}
 }
@@ -284,7 +307,14 @@ export async function updateReturnRecordFieldByKoudenEntryId(
 			revalidatePath(`/koudens/${recordData.kouden_entries.kouden_id}`);
 		}
 	} catch (error) {
-		console.error("返礼記録フィールドの更新エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenEntryId,
+				fieldName,
+			},
+			"返礼記録フィールドの更新エラー",
+		);
 		throw error;
 	}
 }

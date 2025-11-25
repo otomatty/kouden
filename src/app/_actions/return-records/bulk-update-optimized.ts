@@ -8,6 +8,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { AmountGroupData, BulkUpdateResult } from "@/types/return-records/bulk-update";
+import logger from "@/lib/logger";
 
 /**
  * PostgreSQL最適化版：超高速一括更新
@@ -166,7 +167,14 @@ export async function executeBulkUpdateOptimized(
 			failureCount: allEntryIds.length - successCount,
 		};
 	} catch (error) {
-		console.error("PostgreSQL最適化版一括更新エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenId,
+				amountGroupsCount: amountGroups.length,
+			},
+			"PostgreSQL最適化版一括更新エラー",
+		);
 		const errorMessage = error instanceof Error ? error.message : "不明なエラー";
 		throw new Error(`最適化一括更新に失敗: ${errorMessage}`);
 	}

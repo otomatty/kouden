@@ -14,6 +14,7 @@ import {
 } from "@/lib/security/two-factor-auth";
 import { logTwoFactorEventServerAction } from "@/lib/security/security-logger";
 import { revalidatePath } from "next/cache";
+import logger from "@/lib/logger";
 
 export interface TwoFactorActionResult {
 	success: boolean;
@@ -84,7 +85,13 @@ export async function setupTwoFactorAuth(
 			message: "二要素認証が正常に設定されました",
 		};
 	} catch (error) {
-		console.error("2FA setup error:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				userId: user?.id,
+			},
+			"2FA setup error",
+		);
 		return {
 			success: false,
 			error: "設定中にエラーが発生しました",
@@ -141,7 +148,13 @@ export async function disableTwoFactorAuth(): Promise<TwoFactorActionResult> {
 			message: "二要素認証が無効化されました",
 		};
 	} catch (error) {
-		console.error("2FA disable error:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				userId: user?.id,
+			},
+			"2FA disable error",
+		);
 		return {
 			success: false,
 			error: "無効化中にエラーが発生しました",
@@ -209,7 +222,13 @@ export async function verifyTwoFactorLogin(
 			message: "認証が成功しました",
 		};
 	} catch (error) {
-		console.error("2FA verification error:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				userId: user?.id,
+			},
+			"2FA verification error",
+		);
 		return {
 			success: false,
 			error: "認証中にエラーが発生しました",

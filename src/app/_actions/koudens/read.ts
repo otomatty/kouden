@@ -5,6 +5,7 @@ import type { Kouden } from "@/types/kouden";
 import type { Entry } from "@/types/entries";
 import { checkKoudenPermission } from "../permissions";
 import type { Database } from "@/types/supabase";
+import logger from "@/lib/logger";
 type Plan = Database["public"]["Tables"]["plans"]["Row"];
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 type KoudenWithPlan = Kouden & {
@@ -122,7 +123,12 @@ export async function getKoudens(): Promise<{ koudens?: KoudenWithPlan[]; error?
 		});
 		return { koudens: results };
 	} catch (error) {
-		console.error("[ERROR] Error getting koudens:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+			},
+			"Error getting koudens",
+		);
 		return { error: "香典帳の取得に失敗しました" };
 	}
 }
@@ -191,7 +197,14 @@ export async function getKoudenWithEntries(id: string) {
 		.single();
 
 	if (koudenError) {
-		console.error("[ERROR] Error fetching kouden:", koudenError);
+		logger.error(
+			{
+				error: koudenError.message,
+				code: koudenError.code,
+				koudenId: id,
+			},
+			"Error fetching kouden",
+		);
 		throw new Error("香典帳の取得に失敗しました");
 	}
 
@@ -203,7 +216,15 @@ export async function getKoudenWithEntries(id: string) {
 		.single();
 
 	if (ownerError) {
-		console.error("[ERROR] Error fetching owner profile:", ownerError);
+		logger.error(
+			{
+				error: ownerError.message,
+				code: ownerError.code,
+				ownerId: kouden.owner_id,
+				koudenId: id,
+			},
+			"Error fetching owner profile",
+		);
 		throw new Error("オーナー情報の取得に失敗しました");
 	}
 
@@ -224,7 +245,14 @@ export async function getKoudenWithEntries(id: string) {
 		.order("created_at", { ascending: false });
 
 	if (entriesError) {
-		console.error("[ERROR] Error fetching kouden entries:", entriesError);
+		logger.error(
+			{
+				error: entriesError.message,
+				code: entriesError.code,
+				koudenId: id,
+			},
+			"Error fetching kouden entries",
+		);
 		throw new Error("香典帳の記帳データの取得に失敗しました");
 	}
 

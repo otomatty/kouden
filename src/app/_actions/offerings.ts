@@ -12,6 +12,7 @@ import type {
 } from "@/types/offerings";
 import { snakeToCamel } from "@/utils/case-converter";
 import type { Database } from "@/types/supabase";
+import logger from "@/lib/logger";
 
 //お供物情報を作成する
 export async function createOffering(input: Omit<CreateOfferingInput, "created_by">) {
@@ -22,7 +23,7 @@ export async function createOffering(input: Omit<CreateOfferingInput, "created_b
 		} = await supabase.auth.getUser();
 
 		if (!user) {
-			console.error("[ERROR] Authentication required");
+			logger.error({}, "Authentication required");
 			throw new Error("認証が必要です");
 		}
 
@@ -41,7 +42,15 @@ export async function createOffering(input: Omit<CreateOfferingInput, "created_b
 			.single();
 
 		if (error) {
-			console.error("お供え物の作成に失敗しました:", error);
+			logger.error(
+				{
+					error: error.message,
+					code: error.code,
+					koudenId: input.kouden_id,
+					userId: user.id,
+				},
+				"お供え物の作成に失敗しました",
+			);
 			throw new Error("お供え物の作成に失敗しました。");
 		}
 
@@ -58,7 +67,15 @@ export async function createOffering(input: Omit<CreateOfferingInput, "created_b
 				.insert(offeringEntries);
 
 			if (offeringEntriesError) {
-				console.error("香典エントリーの関連付けに失敗しました:", offeringEntriesError);
+				logger.error(
+					{
+						error: offeringEntriesError.message,
+						code: offeringEntriesError.code,
+						offeringId: data.id,
+						entryIds: kouden_entry_ids,
+					},
+					"香典エントリーの関連付けに失敗しました",
+				);
 				throw new Error("香典エントリーの関連付けに失敗しました。");
 			}
 		}
@@ -70,20 +87,29 @@ export async function createOffering(input: Omit<CreateOfferingInput, "created_b
 			.eq("id", input.kouden_id as string);
 
 		if (updateError) {
-			console.error("[ERROR] Failed to update kouden:", {
-				error: updateError,
-				code: updateError.code,
-				details: updateError.details,
-				hint: updateError.hint,
-				message: updateError.message,
-			});
+			logger.error(
+				{
+					error: updateError.message,
+					code: updateError.code,
+					details: updateError.details,
+					hint: updateError.hint,
+					koudenId: input.kouden_id,
+				},
+				"Failed to update kouden",
+			);
 			// 更新エラーは致命的ではないのでログのみ
 		}
 
 		revalidatePath(`/koudens/${input.kouden_id}`);
 		return data;
 	} catch (error) {
-		console.error("お供え物の作成処理中にエラーが発生しました:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenId: input.kouden_id,
+			},
+			"お供え物の作成処理中にエラーが発生しました",
+		);
 		throw error;
 	}
 }
@@ -114,7 +140,15 @@ export async function updateOffering(id: string, input: UpdateOfferingInput) {
 			.single();
 
 		if (error) {
-			console.error("お供え物の更新に失敗しました:", error);
+			logger.error(
+				{
+					error: error.message,
+					code: error.code,
+					id,
+					userId: user.id,
+				},
+				"お供え物の更新に失敗しました",
+			);
 			throw new Error("お供え物の更新に失敗しました。");
 		}
 
@@ -127,7 +161,14 @@ export async function updateOffering(id: string, input: UpdateOfferingInput) {
 				.eq("offering_id", id);
 
 			if (deleteError) {
-				console.error("既存の香典エントリー関連付けの削除に失敗しました:", deleteError);
+				logger.error(
+					{
+						error: deleteError.message,
+						code: deleteError.code,
+						offeringId: id,
+					},
+					"既存の香典エントリー関連付けの削除に失敗しました",
+				);
 				throw new Error("既存の香典エントリー関連付けの削除に失敗しました。");
 			}
 
@@ -144,7 +185,15 @@ export async function updateOffering(id: string, input: UpdateOfferingInput) {
 					.insert(offeringEntries);
 
 				if (insertError) {
-					console.error("香典エントリーの関連付けに失敗しました:", insertError);
+					logger.error(
+						{
+							error: insertError.message,
+							code: insertError.code,
+							offeringId: id,
+							entryIds: kouden_entry_ids,
+						},
+						"香典エントリーの関連付けに失敗しました",
+					);
 					throw new Error("香典エントリーの関連付けに失敗しました。");
 				}
 			}
@@ -157,20 +206,29 @@ export async function updateOffering(id: string, input: UpdateOfferingInput) {
 			.eq("id", input.kouden_id as string);
 
 		if (updateError) {
-			console.error("[ERROR] Failed to update kouden:", {
-				error: updateError,
-				code: updateError.code,
-				details: updateError.details,
-				hint: updateError.hint,
-				message: updateError.message,
-			});
+			logger.error(
+				{
+					error: updateError.message,
+					code: updateError.code,
+					details: updateError.details,
+					hint: updateError.hint,
+					koudenId: input.kouden_id,
+				},
+				"Failed to update kouden",
+			);
 			// 更新エラーは致命的ではないのでログのみ
 		}
 
 		revalidatePath(`/koudens/${input.kouden_id}`);
 		return data;
 	} catch (error) {
-		console.error("お供え物の更新処理中にエラーが発生しました:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				id,
+			},
+			"お供え物の更新処理中にエラーが発生しました",
+		);
 		throw error;
 	}
 }
@@ -189,7 +247,15 @@ export async function deleteOffering(id: string, koudenId: string) {
 	const { error } = await supabase.from("offerings").delete().eq("id", id);
 
 	if (error) {
-		console.error("[deleteOffering] Delete failed:", error);
+		logger.error(
+			{
+				error: error.message,
+				code: error.code,
+				id,
+				koudenId,
+			},
+			"[deleteOffering] Delete failed",
+		);
 		throw new Error(`お供え物の削除に失敗しました: ${error.message}`);
 	}
 
@@ -200,7 +266,14 @@ export async function deleteOffering(id: string, koudenId: string) {
 		.eq("id", koudenId);
 
 	if (updateError) {
-		console.error("[deleteOffering] Failed to update kouden:", updateError);
+		logger.error(
+			{
+				error: updateError.message,
+				code: updateError.code,
+				koudenId,
+			},
+			"[deleteOffering] Failed to update kouden",
+		);
 		// 更新エラーは致命的ではないのでログのみ
 	}
 
@@ -375,7 +448,15 @@ export async function updateOfferingField(
 		.single();
 
 	if (error) {
-		console.error("[updateOfferingField] Update failed:", error);
+		logger.error(
+			{
+				error: error.message,
+				code: error.code,
+				id,
+				field,
+			},
+			"[updateOfferingField] Update failed",
+		);
 		throw new Error(`お供え物の更新に失敗しました: ${error.message}`);
 	}
 

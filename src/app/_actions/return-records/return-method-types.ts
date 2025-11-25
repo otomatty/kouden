@@ -12,6 +12,7 @@ import type {
 	CreateReturnMethodTypeInput,
 	UpdateReturnMethodTypeInput,
 } from "@/types/return-records/return-method-types";
+import logger from "@/lib/logger";
 
 /**
  * 返礼方法種別を作成する
@@ -49,7 +50,13 @@ export async function createReturnMethodType(
 
 		return data as ReturnMethodType;
 	} catch (error) {
-		console.error("返礼方法種別の作成エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				input,
+			},
+			"返礼方法種別の作成エラー",
+		);
 		throw error;
 	}
 }
@@ -73,7 +80,12 @@ export async function getReturnMethodTypes(): Promise<ReturnMethodType[]> {
 
 		return data as ReturnMethodType[];
 	} catch (error) {
-		console.error("返礼方法種別一覧の取得エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+			},
+			"返礼方法種別一覧の取得エラー",
+		);
 		throw error;
 	}
 }
@@ -99,7 +111,13 @@ export async function getReturnMethodType(id: string): Promise<ReturnMethodType 
 
 		return data as ReturnMethodType | null;
 	} catch (error) {
-		console.error("返礼方法種別の取得エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				id,
+			},
+			"返礼方法種別の取得エラー",
+		);
 		throw error;
 	}
 }
@@ -135,7 +153,13 @@ export async function updateReturnMethodType(
 
 		return data as ReturnMethodType;
 	} catch (error) {
-		console.error("返礼方法種別の更新エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				id: input.id,
+			},
+			"返礼方法種別の更新エラー",
+		);
 		throw error;
 	}
 }
@@ -157,7 +181,13 @@ export async function deleteReturnMethodType(id: string): Promise<void> {
 
 		revalidatePath("/settings/return-method-types");
 	} catch (error) {
-		console.error("返礼方法種別の削除エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				id,
+			},
+			"返礼方法種別の削除エラー",
+		);
 		throw error;
 	}
 }

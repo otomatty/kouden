@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Database } from "@/types/supabase";
+import logger from "@/lib/logger";
 
 export async function createClient() {
 	const cookieStore = await cookies();
@@ -24,7 +25,12 @@ export async function createClient() {
 						cookieStore.set({ name, value, ...options });
 					}
 				} catch (error) {
-					console.error("Error setting cookies:", error);
+					logger.error(
+						{
+							error: error instanceof Error ? error.message : String(error),
+						},
+						"Error setting cookies",
+					);
 					// Handle or log error if needed
 				}
 			},

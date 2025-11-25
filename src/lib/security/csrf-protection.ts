@@ -16,6 +16,7 @@
 
 import { createHash, randomBytes } from "node:crypto";
 import type { NextRequest } from "next/server";
+import logger from "@/lib/logger";
 
 const CSRF_SECRET = process.env.CSRF_SECRET || "default-secret-change-in-production";
 
@@ -87,7 +88,7 @@ export function checkCSRFToken(request: NextRequest): boolean {
 
 	// 開発環境では緩和（デバッグ用）
 	if (process.env.NODE_ENV === "development" && process.env.CSRF_DEBUG === "true") {
-		console.warn("CSRF protection is disabled in development mode");
+		logger.warn({}, "CSRF protection is disabled in development mode");
 		return true;
 	}
 
@@ -95,13 +96,25 @@ export function checkCSRFToken(request: NextRequest): boolean {
 	const csrfToken = request.headers.get("x-csrf-token") || request.cookies.get("csrf-token")?.value;
 
 	if (!csrfToken) {
-		console.warn("CSRF token is missing");
+		logger.warn(
+			{
+				pathname: request.nextUrl.pathname,
+				method: request.method,
+			},
+			"CSRF token is missing",
+		);
 		return false;
 	}
 
 	const isValid = verifyCSRFToken(csrfToken);
 	if (!isValid) {
-		console.warn("CSRF token validation failed");
+		logger.warn(
+			{
+				pathname: request.nextUrl.pathname,
+				method: request.method,
+			},
+			"CSRF token validation failed",
+		);
 	}
 
 	return isValid;

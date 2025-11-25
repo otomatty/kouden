@@ -8,5 +8,6 @@ declare namespace NodeJS {
 		GOOGLE_REDIRECT_URI: string;
 		APP_URL: string;
 		NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: string;
+		LOG_LEVEL?: "debug" | "info" | "warn" | "error";
 	}
 }

@@ -11,6 +11,7 @@ import type {
 } from "@/types/telegrams";
 import { toCamelCase, toSnakeCase } from "@/store/telegrams";
 import type { EntryResponse, AttendanceType } from "@/types/entries";
+import logger from "@/lib/logger";
 
 // 弔電の取得（単一）
 export async function getTelegram(id: string) {
@@ -40,7 +41,13 @@ export async function getTelegrams(koudenId: string): Promise<Telegram[]> {
 		if (error) throw error;
 		return (data as TelegramRow[]).map(toCamelCase);
 	} catch (error) {
-		console.error("Failed to fetch telegrams:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenId,
+			},
+			"Failed to fetch telegrams",
+		);
 		throw new Error("弔電の取得に失敗しました");
 	}
 }
@@ -74,7 +81,13 @@ export async function createTelegram(
 		revalidatePath("/koudens/[id]", "page");
 		return toCamelCase(data as TelegramRow);
 	} catch (error) {
-		console.error("Failed to create telegram:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenId: input.koudenId,
+			},
+			"Failed to create telegram",
+		);
 		throw new Error("弔電の作成に失敗しました");
 	}
 }
@@ -96,7 +109,13 @@ export async function updateTelegram(id: string, input: UpdateTelegramInput): Pr
 		revalidatePath("/koudens/[id]", "page");
 		return toCamelCase(data as TelegramRow);
 	} catch (error) {
-		console.error("Failed to update telegram:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				id,
+			},
+			"Failed to update telegram",
+		);
 		throw new Error("弔電の更新に失敗しました");
 	}
 }
@@ -112,7 +131,14 @@ export async function deleteTelegram(id: string, koudenId: string): Promise<void
 		if (error) throw error;
 		revalidatePath(`/koudens/${koudenId}`);
 	} catch (error) {
-		console.error("Failed to delete telegram:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				id,
+				koudenId,
+			},
+			"Failed to delete telegram",
+		);
 		throw new Error("弔電の削除に失敗しました");
 	}
 }
@@ -173,18 +199,22 @@ export async function updateTelegramField(
 			.single();
 
 		if (error) {
-			console.error("[ERROR] Database update failed:", {
-				error,
-				code: error.code,
-				details: error.details,
-				hint: error.hint,
-				message: error.message,
-			});
+			logger.error(
+				{
+					error: error.message,
+					code: error.code,
+					details: error.details,
+					hint: error.hint,
+					id,
+					field,
+				},
+				"Database update failed",
+			);
 			throw new Error(`${field}の更新に失敗しました`);
 		}
 
 		if (!updatedData) {
-			console.error("[ERROR] No data returned after update");
+			logger.error({ id, field }, "No data returned after update");
 			throw new Error(`${field}の更新に失敗しました`);
 		}
 
@@ -196,12 +226,15 @@ export async function updateTelegramField(
 
 		return camelCaseResult;
 	} catch (error) {
-		console.error("[ERROR] Failed to update telegram field:", {
-			error,
-			id,
-			field,
-			value,
-		});
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				id,
+				field,
+				value,
+			},
+			"Failed to update telegram field",
+		);
 		throw new Error(`${field}の更新に失敗しました`);
 	}
 }

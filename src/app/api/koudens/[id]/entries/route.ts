@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getEntries } from "@/app/_actions/entries";
+import logger from "@/lib/logger";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
 	const { id: koudenId } = await params;
@@ -34,7 +35,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
 		return NextResponse.json({ entries, count });
 	} catch (error) {
-		console.error("[API] GET /api/koudens/[id]/entries error:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenId,
+				page,
+				pageSize,
+			},
+			"[API] GET /api/koudens/[id]/entries error",
+		);
 		return NextResponse.json({ error: "Failed to fetch entries" }, { status: 500 });
 	}
 }

@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import logger from "@/lib/logger";
 
 interface UpdateSettingsParams {
 	guide_mode?: boolean;
@@ -24,7 +25,13 @@ export async function getUserSettings(userId: string) {
 
 		return { settings, error: null };
 	} catch (error) {
-		console.error("Error:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				userId,
+			},
+			"Error getting user settings",
+		);
 		return {
 			settings: null,
 			error: "設定の取得に失敗しました",
@@ -53,7 +60,14 @@ export async function updateUserSettings(userId: string, params: UpdateSettingsP
 		revalidatePath("/settings");
 		return { settings, error: null };
 	} catch (error) {
-		console.error("Error:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				userId,
+				params,
+			},
+			"Error updating user settings",
+		);
 		return {
 			settings: null,
 			error: "設定の更新に失敗しました",
@@ -74,7 +88,12 @@ export async function getGuideVisibility(): Promise<boolean> {
 		} = await supabase.auth.getUser();
 
 		if (userError || !user) {
-			console.error("getGuideVisibility: ユーザー情報の取得に失敗:", userError);
+			logger.error(
+				{
+					error: userError?.message,
+				},
+				"getGuideVisibility: ユーザー情報の取得に失敗",
+			);
 			return false;
 		}
 
@@ -85,14 +104,26 @@ export async function getGuideVisibility(): Promise<boolean> {
 			.single();
 
 		if (error) {
-			console.error("getGuideVisibility: 設定の取得に失敗:", error);
+			logger.error(
+				{
+					error: error.message,
+					code: error.code,
+					userId: user.id,
+				},
+				"getGuideVisibility: 設定の取得に失敗",
+			);
 			return true;
 		}
 
 		const guideMode = data?.guide_mode ?? true;
 		return guideMode;
 	} catch (error) {
-		console.error("getGuideVisibility: 予期せぬエラーが発生:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+			},
+			"getGuideVisibility: 予期せぬエラーが発生",
+		);
 		return true;
 	}
 }
@@ -127,7 +158,13 @@ export async function updateGuideVisibility(show: boolean) {
 		revalidatePath("/koudens");
 		return { success: true, error: null };
 	} catch (error) {
-		console.error("Error:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				show,
+			},
+			"Error updating guide visibility",
+		);
 		return {
 			success: false,
 			error: "設定の更新に失敗しました",

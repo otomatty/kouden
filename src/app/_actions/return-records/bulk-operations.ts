@@ -13,6 +13,7 @@ import type {
 	ReturnManagementSummary,
 	BulkUpdateConfig,
 } from "@/types/return-records/return-records";
+import logger from "@/lib/logger";
 
 /**
  * 一括変更用：香典帳の全返礼記録を取得する（ReturnManagementSummary形式）
@@ -102,7 +103,13 @@ export async function getAllReturnRecordsForBulkUpdate(
 
 		return summaries;
 	} catch (error) {
-		console.error("一括変更用全返礼記録の取得エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenId,
+			},
+			"一括変更用全返礼記録の取得エラー",
+		);
 		throw error;
 	}
 }
@@ -217,7 +224,13 @@ export async function bulkUpdateReturnRecords(
 		if (updates.returnItems) {
 			// TODO: 返礼品の操作ロジックを実装
 			// 現在は基本的なステータス・方法の更新のみ対応
-			console.log("返礼品の操作:", updates.returnItems);
+			logger.info(
+				{
+					returnItems: updates.returnItems,
+					koudenId,
+				},
+				"返礼品の操作",
+			);
 		}
 
 		// 一括更新実行
@@ -236,7 +249,14 @@ export async function bulkUpdateReturnRecords(
 
 		return targetRecords.length;
 	} catch (error) {
-		console.error("返礼記録の一括更新エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenId,
+				config,
+			},
+			"返礼記録の一括更新エラー",
+		);
 		throw error;
 	}
 }

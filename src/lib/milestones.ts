@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import matter from "gray-matter";
+import logger from "@/lib/logger";
 
 /**
  * マイルストーンのメタデータ
@@ -55,7 +56,12 @@ export async function getAllMilestones(): Promise<MilestoneMeta[]> {
 			return dateA.getTime() - dateB.getTime();
 		});
 	} catch (error) {
-		console.error("Error loading milestones:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+			},
+			"Error loading milestones",
+		);
 		return [];
 	}
 }
@@ -78,7 +84,13 @@ export async function getMilestoneBySlug(slug: string) {
 			content,
 		};
 	} catch (error) {
-		console.error("Error loading milestone:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				slug,
+			},
+			"Error loading milestone",
+		);
 		throw new Error(`Milestone not found: ${slug}`);
 	}
 }

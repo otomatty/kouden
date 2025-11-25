@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Kouden } from "@/types/kouden";
 import { checkKoudenPermission } from "../permissions";
 import { KOUDEN_ROLES } from "@/types/role";
+import logger from "@/lib/logger";
 
 /**
  * 香典帳の複製（デフォルトで free プラン適用）
@@ -311,7 +312,13 @@ export async function duplicateKouden(id: string): Promise<{ kouden?: Kouden; er
 
 		return { kouden: { ...newKouden, owner } as unknown as Kouden };
 	} catch (error) {
-		console.error("[ERROR] Error duplicating kouden:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenId: id,
+			},
+			"[ERROR] Error duplicating kouden",
+		);
 		return { error: "香典帳の複製に失敗しました" };
 	}
 }

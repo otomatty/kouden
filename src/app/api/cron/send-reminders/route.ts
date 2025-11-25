@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Resend } from "resend";
 import { buildReminderEmail } from "@/utils/emailTemplates/reminder";
+import logger from "@/lib/logger";
 
 const apiKey = process.env.RESEND_API_KEY;
 if (!apiKey) {
@@ -20,7 +21,13 @@ export async function GET() {
 		.eq("code", "free")
 		.single();
 	if (planError || !freePlan) {
-		console.error("[send-reminders] planError:", planError);
+		logger.error(
+			{
+				error: planError?.message,
+				code: planError?.code,
+			},
+			"[send-reminders] planError",
+		);
 		return NextResponse.error();
 	}
 
@@ -44,7 +51,15 @@ export async function GET() {
 			.eq("plan_id", freePlan.id)
 			.eq("created_at::date", dateStr);
 		if (koudenError || !koudenList) {
-			console.error("[send-reminders] koudenError:", koudenError);
+			logger.error(
+				{
+					error: koudenError?.message,
+					code: koudenError?.code,
+					daysLeft,
+					dateStr,
+				},
+				"[send-reminders] koudenError",
+			);
 			continue;
 		}
 

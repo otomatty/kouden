@@ -4,6 +4,7 @@ import { unstable_cache as cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getContactRequestStats } from "./contact-requests";
 import { getCampaignApplicationStats } from "./campaign-applications";
+import logger from "@/lib/logger";
 
 // 1. getDashboardSummary
 export async function getDashboardSummary() {
@@ -16,7 +17,13 @@ export async function getDashboardSummary() {
 		.in("status", ["new", "in_progress"]);
 
 	if (openContactsError) {
-		console.error("Error fetching open contacts count:", openContactsError.message);
+		logger.error(
+			{
+				error: openContactsError.message,
+				code: openContactsError.code,
+			},
+			"Error fetching open contacts count",
+		);
 	}
 
 	// 過去24時間のエラー数を取得 (debug_logsテーブルのcreated_atが24時間以内のもの)
@@ -27,7 +34,13 @@ export async function getDashboardSummary() {
 		.gte("created_at", twentyFourHoursAgo);
 
 	if (recentErrorsError) {
-		console.error("Error fetching recent errors count:", recentErrorsError.message);
+		logger.error(
+			{
+				error: recentErrorsError.message,
+				code: recentErrorsError.code,
+			},
+			"Error fetching recent errors count",
+		);
 	}
 
 	return {
@@ -43,7 +56,13 @@ const fetchServiceStatus = async (url: string, serviceName: string): Promise<any
 		const response = await fetch(url, { next: { revalidate: 300 } }); // 5分キャッシュ
 		if (!response.ok) {
 			// APIがエラーを返した場合でも、サービスがダウンしていると解釈できる
-			console.warn(`Failed to fetch ${serviceName} status: ${response.status}`);
+			logger.warn(
+				{
+					serviceName,
+					status: response.status,
+				},
+				`Failed to fetch ${serviceName} status`,
+			);
 			return { name: serviceName, status: "degraded" }; // または "outage"
 		}
 		// const data = await response.json();
@@ -67,7 +86,13 @@ const fetchServiceStatus = async (url: string, serviceName: string): Promise<any
 		}
 		return { name: serviceName, status: "operational" }; // デフォルト
 	} catch (error) {
-		console.error(`Error fetching ${serviceName} status:`, error);
+		logger.error(
+			{
+				serviceName,
+				error: error instanceof Error ? error.message : String(error),
+			},
+			`Error fetching ${serviceName} status`,
+		);
 		return { name: serviceName, status: "outage" }; // フェッチ自体に失敗した場合
 	}
 };
@@ -112,7 +137,14 @@ export async function getSalesMetrics(range: "7d" | "30d" | "90d" = "30d") {
 		.order("purchased_at", { ascending: true });
 
 	if (error) {
-		console.error("Error fetching sales metrics:", error.message);
+		logger.error(
+			{
+				error: error.message,
+				code: error.code,
+				range,
+			},
+			"Error fetching sales metrics",
+		);
 		// エラー時は空のデータ配列を返す
 		return Array.from({ length: days }).map((_, i) => {
 			const date = new Date(startDate);
@@ -169,7 +201,14 @@ export async function getActivityMetrics(range: "7d" | "30d" | "90d" = "30d") {
 		.order("created_at", { ascending: true });
 
 	if (error) {
-		console.error("Error fetching activity metrics:", error.message);
+		logger.error(
+			{
+				error: error.message,
+				code: error.code,
+				range,
+			},
+			"Error fetching activity metrics",
+		);
 		// エラー時は空のデータ配列を返す
 		return Array.from({ length: days }).map((_, i) => {
 			const date = new Date(startDate);
@@ -217,7 +256,14 @@ export async function getRecentInquiries(limit = 5) {
 		.limit(limit);
 
 	if (error) {
-		console.error("Error fetching recent inquiries:", error.message);
+		logger.error(
+			{
+				error: error.message,
+				code: error.code,
+				limit,
+			},
+			"Error fetching recent inquiries",
+		);
 		return [];
 	}
 	return data;
@@ -233,7 +279,14 @@ export async function getRecentErrors(limit = 5) {
 		.limit(limit);
 
 	if (error) {
-		console.error("Error fetching recent errors:", error.message);
+		logger.error(
+			{
+				error: error.message,
+				code: error.code,
+				limit,
+			},
+			"Error fetching recent errors",
+		);
 		// エラー時は空配列を返す
 		return [];
 	}

@@ -5,6 +5,7 @@ import { z } from "zod";
 import ms from "ms";
 import type { Database } from "@/types/supabase";
 import type { PostgrestError } from "@supabase/supabase-js";
+import logger from "@/lib/logger";
 
 const createInvitationSchema = z.object({
 	koudenId: z.string().uuid(),
@@ -68,7 +69,13 @@ export async function createShareInvitation(
 
 		return invitation;
 	} catch (error) {
-		console.error("[ERROR] Error in createShareInvitation:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				input,
+			},
+			"Error in createShareInvitation",
+		);
 		throw error;
 	}
 }
@@ -102,7 +109,14 @@ export async function getInvitation(token: string) {
 		};
 
 		if (invitationError) {
-			console.error("[ERROR] Database error in getInvitation:", invitationError);
+			logger.error(
+				{
+					error: invitationError.message,
+					code: invitationError.code,
+					token,
+				},
+				"Database error in getInvitation",
+			);
 			if (invitationError.code === "PGRST116") {
 				throw new Error("招待情報が見つかりません");
 			}
@@ -110,7 +124,7 @@ export async function getInvitation(token: string) {
 		}
 
 		if (!invitation) {
-			console.error("[ERROR] No invitation found for token:", token);
+			logger.error({ token }, "No invitation found for token");
 			throw new Error("招待情報が見つかりません");
 		}
 
@@ -122,7 +136,14 @@ export async function getInvitation(token: string) {
 			.single();
 
 		if (creatorError) {
-			console.warn("[WARN] Failed to get creator profile:", creatorError);
+			logger.warn(
+				{
+					error: creatorError.message,
+					code: creatorError.code,
+					creatorId: invitation.created_by,
+				},
+				"Failed to get creator profile",
+			);
 		}
 
 		// ユーザーが既にメンバーかどうかをチェック
@@ -136,7 +157,15 @@ export async function getInvitation(token: string) {
 				.single();
 
 			if (memberCheckError && memberCheckError.code !== "PGRST116") {
-				console.warn("[WARN] Failed to check existing membership:", memberCheckError);
+				logger.warn(
+					{
+						error: memberCheckError.message,
+						code: memberCheckError.code,
+						userId: user.id,
+						koudenId: invitation.kouden_id,
+					},
+					"Failed to check existing membership",
+				);
 			}
 
 			isExistingMember = !!existingMember;
@@ -152,7 +181,13 @@ export async function getInvitation(token: string) {
 
 		return result;
 	} catch (error) {
-		console.error("[ERROR] Error in getInvitation:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				token,
+			},
+			"Error in getInvitation",
+		);
 		throw error;
 	}
 }
@@ -176,7 +211,14 @@ export async function acceptInvitation(token: string) {
 			.single();
 
 		if (invitationError) {
-			console.error("[ERROR] Failed to get invitation:", invitationError);
+			logger.error(
+				{
+					error: invitationError.message,
+					code: invitationError.code,
+					token,
+				},
+				"Failed to get invitation",
+			);
 			if (invitationError.code === "PGRST116") {
 				throw new Error("招待が見つかりません");
 			}
@@ -184,28 +226,48 @@ export async function acceptInvitation(token: string) {
 		}
 
 		if (!invitation) {
-			console.error("[ERROR] No invitation found for token:", token);
+			logger.error({ token }, "No invitation found for token");
 			throw new Error("招待が見つかりません");
 		}
 
 		// 2. 招待の有効性チェック
 		if (invitation.status !== "pending") {
-			console.error("[ERROR] Invitation status is not pending:", invitation.status);
+			logger.error(
+				{
+					invitationId: invitation.id,
+					status: invitation.status,
+					token,
+				},
+				"Invitation status is not pending",
+			);
 			throw new Error("この招待は既に使用されています");
 		}
 
 		const now = new Date();
 		const expiresAt = new Date(invitation.expires_at);
 		if (expiresAt < now) {
-			console.error("[ERROR] Invitation expired:", { expiresAt, now });
+			logger.error(
+				{
+					invitationId: invitation.id,
+					expiresAt: expiresAt.toISOString(),
+					now: now.toISOString(),
+					token,
+				},
+				"Invitation expired",
+			);
 			throw new Error("招待の有効期限が切れています");
 		}
 
 		if (invitation.max_uses && invitation.used_count >= invitation.max_uses) {
-			console.error("[ERROR] Invitation usage limit exceeded:", {
-				used_count: invitation.used_count,
-				max_uses: invitation.max_uses,
-			});
+			logger.error(
+				{
+					invitationId: invitation.id,
+					used_count: invitation.used_count,
+					max_uses: invitation.max_uses,
+					token,
+				},
+				"Invitation usage limit exceeded",
+			);
 			throw new Error("招待の使用回数が上限に達しました");
 		}
 
@@ -218,15 +280,27 @@ export async function acceptInvitation(token: string) {
 			.single();
 
 		if (memberCheckError && memberCheckError.code !== "PGRST116") {
-			console.error("[ERROR] Failed to check existing membership:", memberCheckError);
+			logger.error(
+				{
+					error: memberCheckError.message,
+					code: memberCheckError.code,
+					userId: user.id,
+					koudenId: invitation.kouden_id,
+				},
+				"Failed to check existing membership",
+			);
 			throw new Error("メンバーシップの確認に失敗しました");
 		}
 
 		if (existingMember) {
-			console.error("[ERROR] User is already a member:", {
-				user_id: user.id,
-				kouden_id: invitation.kouden_id,
-			});
+			logger.error(
+				{
+					userId: user.id,
+					koudenId: invitation.kouden_id,
+					token,
+				},
+				"User is already a member",
+			);
 			throw new Error("すでにメンバーとして参加しています");
 		}
 
@@ -240,7 +314,16 @@ export async function acceptInvitation(token: string) {
 		});
 
 		if (memberError) {
-			console.error("[ERROR] Failed to add member:", memberError);
+			logger.error(
+				{
+					error: memberError.message,
+					code: memberError.code,
+					userId: user.id,
+					koudenId: invitation.kouden_id,
+					invitationId: invitation.id,
+				},
+				"Failed to add member",
+			);
 			throw new Error("メンバーの追加に失敗しました");
 		}
 
@@ -254,15 +337,33 @@ export async function acceptInvitation(token: string) {
 			.eq("id", invitation.id);
 
 		if (updateError) {
-			console.error("[ERROR] Failed to update invitation:", updateError);
+			logger.error(
+				{
+					error: updateError.message,
+					code: updateError.code,
+					invitationId: invitation.id,
+				},
+				"Failed to update invitation",
+			);
 			// メンバー追加は成功しているので、招待の更新失敗は警告レベル
-			console.warn("[WARN] Member was added but invitation update failed");
-		} else {
+			logger.warn(
+				{
+					invitationId: invitation.id,
+					userId: user.id,
+				},
+				"Member was added but invitation update failed",
+			);
 		}
 
 		return { success: true };
 	} catch (error) {
-		console.error("[ERROR] Error in acceptInvitation:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				token,
+			},
+			"Error in acceptInvitation",
+		);
 		throw error;
 	}
 }

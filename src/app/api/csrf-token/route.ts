@@ -3,6 +3,8 @@
  * フロントエンドからCSRFトークンを取得するためのエンドポイント
  */
 
+import logger from "@/lib/logger";
+
 const CSRF_SECRET = process.env.CSRF_SECRET || "default-secret-change-in-production";
 
 /**
@@ -64,7 +66,12 @@ export async function GET() {
 
 		return response;
 	} catch (error) {
-		console.error("Error generating CSRF token:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+			},
+			"Error generating CSRF token",
+		);
 		return new Response("Internal Server Error", { status: 500 });
 	}
 }

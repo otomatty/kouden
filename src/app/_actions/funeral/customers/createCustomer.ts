@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { CreateCustomerInput } from "@/types/funeral-management";
+import logger from "@/lib/logger";
 
 /**
  * 新規顧客を作成する
@@ -26,7 +27,15 @@ export async function createCustomer(input: CreateCustomerInput) {
 			.single();
 
 		if (customerError) {
-			console.error("顧客基本情報作成エラー:", customerError);
+			logger.error(
+				{
+					error: customerError.message,
+					code: customerError.code,
+					details: customerError.details,
+					organizationId: input.organization_id,
+				},
+				"顧客基本情報作成エラー",
+			);
 			return {
 				success: false,
 				error: "顧客の基本情報の作成に失敗しました",
@@ -50,7 +59,16 @@ export async function createCustomer(input: CreateCustomerInput) {
 			});
 
 		if (detailsError) {
-			console.error("顧客詳細情報作成エラー:", detailsError);
+			logger.error(
+				{
+					error: detailsError.message,
+					code: detailsError.code,
+					details: detailsError.details,
+					customerId: customer.id,
+					organizationId: input.organization_id,
+				},
+				"顧客詳細情報作成エラー",
+			);
 			// 基本情報をロールバック
 			await supabase.schema("common").from("customers").delete().eq("id", customer.id);
 			return {
@@ -67,7 +85,13 @@ export async function createCustomer(input: CreateCustomerInput) {
 			data: customer,
 		};
 	} catch (error) {
-		console.error("顧客作成中の予期しないエラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				organizationId: input.organization_id,
+			},
+			"顧客作成中の予期しないエラー",
+		);
 		return {
 			success: false,
 			error: "システムエラーが発生しました",

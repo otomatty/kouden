@@ -12,6 +12,7 @@ import type {
 	CreateReturnRecordSelectedMethodInput,
 	UpdateReturnRecordSelectedMethodInput,
 } from "@/types/return-records/return-record-selected-methods";
+import logger from "@/lib/logger";
 
 /**
  * 返礼情報に返礼方法を追加する
@@ -50,7 +51,14 @@ export async function createReturnRecordSelectedMethod(
 		revalidatePath(`/koudens/${koudenId}`);
 		return data as ReturnRecordSelectedMethod;
 	} catch (error) {
-		console.error("返礼方法選択の作成エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				returnRecordId: input.return_record_id,
+				koudenId,
+			},
+			"返礼方法選択の作成エラー",
+		);
 		throw error;
 	}
 }
@@ -78,7 +86,13 @@ export async function getReturnRecordSelectedMethods(
 
 		return data as ReturnRecordSelectedMethod[];
 	} catch (error) {
-		console.error("返礼方法選択一覧の取得エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				returnRecordId,
+			},
+			"返礼方法選択一覧の取得エラー",
+		);
 		throw error;
 	}
 }
@@ -106,7 +120,13 @@ export async function getReturnRecordSelectedMethod(
 
 		return data as ReturnRecordSelectedMethod | null;
 	} catch (error) {
-		console.error("返礼方法選択の取得エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				id,
+			},
+			"返礼方法選択の取得エラー",
+		);
 		throw error;
 	}
 }
@@ -143,7 +163,14 @@ export async function updateReturnRecordSelectedMethod(
 		revalidatePath(`/koudens/${koudenId}`);
 		return data as ReturnRecordSelectedMethod;
 	} catch (error) {
-		console.error("返礼方法選択の更新エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				id: input.id,
+				koudenId,
+			},
+			"返礼方法選択の更新エラー",
+		);
 		throw error;
 	}
 }
@@ -169,7 +196,14 @@ export async function deleteReturnRecordSelectedMethod(
 
 		revalidatePath(`/koudens/${koudenId}`);
 	} catch (error) {
-		console.error("返礼方法選択の削除エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				id,
+				koudenId,
+			},
+			"返礼方法選択の削除エラー",
+		);
 		throw error;
 	}
 }

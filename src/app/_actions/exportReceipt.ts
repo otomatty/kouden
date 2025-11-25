@@ -5,6 +5,7 @@ import PDFDocument from "pdfkit";
 import { Resend } from "resend";
 import fs from "node:fs";
 import path from "node:path";
+import logger from "@/lib/logger";
 
 /**
  * 購入後に領収書PDFを生成し、Storageへ保存、メール送信を行う
@@ -20,7 +21,14 @@ export async function exportReceiptToPdf(purchaseId: string): Promise<void> {
 		.eq("id", purchaseId)
 		.single();
 	if (purchaseError || !purchase) {
-		console.error("[exportReceiptToPdf] purchaseError:", purchaseError);
+		logger.error(
+			{
+				error: purchaseError?.message,
+				code: purchaseError?.code,
+				purchaseId,
+			},
+			"[exportReceiptToPdf] purchaseError",
+		);
 		throw new Error("購入情報の取得に失敗しました");
 	}
 
@@ -31,7 +39,15 @@ export async function exportReceiptToPdf(purchaseId: string): Promise<void> {
 		.eq("id", purchase.plan_id)
 		.single();
 	if (planError || !plan) {
-		console.error("[exportReceiptToPdf] planError:", planError);
+		logger.error(
+			{
+				error: planError?.message,
+				code: planError?.code,
+				planId: purchase.plan_id,
+				purchaseId,
+			},
+			"[exportReceiptToPdf] planError",
+		);
 		throw new Error("プラン情報の取得に失敗しました");
 	}
 
@@ -42,7 +58,15 @@ export async function exportReceiptToPdf(purchaseId: string): Promise<void> {
 		.eq("id", purchase.kouden_id)
 		.single();
 	if (koudenError || !kouden) {
-		console.error("[exportReceiptToPdf] koudenError:", koudenError);
+		logger.error(
+			{
+				error: koudenError?.message,
+				code: koudenError?.code,
+				koudenId: purchase.kouden_id,
+				purchaseId,
+			},
+			"[exportReceiptToPdf] koudenError",
+		);
 		throw new Error("香典帳情報の取得に失敗しました");
 	}
 
@@ -51,7 +75,14 @@ export async function exportReceiptToPdf(purchaseId: string): Promise<void> {
 		purchase.user_id,
 	);
 	if (userError || !userData.user) {
-		console.error("[exportReceiptToPdf] userError:", userError);
+		logger.error(
+			{
+				error: userError?.message,
+				userId: purchase.user_id,
+				purchaseId,
+			},
+			"[exportReceiptToPdf] userError",
+		);
 		throw new Error("ユーザー情報の取得に失敗しました");
 	}
 	const userEmail = userData.user.email;
@@ -103,7 +134,13 @@ export async function exportReceiptToPdf(purchaseId: string): Promise<void> {
 			upsert: false,
 		});
 	if (storageError) {
-		console.error("[exportReceiptToPdf] storageError:", storageError);
+		logger.error(
+			{
+				error: storageError.message,
+				purchaseId,
+			},
+			"[exportReceiptToPdf] storageError",
+		);
 		throw new Error("Storageへのアップロードに失敗しました");
 	}
 
@@ -135,7 +172,14 @@ export async function exportReceiptToPdf(purchaseId: string): Promise<void> {
 		.eq("type_key", "receipt_sent")
 		.single();
 	if (typeError || !notifType) {
-		console.error("[exportReceiptToPdf] notifTypeError:", typeError);
+		logger.error(
+			{
+				error: typeError?.message,
+				code: typeError?.code,
+				purchaseId,
+			},
+			"[exportReceiptToPdf] notifTypeError",
+		);
 		throw new Error("通知タイプの取得に失敗しました");
 	}
 	const { error: notifError } = await supabase.from("notifications").insert({
@@ -148,7 +192,15 @@ export async function exportReceiptToPdf(purchaseId: string): Promise<void> {
 		link_path: null,
 	});
 	if (notifError) {
-		console.error("[exportReceiptToPdf] notifError:", notifError);
+		logger.error(
+			{
+				error: notifError.message,
+				code: notifError.code,
+				userId: purchase.user_id,
+				purchaseId,
+			},
+			"[exportReceiptToPdf] notifError",
+		);
 		throw new Error("通知作成に失敗しました");
 	}
 }

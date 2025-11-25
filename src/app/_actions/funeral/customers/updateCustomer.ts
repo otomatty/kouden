@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { UpdateCustomerInput } from "@/types/funeral-management";
+import logger from "@/lib/logger";
 
 /**
  * 顧客情報を更新する
@@ -26,7 +27,15 @@ export async function updateCustomer(input: UpdateCustomerInput) {
 				.eq("id", input.id);
 
 			if (customerError) {
-				console.error("顧客基本情報更新エラー:", customerError);
+				logger.error(
+					{
+						error: customerError.message,
+						code: customerError.code,
+						details: customerError.details,
+						customerId: input.id,
+					},
+					"顧客基本情報更新エラー",
+				);
 				return {
 					success: false,
 					error: "顧客の基本情報の更新に失敗しました",
@@ -64,7 +73,15 @@ export async function updateCustomer(input: UpdateCustomerInput) {
 					.eq("customer_id", input.id);
 
 				if (detailsError) {
-					console.error("顧客詳細情報更新エラー:", detailsError);
+					logger.error(
+						{
+							error: detailsError.message,
+							code: detailsError.code,
+							details: detailsError.details,
+							customerId: input.id,
+						},
+						"顧客詳細情報更新エラー",
+					);
 					return {
 						success: false,
 						error: "顧客の詳細情報の更新に失敗しました",
@@ -97,7 +114,15 @@ export async function updateCustomer(input: UpdateCustomerInput) {
 					});
 
 				if (detailsError) {
-					console.error("顧客詳細情報作成エラー:", detailsError);
+					logger.error(
+						{
+							error: detailsError.message,
+							code: detailsError.code,
+							details: detailsError.details,
+							customerId: input.id,
+						},
+						"顧客詳細情報作成エラー",
+					);
 					return {
 						success: false,
 						error: "顧客の詳細情報の作成に失敗しました",
@@ -114,7 +139,13 @@ export async function updateCustomer(input: UpdateCustomerInput) {
 			success: true,
 		};
 	} catch (error) {
-		console.error("顧客更新中の予期しないエラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				customerId: input.id,
+			},
+			"顧客更新中の予期しないエラー",
+		);
 		return {
 			success: false,
 			error: "システムエラーが発生しました",
