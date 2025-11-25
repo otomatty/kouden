@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { exportReceiptToPdf } from "@/app/_actions/exportReceipt";
+import logger from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -41,17 +42,17 @@ export async function POST(req: Request) {
 		const metadata = session.metadata as Record<string, string>;
 		const koudenId = metadata.koudenId;
 		if (!koudenId) {
-			console.error("Missing metadata.koudenId");
+			logger.error({ metadata }, "Missing metadata.koudenId");
 			return new NextResponse("Invalid webhook metadata", { status: 400 });
 		}
 		const planCode = metadata.planCode;
 		if (!planCode) {
-			console.error("Missing metadata.planCode");
+			logger.error({ metadata }, "Missing metadata.planCode");
 			return new NextResponse("Invalid webhook metadata", { status: 400 });
 		}
 		const userId = metadata.userId;
 		if (!userId) {
-			console.error("Missing metadata.userId");
+			logger.error({ metadata }, "Missing metadata.userId");
 			return new NextResponse("Invalid webhook metadata", { status: 400 });
 		}
 
@@ -67,7 +68,7 @@ export async function POST(req: Request) {
 		if (!existingKouden) {
 			const planRes = await supabase.from("plans").select("id").eq("code", planCode).single();
 			if (planRes.error || !planRes.data) {
-				console.error("Plan not found for code:", planCode);
+				logger.error({ planCode, error: planRes.error }, "Plan not found for code");
 				return new NextResponse("Plan not found", { status: 400 });
 			}
 			const planId = planRes.data.id;
@@ -79,19 +80,29 @@ export async function POST(req: Request) {
 				created_by: userId,
 				plan_id: planId,
 			});
-			if (koudenError) console.error("Error creating kouden:", koudenError);
+			if (koudenError) {
+				logger.error(
+					{
+						error: koudenError.message,
+						code: koudenError.code,
+						koudenId,
+						userId,
+					},
+					"Error creating kouden",
+				);
+			}
 		}
 
 		// Upsert purchase history
 		const planRes2 = await supabase.from("plans").select("id").eq("code", planCode).single();
 		if (planRes2.error || !planRes2.data) {
-			console.error("Plan not found for code:", planCode);
+			logger.error({ planCode, error: planRes2.error }, "Plan not found for code");
 			return new NextResponse("Plan not found", { status: 400 });
 		}
 		const planId2 = planRes2.data.id;
 		const amountTotal = session.amount_total;
 		if (amountTotal == null) {
-			console.error("Session amount_total is missing");
+			logger.error({ sessionId: session.id }, "Session amount_total is missing");
 			return new NextResponse("Invalid session data", { status: 400 });
 		}
 		const { data: purchaseRow, error: purchaseError } = await supabase
@@ -107,12 +118,26 @@ export async function POST(req: Request) {
 			.select("id")
 			.single();
 		if (purchaseError || !purchaseRow) {
-			console.error("Error inserting purchase:", purchaseError);
+			logger.error(
+				{
+					error: purchaseError?.message,
+					code: purchaseError?.code,
+					koudenId,
+					userId,
+				},
+				"Error inserting purchase",
+			);
 		} else {
 			try {
 				await exportReceiptToPdf(purchaseRow.id);
 			} catch (err) {
-				console.error("Receipt export error:", err);
+				logger.error(
+					{
+						error: err instanceof Error ? err.message : String(err),
+						purchaseId: purchaseRow.id,
+					},
+					"Receipt export error",
+				);
 			}
 		}
 
@@ -121,7 +146,17 @@ export async function POST(req: Request) {
 			.from("koudens")
 			.update({ plan_id: planId2, status: "active" })
 			.eq("id", koudenId);
-		if (updateError) console.error("Error updating kouden plan_id and status:", updateError);
+		if (updateError) {
+			logger.error(
+				{
+					error: updateError.message,
+					code: updateError.code,
+					koudenId,
+					planId: planId2,
+				},
+				"Error updating kouden plan_id and status",
+			);
+		}
 	}
 
 	return NextResponse.json({ received: true });

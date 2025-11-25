@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { KoudenData, KoudenEntry } from "@/types/entries";
 import { formatAmount } from "@/utils/pdfFormatter";
+import logger from "@/lib/logger";
 
 /**
  * 香典帳 PDF 用データ取得
@@ -19,7 +20,14 @@ export async function exportKoudenToPdf(koudenId: string): Promise<KoudenData> {
 		.single();
 
 	if (koudenError || !kouden) {
-		console.error("[exportKoudenToPdf] koudenError:", koudenError, "kouden:", kouden);
+		logger.error(
+			{
+				error: koudenError?.message,
+				code: koudenError?.code,
+				koudenId,
+			},
+			"[exportKoudenToPdf] koudenError",
+		);
 		throw new Error("香典帳の取得に失敗しました");
 	}
 
@@ -31,7 +39,14 @@ export async function exportKoudenToPdf(koudenId: string): Promise<KoudenData> {
 		.order("amount", { ascending: false });
 
 	if (entriesError || !entries) {
-		console.error("[exportKoudenToPdf] entriesError:", entriesError, "entries:", entries);
+		logger.error(
+			{
+				error: entriesError?.message,
+				code: entriesError?.code,
+				koudenId,
+			},
+			"[exportKoudenToPdf] entriesError",
+		);
 		throw new Error("香典データの取得に失敗しました");
 	}
 
@@ -41,7 +56,14 @@ export async function exportKoudenToPdf(koudenId: string): Promise<KoudenData> {
 		.select("id,name")
 		.eq("kouden_id", koudenId);
 	if (relationsError || !relations) {
-		console.error("[exportKoudenToPdf] relationsError:", relationsError, "relations:", relations);
+		logger.error(
+			{
+				error: relationsError?.message,
+				code: relationsError?.code,
+				koudenId,
+			},
+			"[exportKoudenToPdf] relationsError",
+		);
 		throw new Error("関係性データの取得に失敗しました");
 	}
 	const relationsMap = new Map(relations.map((r) => [r.id, r.name]));

@@ -12,6 +12,7 @@ import type {
 	CreateReturnRecordItemInput,
 	UpdateReturnRecordItemInput,
 } from "@/types/return-records/return-record-items";
+import logger from "@/lib/logger";
 
 /**
  * 返礼品詳細情報を作成する
@@ -61,7 +62,14 @@ export async function createReturnRecordItem(
 
 		return data as ReturnRecordItem;
 	} catch (error) {
-		console.error("返礼品詳細情報の作成エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				returnRecordId: input.return_record_id,
+				koudenId,
+			},
+			"返礼品詳細情報の作成エラー",
+		);
 		throw error;
 	}
 }
@@ -88,7 +96,13 @@ export async function getReturnRecordItems(returnRecordId: string): Promise<Retu
 
 		return data as ReturnRecordItem[];
 	} catch (error) {
-		console.error("返礼品詳細情報一覧の取得エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				returnRecordId,
+			},
+			"返礼品詳細情報一覧の取得エラー",
+		);
 		throw error;
 	}
 }
@@ -115,7 +129,13 @@ export async function getReturnRecordItem(id: string): Promise<ReturnRecordItem 
 
 		return data as ReturnRecordItem | null;
 	} catch (error) {
-		console.error("返礼品詳細情報の取得エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				id,
+			},
+			"返礼品詳細情報の取得エラー",
+		);
 		throw error;
 	}
 }
@@ -174,7 +194,14 @@ export async function updateReturnRecordItem(
 
 		return data as ReturnRecordItem;
 	} catch (error) {
-		console.error("返礼品詳細情報の更新エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				id: input.id,
+				koudenId,
+			},
+			"返礼品詳細情報の更新エラー",
+		);
 		throw error;
 	}
 }
@@ -217,7 +244,14 @@ export async function deleteReturnRecordItem(id: string, koudenId: string): Prom
 		// キャッシュの再検証
 		revalidatePath(`/koudens/${koudenId}`);
 	} catch (error) {
-		console.error("返礼品詳細情報の削除エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				id,
+				koudenId,
+			},
+			"返礼品詳細情報の削除エラー",
+		);
 		throw error;
 	}
 }
@@ -253,7 +287,13 @@ async function updateReturnRecordTotalAmount(returnRecordId: string): Promise<vo
 		//     throw updateError;
 		// }
 	} catch (error) {
-		console.error("返礼情報の合計金額更新エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				returnRecordId,
+			},
+			"返礼情報の合計金額更新エラー",
+		);
 		throw error;
 	}
 }

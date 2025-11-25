@@ -6,6 +6,7 @@ import { cache } from "react";
 import { KoudenError, withErrorHandling } from "@/lib/errors";
 import { isKoudenOwner } from "./permissions";
 import type { KoudenRole } from "@/types/role";
+import logger from "@/lib/logger";
 
 /**
  * 香典帳のロールを取得（キャッシュ対応）
@@ -23,7 +24,14 @@ export const getKoudenRoles = cache(async (koudenId: string): Promise<KoudenRole
 			.order("name");
 
 		if (error) {
-			console.error("[ERROR] Error fetching roles:", error);
+			logger.error(
+				{
+					error: error.message,
+					code: error.code,
+					koudenId,
+				},
+				"Error fetching roles",
+			);
 			throw new KoudenError("ロール一覧の取得に失敗しました", "FETCH_ROLES_ERROR");
 		}
 
@@ -57,7 +65,14 @@ export const getKoudenRolesForAdmin = cache(async (koudenId: string): Promise<Ko
 			.order("name");
 
 		if (error) {
-			console.error("[ERROR] Error fetching roles for admin:", error);
+			logger.error(
+				{
+					error: error.message,
+					code: error.code,
+					koudenId,
+				},
+				"Error fetching roles for admin",
+			);
 			throw new KoudenError("ロール情報の取得に失敗しました", "FETCH_ROLES_ERROR");
 		}
 
@@ -100,7 +115,16 @@ export async function updateMemberRole(koudenId: string, userId: string, roleId:
 		});
 
 		if (error) {
-			console.error("[ERROR] Failed to update member role:", error);
+			logger.error(
+				{
+					error: error.message,
+					code: error.code,
+					koudenId,
+					userId,
+					roleId,
+				},
+				"Failed to update member role",
+			);
 			throw new KoudenError("ロールの更新に失敗しました", "UPDATE_ROLE_ERROR");
 		}
 
@@ -143,7 +167,15 @@ export async function removeMember(koudenId: string, userId: string) {
 		});
 
 		if (error) {
-			console.error("[ERROR] Failed to remove member:", error);
+			logger.error(
+				{
+					error: error.message,
+					code: error.code,
+					koudenId,
+					userId,
+				},
+				"Failed to remove member",
+			);
 			throw new KoudenError("メンバーの削除に失敗しました", "REMOVE_MEMBER_ERROR");
 		}
 
@@ -202,7 +234,15 @@ export async function leaveMember(koudenId: string) {
 		});
 
 		if (error) {
-			console.error("[ERROR] Failed to leave member:", error);
+			logger.error(
+				{
+					error: error.message,
+					code: error.code,
+					koudenId,
+					userId: currentUser.id,
+				},
+				"Failed to leave member",
+			);
 			throw new KoudenError("香典帳からの退出に失敗しました", "LEAVE_MEMBER_ERROR");
 		}
 

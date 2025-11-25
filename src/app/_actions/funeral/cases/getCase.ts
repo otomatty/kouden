@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import type { FuneralCaseWithDetails } from "@/types/funeral-management";
+import logger from "@/lib/logger";
 
 /**
  * Get a single funeral case by ID with customer details.
@@ -30,7 +31,15 @@ export async function getCase(id: string): Promise<FuneralCaseWithDetails | null
 		.single();
 
 	if (customerError) {
-		console.warn("Customer not found for case:", id, customerError);
+		logger.warn(
+			{
+				error: customerError.message,
+				code: customerError.code,
+				caseId: id,
+				customerId: caseRecord.customer_id,
+			},
+			"Customer not found for case",
+		);
 	}
 
 	// 顧客詳細情報を別途取得

@@ -10,6 +10,7 @@ import type {
 	Entry,
 	AttendanceType,
 } from "@/types/entries";
+import logger from "@/lib/logger";
 
 export async function createEntry(input: CreateEntryInput): Promise<EntryResponse> {
 	const supabase = await createClient();
@@ -41,14 +42,16 @@ export async function createEntry(input: CreateEntryInput): Promise<EntryRespons
 
 		if (error) {
 			// デバッグ: エラーの詳細情報をログ
-			console.error("[ERROR] Create Entry with Return Record Failed:", {
-				error,
-				errorCode: error.code,
-				errorMessage: error.message,
-				errorDetails: error.details,
-				input,
-				userId: user.id,
-			});
+			logger.error(
+				{
+					errorCode: error.code,
+					errorMessage: error.message,
+					errorDetails: error.details,
+					input,
+					userId: user.id,
+				},
+				"Create Entry with Return Record Failed",
+			);
 
 			// エラーメッセージの改善
 			if (error.code === "42501") {
@@ -79,12 +82,14 @@ export async function createEntry(input: CreateEntryInput): Promise<EntryRespons
 
 		return response;
 	} catch (error) {
-		console.error("[ERROR] Unexpected error in createEntry:", {
-			error,
-			input,
-			errorMessage: error instanceof Error ? error.message : "Unknown error",
-			userId: user.id,
-		});
+		logger.error(
+			{
+				input,
+				errorMessage: error instanceof Error ? error.message : "Unknown error",
+				userId: user.id,
+			},
+			"Unexpected error in createEntry",
+		);
 		throw error instanceof Error ? error : new Error("香典情報の作成に失敗しました");
 	}
 }
@@ -159,12 +164,16 @@ export async function getEntries(
 		const entries = rawEntries ?? [];
 
 		if (entriesError) {
-			console.error("[ERROR] Failed to fetch entries:", {
-				message: entriesError.message,
-				details: entriesError.details,
-				hint: entriesError.hint,
-				code: entriesError.code,
-			});
+			logger.error(
+				{
+					message: entriesError.message,
+					details: entriesError.details,
+					hint: entriesError.hint,
+					code: entriesError.code,
+					koudenId,
+				},
+				"Failed to fetch entries",
+			);
 			throw new Error("香典情報の取得に失敗しました");
 		}
 
@@ -175,12 +184,16 @@ export async function getEntries(
 			.eq("kouden_id", koudenId);
 
 		if (relationshipsError) {
-			console.error("[ERROR] Failed to fetch relationships:", {
-				message: relationshipsError.message,
-				details: relationshipsError.details,
-				hint: relationshipsError.hint,
-				code: relationshipsError.code,
-			});
+			logger.error(
+				{
+					message: relationshipsError.message,
+					details: relationshipsError.details,
+					hint: relationshipsError.hint,
+					code: relationshipsError.code,
+					koudenId,
+				},
+				"Failed to fetch relationships",
+			);
 			throw new Error("関係性情報の取得に失敗しました");
 		}
 
@@ -197,7 +210,13 @@ export async function getEntries(
 
 		return { entries: entriesWithRelationships as Entry[], count: count ?? 0 };
 	} catch (error) {
-		console.error("[ERROR] Unexpected error in getEntries:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenId,
+			},
+			"Unexpected error in getEntries",
+		);
 		throw error;
 	}
 }
@@ -277,12 +296,16 @@ export async function getEntriesForAdmin(
 		const entries = rawEntries ?? [];
 
 		if (entriesError) {
-			console.error("[ERROR] Failed to fetch entries for admin:", {
-				message: entriesError.message,
-				details: entriesError.details,
-				hint: entriesError.hint,
-				code: entriesError.code,
-			});
+			logger.error(
+				{
+					message: entriesError.message,
+					details: entriesError.details,
+					hint: entriesError.hint,
+					code: entriesError.code,
+					koudenId,
+				},
+				"Failed to fetch entries for admin",
+			);
 			throw new Error("香典情報の取得に失敗しました");
 		}
 
@@ -293,12 +316,16 @@ export async function getEntriesForAdmin(
 			.eq("kouden_id", koudenId);
 
 		if (relationshipsError) {
-			console.error("[ERROR] Failed to fetch relationships for admin:", {
-				message: relationshipsError.message,
-				details: relationshipsError.details,
-				hint: relationshipsError.hint,
-				code: relationshipsError.code,
-			});
+			logger.error(
+				{
+					message: relationshipsError.message,
+					details: relationshipsError.details,
+					hint: relationshipsError.hint,
+					code: relationshipsError.code,
+					koudenId,
+				},
+				"Failed to fetch relationships for admin",
+			);
 			throw new Error("関係性情報の取得に失敗しました");
 		}
 
@@ -315,7 +342,13 @@ export async function getEntriesForAdmin(
 
 		return { entries: entriesWithRelationships as Entry[], count: count ?? 0 };
 	} catch (error) {
-		console.error("[ERROR] Unexpected error in getEntriesForAdmin:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenId,
+			},
+			"Unexpected error in getEntriesForAdmin",
+		);
 		throw error;
 	}
 }
@@ -383,10 +416,14 @@ export async function updateEntry(id: string, input: UpdateEntryInput): Promise<
 			.single();
 
 		if (error || !updatedData) {
-			console.error("[ERROR] Update failed:", {
-				error,
-				id,
-			});
+			logger.error(
+				{
+					error: error?.message,
+					errorCode: error?.code,
+					id,
+				},
+				"Update failed",
+			);
 			throw new Error("香典情報の更新に失敗しました");
 		}
 
@@ -400,7 +437,13 @@ export async function updateEntry(id: string, input: UpdateEntryInput): Promise<
 			relationshipId: updatedData.relationship_id,
 		};
 	} catch (error) {
-		console.error("[ERROR] Failed to update entry:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				id,
+			},
+			"Failed to update entry",
+		);
 		throw new Error("香典情報の更新に失敗しました");
 	}
 }
@@ -498,7 +541,14 @@ export async function updateEntryField(
 			relationshipId: updatedData.relationship_id,
 		};
 	} catch (error) {
-		console.error("[ERROR] Failed to update entry:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				id,
+				field,
+			},
+			"Failed to update entry",
+		);
 		throw new Error(`${field}の更新に失敗しました`);
 	}
 }

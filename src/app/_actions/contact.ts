@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import logger from "@/lib/logger";
 
 /**
  * Create a new contact request (support unauthenticated and authenticated users).
@@ -29,7 +30,15 @@ export async function createContactRequest(formData: FormData) {
 	const { data, error } = await supabase.from("contact_requests").insert(insertData);
 
 	if (error) {
-		console.error("Failed to create contact request:", error);
+		logger.error(
+			{
+				error: error.message,
+				code: error.code,
+				userId: user?.id,
+				category: insertData.category,
+			},
+			"Failed to create contact request",
+		);
 		throw new Error(error.message);
 	}
 
@@ -57,7 +66,14 @@ export async function getContactRequests() {
 		.order("created_at", { ascending: false });
 
 	if (error) {
-		console.error("Failed to fetch contact requests:", error);
+		logger.error(
+			{
+				error: error.message,
+				code: error.code,
+				userId: user.id,
+			},
+			"Failed to fetch contact requests",
+		);
 		throw new Error(error.message);
 	}
 
@@ -95,7 +111,15 @@ export async function getContactRequestDetail(requestId: string) {
 		.single();
 
 	if (error) {
-		console.error("Failed to fetch contact request detail:", error);
+		logger.error(
+			{
+				error: error.message,
+				code: error.code,
+				userId: user.id,
+				requestId,
+			},
+			"Failed to fetch contact request detail",
+		);
 		throw new Error(error.message);
 	}
 
@@ -118,7 +142,14 @@ export async function uploadContactAttachment(requestId: string, file: File) {
 		.from("contact-attachments")
 		.upload(filePath, file, { cacheControl: "3600", upsert: false });
 	if (uploadError) {
-		console.error("Failed to upload attachment:", uploadError);
+		logger.error(
+			{
+				error: uploadError.message,
+				requestId,
+				fileName: file.name,
+			},
+			"Failed to upload attachment",
+		);
 		throw new Error(uploadError.message);
 	}
 	// データベースにメタ情報を保存
@@ -127,7 +158,15 @@ export async function uploadContactAttachment(requestId: string, file: File) {
 		.insert({ request_id: requestId, file_url: filePath, file_name: file.name })
 		.select();
 	if (dbError) {
-		console.error("Failed to insert attachment record:", dbError);
+		logger.error(
+			{
+				error: dbError.message,
+				code: dbError.code,
+				requestId,
+				fileName: file.name,
+			},
+			"Failed to insert attachment record",
+		);
 		throw new Error(dbError.message);
 	}
 	return data;

@@ -12,6 +12,7 @@ import type {
 	CreateReturnItemInput,
 	UpdateReturnItemInput,
 } from "@/types/return-records/return-items";
+import logger from "@/lib/logger";
 
 /**
  * 返礼品マスター情報作成用の入力型（香典帳IDが必要）
@@ -94,7 +95,14 @@ export async function createReturnItem(input: CreateReturnItemWithKoudenInput): 
 		// キャッシュの再検証
 		revalidatePath(`/koudens/${input.kouden_id}/settings/return-items`);
 	} catch (error) {
-		console.error("[Server] Error in createReturnItem:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenId: input.kouden_id,
+				input,
+			},
+			"[Server] Error in createReturnItem",
+		);
 		// エラーメッセージを適切に変換
 		if (error instanceof Error) {
 			throw new Error(error.message);
@@ -143,7 +151,13 @@ export async function getReturnItem(id: string): Promise<ReturnItem | null> {
 
 		return data as ReturnItem;
 	} catch (error) {
-		console.error("返礼品マスター情報の取得エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				id,
+			},
+			"返礼品マスター情報の取得エラー",
+		);
 		throw error;
 	}
 }
@@ -191,7 +205,14 @@ export async function updateReturnItem(
 
 		return data as ReturnItem;
 	} catch (error) {
-		console.error("返礼品マスター情報の更新エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				id,
+				koudenId: kouden_id,
+			},
+			"返礼品マスター情報の更新エラー",
+		);
 		throw error;
 	}
 }
@@ -225,7 +246,14 @@ export async function deleteReturnItem(id: string, koudenId: string): Promise<vo
 		// キャッシュの再検証
 		revalidatePath(`/koudens/${koudenId}`);
 	} catch (error) {
-		console.error("返礼品情報の削除エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				id,
+				koudenId,
+			},
+			"返礼品情報の削除エラー",
+		);
 		throw error;
 	}
 }
@@ -260,7 +288,15 @@ export async function uploadReturnItemImage(imageBlob: Blob, koudenId: string): 
 			});
 
 		if (uploadError) {
-			console.error("[ERROR] Failed to upload return item image:", uploadError);
+			logger.error(
+				{
+					error: uploadError.message,
+					koudenId,
+					userId: user.id,
+					fileName,
+				},
+				"Failed to upload return item image",
+			);
 			throw new Error("画像のアップロードに失敗しました");
 		}
 
@@ -269,7 +305,13 @@ export async function uploadReturnItemImage(imageBlob: Blob, koudenId: string): 
 
 		return publicUrl.publicUrl;
 	} catch (error) {
-		console.error("[ERROR] Upload return item image failed:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenId,
+			},
+			"Upload return item image failed",
+		);
 		throw error instanceof Error ? error : new Error("画像のアップロードに失敗しました");
 	}
 }
@@ -303,11 +345,24 @@ export async function deleteReturnItemImage(imageUrl: string): Promise<void> {
 		const { error } = await supabase.storage.from("return-items").remove([filePath]);
 
 		if (error) {
-			console.error("[ERROR] Failed to delete return item image:", error);
+			logger.error(
+				{
+					error: error.message,
+					imageUrl,
+					filePath,
+				},
+				"Failed to delete return item image",
+			);
 			// 削除エラーは致命的ではないのでログのみ
 		}
 	} catch (error) {
-		console.error("[ERROR] Delete return item image failed:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				imageUrl,
+			},
+			"Delete return item image failed",
+		);
 		// 削除エラーは致命的ではないのでログのみ
 	}
 }

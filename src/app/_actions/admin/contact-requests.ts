@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import logger from "@/lib/logger";
 
 /**
  * 管理者権限チェック
@@ -62,7 +63,14 @@ export async function getContactRequests(params?: {
 	const { data, error, count } = await query;
 
 	if (error) {
-		console.error("Failed to fetch contact requests:", error);
+		logger.error(
+			{
+				error: error.message,
+				code: error.code,
+				details: error.details,
+			},
+			"Failed to fetch contact requests",
+		);
 		throw new Error(error.message);
 	}
 
@@ -96,7 +104,15 @@ export async function getContactRequestDetail(requestId: string) {
 		.single();
 
 	if (error) {
-		console.error("Failed to fetch contact request detail:", error);
+		logger.error(
+			{
+				error: error.message,
+				code: error.code,
+				details: error.details,
+				requestId,
+			},
+			"Failed to fetch contact request detail",
+		);
 		throw new Error(error.message);
 	}
 
@@ -123,7 +139,16 @@ export async function updateContactRequestStatus(
 		.single();
 
 	if (error) {
-		console.error("Failed to update contact request status:", error);
+		logger.error(
+			{
+				error: error.message,
+				code: error.code,
+				details: error.details,
+				requestId,
+				status,
+			},
+			"Failed to update contact request status",
+		);
 		throw new Error(error.message);
 	}
 
@@ -142,7 +167,14 @@ export async function getContactRequestStats() {
 		.select("status", { count: "exact" });
 
 	if (totalError) {
-		console.error("Failed to fetch total stats:", totalError);
+		logger.error(
+			{
+				error: totalError.message,
+				code: totalError.code,
+				details: totalError.details,
+			},
+			"Failed to fetch total stats",
+		);
 		throw new Error(totalError.message);
 	}
 
@@ -153,7 +185,14 @@ export async function getContactRequestStats() {
 		.order("status");
 
 	if (statusError) {
-		console.error("Failed to fetch status stats:", statusError);
+		logger.error(
+			{
+				error: statusError.message,
+				code: statusError.code,
+				details: statusError.details,
+			},
+			"Failed to fetch status stats",
+		);
 		throw new Error(statusError.message);
 	}
 
@@ -164,7 +203,14 @@ export async function getContactRequestStats() {
 		.order("category");
 
 	if (categoryError) {
-		console.error("Failed to fetch category stats:", categoryError);
+		logger.error(
+			{
+				error: categoryError.message,
+				code: categoryError.code,
+				details: categoryError.details,
+			},
+			"Failed to fetch category stats",
+		);
 		throw new Error(categoryError.message);
 	}
 

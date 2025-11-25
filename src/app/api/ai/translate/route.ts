@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getGeminiModel, isGeminiConfigured, GEMINI_CONFIGS } from "@/lib/gemini";
+import logger from "@/lib/logger";
 
 interface TranslateRequestBody {
 	text: string;
@@ -40,7 +41,13 @@ export async function POST(request: NextRequest) {
 			targetLanguage,
 		});
 	} catch (error) {
-		console.error("Translation error:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				targetLanguage,
+			},
+			"Translation error",
+		);
 
 		return NextResponse.json(
 			{

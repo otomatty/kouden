@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import logger from "@/lib/logger";
 
 /**
  * Debug helper: Get detailed organization and membership info for a user
@@ -41,7 +42,13 @@ export async function debugUserOrganizationAccess(userId: string) {
 			},
 		};
 	} catch (error) {
-		console.error("[debugUserOrganizationAccess] Error:", error);
+		logger.error(
+			{
+				userId,
+				error: error instanceof Error ? error.message : String(error),
+			},
+			"[debugUserOrganizationAccess] Error",
+		);
 		return { error };
 	}
 }
@@ -61,12 +68,18 @@ export async function requireOrganizationAccess(type: "funeral_company" | "gift_
 		} = await supabase.auth.getUser();
 
 		if (authError) {
-			console.error("[requireOrganizationAccess] Auth error:", authError);
+			logger.error(
+				{
+					error: authError.message,
+					type,
+				},
+				"[requireOrganizationAccess] Auth error",
+			);
 			redirect("/login");
 		}
 
 		if (!user) {
-			console.warn("[requireOrganizationAccess] No user found");
+			logger.warn({ type }, "[requireOrganizationAccess] No user found");
 			redirect("/login");
 		}
 
@@ -79,23 +92,51 @@ export async function requireOrganizationAccess(type: "funeral_company" | "gift_
 			.single();
 
 		if (typeError) {
-			console.error("[requireOrganizationAccess] Error fetching organization type:", typeError);
-			console.error("Type query details:", { type, schema: "common", table: "organization_types" });
+			logger.error(
+				{
+					error: typeError.message,
+					code: typeError.code,
+					type,
+					schema: "common",
+					table: "organization_types",
+				},
+				"[requireOrganizationAccess] Error fetching organization type",
+			);
 
 			// Get debug info when type lookup fails
 			const debugInfo = await debugUserOrganizationAccess(user.id);
-			console.error("[requireOrganizationAccess] Debug info:", debugInfo);
+			logger.error(
+				{
+					userId: user.id,
+					type,
+					debugInfo,
+				},
+				"[requireOrganizationAccess] Debug info",
+			);
 
 			redirect("/unauthorized");
 		}
 
 		const typeId = typeRecord?.id;
 		if (!typeId) {
-			console.error(`[requireOrganizationAccess] Organization type '${type}' not found`);
+			logger.error(
+				{
+					type,
+					userId: user.id,
+				},
+				`[requireOrganizationAccess] Organization type '${type}' not found`,
+			);
 
 			// Get debug info when type not found
 			const debugInfo = await debugUserOrganizationAccess(user.id);
-			console.error("[requireOrganizationAccess] Debug info:", debugInfo);
+			logger.error(
+				{
+					userId: user.id,
+					type,
+					debugInfo,
+				},
+				"[requireOrganizationAccess] Debug info",
+			);
 
 			redirect("/unauthorized");
 		}
@@ -109,11 +150,27 @@ export async function requireOrganizationAccess(type: "funeral_company" | "gift_
 			.eq("status", "active");
 
 		if (orgsError) {
-			console.error("[requireOrganizationAccess] Error fetching organizations:", orgsError);
+			logger.error(
+				{
+					error: orgsError.message,
+					code: orgsError.code,
+					type,
+					typeId,
+					userId: user.id,
+				},
+				"[requireOrganizationAccess] Error fetching organizations",
+			);
 
 			// Get debug info when org lookup fails
 			const debugInfo = await debugUserOrganizationAccess(user.id);
-			console.error("[requireOrganizationAccess] Debug info:", debugInfo);
+			logger.error(
+				{
+					userId: user.id,
+					type,
+					debugInfo,
+				},
+				"[requireOrganizationAccess] Debug info",
+			);
 
 			redirect("/unauthorized");
 		}
@@ -121,11 +178,25 @@ export async function requireOrganizationAccess(type: "funeral_company" | "gift_
 		const orgIds = orgs?.map((o) => o.id) ?? [];
 
 		if (orgIds.length === 0) {
-			console.warn(`[requireOrganizationAccess] No organizations found for type '${type}'`);
+			logger.warn(
+				{
+					type,
+					typeId,
+					userId: user.id,
+				},
+				`[requireOrganizationAccess] No organizations found for type '${type}'`,
+			);
 
 			// Get debug info when no orgs found
 			const debugInfo = await debugUserOrganizationAccess(user.id);
-			console.error("[requireOrganizationAccess] Debug info:", debugInfo);
+			logger.error(
+				{
+					userId: user.id,
+					type,
+					debugInfo,
+				},
+				"[requireOrganizationAccess] Debug info",
+			);
 
 			redirect("/unauthorized");
 		}
@@ -139,28 +210,62 @@ export async function requireOrganizationAccess(type: "funeral_company" | "gift_
 			.eq("user_id", user.id);
 
 		if (membershipError) {
-			console.error("[requireOrganizationAccess] Error fetching memberships:", membershipError);
+			logger.error(
+				{
+					error: membershipError.message,
+					code: membershipError.code,
+					type,
+					userId: user.id,
+					orgIds,
+				},
+				"[requireOrganizationAccess] Error fetching memberships",
+			);
 
 			// Get debug info when membership lookup fails
 			const debugInfo = await debugUserOrganizationAccess(user.id);
-			console.error("[requireOrganizationAccess] Debug info:", debugInfo);
+			logger.error(
+				{
+					userId: user.id,
+					type,
+					debugInfo,
+				},
+				"[requireOrganizationAccess] Debug info",
+			);
 
 			redirect("/unauthorized");
 		}
 
 		if (!memberships || memberships.length === 0) {
-			console.warn(
-				`[requireOrganizationAccess] User ${user.id} has no membership in organizations of type '${type}'`,
+			logger.warn(
+				{
+					userId: user.id,
+					type,
+					orgIds,
+				},
+				`[requireOrganizationAccess] User has no membership in organizations of type '${type}'`,
 			);
 
 			// Get comprehensive debug info when access denied
 			const debugInfo = await debugUserOrganizationAccess(user.id);
-			console.error("[requireOrganizationAccess] Comprehensive debug info:", debugInfo);
+			logger.error(
+				{
+					userId: user.id,
+					type,
+					debugInfo,
+				},
+				"[requireOrganizationAccess] Comprehensive debug info",
+			);
 
 			redirect("/unauthorized");
 		}
 	} catch (error) {
-		console.error("[requireOrganizationAccess] Unexpected error:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				type,
+			},
+			"[requireOrganizationAccess] Unexpected error",
+		);
 		redirect("/unauthorized");
 	}
 }

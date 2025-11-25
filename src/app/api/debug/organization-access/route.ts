@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { debugUserOrganizationAccess } from "@/lib/access";
+import logger from "@/lib/logger";
 
 /**
  * Debug endpoint to check user's organization access
@@ -32,7 +33,12 @@ export async function GET() {
 			debugInfo,
 		});
 	} catch (error) {
-		console.error("[Debug API] Error:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+			},
+			"Debug API Error",
+		);
 		return NextResponse.json({ error: "Internal server error", details: error }, { status: 500 });
 	}
 }

@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { calcSupportFee } from "@/utils/calcSupportFee";
+import logger from "@/lib/logger";
 
 /**
  * Stripe Checkout セッション生成
@@ -52,7 +53,7 @@ export async function purchaseKouden({
 		// Retrieve Stripe secret key safely and initialize
 		const stripeSecret = process.env.STRIPE_SECRET_KEY;
 		if (!stripeSecret) {
-			console.error("[ERROR] STRIPE_SECRET_KEY is not set");
+			logger.error({}, "[ERROR] STRIPE_SECRET_KEY is not set");
 			return { error: "支払いセッションの生成に失敗しました" };
 		}
 		// FIRST_EDIT: 開発環境では環境変数STRIPE_API_VERSIONを使い、それ以外は既存バージョンを使用
@@ -69,7 +70,12 @@ export async function purchaseKouden({
 			error: userError,
 		} = await supabaseClient.auth.getUser();
 		if (userError || !user) {
-			console.error("[ERROR] ユーザー取得失敗:", userError);
+			logger.error(
+				{
+					error: userError?.message,
+				},
+				"[ERROR] ユーザー取得失敗",
+			);
 			return { error: "認証が必要です" };
 		}
 		const userId = user.id;
@@ -116,7 +122,14 @@ export async function purchaseKouden({
 		});
 		return { url: session.url || undefined, sessionId: session.id };
 	} catch (error) {
-		console.error("[ERROR] Error creating Stripe session:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenId,
+				planCode,
+			},
+			"[ERROR] Error creating Stripe session",
+		);
 		return { error: "支払いセッションの生成に失敗しました" };
 	}
 }

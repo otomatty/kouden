@@ -6,6 +6,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { NextRequest } from "next/server";
 import { logFileUploadBlocked } from "./security-logger";
+import logger from "@/lib/logger";
 
 export interface FileValidationResult {
 	isValid: boolean;
@@ -99,7 +100,14 @@ export async function validateFileUpload(
 
 		return { isValid: true };
 	} catch (error) {
-		console.error("File validation error:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				fileName: file.name,
+				userId,
+			},
+			"File validation error",
+		);
 		return {
 			isValid: false,
 			error: "ファイル検証中にエラーが発生しました",
@@ -283,7 +291,13 @@ async function getFileUploadRestrictions(): Promise<FileUploadRestriction[]> {
 			.select("file_extension, is_allowed, max_file_size, description");
 
 		if (error) {
-			console.error("Failed to fetch file upload restrictions:", error);
+			logger.error(
+				{
+					error: error.message,
+					code: error.code,
+				},
+				"Failed to fetch file upload restrictions",
+			);
 			return restrictionsCache; // フォールバック：古いキャッシュを使用
 		}
 
@@ -297,7 +311,12 @@ async function getFileUploadRestrictions(): Promise<FileUploadRestriction[]> {
 
 		return restrictionsCache;
 	} catch (error) {
-		console.error("Error fetching file upload restrictions:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+			},
+			"Error fetching file upload restrictions",
+		);
 		return restrictionsCache; // フォールバック
 	}
 }

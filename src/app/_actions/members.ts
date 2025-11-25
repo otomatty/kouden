@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { cache } from "react";
 import { KoudenError, withErrorHandling } from "@/lib/errors";
+import logger from "@/lib/logger";
 
 /**
  * メンバー一覧を取得する（最適化版）
@@ -28,7 +29,14 @@ export const getMembers = cache(async (koudenId: string) => {
 			.single();
 
 		if (permissionError) {
-			console.error("[ERROR] Failed to fetch permission:", permissionError);
+			logger.error(
+				{
+					error: permissionError.message,
+					code: permissionError.code,
+					koudenId,
+				},
+				"Failed to fetch permission",
+			);
 			throw new KoudenError("権限の確認に失敗しました", "FETCH_PERMISSION_ERROR");
 		}
 
@@ -44,7 +52,15 @@ export const getMembers = cache(async (koudenId: string) => {
 				.single();
 
 			if (membershipError) {
-				console.error("[ERROR] Failed to check membership:", membershipError);
+				logger.error(
+					{
+						error: membershipError.message,
+						code: membershipError.code,
+						koudenId,
+						userId: user.id,
+					},
+					"Failed to check membership",
+				);
 				throw new KoudenError("メンバー権限の確認に失敗しました", "FETCH_MEMBERSHIP_ERROR");
 			}
 
@@ -73,7 +89,14 @@ export const getMembers = cache(async (koudenId: string) => {
 			.eq("kouden_id", koudenId);
 
 		if (membersError) {
-			console.error("[ERROR] Failed to fetch members:", membersError);
+			logger.error(
+				{
+					error: membersError.message,
+					code: membersError.code,
+					koudenId,
+				},
+				"Failed to fetch members",
+			);
 			throw new KoudenError("メンバー一覧の取得に失敗しました", "FETCH_MEMBERS_ERROR");
 		}
 
@@ -89,7 +112,14 @@ export const getMembers = cache(async (koudenId: string) => {
 			.in("id", userIds);
 
 		if (profilesError) {
-			console.error("[ERROR] Failed to fetch profiles:", profilesError);
+			logger.error(
+				{
+					error: profilesError.message,
+					code: profilesError.code,
+					koudenId,
+				},
+				"Failed to fetch profiles",
+			);
 			throw new KoudenError("プロフィール情報の取得に失敗しました", "FETCH_PROFILES_ERROR");
 		}
 
@@ -148,7 +178,14 @@ export const getMembersForAdmin = cache(async (koudenId: string) => {
 			.single();
 
 		if (koudenError) {
-			console.error("[ERROR] Failed to fetch kouden:", koudenError);
+			logger.error(
+				{
+					error: koudenError.message,
+					code: koudenError.code,
+					koudenId,
+				},
+				"Failed to fetch kouden",
+			);
 			throw new KoudenError("香典帳の取得に失敗しました", "FETCH_KOUDEN_ERROR");
 		}
 
@@ -176,7 +213,14 @@ export const getMembersForAdmin = cache(async (koudenId: string) => {
 			.eq("kouden_id", koudenId);
 
 		if (membersError) {
-			console.error("[ERROR] Failed to fetch members:", membersError);
+			logger.error(
+				{
+					error: membersError.message,
+					code: membersError.code,
+					koudenId,
+				},
+				"Failed to fetch members",
+			);
 			throw new KoudenError("メンバー一覧の取得に失敗しました", "FETCH_MEMBERS_ERROR");
 		}
 
@@ -192,7 +236,14 @@ export const getMembersForAdmin = cache(async (koudenId: string) => {
 			.in("id", userIds);
 
 		if (profilesError) {
-			console.error("[ERROR] Failed to fetch profiles:", profilesError);
+			logger.error(
+				{
+					error: profilesError.message,
+					code: profilesError.code,
+					koudenId,
+				},
+				"Failed to fetch profiles",
+			);
 			throw new KoudenError("プロフィール情報の取得に失敗しました", "FETCH_PROFILES_ERROR");
 		}
 

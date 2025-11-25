@@ -5,6 +5,8 @@
  * @module performance-monitor
  */
 
+import logger from "@/lib/logger";
+
 interface PerformanceMetrics {
 	operation: string;
 	startTime: number;
@@ -68,7 +70,13 @@ export class PerformanceMonitor {
 	 */
 	error(operation: string, error: Error | string): void {
 		const errorMsg = error instanceof Error ? error.message : error;
-		console.error(`❌ エラー: ${operation} - ${errorMsg}`);
+		logger.error(
+			{
+				operation,
+				error: errorMsg,
+			},
+			`❌ エラー: ${operation}`,
+		);
 
 		const metric = this.metrics.find((m) => m.operation.includes(operation));
 		if (metric) {

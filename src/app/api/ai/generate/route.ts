@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getGeminiModel, isGeminiConfigured, GEMINI_CONFIGS } from "@/lib/gemini";
 import { isAbstractInput, generateClarifyingQuestions } from "@/utils/blog-ai-agent";
+import logger from "@/lib/logger";
 
 interface SuggestionOption {
 	id: string;
@@ -418,8 +419,13 @@ export async function POST(request: NextRequest) {
 				aiResponse.searchResults = searchResults;
 			}
 		} catch (parseError) {
-			console.error("Failed to parse AI response as JSON:", parseError);
-			console.error("Raw response:", cleanedResponse);
+			logger.error(
+				{
+					error: parseError instanceof Error ? parseError.message : String(parseError),
+					rawResponse: cleanedResponse.substring(0, 500), // 最初の500文字のみ
+				},
+				"Failed to parse AI response as JSON",
+			);
 
 			// JSONパースに失敗した場合は、デフォルトの選択肢形式で返す
 			aiResponse = {
@@ -480,15 +486,14 @@ export async function POST(request: NextRequest) {
 
 		return NextResponse.json(aiResponse);
 	} catch (error) {
-		console.error("AI generation error:", error);
-
-		// エラーの詳細をログに記録
-		if (error instanceof Error) {
-			console.error("Error details:", {
-				message: error.message,
-				stack: error.stack,
-			});
-		}
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				errorStack: error instanceof Error ? error.stack : undefined,
+				model,
+			},
+			"AI generation error",
+		);
 
 		return NextResponse.json(
 			{

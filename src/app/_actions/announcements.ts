@@ -6,6 +6,7 @@ import type {
 	CreateAnnouncementInput,
 	UpdateAnnouncementInput,
 } from "@/types/announcements";
+import logger from "@/lib/logger";
 
 /**
  * アクティブなお知らせを取得（表示用）
@@ -27,13 +28,24 @@ export async function getActiveAnnouncements(): Promise<{
 			.order("created_at", { ascending: false });
 
 		if (error) {
-			console.error("[ERROR] Failed to fetch announcements:", error);
+			logger.error(
+				{
+					error: error.message,
+					code: error.code,
+				},
+				"Failed to fetch announcements",
+			);
 			throw new Error("お知らせの取得に失敗しました");
 		}
 
 		return { announcements: announcements || [] };
 	} catch (error) {
-		console.error("[ERROR] Error in getActiveAnnouncements:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+			},
+			"Error in getActiveAnnouncements",
+		);
 		return {
 			announcements: [],
 			error: error instanceof Error ? error.message : "お知らせの取得に失敗しました",
@@ -66,13 +78,25 @@ export async function getAllAnnouncements(): Promise<{
 			.order("created_at", { ascending: false });
 
 		if (error) {
-			console.error("[ERROR] Failed to fetch all announcements:", error);
+			logger.error(
+				{
+					error: error.message,
+					code: error.code,
+					userId: user.id,
+				},
+				"Failed to fetch all announcements",
+			);
 			throw new Error("お知らせの取得に失敗しました");
 		}
 
 		return { announcements: announcements || [] };
 	} catch (error) {
-		console.error("[ERROR] Error in getAllAnnouncements:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+			},
+			"Error in getAllAnnouncements",
+		);
 		return {
 			announcements: [],
 			error: error instanceof Error ? error.message : "お知らせの取得に失敗しました",
@@ -108,13 +132,27 @@ export async function createAnnouncement(input: CreateAnnouncementInput): Promis
 			.single();
 
 		if (error) {
-			console.error("[ERROR] Failed to create announcement:", error);
+			logger.error(
+				{
+					error: error.message,
+					code: error.code,
+					userId: user.id,
+					input,
+				},
+				"Failed to create announcement",
+			);
 			throw new Error("お知らせの作成に失敗しました");
 		}
 
 		return { announcement };
 	} catch (error) {
-		console.error("[ERROR] Error in createAnnouncement:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				input,
+			},
+			"Error in createAnnouncement",
+		);
 		return {
 			error: error instanceof Error ? error.message : "お知らせの作成に失敗しました",
 		};
@@ -151,13 +189,27 @@ export async function updateAnnouncement(input: UpdateAnnouncementInput): Promis
 			.single();
 
 		if (error) {
-			console.error("[ERROR] Failed to update announcement:", error);
+			logger.error(
+				{
+					error: error.message,
+					code: error.code,
+					userId: user.id,
+					id: input.id,
+				},
+				"Failed to update announcement",
+			);
 			throw new Error("お知らせの更新に失敗しました");
 		}
 
 		return { announcement };
 	} catch (error) {
-		console.error("[ERROR] Error in updateAnnouncement:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				id: input.id,
+			},
+			"Error in updateAnnouncement",
+		);
 		return {
 			error: error instanceof Error ? error.message : "お知らせの更新に失敗しました",
 		};
@@ -184,13 +236,27 @@ export async function deleteAnnouncement(id: string): Promise<{
 		const { error } = await supabase.from("announcements").delete().eq("id", id);
 
 		if (error) {
-			console.error("[ERROR] Failed to delete announcement:", error);
+			logger.error(
+				{
+					error: error.message,
+					code: error.code,
+					userId: user.id,
+					id,
+				},
+				"Failed to delete announcement",
+			);
 			throw new Error("お知らせの削除に失敗しました");
 		}
 
 		return { success: true };
 	} catch (error) {
-		console.error("[ERROR] Error in deleteAnnouncement:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				id,
+			},
+			"Error in deleteAnnouncement",
+		);
 		return {
 			error: error instanceof Error ? error.message : "お知らせの削除に失敗しました",
 		};

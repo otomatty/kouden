@@ -5,6 +5,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { NextRequest } from "next/server";
+import logger from "@/lib/logger";
 
 export interface LoginAttempt {
 	id: string;
@@ -33,7 +34,12 @@ export async function recordLoginAttempt(
 	const ipAddress = getClientIP(request);
 
 	if (!ipAddress) {
-		console.warn("Could not determine IP address for login attempt");
+		logger.warn(
+			{
+				userId,
+			},
+			"Could not determine IP address for login attempt",
+		);
 		return;
 	}
 

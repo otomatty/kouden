@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import matter from "gray-matter";
+import logger from "@/lib/logger";
 
 /**
  * 更新履歴のメタデータ
@@ -82,7 +83,12 @@ export async function getAllChangelogs(): Promise<ChangelogMeta[]> {
 			return compareVersions(a.version, b.version);
 		});
 	} catch (error) {
-		console.error("Error loading changelogs:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+			},
+			"Error loading changelogs",
+		);
 		return [];
 	}
 }
@@ -105,7 +111,13 @@ export async function getChangelogBySlug(slug: string) {
 			content,
 		};
 	} catch (error) {
-		console.error("Error loading changelog:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				slug,
+			},
+			"Error loading changelog",
+		);
 		throw new Error(`Changelog not found: ${slug}`);
 	}
 }

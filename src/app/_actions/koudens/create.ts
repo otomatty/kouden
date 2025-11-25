@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { CreateKoudenParams, Kouden } from "@/types/kouden";
 import { KOUDEN_ROLES } from "@/types/role";
+import logger from "@/lib/logger";
 
 export interface CreateKoudenWithPlanParams extends CreateKoudenParams {
 	planCode: string;
@@ -89,7 +90,14 @@ export async function createKouden({
 
 		return { kouden: { ...kouden, owner } as unknown as Kouden };
 	} catch (error) {
-		console.error("[ERROR] Error creating kouden:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				title,
+				userId,
+			},
+			"Error creating kouden",
+		);
 		return { error: "香典帳の作成に失敗しました" };
 	}
 }
@@ -149,7 +157,15 @@ export async function createKoudenWithPlan({
 		}
 		return { koudenId: kouden.id };
 	} catch (error) {
-		console.error("[ERROR] Error creating kouden with plan:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				title,
+				planCode,
+				userId: uid,
+			},
+			"Error creating kouden with plan",
+		);
 		return { error: "有料香典帳の作成に失敗しました" };
 	}
 }

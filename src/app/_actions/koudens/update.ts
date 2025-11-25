@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import type { Kouden } from "@/types/kouden";
 import { canEditKouden, checkKoudenPermission } from "../permissions";
 import { KOUDEN_ROLES } from "@/types/role";
+import logger from "@/lib/logger";
 
 /**
  * 香典帳の更新
@@ -40,7 +41,15 @@ export async function updateKouden(id: string, input: { title: string; descripti
 	const { error } = await supabase.from("koudens").update(updateData).eq("id", id);
 
 	if (error) {
-		console.error("Failed to update kouden:", error);
+		logger.error(
+			{
+				error: error.message,
+				code: error.code,
+				id,
+				input,
+			},
+			"Failed to update kouden",
+		);
 		throw new Error("香典帳の更新に失敗しました。しばらく経ってから再度お試しください。");
 	}
 

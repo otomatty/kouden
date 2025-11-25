@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import logger from "@/lib/logger";
 
 /**
  * 管理者権限チェック
@@ -58,7 +59,14 @@ export async function getCampaignApplications(params?: {
 	const { data, error, count } = await query;
 
 	if (error) {
-		console.error("Failed to fetch campaign applications:", error);
+		logger.error(
+			{
+				error: error.message,
+				code: error.code,
+				details: error.details,
+			},
+			"Failed to fetch campaign applications",
+		);
 		throw new Error(error.message);
 	}
 
@@ -84,7 +92,15 @@ export async function getCampaignApplication(id: string) {
 		.single();
 
 	if (error) {
-		console.error("Failed to fetch campaign application:", error);
+		logger.error(
+			{
+				error: error.message,
+				code: error.code,
+				details: error.details,
+				applicationId: id,
+			},
+			"Failed to fetch campaign application",
+		);
 		throw new Error(error.message);
 	}
 
@@ -111,7 +127,16 @@ export async function updateCampaignApplicationStatus(
 		.single();
 
 	if (error) {
-		console.error("Failed to update application status:", error);
+		logger.error(
+			{
+				error: error.message,
+				code: error.code,
+				details: error.details,
+				applicationId,
+				status,
+			},
+			"Failed to update application status",
+		);
 		throw new Error(error.message);
 	}
 
@@ -130,7 +155,14 @@ export async function getCampaignApplicationStats() {
 		.select("status", { count: "exact" });
 
 	if (totalError) {
-		console.error("Failed to fetch total stats:", totalError);
+		logger.error(
+			{
+				error: totalError.message,
+				code: totalError.code,
+				details: totalError.details,
+			},
+			"Failed to fetch total stats",
+		);
 		throw new Error(totalError.message);
 	}
 
@@ -141,7 +173,14 @@ export async function getCampaignApplicationStats() {
 		.order("status");
 
 	if (statusError) {
-		console.error("Failed to fetch status stats:", statusError);
+		logger.error(
+			{
+				error: statusError.message,
+				code: statusError.code,
+				details: statusError.details,
+			},
+			"Failed to fetch status stats",
+		);
 		throw new Error(statusError.message);
 	}
 
@@ -154,7 +193,14 @@ export async function getCampaignApplicationStats() {
 		.gte("created_at", today.toISOString());
 
 	if (todayError) {
-		console.error("Failed to fetch today stats:", todayError);
+		logger.error(
+			{
+				error: todayError.message,
+				code: todayError.code,
+				details: todayError.details,
+			},
+			"Failed to fetch today stats",
+		);
 		throw new Error(todayError.message);
 	}
 
@@ -168,7 +214,14 @@ export async function getCampaignApplicationStats() {
 		.gte("created_at", weekStart.toISOString());
 
 	if (weekError) {
-		console.error("Failed to fetch week stats:", weekError);
+		logger.error(
+			{
+				error: weekError.message,
+				code: weekError.code,
+				details: weekError.details,
+			},
+			"Failed to fetch week stats",
+		);
 		throw new Error(weekError.message);
 	}
 

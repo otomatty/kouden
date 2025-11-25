@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import logger from "@/lib/logger";
 
 /**
  * プロフィールの存在確認
@@ -39,7 +40,12 @@ export async function ensureProfile() {
 
 		return { success: true };
 	} catch (error) {
-		console.error("[ERROR] Error ensuring profile:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+			},
+			"Error ensuring profile",
+		);
 		return { error: "プロフィールの確認に失敗しました" };
 	}
 }
@@ -57,7 +63,12 @@ export async function getCurrentUser() {
 
 		return user;
 	} catch (error) {
-		console.error("[ERROR] Error getting current user:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+			},
+			"Error getting current user",
+		);
 		return null;
 	}
 }

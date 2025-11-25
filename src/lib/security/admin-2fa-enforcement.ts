@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logSecurityEvent } from "./security-logger";
 import type { NextRequest } from "next/server";
+import logger from "@/lib/logger";
 
 export interface TwoFactorEnforcementResult {
 	isEnforced: boolean;
@@ -30,7 +31,13 @@ async function isTwoFactorEnabledDirect(userId: string): Promise<boolean> {
 
 		return !error && data?.two_factor_enabled === true;
 	} catch (error) {
-		console.error("Failed to check 2FA status:", error);
+		logger.error(
+			{
+				userId,
+				error: error instanceof Error ? error.message : String(error),
+			},
+			"Failed to check 2FA status",
+		);
 		return false;
 	}
 }
@@ -87,7 +94,14 @@ export async function enforceTwoFactorAuth(
 
 		return { isEnforced: true };
 	} catch (error) {
-		console.error("2FA enforcement check failed:", error);
+		logger.error(
+			{
+				userId,
+				currentPath,
+				error: error instanceof Error ? error.message : String(error),
+			},
+			"2FA enforcement check failed",
+		);
 		// エラー時は安全側に倒して設定ページにリダイレクト
 		return {
 			isEnforced: false,

@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import logger from "@/lib/logger";
 
 /**
  * 管理者権限をチェックする
@@ -25,16 +26,35 @@ export async function checkAdminPermission() {
 		.single();
 
 	if (error && error.code !== "PGRST116") {
-		console.error("Admin permission check error:", error);
+		logger.error(
+			{
+				error: error.message,
+				code: error.code,
+				details: error.details,
+				userId: user.id,
+			},
+			"Admin permission check error",
+		);
 		throw new Error("管理者権限の確認に失敗しました");
 	}
 
 	if (!adminUser) {
-		console.warn(`User ${user.id} is not registered as admin in admin_users table`);
+		logger.warn(
+			{
+				userId: user.id,
+			},
+			`User ${user.id} is not registered as admin in admin_users table`,
+		);
 		throw new Error("管理者権限が必要です");
 	}
 
-	console.log(`Admin access granted for user ${user.id} with role: ${adminUser.role}`);
+	logger.info(
+		{
+			userId: user.id,
+			role: adminUser.role,
+		},
+		`Admin access granted for user ${user.id} with role: ${adminUser.role}`,
+	);
 
 	return { supabase, user, adminRole: adminUser.role };
 }

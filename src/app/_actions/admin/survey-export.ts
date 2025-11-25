@@ -2,20 +2,23 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import logger from "@/lib/logger";
 
 /**
  * アンケートデータをCSV形式でエクスポート
  * @returns CSV文字列
  */
 export async function exportSurveyDataToCsv() {
+	let user: { id: string } | null = null;
 	try {
 		const supabase = await createClient();
 
 		// 認証確認
 		const {
-			data: { user },
+			data: { user: authUser },
 			error: authError,
 		} = await supabase.auth.getUser();
+		user = authUser;
 		if (authError || !user) {
 			return {
 				success: false,
@@ -61,7 +64,15 @@ export async function exportSurveyDataToCsv() {
 			.order("created_at", { ascending: false });
 
 		if (fetchError) {
-			console.error("アンケートデータ取得エラー:", fetchError);
+			logger.error(
+				{
+					error: fetchError.message,
+					code: fetchError.code,
+					details: fetchError.details,
+					userId: user.id,
+				},
+				"アンケートデータ取得エラー",
+			);
 			return {
 				success: false,
 				error: "データ取得に失敗しました",
@@ -119,7 +130,13 @@ export async function exportSurveyDataToCsv() {
 			filename: `survey_data_${new Date().toISOString().split("T")[0]}.csv`,
 		};
 	} catch (error) {
-		console.error("CSVエクスポートエラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				userId: user?.id,
+			},
+			"CSVエクスポートエラー",
+		);
 		return {
 			success: false,
 			error: "予期しないエラーが発生しました",
@@ -132,14 +149,16 @@ export async function exportSurveyDataToCsv() {
  * @returns CSV文字列
  */
 export async function exportSurveySummaryToCsv() {
+	let user: { id: string } | null = null;
 	try {
 		const supabase = await createClient();
 
 		// 認証確認
 		const {
-			data: { user },
+			data: { user: authUser },
 			error: authError,
 		} = await supabase.auth.getUser();
+		user = authUser;
 		if (authError || !user) {
 			return {
 				success: false,
@@ -168,7 +187,15 @@ export async function exportSurveySummaryToCsv() {
 			.order("created_at", { ascending: false });
 
 		if (fetchError) {
-			console.error("アンケートデータ取得エラー:", fetchError);
+			logger.error(
+				{
+					error: fetchError.message,
+					code: fetchError.code,
+					details: fetchError.details,
+					userId: user.id,
+				},
+				"アンケートデータ取得エラー",
+			);
 			return {
 				success: false,
 				error: "データ取得に失敗しました",
@@ -266,7 +293,13 @@ export async function exportSurveySummaryToCsv() {
 			filename: `survey_summary_${new Date().toISOString().split("T")[0]}.csv`,
 		};
 	} catch (error) {
-		console.error("サマリーCSVエクスポートエラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				userId: user?.id,
+			},
+			"サマリーCSVエクスポートエラー",
+		);
 		return {
 			success: false,
 			error: "予期しないエラーが発生しました",

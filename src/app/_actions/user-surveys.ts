@@ -8,6 +8,7 @@ import {
 	type SurveyTrigger,
 } from "@/schemas/user-surveys";
 import { revalidatePath } from "next/cache";
+import logger from "@/lib/logger";
 
 /**
  * ユーザーアンケート回答を作成
@@ -39,7 +40,14 @@ export async function createUserSurvey(formData: UserSurveyFormInput, trigger: S
 			.single();
 
 		if (checkError && checkError.code !== "PGRST116") {
-			console.error("既存アンケート確認エラー:", checkError);
+			logger.error(
+				{
+					error: checkError.message,
+					code: checkError.code,
+					userId: user.id,
+				},
+				"既存アンケート確認エラー",
+			);
 			return {
 				success: false,
 				error: "アンケート状況の確認に失敗しました。時間を置いてお試しください。",
@@ -86,7 +94,15 @@ export async function createUserSurvey(formData: UserSurveyFormInput, trigger: S
 			.single();
 
 		if (insertError) {
-			console.error("アンケート保存エラー:", insertError);
+			logger.error(
+				{
+					error: insertError.message,
+					code: insertError.code,
+					userId: user.id,
+					trigger,
+				},
+				"アンケート保存エラー",
+			);
 			return {
 				success: false,
 				error: "アンケートの保存に失敗しました。時間を置いてお試しください。",
@@ -104,7 +120,13 @@ export async function createUserSurvey(formData: UserSurveyFormInput, trigger: S
 				"アンケートへのご回答、ありがとうございました。いただいたご意見は今後のサービス改善に活用させていただきます。",
 		};
 	} catch (error) {
-		console.error("アンケート作成エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				trigger,
+			},
+			"アンケート作成エラー",
+		);
 
 		// Zodバリデーションエラーの場合
 		if (error instanceof Error && error.name === "ZodError") {
@@ -165,7 +187,15 @@ export async function getUserSurveyStatus(trigger?: SurveyTrigger): Promise<Surv
 			.single();
 
 		if (fetchError && fetchError.code !== "PGRST116") {
-			console.error("アンケート状況取得エラー:", fetchError);
+			logger.error(
+				{
+					error: fetchError.message,
+					code: fetchError.code,
+					userId: user.id,
+					trigger,
+				},
+				"アンケート状況取得エラー",
+			);
 			return { hasAnswered: false };
 		}
 
@@ -202,7 +232,13 @@ export async function getUserSurveyStatus(trigger?: SurveyTrigger): Promise<Surv
 
 		return { hasAnswered: false };
 	} catch (error) {
-		console.error("アンケート状況確認エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				trigger,
+			},
+			"アンケート状況確認エラー",
+		);
 		return { hasAnswered: false };
 	}
 }
@@ -243,13 +279,25 @@ export async function checkOneWeekOwnershipSurvey(): Promise<boolean> {
 			.limit(1);
 
 		if (fetchError) {
-			console.error("香典帳確認エラー:", fetchError);
+			logger.error(
+				{
+					error: fetchError.message,
+					code: fetchError.code,
+					userId: user.id,
+				},
+				"香典帳確認エラー",
+			);
 			return false;
 		}
 
 		return koudens && koudens.length > 0;
 	} catch (error) {
-		console.error("1週間経過チェックエラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+			},
+			"1週間経過チェックエラー",
+		);
 		return false;
 	}
 }
@@ -295,7 +343,14 @@ export async function getAdminSurveyAnalytics() {
 			.order("created_at", { ascending: false });
 
 		if (fetchError) {
-			console.error("アンケートデータ取得エラー:", fetchError);
+			logger.error(
+				{
+					error: fetchError.message,
+					code: fetchError.code,
+					userId: user.id,
+				},
+				"アンケートデータ取得エラー",
+			);
 			return {
 				success: false,
 				error: "データ取得に失敗しました",
@@ -326,7 +381,12 @@ export async function getAdminSurveyAnalytics() {
 			},
 		};
 	} catch (error) {
-		console.error("管理者アナリティクスエラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+			},
+			"管理者アナリティクスエラー",
+		);
 		return {
 			success: false,
 			error: "予期しないエラーが発生しました",
@@ -365,7 +425,15 @@ export async function createSurveySkip(trigger: SurveyTrigger) {
 			.single();
 
 		if (checkError && checkError.code !== "PGRST116") {
-			console.error("既存スキップ記録確認エラー:", checkError);
+			logger.error(
+				{
+					error: checkError.message,
+					code: checkError.code,
+					userId: user.id,
+					trigger,
+				},
+				"既存スキップ記録確認エラー",
+			);
 			return {
 				success: false,
 				error: "スキップ記録の確認に失敗しました。時間を置いてお試しください。",
@@ -390,7 +458,15 @@ export async function createSurveySkip(trigger: SurveyTrigger) {
 			.single();
 
 		if (insertError) {
-			console.error("スキップ記録作成エラー:", insertError);
+			logger.error(
+				{
+					error: insertError.message,
+					code: insertError.code,
+					userId: user.id,
+					trigger,
+				},
+				"スキップ記録作成エラー",
+			);
 			return {
 				success: false,
 				error: "スキップ記録の作成に失敗しました。時間を置いてお試しください。",
@@ -403,7 +479,13 @@ export async function createSurveySkip(trigger: SurveyTrigger) {
 			message: "アンケートをスキップしました。1日後に再度表示される場合があります。",
 		};
 	} catch (error) {
-		console.error("アンケートスキップエラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				trigger,
+			},
+			"アンケートスキップエラー",
+		);
 		return {
 			success: false,
 			error: "予期しないエラーが発生しました。時間を置いてお試しください。",
@@ -439,13 +521,27 @@ export async function checkSurveySkipStatus(trigger: SurveyTrigger): Promise<boo
 			.single();
 
 		if (fetchError && fetchError.code !== "PGRST116") {
-			console.error("スキップ状況確認エラー:", fetchError);
+			logger.error(
+				{
+					error: fetchError.message,
+					code: fetchError.code,
+					userId: user.id,
+					trigger,
+				},
+				"スキップ状況確認エラー",
+			);
 			return false;
 		}
 
 		return !!skipRecord;
 	} catch (error) {
-		console.error("スキップ状況チェックエラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				trigger,
+			},
+			"スキップ状況チェックエラー",
+		);
 		return false;
 	}
 }

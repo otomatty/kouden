@@ -13,6 +13,7 @@ import type {
 	BulkUpdateExecutionData,
 	BulkUpdateResult,
 } from "@/types/return-records/bulk-update";
+import logger from "@/lib/logger";
 
 // 返礼品マスタのキャッシュ（セッション内で再利用）
 const returnItemsCache = new Map<string, ReturnItemMaster[]>();
@@ -47,7 +48,15 @@ export async function getReturnItemsForBulkUpdate(koudenId: string): Promise<Ret
 			.order("name", { ascending: true });
 
 		if (error) {
-			console.error("返礼品マスタ取得エラー:", error);
+			logger.error(
+				{
+					error: error.message,
+					code: error.code,
+					koudenId,
+					userId: user.id,
+				},
+				"返礼品マスタ取得エラー",
+			);
 			throw new Error(`返礼品マスタの取得に失敗しました: ${error.message}`);
 		}
 
@@ -58,7 +67,13 @@ export async function getReturnItemsForBulkUpdate(koudenId: string): Promise<Ret
 
 		return result;
 	} catch (error) {
-		console.error("返礼品マスタの取得エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenId,
+			},
+			"返礼品マスタの取得エラー",
+		);
 		if (error instanceof Error) {
 			throw error;
 		}
@@ -98,7 +113,14 @@ export async function executeBulkUpdateByAmount(
 				.in("id", executionData.returnItemIds);
 
 			if (returnItemsError) {
-				console.error("返礼品マスタ取得エラー:", returnItemsError);
+				logger.error(
+					{
+						error: returnItemsError.message,
+						code: returnItemsError.code,
+						returnItemIds: executionData.returnItemIds,
+					},
+					"返礼品マスタ取得エラー",
+				);
 				throw new Error(`返礼品情報の取得に失敗しました: ${returnItemsError.message}`);
 			}
 
@@ -129,7 +151,14 @@ export async function executeBulkUpdateByAmount(
 			.in("kouden_entry_id", executionData.entryIds);
 
 		if (selectError) {
-			console.error("既存記録取得エラー:", selectError);
+			logger.error(
+				{
+					error: selectError.message,
+					code: selectError.code,
+					entryIds: executionData.entryIds,
+				},
+				"既存記録取得エラー",
+			);
 			throw new Error(`既存記録の取得に失敗しました: ${selectError.message}`);
 		}
 
@@ -253,7 +282,13 @@ export async function executeBulkUpdateByAmount(
 			errors: errors.length > 0 ? errors : undefined,
 		};
 	} catch (error) {
-		console.error("一括更新の実行エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				executionData,
+			},
+			"一括更新の実行エラー",
+		);
 		const errorMessage = error instanceof Error ? error.message : "不明なエラー";
 		throw new Error(`一括更新の実行に失敗しました: ${errorMessage}`);
 	}
@@ -297,7 +332,14 @@ export async function executeBulkUpdateMultipleGroups(
 				try {
 					return await executeBulkUpdateByAmount(executionData);
 				} catch (error) {
-					console.error(`グループ処理エラー (金額: ${group.amount}):`, error);
+					logger.error(
+						{
+							error: error instanceof Error ? error.message : String(error),
+							amount: group.amount,
+							entryIds: group.entryIds,
+						},
+						`グループ処理エラー (金額: ${group.amount})`,
+					);
 					return {
 						successCount: 0,
 						failureCount: group.count,
@@ -329,7 +371,14 @@ export async function executeBulkUpdateMultipleGroups(
 			errors: allErrors.length > 0 ? allErrors : undefined,
 		};
 	} catch (error) {
-		console.error("複数グループ一括更新エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenId,
+				amountGroupsCount: amountGroups.length,
+			},
+			"複数グループ一括更新エラー",
+		);
 		const errorMessage = error instanceof Error ? error.message : "不明なエラー";
 		throw new Error(`複数グループの一括更新に失敗しました: ${errorMessage}`);
 	}

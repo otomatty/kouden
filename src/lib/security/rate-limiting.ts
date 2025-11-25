@@ -4,6 +4,7 @@
  */
 
 import type { NextRequest } from "next/server";
+import logger from "@/lib/logger";
 
 interface RateLimitConfig {
 	windowMs: number; // 時間窓（ミリ秒）
@@ -41,7 +42,12 @@ export async function rateLimit(
 	const clientIP = getClientIP(request);
 	if (!clientIP) {
 		// IPが取得できない場合は通す（ログに記録）
-		console.warn("Could not determine client IP for rate limiting");
+		logger.warn(
+			{
+				pathname: request.nextUrl.pathname,
+			},
+			"Could not determine client IP for rate limiting",
+		);
 		return { success: true };
 	}
 

@@ -5,6 +5,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { NextRequest } from "next/server";
+import logger from "@/lib/logger";
 
 export type SecurityEventType =
 	| "admin_login_success"
@@ -66,19 +67,36 @@ export async function logSecurityEvent(
 
 		// 重要度が高い場合は即座にアラート（将来的にSlack/Discord通知等）
 		if (entry.severity === "critical" || entry.severity === "error") {
-			console.error(`[SECURITY ALERT] ${entry.eventType}:`, {
-				userId: entry.userId,
-				ipAddress,
-				details: entry.details,
-			});
+			logger.error(
+				{
+					eventType: entry.eventType,
+					userId: entry.userId,
+					ipAddress,
+					details: entry.details,
+					severity: entry.severity,
+				},
+				`[SECURITY ALERT] ${entry.eventType}`,
+			);
 
 			// 即座に管理者に通知する場合（実装例）
 			await notifyAdmins(entry, ipAddress);
 		}
 	} catch (error) {
-		console.error("Failed to log security event:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				eventType: entry.eventType,
+			},
+			"Failed to log security event",
+		);
 		// セキュリティログの記録失敗は致命的なので、フォールバック処理
-		console.error(`[SECURITY LOG FAILURE] ${entry.eventType}:`, entry);
+		logger.error(
+			{
+				eventType: entry.eventType,
+				entry,
+			},
+			`[SECURITY LOG FAILURE] ${entry.eventType}`,
+		);
 	}
 }
 
@@ -312,10 +330,15 @@ async function notifyAdmins(entry: SecurityLogEntry, ipAddress: string | null): 
 			});
 
 			if (!response.ok) {
-				console.error("Failed to send Slack notification");
+				logger.error({}, "Failed to send Slack notification");
 			}
 		} catch (error) {
-			console.error("Error sending Slack notification:", error);
+			logger.error(
+				{
+					error: error instanceof Error ? error.message : String(error),
+				},
+				"Error sending Slack notification",
+			);
 		}
 	}
 }

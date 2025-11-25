@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import logger from "@/lib/logger";
 
 /**
  * 全ユーザー管理用の型定義
@@ -151,7 +152,13 @@ export async function getAllUsers(params: GetUsersParams = {}): Promise<{
 							admin_info: adminInfo,
 						};
 					} catch (error) {
-						console.error(`Failed to get details for user ${profile.id}:`, error);
+						logger.error(
+							{
+								userId: profile.id,
+								error: error instanceof Error ? error.message : String(error),
+							},
+							"Failed to get details for user",
+						);
 						// エラーが発生した場合は基本情報のみ返す
 						const stats = await getUserStats(profile.id).catch(() => ({
 							owned_koudens_count: 0,
@@ -191,7 +198,13 @@ export async function getAllUsers(params: GetUsersParams = {}): Promise<{
 			hasMore: (count || 0) > offset + limit,
 		};
 	} catch (error) {
-		console.error("Error fetching users:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				params,
+			},
+			"Error fetching users",
+		);
 		throw new Error("ユーザー一覧の取得に失敗しました");
 	}
 }
@@ -236,7 +249,13 @@ export async function getUserDetail(userId: string): Promise<UserDetail> {
 			koudens,
 		};
 	} catch (error) {
-		console.error(`Error fetching user detail for ${userId}:`, error);
+		logger.error(
+			{
+				userId,
+				error: error instanceof Error ? error.message : String(error),
+			},
+			"Error fetching user detail",
+		);
 		throw new Error("ユーザー詳細の取得に失敗しました");
 	}
 }
@@ -258,9 +277,22 @@ async function getUserAuthInfo(userId: string): Promise<{
 		if (error) {
 			// 権限エラーの場合は警告レベルで記録
 			if (error.code === "not_admin") {
-				console.warn(`Admin access denied for user ${userId}:`, error.message);
+				logger.warn(
+					{
+						userId,
+						error: error.message,
+					},
+					"Admin access denied for user",
+				);
 			} else {
-				console.error(`Failed to get auth info for user ${userId}:`, error);
+				logger.error(
+					{
+						userId,
+						error: error.message,
+						code: error.code,
+					},
+					"Failed to get auth info for user",
+				);
 			}
 			return {};
 		}
@@ -271,7 +303,13 @@ async function getUserAuthInfo(userId: string): Promise<{
 			email_confirmed_at: authUser.user?.email_confirmed_at,
 		};
 	} catch (error) {
-		console.error(`Error getting auth info for user ${userId}:`, error);
+		logger.error(
+			{
+				userId,
+				error: error instanceof Error ? error.message : String(error),
+			},
+			"Error getting auth info for user",
+		);
 		return {};
 	}
 }
@@ -305,7 +343,14 @@ async function getAllUsersAuthInfo(userIds: string[]): Promise<
 		const { data: users, error } = await supabase.auth.admin.listUsers();
 
 		if (error) {
-			console.error("Failed to get all users auth info:", error);
+			logger.error(
+				{
+					error: error.message,
+					code: error.code,
+					userIdsCount: userIds.length,
+				},
+				"Failed to get all users auth info",
+			);
 			// エラーの場合は空のオブジェクトを各ユーザーに設定
 			for (const id of userIds) {
 				result[id] = {};
@@ -331,7 +376,13 @@ async function getAllUsersAuthInfo(userIds: string[]): Promise<
 
 		return result;
 	} catch (error) {
-		console.error("Error getting all users auth info:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				userIdsCount: userIds.length,
+			},
+			"Error getting all users auth info",
+		);
 		// エラーの場合は空のオブジェクトを各ユーザーに設定
 		for (const id of userIds) {
 			result[id] = {};
@@ -370,7 +421,13 @@ async function getUserStats(userId: string): Promise<{
 			total_entries_count: totalEntries.count || 0,
 		};
 	} catch (error) {
-		console.error(`Error getting stats for user ${userId}:`, error);
+		logger.error(
+			{
+				userId,
+				error: error instanceof Error ? error.message : String(error),
+			},
+			"Error getting stats for user",
+		);
 		return {
 			owned_koudens_count: 0,
 			participated_koudens_count: 0,
@@ -483,7 +540,13 @@ async function getUserKoudens(userId: string): Promise<
 			.sort((a, b) => new Date(b.joined_at).getTime() - new Date(a.joined_at).getTime())
 			.map(({ status, ...kouden }) => kouden);
 	} catch (error) {
-		console.error(`Error getting koudens for user ${userId}:`, error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				userId,
+			},
+			`Error getting koudens for user ${userId}`,
+		);
 		return [];
 	}
 }
@@ -636,7 +699,7 @@ export async function getAllKoudens(params: GetAdminKoudensParams = {}): Promise
 		const adminCheck = await isAdminUser();
 
 		if (!adminCheck) {
-			console.error("Admin permission denied");
+			logger.error({}, "Admin permission denied");
 			throw new Error("管理者権限が必要です");
 		}
 
@@ -679,7 +742,13 @@ export async function getAllKoudens(params: GetAdminKoudensParams = {}): Promise
 		const { data: koudens, error: koudensError, count } = await query;
 
 		if (koudensError) {
-			console.error("Koudens query error:", koudensError);
+			logger.error(
+				{
+					error: koudensError.message,
+					code: koudensError.code,
+				},
+				"Koudens query error",
+			);
 			throw new Error(`香典帳の取得に失敗しました: ${koudensError.message}`);
 		}
 
@@ -722,7 +791,13 @@ export async function getAllKoudens(params: GetAdminKoudensParams = {}): Promise
 						remainingDays,
 					};
 				} catch (error) {
-					console.error(`Failed to get details for kouden ${kouden.id}:`, error);
+					logger.error(
+						{
+							koudenId: kouden.id,
+							error: error instanceof Error ? error.message : String(error),
+						},
+						"Failed to get details for kouden",
+					);
 					// エラーが発生した場合は基本情報のみ返す
 					return {
 						...kouden,
@@ -751,7 +826,13 @@ export async function getAllKoudens(params: GetAdminKoudensParams = {}): Promise
 			hasMore: (count || 0) > offset + limit,
 		};
 	} catch (error) {
-		console.error("Error fetching admin koudens:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				params,
+			},
+			"Error fetching admin koudens",
+		);
 
 		// エラーの詳細を含めて再スロー
 		if (error instanceof Error) {
@@ -844,7 +925,13 @@ async function getKoudenStats(koudenId: string): Promise<{
 			total_amount: totalAmount,
 		};
 	} catch (error) {
-		console.error(`Error getting stats for kouden ${koudenId}:`, error);
+		logger.error(
+			{
+				koudenId,
+				error: error instanceof Error ? error.message : String(error),
+			},
+			"Error getting stats for kouden",
+		);
 		return {
 			entries_count: 0,
 			members_count: 0,

@@ -11,6 +11,7 @@ import type {
 	ReturnEntryRecord,
 	CreateReturnEntryInput,
 } from "@/types/return-records/return-records";
+import logger from "@/lib/logger";
 
 /**
  * 返礼情報を作成する
@@ -49,7 +50,13 @@ export async function createReturnEntry(input: CreateReturnEntryInput): Promise<
 
 		return data as ReturnEntryRecord;
 	} catch (error) {
-		console.error("返礼情報の作成エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenEntryId: input.kouden_entry_id,
+			},
+			"返礼情報の作成エラー",
+		);
 		throw error;
 	}
 }
@@ -79,7 +86,13 @@ export async function getReturnEntryRecord(
 
 		return data as ReturnEntryRecord | null;
 	} catch (error) {
-		console.error("返礼情報の取得エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenEntryId,
+			},
+			"返礼情報の取得エラー",
+		);
 		throw error;
 	}
 }
@@ -111,7 +124,13 @@ export async function getReturnEntriesByKouden(koudenId: string): Promise<Return
 
 		return data as ReturnEntryRecord[];
 	} catch (error) {
-		console.error("返礼情報一覧の取得エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenId,
+			},
+			"返礼情報一覧の取得エラー",
+		);
 		throw error;
 	}
 }
@@ -139,7 +158,14 @@ export async function deleteReturnEntry(koudenEntryId: string, koudenId: string)
 		// キャッシュの再検証
 		revalidatePath(`/koudens/${koudenId}`);
 	} catch (error) {
-		console.error("返礼情報の削除エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenEntryId,
+				koudenId,
+			},
+			"返礼情報の削除エラー",
+		);
 		throw error;
 	}
 }
@@ -186,7 +212,13 @@ export async function deleteReturnRecords(returnRecordIds: string[]): Promise<vo
 			}
 		}
 	} catch (error) {
-		console.error("返礼記録の一括削除エラー:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				returnRecordIds,
+			},
+			"返礼記録の一括削除エラー",
+		);
 		throw error;
 	}
 }
