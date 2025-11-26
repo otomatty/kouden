@@ -53,7 +53,7 @@
    - 本番ビルドが成功するか確認
    - 失敗があればPRをブロック
 
-**対象ブランチ**: すべてのPR（`main`、`develop`へのPR）
+**対象ブランチ**: `main`、`develop` ブランチへのPR
 
 ---
 
@@ -76,6 +76,7 @@
 **対象ブランチ**: すべてのPR
 
 **必要な設定**:
+- `@vitest/coverage-v8` パッケージのインストール
 - Codecov または Coveralls のアカウント設定（オプション）
 
 ---
@@ -116,8 +117,9 @@
 
 **実行内容**:
 1. Storybookのビルド
-2. ビルド成果物のアップロード（Artifact）
-3. Chromaticへのデプロイ（オプション）
+2. Storybookのテスト実行（`npm run test-storybook`）
+3. ビルド成果物のアップロード（Artifact）
+4. Chromaticへのデプロイ（オプション）
 
 **対象ブランチ**: すべてのPR
 

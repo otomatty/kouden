@@ -39,25 +39,38 @@ jobs:
       - name: Check migration files syntax
         run: |
           # マイグレーションファイルの存在確認
-          if [ -d "supabase/migrations" ] && [ "$(ls -A supabase/migrations/*.sql 2>/dev/null)" ]; then
-            echo "✅ Migration files found"
-            # 基本的なSQL構文チェック（PostgreSQL）
-            for file in supabase/migrations/*.sql; do
-              echo "Checking $file..."
-              # SQLファイルが空でないことを確認
-              if [ ! -s "$file" ]; then
-                echo "❌ Error: $file is empty"
+          if [ -d "supabase/migrations" ]; then
+            shopt -s nullglob
+            files=(supabase/migrations/*.sql)
+            if [ ${#files[@]} -gt 0 ]; then
+              echo "✅ Migration files found"
+              errors=0
+              # 基本的なSQL構文チェック（PostgreSQL）
+              for file in "${files[@]}"; do
+                echo "Checking $file..."
+                # SQLファイルが空でないことを確認
+                if [ ! -s "$file" ]; then
+                  echo "❌ Error: $file is empty"
+                  errors=$((errors + 1))
+                  continue
+                fi
+                # 基本的な構文エラーをチェック（簡単な検証）
+                if grep -q "CREATE\|ALTER\|DROP\|INSERT\|UPDATE\|DELETE" "$file"; then
+                  echo "✅ $file contains valid SQL keywords"
+                else
+                  echo "⚠️ Warning: $file may not contain valid SQL statements"
+                fi
+              done
+              
+              if [ $errors -gt 0 ]; then
+                echo "❌ Found $errors empty migration file(s)"
                 exit 1
               fi
-              # 基本的な構文エラーをチェック（簡単な検証）
-              if grep -q "CREATE\|ALTER\|DROP\|INSERT\|UPDATE\|DELETE" "$file"; then
-                echo "✅ $file contains valid SQL keywords"
-              else
-                echo "⚠️ Warning: $file may not contain valid SQL statements"
-              fi
-            done
+            else
+              echo "ℹ️ No migration files found, skipping check"
+            fi
           else
-            echo "ℹ️ No migration files found, skipping check"
+            echo "ℹ️ No migrations directory found, skipping check"
           fi
 
       - name: Validate database schema files
@@ -67,13 +80,19 @@ jobs:
           # databaseディレクトリ内のSQLファイルの存在確認
           if [ -d "database" ]; then
             echo "✅ Database directory found"
+            errors=0
             # SQLファイルの基本的な検証
-            find database -name "*.sql" -type f | while read file; do
+            while IFS= read -r file; do
               echo "Checking $file..."
               if [ ! -s "$file" ]; then
                 echo "❌ Error: $file is empty"
-                exit 1
+                errors=$((errors + 1))
               fi
-            done
+            done < <(find database -name "*.sql" -type f)
+            
+            if [ $errors -gt 0 ]; then
+              echo "❌ Found $errors empty database schema file(s)"
+              exit 1
+            fi
           fi
 
