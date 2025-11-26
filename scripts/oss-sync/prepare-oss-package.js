@@ -7,7 +7,7 @@ import path from "node:path";
  * OSS版用のpackage.jsonを準備する
  */
 function prepareOSSPackage() {
-	console.log("🔄 Preparing OSS package.json...");
+	console.info("🔄 Preparing OSS package.json...");
 
 	const packageJsonPath = path.join(__dirname, "../../package.json");
 	const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
@@ -25,13 +25,13 @@ function prepareOSSPackage() {
 
 	// 依存関係から削除
 	for (const dep of premiumDependencies) {
-		if (packageJson.dependencies && packageJson.dependencies[dep]) {
+		if (packageJson.dependencies?.[dep]) {
 			delete packageJson.dependencies[dep];
-			console.log(`❌ Removed premium dependency: ${dep}`);
+			console.info(`❌ Removed premium dependency: ${dep}`);
 		}
-		if (packageJson.devDependencies && packageJson.devDependencies[dep]) {
+		if (packageJson.devDependencies?.[dep]) {
 			delete packageJson.devDependencies[dep];
-			console.log(`❌ Removed premium devDependency: ${dep}`);
+			console.info(`❌ Removed premium devDependency: ${dep}`);
 		}
 	}
 
@@ -49,7 +49,7 @@ function prepareOSSPackage() {
 	};
 
 	// プライベート設定を削除
-	delete packageJson.private;
+	packageJson.private = undefined;
 
 	// スクリプトをOSS版用に調整
 	const ossScripts = {
@@ -94,14 +94,14 @@ function prepareOSSPackage() {
 	const outputPath = path.join(outputDir, "package.json");
 	fs.writeFileSync(outputPath, JSON.stringify(packageJson, null, 2));
 
-	console.log("✅ OSS package.json prepared successfully");
-	console.log(`📦 Dependencies count: ${Object.keys(packageJson.dependencies || {}).length}`);
-	console.log(`🛠️ DevDependencies count: ${Object.keys(packageJson.devDependencies || {}).length}`);
+	console.info("✅ OSS package.json prepared successfully");
+	console.info(`📦 Dependencies count: ${Object.keys(packageJson.dependencies || {}).length}`);
+	console.info(`🛠️ DevDependencies count: ${Object.keys(packageJson.devDependencies || {}).length}`);
 }
 
 // 環境変数ファイルの準備
 function prepareEnvExample() {
-	console.log("🔄 Preparing .env.example...");
+	console.info("🔄 Preparing .env.example...");
 
 	const envExample = `# Supabase Configuration
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
@@ -123,12 +123,12 @@ NEXT_PUBLIC_VERCEL_ANALYTICS_ID=
 	const outputPath = path.join(__dirname, "../../oss-temp/.env.example");
 	fs.writeFileSync(outputPath, envExample);
 
-	console.log("✅ .env.example prepared successfully");
+	console.info("✅ .env.example prepared successfully");
 }
 
 // Docker設定の準備
 function prepareDockerfile() {
-	console.log("🔄 Preparing Dockerfile...");
+	console.info("🔄 Preparing Dockerfile...");
 
 	const dockerfile = `FROM node:18-alpine AS base
 
@@ -182,19 +182,19 @@ CMD ["node", "server.js"]
 	const outputPath = path.join(__dirname, "../../oss-temp/Dockerfile");
 	fs.writeFileSync(outputPath, dockerfile);
 
-	console.log("✅ Dockerfile prepared successfully");
+	console.info("✅ Dockerfile prepared successfully");
 }
 
 // メイン処理
 function main() {
 	try {
-		console.log("🚀 Starting OSS package preparation...");
+		console.info("🚀 Starting OSS package preparation...");
 
 		prepareOSSPackage();
 		prepareEnvExample();
 		prepareDockerfile();
 
-		console.log("✨ OSS package preparation completed successfully!");
+		console.info("✨ OSS package preparation completed successfully!");
 	} catch (error) {
 		console.error("❌ Error preparing OSS package:", error);
 		process.exit(1);
