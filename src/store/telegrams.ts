@@ -1,6 +1,6 @@
-import { atom } from "jotai";
 import type { Database } from "@/types/supabase";
 import type { Telegram, TelegramRow, UpdateTelegramInput } from "@/types/telegrams";
+import { atom } from "jotai";
 
 // スネークケースからキャメルケースへの変換
 export const toCamelCase = (row: TelegramRow): Telegram => ({

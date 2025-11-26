@@ -1,4 +1,4 @@
-import type { Driver, DriveStep } from "driver.js";
+import type { DriveStep, Driver } from "driver.js";
 
 export type DriverRef = Driver | null;
 

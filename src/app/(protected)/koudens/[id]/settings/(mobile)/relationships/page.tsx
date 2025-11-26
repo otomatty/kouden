@@ -1,6 +1,6 @@
-import React from "react";
-import { BackLink } from "@/components/custom/back-link";
 import { getRelationships } from "@/app/_actions/relationships";
+import { BackLink } from "@/components/custom/back-link";
+import React from "react";
 import { RelationshipCardList } from "./_components/relationship-card-list";
 
 interface RelationshipsPageProps {

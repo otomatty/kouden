@@ -1,9 +1,9 @@
-import type { MDXComponents } from "mdx/types";
-import type React from "react";
-import Image from "next/image";
-import { generateHeaderId } from "@/utils/markdown-utils";
 import { AccordionMDX } from "@/components/ui/accordion-mdx";
 import { convertGyazoUrl, isGyazoUrl } from "@/utils/image-utils";
+import { generateHeaderId } from "@/utils/markdown-utils";
+import type { MDXComponents } from "mdx/types";
+import Image from "next/image";
+import type React from "react";
 
 // ページごとのID管理用（ページ遷移時にリセット）
 let currentPageUsedIds = new Set<string>();

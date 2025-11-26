@@ -1,7 +1,7 @@
-import type React from "react";
-import { Users, Box, TrendingUp } from "lucide-react";
-import { SectionTitle } from "@/components/ui/section-title";
 import { Section } from "@/components/ui/section";
+import { SectionTitle } from "@/components/ui/section-title";
+import { Box, TrendingUp, Users } from "lucide-react";
+import type React from "react";
 
 interface Program {
 	title: string;

@@ -1,9 +1,7 @@
 "use client";
 
-import { useFormContext } from "react-hook-form";
-import { FormControl, FormField, FormItem, FormMessage, FormLabel } from "@/components/ui/form";
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
 	Select,
 	SelectContent,
@@ -11,9 +9,11 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import type { Relationship } from "@/types/relationships";
+import { Textarea } from "@/components/ui/textarea";
 import type { AttendanceType } from "@/types/entries";
+import type { Relationship } from "@/types/relationships";
 import { normalizeNumericInput } from "@/utils/normalize";
+import { useFormContext } from "react-hook-form";
 
 const attendanceTypeMap: Record<AttendanceType, string> = {
 	FUNERAL: "葬儀",

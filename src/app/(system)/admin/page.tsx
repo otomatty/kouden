@@ -1,23 +1,23 @@
-import type { Metadata } from "next";
-import { Suspense } from "react";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { isTwoFactorEnabled } from "@/lib/security/two-factor-auth";
+import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { Suspense } from "react";
 
-import { SummaryCard } from "./_components/dashboard/summary-card";
-import { ServiceStatusTabs } from "./_components/dashboard/service-status-tabs";
-import { SalesChart } from "./_components/dashboard/sales-chart";
 import { ActivityChart } from "./_components/dashboard/activity-chart";
-import { RecentInquiriesList } from "./_components/dashboard/recent-inquiries-list";
 import { RecentErrorsList } from "./_components/dashboard/recent-errors-list";
+import { RecentInquiriesList } from "./_components/dashboard/recent-inquiries-list";
+import { SalesChart } from "./_components/dashboard/sales-chart";
+import { ServiceStatusTabs } from "./_components/dashboard/service-status-tabs";
+import { SummaryCard } from "./_components/dashboard/summary-card";
 
 import {
-	getDashboardSummary,
-	getServiceStatus,
-	getSalesMetrics,
 	getActivityMetrics,
-	getRecentInquiries,
+	getDashboardSummary,
 	getRecentErrors,
+	getRecentInquiries,
+	getSalesMetrics,
+	getServiceStatus,
 } from "@/app/_actions/admin/dashboard";
 
 export const metadata: Metadata = {

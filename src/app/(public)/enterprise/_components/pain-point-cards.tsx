@@ -1,7 +1,7 @@
-import type React from "react";
-import { ClipboardList, BarChart2, ShieldCheck } from "lucide-react";
-import { SectionTitle } from "@/components/ui/section-title";
 import { Section } from "@/components/ui/section";
+import { SectionTitle } from "@/components/ui/section-title";
+import { BarChart2, ClipboardList, ShieldCheck } from "lucide-react";
+import type React from "react";
 
 interface PainPoint {
 	title: string;

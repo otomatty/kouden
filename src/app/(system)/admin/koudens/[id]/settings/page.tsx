@@ -1,10 +1,10 @@
 import { checkAdminPermission } from "@/app/_actions/admin/permissions";
 import { getKoudenForAdmin } from "@/app/_actions/koudens/read";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Info, Users, Calendar } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
+import { Calendar, Info, Settings, Users } from "lucide-react";
 
 interface AdminSettingsPageProps {
 	params: Promise<{ id: string }>;

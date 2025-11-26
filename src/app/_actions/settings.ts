@@ -1,8 +1,8 @@
 "use server";
 
+import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import logger from "@/lib/logger";
 
 interface UpdateSettingsParams {
 	guide_mode?: boolean;

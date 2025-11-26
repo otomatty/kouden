@@ -1,6 +1,6 @@
-import React from "react";
-import Link from "next/link";
 import type { Database } from "@/types/supabase";
+import Link from "next/link";
+import React from "react";
 
 type ContactRequest = Database["public"]["Tables"]["contact_requests"]["Row"];
 

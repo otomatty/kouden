@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { HeaderNavigation } from "./header-navigation";
 import Container from "@/components/ui/container";
 import { useAuth } from "@/hooks/use-auth";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { HeaderNavigation } from "./header-navigation";
 
 export function Header({ version }: { version: string }) {
 	const { user, isLoading } = useAuth();

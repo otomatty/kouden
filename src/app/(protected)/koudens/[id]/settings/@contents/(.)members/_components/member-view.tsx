@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef, memo, useState } from "react";
-import { useSetAtom } from "jotai";
 import { membersAtom } from "@/store/members";
-import { MembersTable } from "./table/data-table";
-import { createColumns } from "./table/columns";
 import type { KoudenMember } from "@/types/member";
 import type { KoudenRole } from "@/types/role";
 import type { KoudenPermission } from "@/types/role";
+import { useSetAtom } from "jotai";
+import { memo, useEffect, useRef, useState } from "react";
+import { createColumns } from "./table/columns";
+import { MembersTable } from "./table/data-table";
 
 interface MemberViewProps {
 	koudenId: string;

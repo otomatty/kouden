@@ -1,7 +1,7 @@
 "use client";
 
-import React, { type ReactNode } from "react";
 import { Section } from "@/components/ui/section";
+import React, { type ReactNode } from "react";
 
 export interface MediaSectionProps {
 	/** ローカル動画ファイルの URL */

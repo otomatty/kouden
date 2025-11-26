@@ -1,7 +1,7 @@
-import { requireOrganizationAccess } from "@/lib/access";
-import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/app/_actions/admin/permissions";
 import { SystemHeader } from "@/components/ui/system-header";
+import { requireOrganizationAccess } from "@/lib/access";
+import { createClient } from "@/lib/supabase/server";
 import type { ReactNode } from "react";
 
 // Version fetched from environment variable

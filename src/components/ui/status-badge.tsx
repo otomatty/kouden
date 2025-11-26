@@ -1,6 +1,6 @@
-import type * as React from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import type * as React from "react";
 
 // 返礼ステータスの型定義
 export type ReturnStatus = "PENDING" | "PARTIAL_RETURNED" | "COMPLETED" | "NOT_REQUIRED";

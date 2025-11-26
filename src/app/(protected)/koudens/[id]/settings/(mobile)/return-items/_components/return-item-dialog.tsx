@@ -9,10 +9,10 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
+import type { ReturnItem } from "@/types/return-records/return-items";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { ReturnItemForm } from "./return-item-form";
-import type { ReturnItem } from "@/types/return-records/return-items";
 
 type Props = {
 	koudenId: string;

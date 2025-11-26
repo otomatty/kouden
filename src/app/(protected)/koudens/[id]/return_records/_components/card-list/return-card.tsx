@@ -1,23 +1,23 @@
 "use client";
 
-// library
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
-// types
-import type { ReturnManagementSummary } from "@/types/return-records/return-records";
-import type { Relationship } from "@/types/relationships";
-// components
-import { Card, CardContent } from "@/components/ui/card";
+import { EntryAllocationDialog } from "@/components/custom/EntryAllocationDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Pen, Eye, Package, ChevronRight } from "lucide-react";
+// components
+import { Card, CardContent } from "@/components/ui/card";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { EntryAllocationDialog } from "@/components/custom/EntryAllocationDialog";
+import type { Relationship } from "@/types/relationships";
+// types
+import type { ReturnManagementSummary } from "@/types/return-records/return-records";
+// library
+import { format } from "date-fns";
+import { ja } from "date-fns/locale";
+import { ChevronRight, Eye, MoreHorizontal, Package, Pen } from "lucide-react";
 
 interface ReturnCardProps {
 	returnRecord: ReturnManagementSummary;

@@ -2,8 +2,8 @@
 // Jotaiを使用した権限管理は表示制御に使用する(クライアントサイド限定)
 // CRUD操作の権限管理はServer Actionsなどサーバーサイドで行う
 
-import { atom } from "jotai";
 import type { KoudenPermission } from "@/types/role";
+import { atom } from "jotai";
 
 // 初期値は最も制限の強い'viewer'に設定
 export const permissionAtom = atom<KoudenPermission>("viewer");
@@ -15,8 +15,7 @@ export const permissionAtom = atom<KoudenPermission>("viewer");
 export const canUpdateKouden = (permission: KoudenPermission) =>
 	permission === "owner" || permission === "editor";
 // 香典帳の削除
-export const canDeleteKouden = (permission: KoudenPermission) =>
-	permission === "owner";
+export const canDeleteKouden = (permission: KoudenPermission) => permission === "owner";
 
 // ----------------
 // UI表示権限(香典情報、お供え物、弔電、返礼品)
@@ -38,11 +37,9 @@ export const canDeleteData = (permission: KoudenPermission) =>
 // メンバーの作成
 // メンバーは招待することで作成されるので招待の権限を使用する
 // メンバーの更新
-export const canUpdateMember = (permission: KoudenPermission) =>
-	permission === "owner";
+export const canUpdateMember = (permission: KoudenPermission) => permission === "owner";
 // メンバーの削除
-export const canDeleteMember = (permission: KoudenPermission) =>
-	permission === "owner";
+export const canDeleteMember = (permission: KoudenPermission) => permission === "owner";
 // ----------------
 
 // ----------------

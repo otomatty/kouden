@@ -1,8 +1,8 @@
 import { checkAdminPermission } from "@/app/_actions/admin/permissions";
 
+import { KoudenStatistics } from "@/app/(protected)/koudens/[id]/statistics/_components";
 import { getEntriesForAdmin } from "@/app/_actions/entries";
 import { calculateEntryTotalAmount } from "@/app/_actions/offerings/queries";
-import { KoudenStatistics } from "@/app/(protected)/koudens/[id]/statistics/_components";
 import type { Entry } from "@/types/entries";
 
 interface AdminStatisticsPageProps {

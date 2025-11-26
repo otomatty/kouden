@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, TrendingUp, Star, MessageSquare } from "lucide-react";
+import { MessageSquare, Star, TrendingUp, Users } from "lucide-react";
+import { useMemo } from "react";
 
 interface SurveyData {
 	totalResponses: number;

@@ -1,6 +1,4 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import { PageHero } from "../_components/page-hero";
+import { Button } from "@/components/ui/button";
 import {
 	Card,
 	CardContent,
@@ -9,10 +7,12 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { FAQSection } from "../_components/faq-section";
-import { ChevronRight } from "lucide-react";
 import Container from "@/components/ui/container";
+import { ChevronRight } from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { FAQSection } from "../_components/faq-section";
+import { PageHero } from "../_components/page-hero";
 
 export const metadata: Metadata = {
 	title: "料金プラン - 香典帳アプリ",

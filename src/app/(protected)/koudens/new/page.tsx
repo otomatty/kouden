@@ -1,7 +1,7 @@
-import type { Metadata } from "next";
 import { getPlans } from "@/app/_actions/plans";
 import { NewKoudenPlanSelector } from "@/components/custom/new-kouden-plan-selector";
 import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
 export const metadata: Metadata = {
 	title: "新規香典帳作成",
 	description: "香典帳の新規作成ページです",

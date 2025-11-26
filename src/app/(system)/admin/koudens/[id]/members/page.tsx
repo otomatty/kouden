@@ -1,5 +1,5 @@
-import { checkAdminPermission } from "@/app/_actions/admin/permissions";
 import { MemberView } from "@/app/(protected)/koudens/[id]/members/_components/member-view";
+import { checkAdminPermission } from "@/app/_actions/admin/permissions";
 import { getMembersForAdmin } from "@/app/_actions/members";
 import { getKoudenRolesForAdmin } from "@/app/_actions/roles";
 

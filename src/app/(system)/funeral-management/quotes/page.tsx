@@ -1,8 +1,8 @@
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, FileText, Eye, Download, Edit } from "lucide-react";
+import { Download, Edit, Eye, FileText, Plus, Search } from "lucide-react";
 import Link from "next/link";
 
 export default function QuotesPage() {

@@ -1,16 +1,5 @@
 "use client";
 
-import { TrendingUp } from "lucide-react";
-import {
-	Bar,
-	BarChart,
-	CartesianGrid,
-	XAxis,
-	YAxis,
-	Tooltip,
-	Legend,
-	ResponsiveContainer,
-} from "recharts";
 import {
 	Card,
 	CardContent,
@@ -21,6 +10,17 @@ import {
 } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TrendingUp } from "lucide-react";
+import {
+	Bar,
+	BarChart,
+	CartesianGrid,
+	Legend,
+	ResponsiveContainer,
+	Tooltip,
+	XAxis,
+	YAxis,
+} from "recharts";
 
 interface TimeSeriesChartProps {
 	title: string;

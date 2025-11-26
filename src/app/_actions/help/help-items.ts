@@ -1,8 +1,8 @@
 "use server";
 
-import { getAllDocs } from "@/lib/docs";
 import { getPublishedPosts } from "@/app/_actions/blog/posts";
-import type { QuickHelpItem, HelpSearchResult, HelpSearchParams } from "@/types/help";
+import { getAllDocs } from "@/lib/docs";
+import type { HelpSearchParams, HelpSearchResult, QuickHelpItem } from "@/types/help";
 
 /**
  * 静的ヘルプアイテムの定義

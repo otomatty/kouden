@@ -1,30 +1,30 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
-import { useRouter } from "next/navigation";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import Link from "next/link";
 import {
+	BookOpen,
 	LogOut,
 	Menu,
-	ShieldCheck,
-	User as UserIcon,
-	BookOpen,
 	PlayCircle,
 	Settings,
+	ShieldCheck,
+	User as UserIcon,
 } from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
-import { useState } from "react";
-import { UserMenu } from "./user-menu";
-import { NotificationsPopover } from "./notifications-popover";
 import { FeedbackButton } from "@/components/custom/feedback-button";
-import { GuideMenu } from "./guide-menu";
 import type { NotificationItem } from "@/types/notifications";
+import { useState } from "react";
+import { GuideMenu } from "./guide-menu";
+import { NotificationsPopover } from "./notifications-popover";
+import { UserMenu } from "./user-menu";
 
 interface HeaderProps {
 	user: User;

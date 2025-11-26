@@ -1,11 +1,11 @@
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft, Edit, UserCheck, Phone, Mail, MapPin, Calendar, FileText } from "lucide-react";
+import { getCustomer } from "@/app/_actions/funeral/customers/getCustomer";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { getCustomer } from "@/app/_actions/funeral/customers/getCustomer";
+import { ArrowLeft, Calendar, Edit, FileText, Mail, MapPin, Phone, UserCheck } from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
 
 interface CustomerDetailPageProps {
 	params: Promise<{

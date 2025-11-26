@@ -1,8 +1,8 @@
 "use client";
 
+import { VideoPlayer } from "@/components/custom/video-player";
 import { Section } from "@/components/ui/section";
 import { SectionTitle } from "@/components/ui/section-title";
-import { VideoPlayer } from "@/components/custom/video-player";
 import Image from "next/image";
 
 /**

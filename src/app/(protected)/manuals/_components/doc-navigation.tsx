@@ -1,9 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, List } from "lucide-react";
-import Link from "next/link";
 import type { DocMeta } from "@/lib/docs";
 import { getCategoryName } from "@/lib/docs-config";
+import { ChevronLeft, ChevronRight, List } from "lucide-react";
+import Link from "next/link";
 
 interface DocNavigationProps {
 	prevDoc?: DocMeta | null;

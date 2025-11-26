@@ -1,6 +1,6 @@
 import { getKouden } from "@/app/_actions/koudens";
-import { GeneralSettingsForm } from "./_components/general-settings-form";
 import { SettingsHeader } from "../../_components/settings-header";
+import { GeneralSettingsForm } from "./_components/general-settings-form";
 
 interface GeneralSettingsPageProps {
 	params: Promise<{ id: string }>;

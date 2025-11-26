@@ -1,7 +1,7 @@
-import { checkAdminPermission } from "@/app/_actions/admin/permissions";
 import { OfferingView } from "@/app/(protected)/koudens/[id]/offerings/_components";
-import { getOfferings } from "@/app/_actions/offerings";
+import { checkAdminPermission } from "@/app/_actions/admin/permissions";
 import { getEntriesForAdmin } from "@/app/_actions/entries";
+import { getOfferings } from "@/app/_actions/offerings";
 
 interface AdminOfferingsPageProps {
 	params: Promise<{ id: string }>;

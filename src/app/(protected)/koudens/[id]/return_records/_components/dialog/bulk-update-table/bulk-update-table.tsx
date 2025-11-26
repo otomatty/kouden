@@ -1,9 +1,9 @@
 "use client";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { formatCurrency } from "@/utils/currency";
-import { calculateGroupStatistics } from "@/utils/bulk-update-helpers";
 import type { AmountGroupData, ReturnItemMaster } from "@/types/return-records/bulk-update";
+import { calculateGroupStatistics } from "@/utils/bulk-update-helpers";
+import { formatCurrency } from "@/utils/currency";
 import { AmountGroupRow } from "./amount-group-row";
 import { SelectAllCheckbox } from "./select-all-checkbox";
 

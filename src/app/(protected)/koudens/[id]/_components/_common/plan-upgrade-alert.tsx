@@ -1,8 +1,8 @@
-import React from "react";
-import Link from "next/link";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { X } from "lucide-react";
+import Link from "next/link";
+import React from "react";
 
 interface PlanUpgradeAlertProps {
 	remainingDays: number;

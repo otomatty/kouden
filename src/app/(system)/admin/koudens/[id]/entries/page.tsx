@@ -1,5 +1,5 @@
-import { checkAdminPermission } from "@/app/_actions/admin/permissions";
 import EntriesPageClient from "@/app/(protected)/koudens/[id]/entries/EntriesPageClient";
+import { checkAdminPermission } from "@/app/_actions/admin/permissions";
 import { getEntriesForAdmin } from "@/app/_actions/entries";
 import { getRelationshipsForAdmin } from "@/app/_actions/relationships";
 

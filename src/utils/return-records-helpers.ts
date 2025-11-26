@@ -3,15 +3,15 @@
  * @module return-records-helpers
  */
 
+import { calculateEntryTotalAmount } from "@/app/_actions/offerings/queries";
 import type { Entry } from "@/types/entries";
 import type { Relationship } from "@/types/relationships";
 import type {
 	ReturnEntryRecord,
+	ReturnItem,
 	ReturnManagementSummary,
 	ReturnStatus,
-	ReturnItem,
 } from "@/types/return-records/return-records";
-import { calculateEntryTotalAmount } from "@/app/_actions/offerings/queries";
 
 /**
  * 返礼状況の表示用テキストを取得

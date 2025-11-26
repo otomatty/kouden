@@ -5,15 +5,15 @@
  * @module bulk-update
  */
 
+import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
 import type {
 	AmountGroupData,
-	ReturnItemMaster,
 	BulkUpdateExecutionData,
 	BulkUpdateResult,
+	ReturnItemMaster,
 } from "@/types/return-records/bulk-update";
-import logger from "@/lib/logger";
+import { revalidatePath } from "next/cache";
 
 // 返礼品マスタのキャッシュ（セッション内で再利用）
 const returnItemsCache = new Map<string, ReturnItemMaster[]>();

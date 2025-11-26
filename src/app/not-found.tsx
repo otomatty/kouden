@@ -1,10 +1,10 @@
-import { Header } from "./(public)/_components/header";
 import { Footer } from "./(public)/_components/footer";
+import { Header } from "./(public)/_components/header";
 import { MobileBottomNavigation } from "./(public)/_components/mobile-bottom-navigation";
 
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
 // Version fetched from environment variable
 const version = process.env.NEXT_PUBLIC_APP_VERSION ?? "";

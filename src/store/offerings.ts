@@ -1,5 +1,5 @@
-import { atom } from "jotai";
 import type { Offering, OfferingType } from "@/types/offerings";
+import { atom } from "jotai";
 
 // お供物データを管理するatom
 export const offeringsAtom = atom<Offering[]>([]);

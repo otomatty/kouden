@@ -1,6 +1,6 @@
-import { redirect, notFound } from "next/navigation";
-import { getKoudenForAdmin } from "@/app/_actions/koudens/read";
 import { checkAdminPermission } from "@/app/_actions/admin/permissions";
+import { getKoudenForAdmin } from "@/app/_actions/koudens/read";
+import { notFound, redirect } from "next/navigation";
 
 export default async function AdminKoudenPage({ params }: { params: Promise<{ id: string }> }) {
 	const { id: koudenId } = await params;

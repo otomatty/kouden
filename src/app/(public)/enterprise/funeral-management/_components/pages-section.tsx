@@ -1,7 +1,7 @@
 import { Section } from "@/components/ui/section";
 import { SectionTitle } from "@/components/ui/section-title";
-import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import Link from "next/link";
 
 /**
  * 葬儀管理システム内のページ一覧を表示するセクション

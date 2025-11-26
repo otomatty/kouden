@@ -1,20 +1,20 @@
 "use client";
 
-import type { User } from "@supabase/supabase-js";
-import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
+	DropdownMenuGroup,
 	DropdownMenuItem,
+	DropdownMenuLabel,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-	DropdownMenuGroup,
-	DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Settings, User as UserIcon, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import type { User } from "@supabase/supabase-js";
+import { LogOut, Settings, ShieldCheck, User as UserIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface UserMenuProps {
 	user: User;

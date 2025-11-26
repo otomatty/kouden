@@ -1,6 +1,6 @@
-import React from "react";
-import type { Testimonial } from "@/types/testimonials";
 import { SectionTitle } from "@/components/ui/section-title";
+import type { Testimonial } from "@/types/testimonials";
+import React from "react";
 import { TestimonialCard } from "./TestimonialCard";
 
 /**

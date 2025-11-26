@@ -1,7 +1,7 @@
-import type { Metadata } from "next";
-import { PageHero } from "../_components/page-hero";
 import { Heading } from "@/components/ui/heading";
 import { Section } from "@/components/ui/section";
+import type { Metadata } from "next";
+import { PageHero } from "../_components/page-hero";
 
 export const metadata: Metadata = {
 	title: "特定商取引法に基づく表記 | 香典帳",

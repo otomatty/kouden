@@ -1,8 +1,8 @@
+import type { offeringFormSchema } from "@/schemas/offerings";
 import type { Database } from "@/types/supabase";
 import type { SnakeToCamelCaseNested } from "@/utils/case-converter";
 import type { KeysToCamelCase } from "@/utils/case-converter";
 import type { z } from "zod";
-import type { offeringFormSchema } from "@/schemas/offerings";
 
 export type OfferingType = Database["public"]["Enums"]["offering_type"];
 

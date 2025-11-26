@@ -1,8 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import * as XLSX from "xlsx";
 import type { Database } from "@/types/supabase";
+import * as XLSX from "xlsx";
 
 type Entry = Database["public"]["Tables"]["kouden_entries"]["Row"] & {
 	relationship: {

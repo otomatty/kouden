@@ -1,15 +1,12 @@
-import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Clock } from "lucide-react";
 
 interface ComingSoonBadgeProps {
 	label?: string;
 	className?: string;
 }
 
-export function ComingSoonBadge({
-	label = "実装予定",
-	className,
-}: ComingSoonBadgeProps) {
+export function ComingSoonBadge({ label = "実装予定", className }: ComingSoonBadgeProps) {
 	return (
 		<div
 			className={cn(

@@ -1,6 +1,6 @@
-import { Monitor, Users, Gift, BarChart2, BookOpen, ShieldCheck } from "lucide-react";
 import { Section } from "@/components/ui/section";
 import { SectionTitle } from "@/components/ui/section-title";
+import { BarChart2, BookOpen, Gift, Monitor, ShieldCheck, Users } from "lucide-react";
 
 /**
  * 主要な機能を表示するセクション

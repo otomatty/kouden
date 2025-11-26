@@ -1,13 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, ShoppingCart, ChevronDown, ChevronUp, Lock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
 	Dialog,
 	DialogContent,
@@ -16,11 +12,15 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import type { ReturnItem } from "@/types/return-records/return-items";
+import { ChevronDown, ChevronUp, Lock, ShoppingCart, Trash2 } from "lucide-react";
+import { useState } from "react";
+import type { UseFormReturn } from "react-hook-form";
 import { ReturnItemSelector } from "./return-item-selector";
 import type { ReturnFormData } from "./types";
-import type { UseFormReturn } from "react-hook-form";
-import type { ReturnItem } from "@/types/return-records/return-items";
 
 interface ReturnItemCardProps {
 	form: UseFormReturn<ReturnFormData>;

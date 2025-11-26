@@ -1,5 +1,5 @@
-import { redirect, notFound } from "next/navigation";
 import { getKouden } from "@/app/_actions/koudens";
+import { notFound, redirect } from "next/navigation";
 
 export default async function KoudenPage({ params }: { params: Promise<{ id: string }> }) {
 	const { id: koudenId } = await params;

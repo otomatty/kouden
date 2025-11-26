@@ -1,10 +1,10 @@
 "use client";
 
-import React from "react";
-import { User, ChevronRight } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { ChevronRight, User } from "lucide-react";
+import React from "react";
 import type { Member } from "./types";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface MemberListProps {
 	members: Member[];

@@ -1,4 +1,3 @@
-import { useState, useCallback } from "react";
 import {
 	Select,
 	SelectContent,
@@ -8,7 +7,8 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { SelectOption } from "@/types/data-table/additional-select";
-import { getDefaultColorByVariant, type SelectColorConfig } from "@/types/data-table/select-colors";
+import { type SelectColorConfig, getDefaultColorByVariant } from "@/types/data-table/select-colors";
+import { useCallback, useState } from "react";
 
 interface ColoredSelectCellProps {
 	value: string | number | boolean | null;

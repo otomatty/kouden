@@ -1,29 +1,29 @@
 "use client";
 
-import type { User } from "@supabase/supabase-js";
-import { useRouter } from "next/navigation";
-import { usePathname } from "next/navigation";
-import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import Container from "@/components/ui/container";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import Container from "@/components/ui/container";
-import { AdminAppsMenu } from "./admin-apps-menu";
+import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
+import type { User } from "@supabase/supabase-js";
 import {
-	LayoutDashboard,
-	Briefcase,
-	Users,
-	FileText,
-	LifeBuoy,
-	BookOpen,
 	BarChart3,
+	BookOpen,
+	Briefcase,
+	FileText,
+	LayoutDashboard,
+	LifeBuoy,
+	Users,
 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { AdminAppsMenu } from "./admin-apps-menu";
 
 interface AdminHeaderProps {
 	user: User;

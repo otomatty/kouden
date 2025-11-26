@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback } from "react";
-import { getPostStats, getBulkPostStats } from "@/app/_actions/blog/analytics";
+import { getBulkPostStats, getPostStats } from "@/app/_actions/blog/analytics";
 import type { PostStats } from "@/types/blog";
+import { useCallback, useEffect, useState } from "react";
 
 interface UsePostStatsOptions {
 	postId: string;

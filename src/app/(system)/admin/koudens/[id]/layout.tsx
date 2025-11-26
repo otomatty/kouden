@@ -1,14 +1,14 @@
-import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
-import { getKoudenForAdmin, getKoudenWithPlanForAdmin } from "@/app/_actions/koudens/read";
-import { checkAdminPermission } from "@/app/_actions/admin/permissions";
 import KoudenHeader from "@/app/(protected)/koudens/[id]/_components/_common/kouden-header";
 import TabNavigation from "@/app/(protected)/koudens/[id]/_components/_common/tab-navigation";
+import { checkAdminPermission } from "@/app/_actions/admin/permissions";
+import { getKoudenForAdmin, getKoudenWithPlanForAdmin } from "@/app/_actions/koudens/read";
+import { Button } from "@/components/ui/button";
 import type { Kouden } from "@/types/kouden";
 import type { KoudenPermission } from "@/types/role";
+import { ArrowLeft } from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
 
 /**
  * 管理者用香典帳詳細ページのメタデータを生成する

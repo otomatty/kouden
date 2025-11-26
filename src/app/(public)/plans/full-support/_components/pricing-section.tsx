@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { DollarSign, Info } from "lucide-react";
 import { Section } from "@/components/ui/section";
 import { SectionTitle } from "@/components/ui/section-title";
+import { DollarSign, Info } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // これらの定数はコンポーネントの外に出すか、useMemoでメモ化することも検討できますが、
 // 今回はuseCallbackの依存配列から除外するだけでLinterエラーは解消されます。

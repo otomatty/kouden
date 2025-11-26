@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { useAtom } from "jotai";
-import type { Telegram } from "@/types/telegrams";
+import { telegramsAtom } from "@/store/telegrams";
 import type { Entry } from "@/types/entries";
+import type { Telegram } from "@/types/telegrams";
+import { useAtom } from "jotai";
+import { useEffect, useMemo, useState } from "react";
 import { MobileFilters } from "./mobile-filters";
 import { TelegramCard } from "./telegram-card";
-import { telegramsAtom } from "@/store/telegrams";
 
 interface TelegramCardListProps {
 	telegrams: Telegram[];

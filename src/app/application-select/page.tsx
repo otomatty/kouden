@@ -1,8 +1,8 @@
+import Container from "@/components/ui/container";
 import { createClient } from "@/lib/supabase/server";
+import { BookOpen, Gift, Users } from "lucide-react";
 import { redirect } from "next/navigation";
 import ApplicationCard from "./_components/ApplicationCard";
-import { Users, Gift, BookOpen } from "lucide-react";
-import Container from "@/components/ui/container";
 
 export default async function ApplicationSelectPage() {
 	const supabase = await createClient();

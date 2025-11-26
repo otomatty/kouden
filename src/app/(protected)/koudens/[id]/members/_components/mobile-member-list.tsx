@@ -1,8 +1,7 @@
-import React, { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Users, Search, ChevronRight } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
 	Select,
 	SelectContent,
@@ -10,14 +9,15 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { getInitials } from "@/lib/utils";
-import { ShareLinkForm } from "./share-link-dialog";
+import type { KoudenMember } from "@/types/member";
+import type { KoudenPermission, KoudenRole } from "@/types/role";
+import type { PrimitiveAtom } from "jotai";
+import { ChevronRight, Search, Users } from "lucide-react";
+import React, { useState } from "react";
 import { InviteByEmailDialog } from "./invite-by-email-dialog";
 import { MemberDetailDrawer } from "./member-detail-drawer";
-import type { KoudenMember } from "@/types/member";
-import type { KoudenRole, KoudenPermission } from "@/types/role";
-import type { PrimitiveAtom } from "jotai";
+import { ShareLinkForm } from "./share-link-dialog";
 
 interface MobileMemberListProps {
 	members: KoudenMember[];

@@ -1,6 +1,6 @@
+import type { ReturnItem } from "@/types/return-records/return-items";
 import { atom } from "jotai";
 import { atomFamily } from "jotai/utils";
-import type { ReturnItem } from "@/types/return-records/return-items";
 
 // 返礼品データを管理するatom（香典帳IDごと）
 export const returnItemsAtom = atom<Record<string, ReturnItem[]>>({});

@@ -1,12 +1,12 @@
 "use client";
 
+import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
+import { Button } from "@/components/ui/button";
 import { useCallback } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 
-import { RelationshipForm, type RelationshipFormValues } from "./form";
 import type { Relationship } from "@/types/relationships";
+import { RelationshipForm, type RelationshipFormValues } from "./form";
 
 interface RelationshipDialogProps {
 	koudenId: string;

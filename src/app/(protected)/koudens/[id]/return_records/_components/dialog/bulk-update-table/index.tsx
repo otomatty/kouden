@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -11,13 +11,13 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle, Loader2, Settings } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Settings, Loader2, AlertTriangle } from "lucide-react";
 
+import type { AmountGroupData, ReturnItemMaster } from "@/types/return-records/bulk-update";
 // types
 import type { ReturnManagementSummary } from "@/types/return-records/return-records";
-import type { AmountGroupData, ReturnItemMaster } from "@/types/return-records/bulk-update";
 
 // utils
 import { groupRecordsByAmount } from "@/utils/bulk-update-helpers";
@@ -32,10 +32,10 @@ import {
 import { executeBulkUpdateOptimized } from "@/app/_actions/return-records/bulk-update-optimized";
 import { getAllReturnRecordsForBulkUpdate } from "@/app/_actions/return-records/return-records";
 
-// components
-import { BulkUpdateTable } from "./bulk-update-table";
 import { BulkUpdateLoadingScreen } from "@/components/custom/bulk-update-loading-screen";
 import { returnRecordsBulkUpdateHints } from "@/store/loading-hints";
+// components
+import { BulkUpdateTable } from "./bulk-update-table";
 
 interface BulkUpdateTableDialogProps {
 	koudenId: string;

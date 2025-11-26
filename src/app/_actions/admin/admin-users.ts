@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
 import type { AdminUser } from "@/types/admin";
+import { revalidatePath } from "next/cache";
 
 export async function getAdminUsers() {
 	const supabase = await createClient();

@@ -5,8 +5,8 @@
 
 "use client";
 
-import { createContext, useContext, type ReactNode } from "react";
 import { useCSRFToken } from "@/hooks/use-csrf-token";
+import { type ReactNode, createContext, useContext } from "react";
 
 interface CSRFContextValue {
 	token: string | null;

@@ -1,6 +1,6 @@
+import { Button } from "@/components/ui/button";
 import type { Meta, StoryObj } from "@storybook/react";
 import { SearchableSelectorDialog } from "./searchable-selector-dialog";
-import { Button } from "@/components/ui/button";
 
 const meta = {
 	title: "Components/SearchableSelectorDialog",

@@ -1,9 +1,9 @@
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { getCustomer } from "@/app/_actions/funeral/customers/getCustomer";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
 import { EditCustomerClient } from "./_components/edit-customer-client";
 
 interface EditCustomerPageProps {

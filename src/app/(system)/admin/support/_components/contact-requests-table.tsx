@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { getContactRequests } from "@/app/_actions/admin/contact-requests";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,11 +9,11 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { ContactRequestsPagination } from "./contact-requests-pagination";
-import { getContactRequests } from "@/app/_actions/admin/contact-requests";
 import { formatDistanceToNow } from "date-fns";
 import { ja } from "date-fns/locale";
 import { Eye, Mail, User } from "lucide-react";
+import Link from "next/link";
+import { ContactRequestsPagination } from "./contact-requests-pagination";
 
 interface ContactRequestsTableProps {
 	status?: string;

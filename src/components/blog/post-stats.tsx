@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Eye, Bookmark } from "lucide-react";
 import { getPostStats } from "@/app/_actions/blog/analytics";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Bookmark, Eye } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface PostStatsProps {
 	postId: string;

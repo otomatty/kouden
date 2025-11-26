@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, type GenerativeModel } from "@google/generative-ai";
+import { type GenerativeModel, GoogleGenerativeAI } from "@google/generative-ai";
 
 /**
  * Gemini APIクライアント

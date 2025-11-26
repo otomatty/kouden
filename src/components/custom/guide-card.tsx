@@ -1,12 +1,8 @@
 "use client";
 
-import {
-	HoverCard,
-	HoverCardContent,
-	HoverCardTrigger,
-} from "@/components/ui/hover-card";
-import { useAtomValue } from "jotai";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { guideModeAtom } from "@/store/guide";
+import { useAtomValue } from "jotai";
 
 interface GuideCardProps {
 	children: React.ReactNode;
@@ -15,12 +11,7 @@ interface GuideCardProps {
 	sideOffset?: number;
 }
 
-export function GuideCard({
-	children,
-	content,
-	align,
-	sideOffset,
-}: GuideCardProps) {
+export function GuideCard({ children, content, align, sideOffset }: GuideCardProps) {
 	const isEnabled = useAtomValue(guideModeAtom);
 
 	// nullの場合はデフォルト値としてtrueを返す

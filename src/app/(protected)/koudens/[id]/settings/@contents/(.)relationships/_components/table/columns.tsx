@@ -1,19 +1,19 @@
 "use client";
 
-import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { ArrowUpDown, MoreHorizontal, Trash2 } from "lucide-react";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Switch } from "@/components/ui/switch";
+import type { CellValue } from "@/types/data-table/table";
+import type { Relationship } from "@/types/relationships";
 // types
 import type { KoudenPermission } from "@/types/role";
-import type { Relationship } from "@/types/relationships";
-import type { CellValue } from "@/types/data-table/table";
+import { type ColumnDef, createColumnHelper } from "@tanstack/react-table";
+import { ArrowUpDown, MoreHorizontal, Trash2 } from "lucide-react";
 // constants
 import { columnLabels } from "./constants";
 

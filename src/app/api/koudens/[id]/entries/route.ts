@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { getEntries } from "@/app/_actions/entries";
 import logger from "@/lib/logger";
+import { NextResponse } from "next/server";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
 	const { id: koudenId } = await params;

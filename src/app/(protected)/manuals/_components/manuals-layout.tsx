@@ -1,9 +1,9 @@
 "use client";
 
 import { getAllDocs } from "@/lib/docs";
-import { DocsList } from "./docs-list";
-import { BreadcrumbNav } from "./breadcrumb-nav";
 import { use } from "react";
+import { BreadcrumbNav } from "./breadcrumb-nav";
+import { DocsList } from "./docs-list";
 
 interface ManualsLayoutProps {
 	children: React.ReactNode;

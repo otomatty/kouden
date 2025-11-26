@@ -1,6 +1,6 @@
-import EntriesPageClient from "./EntriesPageClient";
 import { getEntries } from "@/app/_actions/entries";
 import { getRelationships } from "@/app/_actions/relationships";
+import EntriesPageClient from "./EntriesPageClient";
 
 /**
  * 香典帳（entries）のページコンポーネント

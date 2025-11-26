@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { Providers } from "./providers";
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { notoSansJP, zenOldMincho } from "./fonts";
-import { Toaster } from "@/components/ui/sonner";
 import { getUser } from "./_actions/user";
+import { notoSansJP, zenOldMincho } from "./fonts";
+import { Providers } from "./providers";
 
 export const viewport: Viewport = {
 	width: "device-width",

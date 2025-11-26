@@ -1,18 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { formatDate } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
-import type { Announcement } from "@/types/admin";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -23,6 +10,19 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
+import { formatDate } from "@/lib/utils";
+import type { Announcement } from "@/types/admin";
+import { useState } from "react";
 import { EditAnnouncementButton } from "./edit-announcement-button";
 
 interface AnnouncementsTableProps {
@@ -59,14 +59,9 @@ const categoryLabels = {
 	other: "その他",
 };
 
-export function AnnouncementsTable({
-	announcements,
-	deleteAnnouncement,
-}: AnnouncementsTableProps) {
+export function AnnouncementsTable({ announcements, deleteAnnouncement }: AnnouncementsTableProps) {
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-	const [selectedAnnouncementId, setSelectedAnnouncementId] = useState<
-		string | null
-	>(null);
+	const [selectedAnnouncementId, setSelectedAnnouncementId] = useState<string | null>(null);
 
 	const handleDelete = async (id: string) => {
 		setSelectedAnnouncementId(id);
@@ -105,28 +100,19 @@ export function AnnouncementsTable({
 						<TableRow key={announcement.id}>
 							<TableCell>{announcement.title}</TableCell>
 							<TableCell>
-								<Badge
-									variant="secondary"
-									className={categoryColors[announcement.category]}
-								>
+								<Badge variant="secondary" className={categoryColors[announcement.category]}>
 									{categoryLabels[announcement.category]}
 								</Badge>
 							</TableCell>
 							<TableCell>
-								<Badge
-									variant="secondary"
-									className={statusColors[announcement.status]}
-								>
+								<Badge variant="secondary" className={statusColors[announcement.status]}>
 									{announcement.status === "draft" && "下書き"}
 									{announcement.status === "published" && "公開中"}
 									{announcement.status === "archived" && "アーカイブ"}
 								</Badge>
 							</TableCell>
 							<TableCell>
-								<Badge
-									variant="secondary"
-									className={priorityColors[announcement.priority]}
-								>
+								<Badge variant="secondary" className={priorityColors[announcement.priority]}>
 									{announcement.priority === "low" && "低"}
 									{announcement.priority === "normal" && "中"}
 									{announcement.priority === "high" && "高"}
@@ -134,14 +120,10 @@ export function AnnouncementsTable({
 								</Badge>
 							</TableCell>
 							<TableCell>
-								{announcement.publishedAt
-									? formatDate(announcement.publishedAt)
-									: "-"}
+								{announcement.publishedAt ? formatDate(announcement.publishedAt) : "-"}
 							</TableCell>
 							<TableCell>
-								{announcement.expiresAt
-									? formatDate(announcement.expiresAt)
-									: "-"}
+								{announcement.expiresAt ? formatDate(announcement.expiresAt) : "-"}
 							</TableCell>
 							<TableCell>{formatDate(announcement.createdAt)}</TableCell>
 							<TableCell>{formatDate(announcement.updatedAt)}</TableCell>
@@ -160,10 +142,7 @@ export function AnnouncementsTable({
 				</TableBody>
 			</Table>
 
-			<AlertDialog
-				open={isDeleteDialogOpen}
-				onOpenChange={setIsDeleteDialogOpen}
-			>
+			<AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>お知らせを削除</AlertDialogTitle>

@@ -8,7 +8,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Search, Filter } from "lucide-react";
+import { Filter, Search } from "lucide-react";
 
 interface CustomerSearchFilterProps {
 	searchTerm: string;

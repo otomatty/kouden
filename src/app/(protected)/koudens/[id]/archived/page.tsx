@@ -1,8 +1,8 @@
 import { getKouden, getKoudenWithPlan } from "@/app/_actions/koudens/read";
-import { notFound } from "next/navigation";
 import { checkKoudenPermission } from "@/app/_actions/permissions";
-import { ArchivedPageClient } from "./_components/archived-page-client";
 import type { KoudenPermission } from "@/types/role";
+import { notFound } from "next/navigation";
+import { ArchivedPageClient } from "./_components/archived-page-client";
 
 interface ArchivedPageProps {
 	params: Promise<{ id: string }>;

@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/utils/currency";
 import { formatPostalCode } from "@/utils/postal-code";
+import { useCallback, useEffect, useState } from "react";
 
 interface EditableCellProps {
 	value: string | number | null;

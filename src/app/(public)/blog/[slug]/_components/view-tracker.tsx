@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { recordPostView } from "@/app/_actions/blog/analytics";
+import { useEffect, useRef } from "react";
 
 interface ViewTrackerProps {
 	postId: string;

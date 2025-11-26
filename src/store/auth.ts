@@ -1,5 +1,5 @@
-import { atom } from "jotai";
 import type { User } from "@supabase/supabase-js";
+import { atom } from "jotai";
 
 export const userAtom = atom<User | null>(null);
 export const isLoadingUserAtom = atom<boolean>(true);

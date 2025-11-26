@@ -1,7 +1,7 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { getGeminiModel, isGeminiConfigured, GEMINI_CONFIGS } from "@/lib/gemini";
-import { isAbstractInput, generateClarifyingQuestions } from "@/utils/blog-ai-agent";
+import { GEMINI_CONFIGS, getGeminiModel, isGeminiConfigured } from "@/lib/gemini";
 import logger from "@/lib/logger";
+import { generateClarifyingQuestions, isAbstractInput } from "@/utils/blog-ai-agent";
+import { type NextRequest, NextResponse } from "next/server";
 
 interface SuggestionOption {
 	id: string;

@@ -1,12 +1,12 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
-import { allocateOfferingToEntries, removeOfferingAllocation } from "../allocation";
-import {
-	getOfferingAllocations,
-	checkOfferingAllocationIntegrity,
-	calculateEntryTotalAmount,
-} from "../queries";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { OfferingAllocationRequest } from "@/types/entries";
+import { type Mock, beforeEach, describe, expect, it, vi } from "vitest";
+import { allocateOfferingToEntries, removeOfferingAllocation } from "../allocation";
+import {
+	calculateEntryTotalAmount,
+	checkOfferingAllocationIntegrity,
+	getOfferingAllocations,
+} from "../queries";
 
 // モック設定
 vi.mock("@/lib/supabase/admin", () => ({

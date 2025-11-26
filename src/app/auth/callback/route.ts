@@ -1,7 +1,7 @@
+import { acceptInvitation } from "@/app/_actions/invitations";
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { acceptInvitation } from "@/app/_actions/invitations";
 
 export async function GET(request: Request) {
 	const requestUrl = new URL(request.url);

@@ -1,11 +1,11 @@
 "use client";
 
-import { useAtomValue } from "jotai";
+import { CrudDialog } from "@/components/custom/crud-dialog";
 import { permissionAtom } from "@/store/permission";
 import { canCreateData, canUpdateData } from "@/store/permission";
-import type { Telegram } from "@/types/telegrams";
 import type { Entry } from "@/types/entries";
-import { CrudDialog } from "@/components/custom/crud-dialog";
+import type { Telegram } from "@/types/telegrams";
+import { useAtomValue } from "jotai";
 import { TelegramForm } from "./telegram-form";
 
 interface TelegramDialogProps {

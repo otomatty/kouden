@@ -1,14 +1,14 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { execSync } from "node:child_process";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Import functions to test
 import {
 	createChangelog,
 	generateChangelog,
-	showTemplate,
 	showHelp,
+	showTemplate,
 } from "../changelog-manager.js";
 
 // Mock external dependencies

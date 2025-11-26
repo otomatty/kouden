@@ -1,5 +1,5 @@
-import { MilestoneCard } from "./milestone-card";
 import type { MilestoneMeta } from "@/lib/milestones";
+import { MilestoneCard } from "./milestone-card";
 
 interface MilestonesTimelineProps {
 	milestones: MilestoneMeta[];

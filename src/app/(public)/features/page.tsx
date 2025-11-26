@@ -1,19 +1,19 @@
-import type { Metadata } from "next";
-import Link from "next/link";
+import { SectionTitle } from "@/components/ui/section-title";
 import {
+	BarChart2,
 	ChevronRight,
 	Cloud,
-	BarChart2,
 	FileText,
-	Monitor,
 	Gift,
-	Lock,
 	LayoutDashboard,
+	Lock,
+	Monitor,
 	Timer,
 } from "lucide-react";
-import { SectionTitle } from "@/components/ui/section-title";
-import { PageHero } from "../_components/page-hero";
+import type { Metadata } from "next";
+import Link from "next/link";
 import { CTASection } from "../_components/cta-section";
+import { PageHero } from "../_components/page-hero";
 
 export const metadata: Metadata = {
 	title: "機能紹介 | 香典帳",

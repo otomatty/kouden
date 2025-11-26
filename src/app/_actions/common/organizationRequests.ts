@@ -1,9 +1,9 @@
 "use server";
 
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { Resend } from "resend";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 /** Approve a pending organization request */
 export async function approveOrganization(id: string) {

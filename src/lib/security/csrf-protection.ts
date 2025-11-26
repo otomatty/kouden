@@ -15,8 +15,8 @@
  */
 
 import { createHash, randomBytes } from "node:crypto";
-import type { NextRequest } from "next/server";
 import logger from "@/lib/logger";
+import type { NextRequest } from "next/server";
 
 const CSRF_SECRET = process.env.CSRF_SECRET || "default-secret-change-in-production";
 

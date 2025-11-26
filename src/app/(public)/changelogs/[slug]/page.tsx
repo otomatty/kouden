@@ -1,13 +1,13 @@
-import { getChangelogBySlug, getChangelogNavigation } from "@/lib/changelogs";
-import { MDXRemote } from "next-mdx-remote/rsc";
-import { mdxComponents } from "@/lib/mdx-components";
-import { mdxOptions } from "@/lib/mdx";
-import Container from "@/components/ui/container";
 import { ChangelogNavigation } from "@/components/changelogs/changelog-navigation";
-import { Badge } from "@/components/ui/badge";
 import { BackLink } from "@/components/custom/back-link";
+import { Badge } from "@/components/ui/badge";
+import Container from "@/components/ui/container";
+import { getChangelogBySlug, getChangelogNavigation } from "@/lib/changelogs";
+import { mdxOptions } from "@/lib/mdx";
+import { mdxComponents } from "@/lib/mdx-components";
 import { AlertCircle, AlertTriangle, Bug, Plus, Shield, Sparkles, Zap } from "lucide-react";
 import type { Metadata } from "next";
+import { MDXRemote } from "next-mdx-remote/rsc";
 
 type PageParams = Promise<{
 	slug: string;

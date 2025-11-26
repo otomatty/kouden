@@ -1,18 +1,18 @@
-// library
-import { useState } from "react";
-import { useAtomValue } from "jotai";
+import { Badge } from "@/components/ui/badge";
 // ui
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ChevronRight } from "lucide-react";
 import { Drawer, DrawerTrigger } from "@/components/ui/drawer";
-// types
-import type { Telegram } from "@/types/telegrams";
-import type { Entry } from "@/types/entries";
-// components
-import { TelegramDrawerContent } from "./telegram-drawer-content";
 // stores
 import { mergedTelegramsAtom } from "@/store/telegrams";
+import type { Entry } from "@/types/entries";
+// types
+import type { Telegram } from "@/types/telegrams";
+import { useAtomValue } from "jotai";
+import { ChevronRight } from "lucide-react";
+// library
+import { useState } from "react";
+// components
+import { TelegramDrawerContent } from "./telegram-drawer-content";
 
 interface TelegramCardProps {
 	telegram: Telegram;

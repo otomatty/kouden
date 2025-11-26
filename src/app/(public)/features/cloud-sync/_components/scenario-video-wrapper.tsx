@@ -1,8 +1,8 @@
 "use client";
 
+import { CloudOff, History, Home, MapPin, RefreshCw } from "lucide-react";
 import type React from "react";
-import { ScenarioVideoSection, type Scenario } from "../../_components/ScenarioVideoSection";
-import { MapPin, Home, CloudOff, RefreshCw, History } from "lucide-react";
+import { type Scenario, ScenarioVideoSection } from "../../_components/ScenarioVideoSection";
 
 const scenarios: Scenario[] = [
 	{

@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { Resend } from "resend";
-import { buildReminderEmail } from "@/utils/emailTemplates/reminder";
 import logger from "@/lib/logger";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { buildReminderEmail } from "@/utils/emailTemplates/reminder";
+import { NextResponse } from "next/server";
+import { Resend } from "resend";
 
 const apiKey = process.env.RESEND_API_KEY;
 if (!apiKey) {

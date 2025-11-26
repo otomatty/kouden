@@ -1,11 +1,11 @@
-import { Suspense, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ContactRequestsTable } from "./_components/contact-requests-table";
-import { ContactRequestsStats } from "./_components/contact-requests-stats";
-import { ContactRequestsFilters } from "./_components/contact-requests-filters";
-import { CampaignApplicationsTable } from "./_components/campaign-applications-table";
+import { Suspense, useMemo } from "react";
 import { CampaignApplicationsStats } from "./_components/campaign-applications-stats";
+import { CampaignApplicationsTable } from "./_components/campaign-applications-table";
+import { ContactRequestsFilters } from "./_components/contact-requests-filters";
+import { ContactRequestsStats } from "./_components/contact-requests-stats";
+import { ContactRequestsTable } from "./_components/contact-requests-table";
 import { SupportTabs } from "./_components/support-tabs";
 
 interface SupportPageProps {

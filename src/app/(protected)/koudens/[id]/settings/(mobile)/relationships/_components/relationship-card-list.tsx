@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { deleteRelationship, updateRelationship } from "@/app/_actions/relationships";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Pencil, Trash } from "lucide-react";
-import { toast } from "sonner";
-import { useAtomValue } from "jotai";
 import { permissionAtom } from "@/store/permission";
-import { RelationshipDialog } from "./relationship-dialog";
 import type { Relationship } from "@/types/relationships";
-import { deleteRelationship, updateRelationship } from "@/app/_actions/relationships";
+import { useAtomValue } from "jotai";
+import { Pencil, Plus, Trash } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { RelationshipDialog } from "./relationship-dialog";
 
 interface RelationshipCardListProps {
 	koudenId: string;

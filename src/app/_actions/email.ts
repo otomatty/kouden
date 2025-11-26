@@ -1,7 +1,7 @@
 "use server";
 
-import { Resend } from "resend";
 import { generateInvitationEmailHtml } from "@/utils/emailTemplates";
+import { Resend } from "resend";
 
 /**
  * Sends an invitation email with the share link for a Kouden.

@@ -1,21 +1,21 @@
-import { Checkbox } from "@/components/ui/checkbox";
+import { EditableCell } from "@/components/custom/data-table/editable-cell";
+import { SelectionColumn } from "@/components/custom/data-table/selection-column";
+import { SearchableSelectorDialog } from "@/components/custom/searchable-selector-dialog";
 import { Button } from "@/components/ui/button";
-import { ArrowUpDown, Pencil, MoreHorizontal, Trash } from "lucide-react";
-import type { KoudenPermission } from "@/types/role";
-import type { Table, Row, Column } from "@tanstack/react-table";
-import type { Telegram } from "@/types/telegrams";
-import type { Entry } from "@/types/entries";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { EditableCell } from "@/components/custom/data-table/editable-cell";
-import { SearchableSelectorDialog } from "@/components/custom/searchable-selector-dialog";
 import type { EditableColumnConfig } from "@/types/data-table/table";
 import type { CellValue } from "@/types/data-table/table";
-import { SelectionColumn } from "@/components/custom/data-table/selection-column";
+import type { Entry } from "@/types/entries";
+import type { KoudenPermission } from "@/types/role";
+import type { Telegram } from "@/types/telegrams";
+import type { Column, Row, Table } from "@tanstack/react-table";
+import { ArrowUpDown, MoreHorizontal, Pencil, Trash } from "lucide-react";
 
 // カラムラベルの定義
 export const columnLabels: Record<string, string> = {

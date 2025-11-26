@@ -1,29 +1,29 @@
 "use client";
 
-import type React from "react";
-import { useState } from "react";
-import {
-	Drawer,
-	DrawerContent,
-	DrawerHeader,
-	DrawerTitle,
-	DrawerDescription,
-	DrawerFooter,
-	DrawerTrigger,
-} from "@/components/ui/drawer";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+	Drawer,
+	DrawerContent,
+	DrawerDescription,
+	DrawerFooter,
+	DrawerHeader,
+	DrawerTitle,
+	DrawerTrigger,
+} from "@/components/ui/drawer";
+import type React from "react";
+import { useState } from "react";
 
+import { updateMemberRole } from "@/app/_actions/roles";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { getInitials } from "@/lib/utils";
-import { RemoveMemberButton } from "./remove-member-button";
-import { updateMemberRole } from "@/app/_actions/roles";
-import { toast } from "sonner";
 import type { KoudenMember } from "@/types/member";
-import type { KoudenRole, KoudenPermission } from "@/types/role";
+import type { KoudenPermission, KoudenRole } from "@/types/role";
 import type { PrimitiveAtom } from "jotai";
+import { toast } from "sonner";
+import { RemoveMemberButton } from "./remove-member-button";
 
 interface MemberDetailDrawerProps {
 	member: KoudenMember;

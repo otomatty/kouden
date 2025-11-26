@@ -1,27 +1,27 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { createContactRequest } from "@/app/_actions/contact";
+import { Button } from "@/components/ui/button";
 import {
 	Form,
+	FormControl,
 	FormField,
 	FormItem,
 	FormLabel,
-	FormControl,
 	FormMessage,
 } from "@/components/ui/form";
-import { createContactRequest } from "@/app/_actions/contact";
+import type { User } from "@supabase/supabase-js";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { getPlaceholderByCategory } from "./category-placeholders";
 import CategorySelect from "./category-select";
-import TextField from "./text-field";
-import TextArea from "./text-area";
 import FileUpload from "./file-upload";
-import SubmitButton from "./submit-button";
 import StepIndicator from "./step-indicator";
 import StepSummary from "./step-summary";
-import { getPlaceholderByCategory } from "./category-placeholders";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import type { User } from "@supabase/supabase-js";
+import SubmitButton from "./submit-button";
+import TextArea from "./text-area";
+import TextField from "./text-field";
 
 interface ContactFormValues {
 	category: string;

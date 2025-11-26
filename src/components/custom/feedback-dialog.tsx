@@ -1,7 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useMediaQuery } from "@/hooks/use-media-query";
 import {
 	Dialog,
 	DialogContent,
@@ -16,6 +14,8 @@ import {
 	DrawerTitle,
 	DrawerTrigger,
 } from "@/components/ui/drawer";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { useEffect, useState } from "react";
 
 interface FeedbackDialogProps {
 	children: React.ReactNode;

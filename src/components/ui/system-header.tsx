@@ -1,13 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import type { User } from "@supabase/supabase-js";
-import { OrganizationSwitcher } from "@/components/ui/organization-switcher";
 import { UserMenu } from "@/app/(protected)/_components/user-menu";
+import { OrganizationSwitcher } from "@/components/ui/organization-switcher";
 import { SystemNavigation } from "@/components/ui/system-navigation";
-import { useOrganization } from "@/context/organization";
-import { useEffect } from "react";
-import Container from "./container";
 import {
 	funeralManagementNavigation,
 	funeralQuickAccessNavigation,
@@ -16,6 +11,11 @@ import {
 	giftManagementNavigation,
 	giftQuickAccessNavigation,
 } from "@/config/navigation/gift-management";
+import { useOrganization } from "@/context/organization";
+import type { User } from "@supabase/supabase-js";
+import Link from "next/link";
+import { useEffect } from "react";
+import Container from "./container";
 
 type SystemType = "funeral" | "gift" | "default";
 

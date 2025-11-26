@@ -1,21 +1,17 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { useDropzone } from "react-dropzone";
+import { cn } from "@/lib/utils";
 import { ImagePlus, X } from "lucide-react";
 import Image from "next/image";
-import { cn } from "@/lib/utils";
+import { useCallback, useState } from "react";
+import { useDropzone } from "react-dropzone";
 
 interface OfferingPhotoUploaderProps {
 	onPhotosChange: (photos: File[]) => void;
 }
 
-export function OfferingPhotoUploader({
-	onPhotosChange,
-}: OfferingPhotoUploaderProps) {
-	const [photos, setPhotos] = useState<Array<{ file: File; preview: string }>>(
-		[],
-	);
+export function OfferingPhotoUploader({ onPhotosChange }: OfferingPhotoUploaderProps) {
+	const [photos, setPhotos] = useState<Array<{ file: File; preview: string }>>([]);
 
 	const onDrop = useCallback(
 		(acceptedFiles: File[]) => {

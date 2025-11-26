@@ -8,9 +8,9 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
+import type { ReturnItem } from "@/types/return-records/return-items";
 import { Package, Plus, ShoppingCart } from "lucide-react";
 import { ReturnItemSelector } from "./return-item-selector";
-import type { ReturnItem } from "@/types/return-records/return-items";
 
 interface EmptyStateProps {
 	onAddCustomItem: () => void;

@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { headers } from "next/headers";
 import type { Json } from "@/types/supabase";
+import { headers } from "next/headers";
 
 interface AuditLogData {
 	action: string;

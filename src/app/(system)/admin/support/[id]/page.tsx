@@ -1,12 +1,12 @@
-import { notFound } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getContactRequestDetail } from "@/app/_actions/admin/contact-requests";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getContactRequestDetail } from "@/app/_actions/admin/contact-requests";
-import { formatDistanceToNow, format } from "date-fns";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { format, formatDistanceToNow } from "date-fns";
 import { ja } from "date-fns/locale";
-import { ArrowLeft, Mail, User, Building, Calendar, FileText, Paperclip } from "lucide-react";
+import { ArrowLeft, Building, Calendar, FileText, Mail, Paperclip, User } from "lucide-react";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { ContactRequestStatusUpdater } from "../_components/contact-request-status-updater";
 
 interface ContactRequestDetailPageProps {

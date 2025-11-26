@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { PageHero } from "../../_components/page-hero";
-import IncludedFeaturesSection from "./_components/included-features-section";
-import TargetUsersSection from "./_components/target-users-section";
-import PricingSection from "./_components/pricing-section";
-import HowItWorksSection from "./_components/how-it-works-section";
 import AppealPointsSection from "./_components/appeal-points-section";
 import CtaSection from "./_components/cta-section";
+import HowItWorksSection from "./_components/how-it-works-section";
+import IncludedFeaturesSection from "./_components/included-features-section";
+import PricingSection from "./_components/pricing-section";
+import TargetUsersSection from "./_components/target-users-section";
 
 export const metadata: Metadata = {
 	title: "フルサポートプラン - 香典帳アプリ",

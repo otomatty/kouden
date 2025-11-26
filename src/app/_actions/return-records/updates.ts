@@ -5,14 +5,14 @@
  * @module return-records/updates
  */
 
+import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
 import type {
 	ReturnEntryRecord,
 	ReturnStatus,
 	UpdateReturnEntryInput,
 } from "@/types/return-records/return-records";
-import logger from "@/lib/logger";
+import { revalidatePath } from "next/cache";
 
 /**
  * 返礼記録の更新可能フィールドの値の型定義

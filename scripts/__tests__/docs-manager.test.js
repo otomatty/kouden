@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { execSync } from "node:child_process";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Import functions to test
 import { runChangelogManager, runMilestoneManager, showHelp } from "../docs-manager.js";

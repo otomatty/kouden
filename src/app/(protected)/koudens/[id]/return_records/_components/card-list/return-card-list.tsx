@@ -1,14 +1,14 @@
 "use client";
 
-// library
-import { useMemo } from "react";
+import type { Relationship } from "@/types/relationships";
 // types
 import type { ReturnManagementSummary } from "@/types/return-records/return-records";
-import type { Relationship } from "@/types/relationships";
+import { Loader2 } from "lucide-react";
+// library
+import { useMemo } from "react";
 // components
 import { ReturnCard } from "./return-card";
 import { StickySearchHeader } from "./sticky-search-header";
-import { Loader2 } from "lucide-react";
 
 // Props
 interface ReturnCardListProps {

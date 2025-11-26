@@ -1,5 +1,5 @@
-import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Info } from "lucide-react";
 import { ComingSoonBadge } from "./coming-soon-badge";
 
 interface SampleDataWrapperProps {
@@ -8,11 +8,7 @@ interface SampleDataWrapperProps {
 	className?: string;
 }
 
-export function SampleDataWrapper({
-	children,
-	feature,
-	className,
-}: SampleDataWrapperProps) {
+export function SampleDataWrapper({ children, feature, className }: SampleDataWrapperProps) {
 	return (
 		<div className={cn("space-y-2", className)}>
 			<div className="flex items-center justify-between">

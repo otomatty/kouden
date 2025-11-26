@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
+import Link from "next/link";
 
 export function AppFooter() {
 	const currentYear = new Date().getFullYear();

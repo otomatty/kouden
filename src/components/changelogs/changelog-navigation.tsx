@@ -1,6 +1,6 @@
-import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { ChangelogMeta } from "@/lib/changelogs";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import Link from "next/link";
 
 interface ChangelogNavigationProps {
 	prevChangelog?: ChangelogMeta | null;

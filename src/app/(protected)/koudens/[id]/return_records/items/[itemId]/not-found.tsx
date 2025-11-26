@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Package, AlertTriangle } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Package } from "lucide-react";
+import Link from "next/link";
 
 /**
  * 返礼品詳細ページの404エラーページ

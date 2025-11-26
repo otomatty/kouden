@@ -1,6 +1,6 @@
 import type { Entry, EntryFormValues, EntryResponse } from "@/types/entries";
-import { createEntry, updateEntry } from "./entries";
 import type { AttendanceType } from "@/types/entries";
+import { createEntry, updateEntry } from "./entries";
 
 const convertToEntry = (response: EntryResponse): Entry => {
 	if (!response) {

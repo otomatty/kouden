@@ -1,21 +1,21 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import type { Announcement, AnnouncementType } from "@/types/announcements";
 import {
-	X,
-	ExternalLink,
-	Info,
+	AlertCircle,
 	AlertTriangle,
 	CheckCircle,
+	ExternalLink,
+	Info,
 	Megaphone,
-	AlertCircle,
+	X,
 } from "lucide-react";
-import type { Announcement, AnnouncementType } from "@/types/announcements";
-import Link from "next/link";
 import Image from "next/image";
-import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 interface AnnouncementCardProps {
 	announcement: Announcement;

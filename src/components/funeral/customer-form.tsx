@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
 	Select,
 	SelectContent,
@@ -12,16 +11,17 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { toast } from "sonner";
-import { Loader2, Save, User, MapPin, Phone, Mail, FileText } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import type {
-	Customer,
 	CreateCustomerInput,
-	UpdateCustomerInput,
+	Customer,
 	CustomerStatus,
+	UpdateCustomerInput,
 } from "@/types/funeral-management";
+import { FileText, Loader2, Mail, MapPin, Phone, Save, User } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface CustomerFormProps {
 	customer?: Customer;

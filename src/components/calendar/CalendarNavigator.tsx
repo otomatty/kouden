@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import CalendarGrid from "./CalendarGrid";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
 import type { DayAvailability } from "@/app/_actions/calendar";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useEffect, useRef, useState } from "react";
+import CalendarGrid from "./CalendarGrid";
 
 interface CalendarNavigatorProps {
 	initialAvailability: DayAvailability[];

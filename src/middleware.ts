@@ -1,11 +1,11 @@
-import { createClient } from "@/lib/supabase/server";
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 import { isAllowedAdminIP, verifyBasicAuth } from "@/lib/security/ip-restrictions";
 import { isAccountLocked } from "@/lib/security/login-attempts";
 import { rateLimit } from "@/lib/security/rate-limiting";
 // Web Crypto APIを使用（node:cryptoをEdge Runtimeで使用すると問題が起こる場合がある）
 import { logRateLimitExceeded, logSuspiciousActivity } from "@/lib/security/security-logger";
+import { createClient } from "@/lib/supabase/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 // 2FAチェックはMiddlewareではなくページレベルで実行（Edge Runtime制限のため）
 
 const CSRF_SECRET = process.env.CSRF_SECRET || "default-secret-change-in-production";
@@ -151,12 +151,12 @@ export async function middleware(request: NextRequest) {
 		if (!isAllowedAdminIP(request)) {
 			// IP制限に引っかかった場合はベーシック認証を要求
 			const authHeader = request.headers.get("authorization");
-			
+
 			// Authorizationヘッダーがない場合（認証をキャンセルした場合）は香典帳アプリトップへリダイレクト
 			if (!authHeader) {
 				return NextResponse.redirect(new URL("/koudens", request.url));
 			}
-			
+
 			// 認証ヘッダーはあるが認証に失敗した場合は401を返す
 			if (!verifyBasicAuth(request)) {
 				return new NextResponse("Unauthorized", {

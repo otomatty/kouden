@@ -1,10 +1,10 @@
 /// <reference types="vitest" />
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
+	type SurveyTrigger,
+	type UserSurveyFormInput,
 	userSurveyFormSchema,
 	userSurveySchema,
-	type UserSurveyFormInput,
-	type SurveyTrigger,
 } from "../user-surveys";
 
 describe("user-surveys schemas", () => {

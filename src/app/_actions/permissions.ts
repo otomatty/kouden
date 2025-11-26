@@ -1,9 +1,9 @@
 "use server";
 
+import { KoudenError } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
 import type { KoudenPermission, KoudenRole } from "@/types/role";
 import { cache } from "react";
-import { KoudenError } from "@/lib/errors";
 
 // 権限チェックのユーティリティ関数
 export const withPermissionCheck = async <T>(

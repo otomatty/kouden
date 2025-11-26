@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface UseInfiniteScrollOptions<T> {
 	loadMore: (cursor?: string) => Promise<{

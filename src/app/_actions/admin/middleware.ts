@@ -1,7 +1,7 @@
+import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { createAuditLog } from "./audit-logs";
-import logger from "@/lib/logger";
 
 export async function withAdmin<T>(action: () => Promise<T>): Promise<T> {
 	const supabase = await createClient();

@@ -1,7 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { BarChart3, ThumbsUp, CheckCircle2, AlertCircle } from "lucide-react";
+import { AlertCircle, BarChart3, CheckCircle2, ThumbsUp } from "lucide-react";
 
 interface NPSBreakdown {
 	promoters: number;

@@ -1,8 +1,8 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { AdminHeader } from "./_components/admin-header";
-import Container from "@/components/ui/container";
 import { CSRFProvider } from "@/components/providers/csrf-provider";
+import Container from "@/components/ui/container";
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { AdminHeader } from "./_components/admin-header";
 
 interface AdminLayoutProps {
 	children: React.ReactNode;

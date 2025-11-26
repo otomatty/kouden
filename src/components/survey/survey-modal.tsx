@@ -1,11 +1,14 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { CheckCircle, Clock, Loader2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Loader2, Clock, CheckCircle } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Dialog,
 	DialogContent,
@@ -21,19 +24,16 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Textarea } from "@/components/ui/textarea";
 
+import { createSurveySkip, createUserSurvey } from "@/app/_actions/user-surveys";
 import {
-	userSurveyFormSchema,
-	type UserSurveyFormInput,
 	type SurveyTrigger,
+	type UserSurveyFormInput,
+	userSurveyFormSchema,
 } from "@/schemas/user-surveys";
-import { createUserSurvey, createSurveySkip } from "@/app/_actions/user-surveys";
 
 interface SurveyModalProps {
 	trigger: SurveyTrigger;

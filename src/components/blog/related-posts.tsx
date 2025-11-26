@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { BookOpen, Calendar, Eye, Bookmark } from "lucide-react";
 import { getRelatedPosts } from "@/app/_actions/blog/analytics";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { RelatedPost } from "@/types/blog";
+import { BookOpen, Bookmark, Calendar, Eye } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 interface RelatedPostsProps {
 	currentPostId: string;

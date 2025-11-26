@@ -1,7 +1,7 @@
-import { Cloud, BarChart2, FileText, Monitor, Gift, Lock, LayoutDashboard } from "lucide-react";
 import { BentoCard, BentoGrid } from "@/components/magicui/bento-grid";
-import { SectionTitle } from "@/components/ui/section-title";
 import { Section } from "@/components/ui/section";
+import { SectionTitle } from "@/components/ui/section-title";
+import { BarChart2, Cloud, FileText, Gift, LayoutDashboard, Lock, Monitor } from "lucide-react";
 
 const features = [
 	{

@@ -1,7 +1,7 @@
-import Link from "next/link";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Container from "@/components/ui/container";
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { UserPlus, ClipboardList, LifeBuoy } from "lucide-react";
+import { ClipboardList, LifeBuoy, UserPlus } from "lucide-react";
+import Link from "next/link";
 
 export default function OrganizationsPage() {
 	return (

@@ -1,8 +1,8 @@
 "use client";
 
-import type { InputHTMLAttributes } from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import type { InputHTMLAttributes } from "react";
 
 interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> {
 	name: string;

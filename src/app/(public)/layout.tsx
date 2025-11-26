@@ -1,8 +1,8 @@
-import { Header } from "./_components/header";
-import { Footer } from "./_components/footer";
-import { MobileBottomNavigation } from "./_components/mobile-bottom-navigation";
 import { Provider } from "jotai";
 import type { Metadata } from "next";
+import { Footer } from "./_components/footer";
+import { Header } from "./_components/header";
+import { MobileBottomNavigation } from "./_components/mobile-bottom-navigation";
 
 // Version fetched from environment variable
 const version = process.env.NEXT_PUBLIC_APP_VERSION ?? "";

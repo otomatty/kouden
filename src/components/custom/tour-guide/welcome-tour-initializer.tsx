@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
-import { usePathname } from "next/navigation";
 import { useAtom } from "jotai";
+import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 import { tourStateAtom } from "./tour-store";
 
 export function WelcomeTourInitializer() {

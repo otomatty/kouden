@@ -5,16 +5,16 @@ import { usePathname } from "next/navigation";
 
 import type { LucideIcon } from "lucide-react";
 import {
+	BarChart2,
+	BarChart3,
+	Box,
 	Gift,
 	List,
-	Send,
+	Mail,
 	RefreshCcw,
-	BarChart2,
+	Send,
 	Settings,
 	Table2,
-	Box,
-	BarChart3,
-	Mail,
 } from "lucide-react";
 
 interface Tab {

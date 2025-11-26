@@ -1,8 +1,8 @@
 "use client";
 
+import type { Database } from "@/types/supabase";
 import React from "react";
 import ResponseItem from "./response-item";
-import type { Database } from "@/types/supabase";
 
 type ContactResponse = Database["public"]["Tables"]["contact_responses"]["Row"];
 

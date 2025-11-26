@@ -1,13 +1,13 @@
-import { notFound } from "next/navigation";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Calendar, MapPin, User, Phone, Mail } from "lucide-react";
 import { getCase } from "@/app/_actions/funeral/cases/getCase";
 import { getKoudenForCase } from "@/app/_actions/funeral/kouden/create";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { ArrowLeft, Calendar, Mail, MapPin, Phone, User } from "lucide-react";
+import Link from "next/link";
+import { notFound } from "next/navigation";
 import { CreateKoudenButton } from "./_components/create-kouden-button";
 import { KoudenManagementCard } from "./_components/kouden-management-card";
 

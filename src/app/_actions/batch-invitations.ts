@@ -1,7 +1,7 @@
 "use server";
 
-import { createShareInvitation } from "./invitations";
 import { sendInvitationEmail } from "./email";
+import { createShareInvitation } from "./invitations";
 
 /**
  * Sends batch invitations by email. Up to 5 addresses.

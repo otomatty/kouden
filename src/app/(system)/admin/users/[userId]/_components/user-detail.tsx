@@ -1,29 +1,29 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import type { UserDetail as UserDetailType } from "@/app/_actions/admin/users";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { format, formatDistanceToNow } from "date-fns";
+import { ja } from "date-fns/locale";
 import {
-	ArrowLeft,
-	Crown,
-	Calendar,
 	Activity,
-	Mail,
-	Users,
+	ArrowLeft,
 	BookOpen,
-	FileText,
-	ExternalLink,
-	Shield,
+	Calendar,
 	CheckCircle,
+	Crown,
+	ExternalLink,
+	FileText,
+	Mail,
+	Shield,
+	Users,
 	XCircle,
 } from "lucide-react";
-import type { UserDetail as UserDetailType } from "@/app/_actions/admin/users";
-import { formatDistanceToNow, format } from "date-fns";
-import { ja } from "date-fns/locale";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 interface UserDetailProps {
 	user: UserDetailType;

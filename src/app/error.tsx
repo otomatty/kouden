@@ -1,9 +1,9 @@
 "use client";
-import { useEffect } from "react";
-import { Header } from "@/app/(public)/_components/header";
 import { Footer } from "@/app/(public)/_components/footer";
+import { Header } from "@/app/(public)/_components/header";
 import { MobileBottomNavigation } from "@/app/(public)/_components/mobile-bottom-navigation";
 import { Button } from "@/components/ui/button";
+import { useEffect } from "react";
 
 interface ErrorProps {
 	error: Error;

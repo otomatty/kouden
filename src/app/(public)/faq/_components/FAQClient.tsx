@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
 	Accordion,
+	AccordionContent,
 	AccordionItem,
 	AccordionTrigger,
-	AccordionContent,
 } from "@/components/ui/accordion";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import React, { useState, useMemo } from "react";
 import { faqData } from "../_data";
 
 /**

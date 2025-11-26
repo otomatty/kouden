@@ -1,9 +1,9 @@
 "use client";
 
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Badge } from "@/components/ui/badge";
-import { Check } from "lucide-react";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import type { Database } from "@/types/supabase";
+import { Check } from "lucide-react";
 
 type Plan = Database["public"]["Tables"]["plans"]["Row"];
 

@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { useAtomValue, useAtom } from "jotai";
-import { toast } from "sonner";
+import { deleteEntry } from "@/app/_actions/entries";
+import { CrudDialog } from "@/components/custom/crud-dialog";
+import { entriesAtom, formSubmissionStateAtom } from "@/store/entries";
 import type { Entry } from "@/types/entries";
 import type { Relationship } from "@/types/relationships";
-import { CrudDialog } from "@/components/custom/crud-dialog";
+import { useAtom, useAtomValue } from "jotai";
+import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { EntryForm } from "./entry-form";
-import { formSubmissionStateAtom, entriesAtom } from "@/store/entries";
-import { deleteEntry } from "@/app/_actions/entries";
 
 export interface EntryDialogProps {
 	koudenId: string;

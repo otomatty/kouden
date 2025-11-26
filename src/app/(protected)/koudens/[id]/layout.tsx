@@ -1,16 +1,16 @@
-import type { Metadata } from "next";
-import { checkKoudenPermission } from "@/app/_actions/permissions";
-import ClientProviders from "@/components/providers/ClientProviders";
 // Server Actions
 import { getKouden, getKoudenWithPlan } from "@/app/_actions/koudens";
+import { checkKoudenPermission } from "@/app/_actions/permissions";
+import ClientProviders from "@/components/providers/ClientProviders";
+import type { Metadata } from "next";
 
-// components
-import { notFound, redirect } from "next/navigation";
-import ArchivedPage from "./archived/page";
-import KoudenHeader from "./_components/_common/kouden-header";
-import TabNavigation from "./_components/_common/tab-navigation";
 import { BottomNavigation } from "@/app/(protected)/koudens/[id]/_components/_common/bottom-navigation";
 import type { Kouden } from "@/types/kouden";
+// components
+import { notFound, redirect } from "next/navigation";
+import KoudenHeader from "./_components/_common/kouden-header";
+import TabNavigation from "./_components/_common/tab-navigation";
+import ArchivedPage from "./archived/page";
 
 /**
  * 動的ルートのメタデータを生成する

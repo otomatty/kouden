@@ -1,9 +1,9 @@
-/// <reference types="vitest" />
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createClient } from "@/lib/supabase/server";
+/// <reference types="vitest" />
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createRolePermission } from "../createRolePermission";
-import { listRolePermissions } from "../listRolePermissions";
 import { deleteRolePermission } from "../deleteRolePermission";
+import { listRolePermissions } from "../listRolePermissions";
 
 vi.mock("@/lib/supabase/server", () => ({
 	createClient: vi.fn(),

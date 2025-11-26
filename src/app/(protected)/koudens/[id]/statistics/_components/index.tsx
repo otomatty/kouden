@@ -3,22 +3,22 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { formatCurrency } from "@/utils/currency";
-import { memo, useState, useEffect } from "react";
+import { memo, useEffect, useState } from "react";
 import {
-	PieChart,
-	Pie,
-	Cell,
-	ResponsiveContainer,
-	BarChart,
 	Bar,
+	BarChart,
+	Cell,
+	Legend,
+	Pie,
+	PieChart,
+	ResponsiveContainer,
+	Tooltip,
 	XAxis,
 	YAxis,
-	Tooltip,
-	Legend,
 } from "recharts";
 
 import type { ReturnStatus } from "@/components/ui/status-badge";
-import { returnStatusMap, returnStatusCustomColors } from "@/components/ui/status-badge";
+import { returnStatusCustomColors, returnStatusMap } from "@/components/ui/status-badge";
 import { attendanceTypeMap } from "@/types/entries";
 
 interface KoudenStatisticsProps {

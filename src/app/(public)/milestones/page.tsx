@@ -1,8 +1,8 @@
-import { getAllMilestones } from "@/lib/milestones";
 import { MilestonesTimeline } from "@/components/milestones/milestones-timeline";
 import Container from "@/components/ui/container";
-import { PageHero } from "../_components/page-hero";
+import { getAllMilestones } from "@/lib/milestones";
 import type { Metadata } from "next";
+import { PageHero } from "../_components/page-hero";
 
 export const metadata: Metadata = {
 	title: "開発マイルストーン - 香典帳アプリ",

@@ -20,13 +20,13 @@
  * @param props.minHeight - テキストエリアの最小の高さ (デフォルト: 100px)
  */
 
-// library
-import { useState } from "react";
 // ui
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Pencil, Check, X } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Check, Pencil, X } from "lucide-react";
+// library
+import { useState } from "react";
 
 export interface EditableTextAreaProps {
 	label: string;

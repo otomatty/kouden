@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 import { updateMemberRole } from "@/app/_actions/roles";
+import { Button } from "@/components/ui/button";
 import type { KoudenMember } from "@/types/member";
 import type { KoudenRole } from "@/types/role";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface FixRoleDebugHelperProps {
 	members: KoudenMember[];

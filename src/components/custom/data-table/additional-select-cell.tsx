@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	Select,
@@ -7,9 +6,10 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { PlusCircle } from "lucide-react";
-import { AddOptionInput } from "../form/add-option-input";
 import type { AdditionalSelectCellProps } from "@/types/data-table/additional-select";
+import { PlusCircle } from "lucide-react";
+import { useState } from "react";
+import { AddOptionInput } from "../form/add-option-input";
 
 export function AdditionalSelectCell({
 	options,

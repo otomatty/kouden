@@ -1,12 +1,12 @@
 "use client";
 
+import { createRelationship, updateRelationship } from "@/app/_actions/relationships";
+import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
+import { Button } from "@/components/ui/button";
+import type { Relationship } from "@/types/relationships";
 import { useState } from "react";
 import { toast } from "sonner";
-import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
-import { createRelationship, updateRelationship } from "@/app/_actions/relationships";
-import type { Relationship } from "@/types/relationships";
 import { RelationshipForm, type RelationshipFormValues } from "./relationship-form";
-import { Button } from "@/components/ui/button";
 interface RelationshipDialogProps {
 	koudenId: string;
 	onOpenChange: (open: boolean) => void;

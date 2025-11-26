@@ -1,10 +1,10 @@
 "use client";
 
+import { AuthProvider } from "@/components/providers/auth-provider";
+import { OrganizationProvider } from "@/context/organization";
+import type { User } from "@supabase/supabase-js";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
-import { OrganizationProvider } from "@/context/organization";
-import { AuthProvider } from "@/components/providers/auth-provider";
-import type { User } from "@supabase/supabase-js";
 
 interface ProvidersProps {
 	children: React.ReactNode;

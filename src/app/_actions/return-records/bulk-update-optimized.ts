@@ -5,10 +5,10 @@
  * @module bulk-update-optimized
  */
 
-import { createClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
-import type { AmountGroupData, BulkUpdateResult } from "@/types/return-records/bulk-update";
 import logger from "@/lib/logger";
+import { createClient } from "@/lib/supabase/server";
+import type { AmountGroupData, BulkUpdateResult } from "@/types/return-records/bulk-update";
+import { revalidatePath } from "next/cache";
 
 /**
  * PostgreSQL最適化版：超高速一括更新

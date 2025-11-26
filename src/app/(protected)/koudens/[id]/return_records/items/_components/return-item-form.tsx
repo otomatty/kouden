@@ -1,22 +1,11 @@
 "use client";
 
-import { useCallback } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
+	deleteReturnItemImage,
+	uploadReturnItemImage,
+} from "@/app/_actions/return-records/return-items";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, X } from "lucide-react";
 import {
 	Form,
 	FormControl,
@@ -26,14 +15,25 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
-import { toast } from "sonner";
-import { returnItemFormSchema, type ReturnItemFormData } from "@/schemas/return-items";
-import type { ReturnItem, ReturnItemCategory } from "@/types/return-records/return-items";
-import { ReturnItemImageUploader } from "./return-item-image-uploader";
+import { Input } from "@/components/ui/input";
 import {
-	uploadReturnItemImage,
-	deleteReturnItemImage,
-} from "@/app/_actions/return-records/return-items";
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { type ReturnItemFormData, returnItemFormSchema } from "@/schemas/return-items";
+import type { ReturnItem, ReturnItemCategory } from "@/types/return-records/return-items";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Upload, X } from "lucide-react";
+import { useCallback } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { ReturnItemImageUploader } from "./return-item-image-uploader";
 
 interface ReturnItemFormProps {
 	/** 編集時の初期データ（新規作成時はundefined） */

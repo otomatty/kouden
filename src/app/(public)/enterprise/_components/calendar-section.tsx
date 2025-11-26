@@ -1,7 +1,7 @@
+import { getWeeklyAvailability } from "@/app/_actions/calendar";
+import CalendarNavigator from "@/components/calendar/CalendarNavigator";
 import { Section } from "@/components/ui/section";
 import { SectionTitle } from "@/components/ui/section-title";
-import CalendarNavigator from "@/components/calendar/CalendarNavigator";
-import { getWeeklyAvailability } from "@/app/_actions/calendar";
 
 export default async function CalendarSection() {
 	const today = new Date();

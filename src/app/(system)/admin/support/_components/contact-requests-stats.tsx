@@ -1,7 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { getContactRequestStats } from "@/app/_actions/admin/contact-requests";
-import { MessageSquare, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertCircle, CheckCircle, Clock, MessageSquare } from "lucide-react";
 
 const statusConfig = {
 	new: {

@@ -3,8 +3,8 @@
  * 管理者画面へのアクセスを許可されたIPアドレスのみに制限
  */
 
-import type { NextRequest } from "next/server";
 import logger from "@/lib/logger";
+import type { NextRequest } from "next/server";
 
 // 許可されたIPアドレスのリスト（環境変数から取得）
 const ALLOWED_ADMIN_IPS = process.env.ALLOWED_ADMIN_IPS?.split(",").map((ip) => ip.trim()) || [];

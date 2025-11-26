@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { useAtomValue } from "jotai";
 import { DataTable } from "@/components/custom/data-table";
 import { permissionAtom } from "@/store/permission";
-// components
-import { RelationshipToolbar } from "./toolbar";
-import { createColumns } from "./columns";
 // types
 import type { Relationship } from "@/types/relationships";
+import { useAtomValue } from "jotai";
+import { useState } from "react";
+import { createColumns } from "./columns";
+// components
+import { RelationshipToolbar } from "./toolbar";
 
 interface RelationshipTableProps {
 	koudenId: string;

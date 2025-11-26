@@ -2,9 +2,9 @@
 
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Pencil, Trash } from "lucide-react";
 // types
 import type { Relationship } from "@/types/relationships";
+import { Pencil, Plus, Trash } from "lucide-react";
 
 interface RelationshipCardListProps {
 	koudenId: string;

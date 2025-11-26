@@ -6,8 +6,8 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { revalidatePath } from "next/cache";
 import type { OfferingAllocationRequest } from "@/types/entries";
+import { revalidatePath } from "next/cache";
 
 /**
  * お供物を複数の香典エントリーに配分する

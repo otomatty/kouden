@@ -1,23 +1,28 @@
 "use client";
-// library
-import * as React from "react";
-import { useState, useCallback, useMemo, useEffect } from "react";
 import {
-	useReactTable,
+	type ColumnDef,
+	type ColumnFiltersState,
+	type SortingState,
+	type VisibilityState,
 	getCoreRowModel,
 	getFilteredRowModel,
 	getSortedRowModel,
-	type SortingState,
-	type ColumnFiltersState,
-	type VisibilityState,
-	type ColumnDef,
+	useReactTable,
 } from "@tanstack/react-table";
 import { useAtomValue } from "jotai";
 import { useSearchParams } from "next/navigation";
+// library
+import * as React from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-// ui
-import { Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+// Server Actions
+import { deleteEntries, updateEntryField } from "@/app/_actions/entries";
+import { getMembers } from "@/app/_actions/members";
+import { createRelationship } from "@/app/_actions/relationships";
+// components
+import { DataTable as BaseDataTable } from "@/components/custom/data-table";
+import { DataTableToolbar } from "@/components/custom/data-table/toolbar";
+import { TableSkeleton } from "@/components/custom/loading/skeletons";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -29,36 +34,31 @@ import {
 	AlertDialogTitle,
 	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { toast } from "sonner";
-// types
-import type { Entry } from "@/types/entries";
-import type { Relationship } from "@/types/relationships";
-import type { AttendanceType } from "@/types/entries";
-import type { CellValue } from "@/types/data-table/table";
-import type { SelectOption } from "@/types/data-table/additional-select";
-// Server Actions
-import { deleteEntries, updateEntryField } from "@/app/_actions/entries";
-import { getMembers } from "@/app/_actions/members";
-import { createRelationship } from "@/app/_actions/relationships";
+import { Button } from "@/components/ui/button";
 // hooks
 import { useMediaQuery } from "@/hooks/use-media-query";
-// stores
-import { permissionAtom } from "@/store/permission";
 import { userAtom } from "@/store/auth";
 import { duplicateEntriesAtom } from "@/store/duplicateEntries";
-// components
-import { DataTable as BaseDataTable } from "@/components/custom/data-table";
-import { TableSkeleton } from "@/components/custom/loading/skeletons";
-import { DataTableToolbar } from "@/components/custom/data-table/toolbar";
+// stores
+import { permissionAtom } from "@/store/permission";
+import type { SelectOption } from "@/types/data-table/additional-select";
+import type { CellValue } from "@/types/data-table/table";
+// types
+import type { Entry } from "@/types/entries";
+import type { AttendanceType } from "@/types/entries";
+import type { Relationship } from "@/types/relationships";
+// ui
+import { Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { EntryDialog } from "../dialog/entry-dialog";
 import { createColumns } from "./columns";
 import {
 	columnLabels,
+	defaultColumnVisibility,
+	editableColumns,
 	searchOptions,
 	sortOptions,
-	defaultColumnVisibility,
 	tabletColumnVisibility,
-	editableColumns,
 } from "./constants";
 
 interface EntryTableProps {

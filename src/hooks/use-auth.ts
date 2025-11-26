@@ -1,6 +1,6 @@
-import { useAtom } from "jotai";
-import { userAtom, isLoadingUserAtom } from "@/store/auth";
+import { isLoadingUserAtom, userAtom } from "@/store/auth";
 import type { User } from "@supabase/supabase-js";
+import { useAtom } from "jotai";
 
 interface UseAuthReturn {
 	user: User | null;

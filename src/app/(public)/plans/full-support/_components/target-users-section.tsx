@@ -1,6 +1,6 @@
-import { HelpCircle, Users, ListChecks, ShieldCheck } from "lucide-react";
 import { Section } from "@/components/ui/section";
 import { SectionTitle } from "@/components/ui/section-title";
+import { HelpCircle, ListChecks, ShieldCheck, Users } from "lucide-react";
 
 const FullSupportBenefitItem = ({
 	icon: Icon,

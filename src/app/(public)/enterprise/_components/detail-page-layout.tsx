@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
 import { Section } from "@/components/ui/section";
 import { SectionTitle } from "@/components/ui/section-title";
+import type { ReactNode } from "react";
 import { PageHero } from "../../_components/page-hero";
 
 interface DetailPageLayoutProps {

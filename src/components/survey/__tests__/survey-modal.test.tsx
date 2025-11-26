@@ -1,5 +1,5 @@
 /// <reference types="vitest" />
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 
 // 注意: SurveyModalはRadix UIのRadioGroupを使用しており、
 // 現在のテスト環境では適切なプロバイダーコンテキストが設定されていないため、

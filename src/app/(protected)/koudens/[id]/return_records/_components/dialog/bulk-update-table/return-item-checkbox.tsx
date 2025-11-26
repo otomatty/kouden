@@ -1,8 +1,8 @@
 "use client";
 
 import { Checkbox } from "@/components/ui/checkbox";
-import { formatCurrency } from "@/utils/currency";
 import type { ReturnItemMaster } from "@/types/return-records/bulk-update";
+import { formatCurrency } from "@/utils/currency";
 
 interface ReturnItemCheckboxProps {
 	/** 返礼品情報 */

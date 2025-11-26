@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useMemo } from "react";
 
 export function SurveyAnalyticsSkeleton() {
 	// メトリクススケルトン配列をメモ化

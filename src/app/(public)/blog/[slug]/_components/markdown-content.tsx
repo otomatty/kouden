@@ -1,12 +1,12 @@
 "use client";
 
 import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import rehypeRaw from "rehype-raw";
+import remarkGfm from "remark-gfm";
 import "highlight.js/styles/github.css";
+import { BlogContentStyles, COMMON_PROSE_CLASSES } from "@/components/blog/blog-content-styles";
 import { extractHeaders, generateHeaderId, getUniqueHeaderId } from "@/utils/markdown-utils";
-import { COMMON_PROSE_CLASSES, BlogContentStyles } from "@/components/blog/blog-content-styles";
 
 interface MarkdownContentProps {
 	content: string;

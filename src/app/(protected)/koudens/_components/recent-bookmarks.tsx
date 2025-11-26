@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import { Bookmark, Calendar, Eye, ArrowRight, BookOpen } from "lucide-react";
 import { getUserBookmarks } from "@/app/_actions/blog/bookmarks";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { BookmarkInfo } from "@/types/blog";
+import { ArrowRight, BookOpen, Bookmark, Calendar, Eye } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 interface RecentBookmarksProps {
 	className?: string;

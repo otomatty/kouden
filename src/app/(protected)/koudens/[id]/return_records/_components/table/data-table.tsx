@@ -1,27 +1,27 @@
 "use client";
 
-// library
-import { useState, useMemo, useCallback, useEffect } from "react";
 import {
-	useReactTable,
+	type ColumnFiltersState,
+	type SortingState,
+	type VisibilityState,
 	getCoreRowModel,
 	getFilteredRowModel,
 	getSortedRowModel,
-	type SortingState,
-	type ColumnFiltersState,
-	type VisibilityState,
+	useReactTable,
 } from "@tanstack/react-table";
 import { useAtomValue } from "jotai";
+// library
+import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { Button } from "@/components/ui/button";
 // ui
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 
+import type { CellValue } from "@/types/data-table/table";
+import type { Entry } from "@/types/entries";
+import type { Relationship } from "@/types/relationships";
 // types
 import type { ReturnManagementSummary } from "@/types/return-records/return-records";
-import type { Relationship } from "@/types/relationships";
-import type { Entry } from "@/types/entries";
-import type { CellValue } from "@/types/data-table/table";
 
 // Server Actions
 import {
@@ -37,18 +37,18 @@ import { permissionAtom } from "@/store/permission";
 
 // components
 import { DataTable as BaseDataTable } from "@/components/custom/data-table";
-import { TableSkeleton } from "@/components/custom/loading/skeletons";
 import { DataTableToolbar } from "@/components/custom/data-table/toolbar";
-import { ReturnItemsButton } from "../return-items-button";
+import { TableSkeleton } from "@/components/custom/loading/skeletons";
 import { BulkUpdateTableDialog } from "../dialog/bulk-update-table";
+import { ReturnItemsButton } from "../return-items-button";
 import { createColumns } from "./columns";
 import {
 	columnLabels,
+	defaultColumnVisibility,
+	editableColumns,
 	searchOptions,
 	sortOptions,
-	defaultColumnVisibility,
 	tabletColumnVisibility,
-	editableColumns,
 } from "./constants";
 
 // Props

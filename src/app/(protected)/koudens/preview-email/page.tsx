@@ -1,5 +1,5 @@
-import { generateInvitationEmailHtml } from "@/utils/emailTemplates";
 import { getKouden } from "@/app/_actions/koudens";
+import { generateInvitationEmailHtml } from "@/utils/emailTemplates";
 
 export default async function PreviewEmailPage({
 	searchParams,

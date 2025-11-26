@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { updateUserSettings } from "@/app/_actions/settings";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import {
 	Select,
 	SelectContent,
@@ -11,10 +9,12 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
-import { updateUserSettings } from "@/app/_actions/settings";
-import { useSetAtom } from "jotai";
+import { Switch } from "@/components/ui/switch";
 import { guideModeAtom } from "@/store/guide";
+import { useSetAtom } from "jotai";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface SettingsFormProps {
 	userId: string;

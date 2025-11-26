@@ -1,9 +1,9 @@
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, Plus, AlertTriangle, Clock, Truck } from "lucide-react";
 import Container from "@/components/ui/container";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AlertTriangle, Clock, Package, Plus, Truck } from "lucide-react";
 import Link from "next/link";
 
 export default function MaterialsPage() {

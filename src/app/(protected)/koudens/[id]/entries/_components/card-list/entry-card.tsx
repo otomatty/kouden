@@ -1,11 +1,13 @@
-// library
-import { useState } from "react";
-import { useAtomValue } from "jotai";
+import { Badge } from "@/components/ui/badge";
 // ui
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { useAtomValue } from "jotai";
 import { ChevronRight, Gift } from "lucide-react";
+// library
+import { useState } from "react";
 
+// stores
+import { mergedEntriesAtom } from "@/store/entries";
 // types
 import type { Entry } from "@/types/entries";
 import type { Relationship } from "@/types/relationships";
@@ -13,8 +15,6 @@ import type { Relationship } from "@/types/relationships";
 import { formatCurrency } from "@/utils/currency";
 // components
 import { EntryDialog } from "../dialog/entry-dialog";
-// stores
-import { mergedEntriesAtom } from "@/store/entries";
 
 interface EntryCardProps {
 	entry: Entry;

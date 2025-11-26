@@ -1,9 +1,9 @@
 "use server";
 
+import logger from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { canDeleteKouden } from "../permissions";
-import logger from "@/lib/logger";
 
 /**
  * 香典帳の削除

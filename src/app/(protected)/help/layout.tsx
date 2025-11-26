@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
 import { StructuredData } from "@/components/structured-data";
+import type { ReactNode } from "react";
 
 interface HelpLayoutProps {
 	children: ReactNode;

@@ -1,13 +1,8 @@
 "use client";
 
-import type { ColumnDef } from "@tanstack/react-table";
-import type { KoudenMember } from "@/types/member";
-import type { KoudenPermission } from "@/types/role";
-import { Badge } from "@/components/ui/badge";
+import { updateMemberRole } from "@/app/_actions/roles";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { getInitials } from "@/lib/utils";
-import { RemoveMemberButton } from "../remove-member-button";
-import type { PrimitiveAtom } from "jotai";
+import { Badge } from "@/components/ui/badge";
 import {
 	Select,
 	SelectContent,
@@ -15,9 +10,14 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { updateMemberRole } from "@/app/_actions/roles";
-import { toast } from "sonner";
+import { getInitials } from "@/lib/utils";
+import type { KoudenMember } from "@/types/member";
+import type { KoudenPermission } from "@/types/role";
 import type { KoudenRole } from "@/types/role";
+import type { ColumnDef } from "@tanstack/react-table";
+import type { PrimitiveAtom } from "jotai";
+import { toast } from "sonner";
+import { RemoveMemberButton } from "../remove-member-button";
 
 const getRoleDisplayName = (roleName: string) => {
 	const roleMap: Record<string, string> = {

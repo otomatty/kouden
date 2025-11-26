@@ -1,8 +1,8 @@
 "use client";
 
+import { BookOpen, Briefcase, CreditCard, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import type React from "react";
-import { CreditCard, SlidersHorizontal, BookOpen, Briefcase } from "lucide-react";
 
 interface NavItem {
 	name: string;

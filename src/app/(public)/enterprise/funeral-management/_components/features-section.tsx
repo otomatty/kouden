@@ -1,6 +1,6 @@
 import { Section } from "@/components/ui/section";
 import { SectionTitle } from "@/components/ui/section-title";
-import { Users, FileText, Box, CheckSquare, BarChart2, RefreshCw, Smartphone } from "lucide-react";
+import { BarChart2, Box, CheckSquare, FileText, RefreshCw, Smartphone, Users } from "lucide-react";
 
 /**
  * 葬儀会社向けの主な機能を表示するセクション

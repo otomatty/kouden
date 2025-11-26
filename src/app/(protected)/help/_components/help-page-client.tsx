@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { searchHelpItems } from "@/app/_actions/help/help-items";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
 	Select,
@@ -12,27 +12,27 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import {
-	HelpCircle,
-	Search,
-	Clock,
-	ChevronLeft,
-	ChevronRight,
-	Loader2,
-	AlertCircle,
-	BookOpen,
-	FileText,
-	Settings,
-	ExternalLink,
-	Mail,
-	Phone,
-	MessageCircle,
-} from "lucide-react";
-import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type { QuickHelpItem } from "@/types/help";
-import { searchHelpItems } from "@/app/_actions/help/help-items";
-import { getIcon, getActionIcon } from "@/utils/help-icons";
+import { getActionIcon, getIcon } from "@/utils/help-icons";
+import {
+	AlertCircle,
+	BookOpen,
+	ChevronLeft,
+	ChevronRight,
+	Clock,
+	ExternalLink,
+	FileText,
+	HelpCircle,
+	Loader2,
+	Mail,
+	MessageCircle,
+	Phone,
+	Search,
+	Settings,
+} from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 const ITEMS_PER_PAGE = 12;
 

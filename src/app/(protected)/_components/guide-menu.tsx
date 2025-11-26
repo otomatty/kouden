@@ -1,9 +1,9 @@
+import { tourStateAtom } from "@/components/custom/tour-guide/tour-store";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { BookOpen, HelpCircle, PlayCircle } from "lucide-react";
-import { useRouter, usePathname } from "next/navigation";
 import { useAtom } from "jotai";
-import { tourStateAtom } from "@/components/custom/tour-guide/tour-store";
+import { BookOpen, HelpCircle, PlayCircle } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 
 export function GuideMenu() {
 	const router = useRouter();

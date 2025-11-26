@@ -1,12 +1,12 @@
-import type { Metadata } from "next";
-import { Suspense } from "react";
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
 import { BackLink } from "@/components/custom/back-link";
-import { BookmarksList } from "./_components/bookmarks-list";
-import { BookmarksFilters } from "./_components/bookmarks-filters";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { createClient } from "@/lib/supabase/server";
 import { Bookmark } from "lucide-react";
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { Suspense } from "react";
+import { BookmarksFilters } from "./_components/bookmarks-filters";
+import { BookmarksList } from "./_components/bookmarks-list";
 
 export const metadata: Metadata = {
 	title: "ブックマーク一覧 | 香典帳",

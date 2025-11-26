@@ -1,6 +1,6 @@
+import type { entryFormSchema, entrySchema } from "@/schemas/entries";
 import type { Database } from "@/types/supabase";
 import type { z } from "zod";
-import type { entrySchema, entryFormSchema } from "@/schemas/entries";
 
 // 基本的な型定義
 export type AttendanceType = "FUNERAL" | "CONDOLENCE_VISIT" | "ABSENT";

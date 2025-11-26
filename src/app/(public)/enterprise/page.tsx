@@ -1,11 +1,11 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import { ArrowRight, Zap, Smile, BarChart2, ShieldCheck } from "lucide-react";
-import { PageHero } from "../_components/page-hero";
+import { Button } from "@/components/ui/button";
 import { Section } from "@/components/ui/section";
 import { SectionTitle } from "@/components/ui/section-title";
-import { Button } from "@/components/ui/button";
+import { ArrowRight, BarChart2, ShieldCheck, Smile, Zap } from "lucide-react";
+import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
+import { PageHero } from "../_components/page-hero";
 
 export const metadata: Metadata = {
 	title: "企業向け機能 | 香典帳",

@@ -1,15 +1,15 @@
 "use client";
-// library
-import { useState, useEffect } from "react";
+import { Loading } from "@/components/custom/loading";
+// hooks
+import { useMediaQuery } from "@/hooks/use-media-query";
 // types
 import type { Entry } from "@/types/entries";
 import type { Telegram } from "@/types/telegrams";
-// hooks
-import { useMediaQuery } from "@/hooks/use-media-query";
+// library
+import { useEffect, useState } from "react";
+import { TelegramCardList } from "./card-list/telegram-card-list";
 // components
 import { DataTable } from "./table/data-table";
-import { TelegramCardList } from "./card-list/telegram-card-list";
-import { Loading } from "@/components/custom/loading";
 // Props
 interface TelegramsViewProps {
 	telegrams: Telegram[];

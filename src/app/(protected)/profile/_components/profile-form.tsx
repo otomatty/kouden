@@ -1,10 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
+import { updateProfile } from "@/app/_actions/profiles";
 import { Button } from "@/components/ui/button";
 import {
 	Form,
@@ -15,8 +11,12 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { updateProfile } from "@/app/_actions/profiles";
+import * as z from "zod";
 
 const formSchema = z.object({
 	display_name: z

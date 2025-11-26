@@ -1,10 +1,10 @@
-import React from "react";
 import Container from "@/components/ui/container";
-import { createClient } from "@/lib/supabase/server";
-import { AdminOrganizationsTable } from "./_components/AdminOrganizationsTable";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DataTable } from "@/components/ui/data-table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { createClient } from "@/lib/supabase/server";
 import type { ColumnDef } from "@tanstack/react-table";
+import React from "react";
+import { AdminOrganizationsTable } from "./_components/AdminOrganizationsTable";
 
 interface OrgRequest {
 	id: string;

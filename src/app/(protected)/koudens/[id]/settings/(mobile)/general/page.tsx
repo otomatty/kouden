@@ -1,9 +1,9 @@
+import { getKouden } from "@/app/_actions/koudens";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
 import React from "react";
 import { GeneralSettingsForm } from "../../@contents/(.)general/_components/general-settings-form";
-import { getKouden } from "@/app/_actions/koudens";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 interface GeneralSettingsPageProps {
 	params: Promise<{ id: string }>;

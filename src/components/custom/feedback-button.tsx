@@ -1,11 +1,11 @@
 "use client";
 
-import { MessageSquarePlus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useMediaQuery } from "@/hooks/use-media-query";
 import AppContactForm from "@/components/contact/app-contact-form";
 import { FeedbackDialog } from "@/components/custom/feedback-dialog";
+import { Button } from "@/components/ui/button";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import type { User } from "@supabase/supabase-js";
+import { MessageSquarePlus } from "lucide-react";
 import { useState } from "react";
 
 interface FeedbackButtonProps {

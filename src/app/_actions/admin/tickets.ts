@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
+import type { Ticket, TicketMessage } from "@/types/admin";
 import { revalidatePath } from "next/cache";
 import { withAdmin } from "./middleware";
-import type { Ticket, TicketMessage } from "@/types/admin";
 
 export async function getTickets() {
 	return withAdmin(async () => {
@@ -18,16 +18,18 @@ export async function getTickets() {
 		// チケットごとのユーザー情報を取得
 		const ticketsWithUsers = await Promise.all(
 			tickets.map(async (ticket) => {
-				const { data: userData, error: userError } =
-					await supabase.auth.admin.getUserById(ticket.user_id);
+				const { data: userData, error: userError } = await supabase.auth.admin.getUserById(
+					ticket.user_id,
+				);
 
 				if (userError) throw userError;
 
 				// 担当管理者の情報を取得
 				let assignedAdmin = null;
 				if (ticket.assigned_to) {
-					const { data: adminData, error: adminError } =
-						await supabase.auth.admin.getUserById(ticket.assigned_to);
+					const { data: adminData, error: adminError } = await supabase.auth.admin.getUserById(
+						ticket.assigned_to,
+					);
 
 					if (adminError) throw adminError;
 					assignedAdmin = adminData?.user;
@@ -53,10 +55,7 @@ export async function getTickets() {
 	});
 }
 
-export async function updateTicketStatus(
-	ticketId: string,
-	status: Ticket["status"],
-) {
+export async function updateTicketStatus(ticketId: string, status: Ticket["status"]) {
 	return withAdmin(async () => {
 		const supabase = await createClient();
 		const { error } = await supabase
@@ -85,10 +84,7 @@ export async function assignTicket(ticketId: string, adminId: string | null) {
 	});
 }
 
-export async function updateTicketPriority(
-	ticketId: string,
-	priority: Ticket["priority"],
-) {
+export async function updateTicketPriority(ticketId: string, priority: Ticket["priority"]) {
 	return withAdmin(async () => {
 		const supabase = await createClient();
 		const { error } = await supabase
@@ -115,16 +111,18 @@ export async function getTicketById(ticketId: string) {
 		if (ticketError) throw ticketError;
 
 		// ユーザー情報を取得
-		const { data: userData, error: userError } =
-			await supabase.auth.admin.getUserById(ticket.user_id);
+		const { data: userData, error: userError } = await supabase.auth.admin.getUserById(
+			ticket.user_id,
+		);
 
 		if (userError) throw userError;
 
 		// 担当管理者の情報を取得
 		let assignedAdmin = null;
 		if (ticket.assigned_to) {
-			const { data: adminData, error: adminError } =
-				await supabase.auth.admin.getUserById(ticket.assigned_to);
+			const { data: adminData, error: adminError } = await supabase.auth.admin.getUserById(
+				ticket.assigned_to,
+			);
 
 			if (adminError) throw adminError;
 			assignedAdmin = adminData?.user;
@@ -162,8 +160,9 @@ export async function getTicketMessages(ticketId: string) {
 		// メッセージごとのユーザー情報を取得
 		const messagesWithUsers = await Promise.all(
 			messages.map(async (message) => {
-				const { data: userData, error: userError } =
-					await supabase.auth.admin.getUserById(message.created_by);
+				const { data: userData, error: userError } = await supabase.auth.admin.getUserById(
+					message.created_by,
+				);
 
 				if (userError) throw userError;
 

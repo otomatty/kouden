@@ -1,6 +1,6 @@
 import { z } from "zod";
-import type { Database } from "./supabase";
 import type { Profile } from "./profile";
+import type { Database } from "./supabase";
 
 // データベースの型定義
 export type Kouden = Database["public"]["Tables"]["koudens"]["Row"];

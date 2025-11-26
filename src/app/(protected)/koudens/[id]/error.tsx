@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, RefreshCcw } from "lucide-react";
 import Link from "next/link";
+import { useEffect } from "react";
 
 export default function KoudenError({
 	error,

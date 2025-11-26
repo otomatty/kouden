@@ -1,9 +1,9 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Eye, Edit, Phone, Mail, MapPin, Calendar, MessageSquare } from "lucide-react";
-import Link from "next/link";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Customer, CustomerStatus } from "@/types/funeral-management";
+import { Calendar, Edit, Eye, Mail, MapPin, MessageSquare, Phone } from "lucide-react";
+import Link from "next/link";
 
 interface CustomerCardProps {
 	customer: Customer;

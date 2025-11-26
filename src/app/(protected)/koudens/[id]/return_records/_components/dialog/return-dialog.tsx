@@ -1,11 +1,11 @@
 "use client";
 
-// types
-import type { ReturnManagementSummary } from "@/types/return-records/return-records";
-import type { Entry } from "@/types/entries";
-import type { Relationship } from "@/types/relationships";
 // components
 import { CrudDialog } from "@/components/custom/crud-dialog";
+import type { Entry } from "@/types/entries";
+import type { Relationship } from "@/types/relationships";
+// types
+import type { ReturnManagementSummary } from "@/types/return-records/return-records";
 import { ReturnForm } from "./return-form";
 
 export interface ReturnDialogProps {

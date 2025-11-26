@@ -1,6 +1,6 @@
+import type { telegramFormSchema, telegramSchema } from "@/schemas/telegram";
 import type { Database } from "@/types/supabase";
 import type { z } from "zod";
-import type { telegramSchema, telegramFormSchema } from "@/schemas/telegram";
 
 // データベースの型定義
 export type TelegramRow = Database["public"]["Tables"]["telegrams"]["Row"];

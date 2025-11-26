@@ -1,13 +1,13 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { CustomerForm } from "@/components/funeral/customer-form";
 import { updateCustomer } from "@/app/_actions/funeral/customers/updateCustomer";
+import { CustomerForm } from "@/components/funeral/customer-form";
 import type {
-	Customer,
 	CreateCustomerInput,
+	Customer,
 	UpdateCustomerInput,
 } from "@/types/funeral-management";
+import { useRouter } from "next/navigation";
 
 interface EditCustomerClientProps {
 	customer: Customer;

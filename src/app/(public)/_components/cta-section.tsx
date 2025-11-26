@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { SectionTitle } from "@/components/ui/section-title";
 import { Section } from "@/components/ui/section";
+import { SectionTitle } from "@/components/ui/section-title";
+import Link from "next/link";
 
 export function CTASection() {
 	return (

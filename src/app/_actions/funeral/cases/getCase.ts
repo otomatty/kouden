@@ -1,8 +1,8 @@
 "use server";
 
+import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import type { FuneralCaseWithDetails } from "@/types/funeral-management";
-import logger from "@/lib/logger";
 
 /**
  * Get a single funeral case by ID with customer details.
