@@ -1,16 +1,16 @@
 "use client";
 
-import { memo, useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { HelpCircle, Search, Clock, Mail, Loader2, AlertCircle, ExternalLink } from "lucide-react";
+import { AlertCircle, Clock, ExternalLink, HelpCircle, Loader2, Mail, Search } from "lucide-react";
 import Link from "next/link";
+import { memo, useEffect, useState } from "react";
+import { searchHelpItems } from "@/app/_actions/help/help-items";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { QuickHelpItem } from "@/types/help";
-import { searchHelpItems } from "@/app/_actions/help/help-items";
-import { getIcon, getActionIcon } from "@/utils/help-icons";
+import { getActionIcon, getIcon } from "@/utils/help-icons";
 
 interface QuickHelpAreaProps {
 	className?: string;

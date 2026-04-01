@@ -1,11 +1,11 @@
-import * as React from "react";
 import { useAtomValue } from "jotai";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { userAtom } from "@/store/auth";
+import { ListFilter } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ListFilter } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { userAtom } from "@/store/auth";
 
 export interface MemberOption {
 	value: string;

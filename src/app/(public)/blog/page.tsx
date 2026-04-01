@@ -1,11 +1,11 @@
-import Link from "next/link";
 import { ArrowRight, Download } from "lucide-react";
+import Link from "next/link";
 import { getPublishedPosts } from "@/app/_actions/blog/posts";
-import Container from "@/components/ui/container";
 import { PageHero } from "@/app/(public)/_components/page-hero";
+import Container from "@/components/ui/container";
+import { BlogSidebar } from "./_components/blog-sidebar";
 import { FeaturedPostsSection } from "./_components/featured-posts-section";
 import { PostsGrid } from "./_components/posts-grid";
-import { BlogSidebar } from "./_components/blog-sidebar";
 
 export default async function BlogPage() {
 	const { data: posts, error } = await getPublishedPosts();

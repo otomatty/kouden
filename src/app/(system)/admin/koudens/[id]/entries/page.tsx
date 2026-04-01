@@ -1,7 +1,7 @@
 import { checkAdminPermission } from "@/app/_actions/admin/permissions";
-import EntriesPageClient from "@/app/(protected)/koudens/[id]/entries/EntriesPageClient";
 import { getEntriesForAdmin } from "@/app/_actions/entries";
 import { getRelationshipsForAdmin } from "@/app/_actions/relationships";
+import EntriesPageClient from "@/app/(protected)/koudens/[id]/entries/EntriesPageClient";
 
 /**
  * 管理者用香典帳（entries）のページコンポーネント

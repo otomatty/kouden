@@ -13,9 +13,7 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
 				<LoadingScreen
 					title={loadingState.title}
 					hints={loadingHints}
-					onLoadingComplete={() =>
-						setLoadingState({ isLoading: false, title: "" })
-					}
+					onLoadingComplete={() => setLoadingState({ isLoading: false, title: "" })}
 				/>
 			)}
 			{children}

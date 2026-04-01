@@ -1,10 +1,9 @@
+import { formatDistanceToNow } from "date-fns";
+import { ja } from "date-fns/locale";
 import type { Metadata } from "next";
-
 import { notFound } from "next/navigation";
 import { getInvitation } from "@/app/_actions/invitations";
 import { createClient } from "@/lib/supabase/server";
-import { formatDistanceToNow } from "date-fns";
-import { ja } from "date-fns/locale";
 import { AnimatedInvitationCard } from "./_components/animated-invitation-card";
 
 interface InvitationPageProps {

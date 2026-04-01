@@ -1,9 +1,9 @@
-import { MemberView } from "./_components/member-view";
 import { getMembers } from "@/app/_actions/members";
+import { checkKoudenPermission } from "@/app/_actions/permissions";
 import { getKoudenRoles } from "@/app/_actions/roles";
 import type { KoudenMember } from "@/types/member";
-import { checkKoudenPermission } from "@/app/_actions/permissions";
 import { SettingsHeader } from "../../_components/settings-header";
+import { MemberView } from "./_components/member-view";
 
 interface MembersPageProps {
 	params: Promise<{ id: string }>;

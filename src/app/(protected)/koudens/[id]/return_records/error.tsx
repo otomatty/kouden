@@ -1,19 +1,15 @@
 "use client";
 
+import { AlertCircle } from "lucide-react";
 import { useEffect } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
 
 /**
  * 返礼品管理画面のエラー状態
  * - エラーメッセージを表示
  * - エラーをログに記録
  */
-export default function ReturnRecordsError({
-	error,
-}: {
-	error: Error & { digest?: string };
-}) {
+export default function ReturnRecordsError({ error }: { error: Error & { digest?: string } }) {
 	useEffect(() => {
 		console.error(error);
 	}, [error]);

@@ -33,7 +33,8 @@ function prepareOSSPackage() {
 			delete packageJson.devDependencies[dep];
 			console.log(`❌ Removed premium devDependency: ${dep}`);
 		}
-	});
+	}
+	)
 
 	// OSS版用の設定に変更
 	packageJson.name = "kouden-oss";

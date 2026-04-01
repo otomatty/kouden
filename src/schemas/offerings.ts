@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const offeringFormSchema = z.object({
 	type: z.enum(["OTHER", "FLOWER", "INCENSE", "FOOD", "MONEY"], {
-		required_error: "種類を選択してください",
+		message: "種類を選択してください",
 	}),
 	description: z.string().nullable(),
 	quantity: z.number().min(1, "数量を入力してください"),

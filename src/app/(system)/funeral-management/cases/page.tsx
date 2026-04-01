@@ -1,10 +1,10 @@
+import { Plus } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import Container from "@/components/ui/container";
-import { Plus } from "lucide-react";
-import Link from "next/link";
-import { CasesClient } from "./_components/cases-client";
 import type { FuneralCaseWithDetails } from "@/types/funeral-management";
+import { CasesClient } from "./_components/cases-client";
 
 export const metadata: Metadata = {
 	title: "葬儀案件管理 | 葬儀会社管理システム",

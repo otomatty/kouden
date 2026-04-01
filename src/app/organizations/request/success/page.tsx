@@ -1,9 +1,9 @@
-import Container from "@/components/ui/container";
+import { ClipboardList, Clock, User } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Clock, User, ClipboardList } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import ContactSection from "@/app/organizations/_components/ContactSection";
+import { Button } from "@/components/ui/button";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import Container from "@/components/ui/container";
 
 export default function SuccessPage() {
 	return (

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Label } from "@/components/ui/label";
 import {
 	Select,
 	SelectContent,
@@ -6,7 +7,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 
 interface RoleSelectProps {
@@ -20,11 +20,7 @@ interface Role {
 	name: string;
 }
 
-export function RoleSelect({
-	koudenId,
-	value,
-	onValueChange,
-}: RoleSelectProps) {
+export function RoleSelect({ koudenId, value, onValueChange }: RoleSelectProps) {
 	const [roles, setRoles] = useState<Role[]>([]);
 	const supabase = createClient();
 

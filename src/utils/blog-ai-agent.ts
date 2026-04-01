@@ -1,4 +1,4 @@
-import type { BlogMetadata, SuggestionOption, ArticleState } from "@/types/blog-ai-agent";
+import type { ArticleState, BlogMetadata, SuggestionOption } from "@/types/blog-ai-agent";
 
 /**
  * 記事の状態を分析する関数

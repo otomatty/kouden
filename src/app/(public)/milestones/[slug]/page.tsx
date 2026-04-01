@@ -1,24 +1,20 @@
-import { getMilestoneBySlug, getMilestoneNavigation } from "@/lib/milestones";
-import { MDXRemote } from "next-mdx-remote/rsc";
-import { mdxComponents } from "@/lib/mdx-components";
-import { mdxOptions } from "@/lib/mdx";
-import Container from "@/components/ui/container";
-import { MilestoneNavigation } from "@/components/milestones/milestone-navigation";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { BackLink } from "@/components/custom/back-link";
 import { CheckCircle, Clock, Loader } from "lucide-react";
 import type { Metadata } from "next";
+import { MDXRemote } from "next-mdx-remote/rsc";
+import { BackLink } from "@/components/custom/back-link";
+import { MilestoneNavigation } from "@/components/milestones/milestone-navigation";
+import { Badge } from "@/components/ui/badge";
+import Container from "@/components/ui/container";
+import { Progress } from "@/components/ui/progress";
+import { mdxOptions } from "@/lib/mdx";
+import { mdxComponents } from "@/lib/mdx-components";
+import { getMilestoneBySlug, getMilestoneNavigation } from "@/lib/milestones";
 
 type PageParams = Promise<{
 	slug: string;
 }>;
 
-export async function generateMetadata({
-	params,
-}: {
-	params: PageParams;
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: PageParams }): Promise<Metadata> {
 	const resolvedParams = await params;
 
 	try {
@@ -39,11 +35,7 @@ export async function generateMetadata({
 	}
 }
 
-export default async function MilestoneDetailPage({
-	params,
-}: {
-	params: PageParams;
-}) {
+export default async function MilestoneDetailPage({ params }: { params: PageParams }) {
 	const resolvedParams = await params;
 
 	try {

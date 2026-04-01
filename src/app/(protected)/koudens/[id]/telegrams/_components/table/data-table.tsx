@@ -1,45 +1,44 @@
 "use client";
-// library
-import * as React from "react";
-import { useState, useCallback, useMemo, useEffect } from "react";
 import {
-	useReactTable,
+	type ColumnDef,
+	type ColumnFiltersState,
 	getCoreRowModel,
 	getFilteredRowModel,
 	getSortedRowModel,
 	type SortingState,
-	type ColumnFiltersState,
+	useReactTable,
 	type VisibilityState,
-	type ColumnDef,
 } from "@tanstack/react-table";
 import { useAtomValue } from "jotai";
-
+import { Trash2 } from "lucide-react";
+// library
+import * as React from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+// Server Actions
+import { deleteTelegrams, updateTelegramField } from "@/app/_actions/telegrams";
+// components
+import { DataTable as BaseDataTable } from "@/components/custom/data-table";
+import { DataTableToolbar } from "@/components/custom/data-table/toolbar";
 // ui
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
-import { toast } from "sonner";
-// types
-import type { Telegram } from "@/types/telegrams";
-import type { CellValue } from "@/types/data-table/table";
-import type { Entry } from "@/types/entries";
-// Server Actions
-import { updateTelegramField, deleteTelegrams } from "@/app/_actions/telegrams";
 // hooks
 import { useMediaQuery } from "@/hooks/use-media-query";
 // stores
 import { permissionAtom } from "@/store/permission";
-// components
-import { DataTable as BaseDataTable } from "@/components/custom/data-table";
-import { DataTableToolbar } from "@/components/custom/data-table/toolbar";
+import type { CellValue } from "@/types/data-table/table";
+import type { Entry } from "@/types/entries";
+// types
+import type { Telegram } from "@/types/telegrams";
 import { TelegramDialog } from "../dialog/telegram-dialog";
 import {
 	columnLabels,
+	createColumns,
+	defaultColumnVisibility,
+	editableColumns,
 	searchOptions,
 	sortOptions,
-	defaultColumnVisibility,
 	tabletColumnVisibility,
-	editableColumns,
-	createColumns,
 } from "./columns";
 
 interface DataTableProps {

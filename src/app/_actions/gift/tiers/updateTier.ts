@@ -6,11 +6,7 @@ import { createClient } from "@/lib/supabase/server";
  *
  * @param data - Object containing id and fields to update.
  */
-export async function updateTier(data: {
-	id: string;
-	name?: string;
-	threshold?: number;
-}) {
+export async function updateTier(data: { id: string; name?: string; threshold?: number }) {
 	const { id, name, threshold } = data;
 	const supabase = await createClient();
 	const { data: tier, error } = await supabase

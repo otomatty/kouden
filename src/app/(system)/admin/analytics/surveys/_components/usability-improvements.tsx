@@ -19,7 +19,11 @@ function UsabilityRequestBar({
 	label,
 	count,
 	total,
-}: { label: string; count: number; total: number }) {
+}: {
+	label: string;
+	count: number;
+	total: number;
+}) {
 	const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
 
 	return (

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { ResponsiveDialog } from ".";
 import { Button } from "@/components/ui/button";
+import { ResponsiveDialog } from ".";
 
 const meta = {
 	title: "Components/ResponsiveDialog",

@@ -1,33 +1,32 @@
 "use client";
 
-import * as React from "react";
-import { DataTable as BaseDataTable } from "@/components/custom/data-table";
-import { Skeleton } from "@/components/ui/skeleton";
 import type { ColumnDef } from "@tanstack/react-table";
-import type { KoudenMember } from "@/types/member";
-import type { KoudenPermission } from "@/types/role";
-import { v4 as uuidv4 } from "uuid";
 import {
-	useReactTable,
+	type ColumnFiltersState,
 	getCoreRowModel,
 	getFilteredRowModel,
 	getSortedRowModel,
 	type SortingState,
-	type ColumnFiltersState,
+	useReactTable,
 	type VisibilityState,
 } from "@tanstack/react-table";
+import * as React from "react";
+import { v4 as uuidv4 } from "uuid";
+import { DataTable as BaseDataTable } from "@/components/custom/data-table";
 import { DataTableToolbar } from "@/components/custom/data-table/toolbar";
-import { ShareLinkForm } from "../share-link-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import type { KoudenMember } from "@/types/member";
+import type { KoudenPermission, KoudenRole } from "@/types/role";
 import { InviteByEmailDialog } from "../invite-by-email-dialog";
-import type { KoudenRole } from "@/types/role";
+import { ShareLinkForm } from "../share-link-dialog";
 import {
 	columnLabels,
+	defaultColumnVisibility,
 	searchOptions,
 	sortOptions,
-	defaultColumnVisibility,
 	tabletColumnVisibility,
 } from "./columns";
-import { useMediaQuery } from "@/hooks/use-media-query";
 
 interface MembersTableProps {
 	columns: ColumnDef<KoudenMember>[];

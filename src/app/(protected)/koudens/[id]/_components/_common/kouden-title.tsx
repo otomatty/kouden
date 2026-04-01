@@ -1,14 +1,14 @@
 "use client";
 
+import { useAtomValue } from "jotai";
+import { Pencil } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
+import { updateKouden } from "@/app/_actions/koudens";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Pencil } from "lucide-react";
-import { useAtomValue } from "jotai";
-import { permissionAtom, canUpdateKouden } from "@/store/permission";
-import { updateKouden } from "@/app/_actions/koudens";
-import { toast } from "sonner";
+import { canUpdateKouden, permissionAtom } from "@/store/permission";
 
 interface KoudenTitleProps {
 	koudenId: string;

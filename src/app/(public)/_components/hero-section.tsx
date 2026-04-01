@@ -1,7 +1,7 @@
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { zenOldMincho } from "@/app/fonts";
+import { Button } from "@/components/ui/button";
 import Container from "@/components/ui/container";
 
 export function HeroSection() {

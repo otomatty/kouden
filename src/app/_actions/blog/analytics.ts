@@ -1,7 +1,7 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { headers } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * 記事の閲覧数を記録する

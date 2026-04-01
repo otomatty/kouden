@@ -6,11 +6,7 @@ import { createClient } from "@/lib/supabase/server";
  *
  * @param data - Object containing id and fields to update.
  */
-export async function updatePermission(data: {
-	id: string;
-	action?: string;
-	resource?: string;
-}) {
+export async function updatePermission(data: { id: string; action?: string; resource?: string }) {
 	const { id, action, resource } = data;
 	const supabase = await createClient();
 	const { data: permission, error } = await supabase

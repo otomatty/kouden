@@ -1,7 +1,7 @@
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, User, MapPin, Eye, Edit, DollarSign } from "lucide-react";
+import { Calendar, DollarSign, Edit, Eye, MapPin, User } from "lucide-react";
 import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type { FuneralCaseWithDetails } from "@/types/funeral-management";
 
 interface CaseCardProps {

@@ -85,9 +85,7 @@ const setAddressCache = (cache: Record<string, AddressCache>) => {
 };
 
 // キャッシュのクリーンアップ（期限切れのエントリを削除）
-const cleanupCache = (
-	cache: Record<string, AddressCache>,
-): Record<string, AddressCache> => {
+const cleanupCache = (cache: Record<string, AddressCache>): Record<string, AddressCache> => {
 	const now = Date.now();
 	const cleaned = Object.entries(cache).reduce<Record<string, AddressCache>>(
 		(acc, [key, value]) => {
@@ -102,9 +100,7 @@ const cleanupCache = (
 	return cleaned;
 };
 
-export const searchAddress = async (
-	postalCode: string,
-): Promise<{ address: string } | null> => {
+export const searchAddress = async (postalCode: string): Promise<{ address: string } | null> => {
 	try {
 		const numbers = postalCode.replace(/[^\d]/g, "");
 		if (numbers.length !== 7) return null;
@@ -119,9 +115,7 @@ export const searchAddress = async (
 		}
 
 		// APIリクエスト
-		const response = await fetch(
-			`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${numbers}`,
-		);
+		const response = await fetch(`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${numbers}`);
 		const data = await response.json();
 
 		if (data.results?.[0]) {

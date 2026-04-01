@@ -1,7 +1,7 @@
 "use client";
 
+import { CheckCircle2, Database, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import {
 	Carousel,
@@ -10,8 +10,8 @@ import {
 	CarouselNext,
 	CarouselPrevious,
 } from "@/components/ui/carousel";
+import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { Loader2, Database, CheckCircle2 } from "lucide-react";
 
 interface BulkUpdateLoadingScreenProps {
 	/** 表示するタイトル */

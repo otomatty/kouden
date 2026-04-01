@@ -1,10 +1,10 @@
-import type { Metadata } from "next";
 import { ChevronRight } from "lucide-react";
-import { PageHero } from "../_components/page-hero";
+import type { Metadata } from "next";
+import { CTASection } from "../_components/cta-section";
 import { FAQSection } from "../_components/faq-section";
+import { PageHero } from "../_components/page-hero";
 import { BasicUsageSection } from "./_components/basic-usage-section";
 import { FeaturesSection } from "./_components/features-section";
-import { CTASection } from "../_components/cta-section";
 
 export const metadata: Metadata = {
 	title: "使い方ガイド | 香典帳",

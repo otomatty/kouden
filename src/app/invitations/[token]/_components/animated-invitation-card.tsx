@@ -1,6 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { CalendarDays, Info, Users } from "lucide-react";
+import Link from "next/link";
+import { AuthForm } from "@/components/custom/auth-form";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
 	Card,
 	CardContent,
@@ -9,13 +14,8 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { CalendarDays, Users, Info } from "lucide-react";
 import { AcceptInvitationButton } from "./accept-invitation-button";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { AuthForm } from "@/components/custom/auth-form";
 
 interface AnimatedInvitationCardProps {
 	title: string;
@@ -55,7 +55,7 @@ export function AnimatedInvitationCard({
 			x: 0,
 			transition: {
 				duration: 0.5,
-				ease: "easeOut",
+				ease: "easeOut" as const,
 			},
 		},
 	};

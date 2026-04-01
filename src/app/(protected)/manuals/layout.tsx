@@ -1,11 +1,7 @@
 import { getAllDocs } from "@/lib/docs";
 import { DocsList } from "./_components/docs-list";
 
-export default async function ManualsLayout({
-	children,
-}: {
-	children: React.ReactNode;
-}) {
+export default async function ManualsLayout({ children }: { children: React.ReactNode }) {
 	const docs = await getAllDocs();
 
 	return (

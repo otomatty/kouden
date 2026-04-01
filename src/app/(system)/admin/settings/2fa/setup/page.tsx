@@ -3,18 +3,18 @@
  * QRコードを表示し、2FAの設定を完了させる
  */
 
-import { Suspense } from "react";
+import { ShieldCheck, Smartphone } from "lucide-react";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { generateTwoFactorSetup, isTwoFactorEnabled } from "@/lib/security/two-factor-auth";
+import { Suspense } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	getTwoFactorSetupMessage,
 	isTwoFactorRequired,
 } from "@/lib/security/admin-2fa-enforcement";
+import { generateTwoFactorSetup, isTwoFactorEnabled } from "@/lib/security/two-factor-auth";
+import { createClient } from "@/lib/supabase/server";
 import TwoFactorSetupForm from "../_components/TwoFactorSetupForm";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ShieldCheck, Smartphone } from "lucide-react";
 
 interface PageProps {
 	searchParams: Promise<{ from?: string }>;

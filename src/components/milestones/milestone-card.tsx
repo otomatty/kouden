@@ -1,10 +1,10 @@
+import { ArrowRight, Calendar, CheckCircle, Clock, Loader } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Calendar, CheckCircle, Clock, Loader, ArrowRight } from "lucide-react";
-import { cn } from "@/lib/utils";
 import type { MilestoneMeta } from "@/lib/milestones";
+import { cn } from "@/lib/utils";
 
 interface MilestoneCardProps {
 	milestone: MilestoneMeta;

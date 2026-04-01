@@ -1,6 +1,6 @@
+import { Clock, LifeBuoy, Mail } from "lucide-react";
 import Link from "next/link";
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { LifeBuoy, Mail, Clock } from "lucide-react";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function ContactSection() {
 	return (

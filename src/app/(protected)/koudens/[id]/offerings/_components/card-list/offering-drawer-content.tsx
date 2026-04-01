@@ -1,21 +1,15 @@
 // library
-import { useState } from "react";
-import { useAtom, useAtomValue } from "jotai";
-import Image from "next/image";
 
-// ui
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { useAtom, useAtomValue } from "jotai";
+import { Trash2, Users, X } from "lucide-react";
+import Image from "next/image";
+import { useState } from "react";
+import { toast } from "sonner";
+// Server Actions
+import { deleteOffering, updateOfferingField } from "@/app/_actions/offerings";
+// components
+import { EditableField } from "@/components/custom/editable-field";
+import { OfferingAllocationDialog } from "@/components/custom/offering-allocation-dialog";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -26,23 +20,29 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { toast } from "sonner";
-import { X, Trash2, Users } from "lucide-react";
+// ui
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { offeringsAtom, optimisticOfferingsAtom } from "@/store/offerings";
+// stores
+import { canDeleteData, canUpdateData, permissionAtom } from "@/store/permission";
+import type { Entry } from "@/types/entries";
 // types
 import type {
+	OfferingType,
 	OfferingWithKoudenEntries,
 	OptimisticOffering,
-	OfferingType,
 } from "@/types/offerings";
-import type { Entry } from "@/types/entries";
-// stores
-import { permissionAtom, canUpdateData, canDeleteData } from "@/store/permission";
-import { offeringsAtom, optimisticOfferingsAtom } from "@/store/offerings";
-// Server Actions
-import { updateOfferingField, deleteOffering } from "@/app/_actions/offerings";
-// components
-import { EditableField } from "@/components/custom/editable-field";
-import { OfferingAllocationDialog } from "@/components/custom/offering-allocation-dialog";
 import { formatCurrency } from "@/utils/currency";
 import { typeLabels } from "../table/constants";
 

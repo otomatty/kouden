@@ -5,11 +5,11 @@ import {
 	Bar,
 	BarChart,
 	CartesianGrid,
-	XAxis,
-	YAxis,
-	Tooltip,
 	Legend,
 	ResponsiveContainer,
+	Tooltip,
+	XAxis,
+	YAxis,
 } from "recharts";
 import {
 	Card,

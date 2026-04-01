@@ -1,3 +1,4 @@
+import { Package, Plus, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -8,9 +9,8 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import { Package, Plus, ShoppingCart } from "lucide-react";
-import { ReturnItemSelector } from "./return-item-selector";
 import type { ReturnItem } from "@/types/return-records/return-items";
+import { ReturnItemSelector } from "./return-item-selector";
 
 interface EmptyStateProps {
 	onAddCustomItem: () => void;

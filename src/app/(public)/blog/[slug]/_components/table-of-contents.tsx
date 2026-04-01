@@ -1,9 +1,9 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { List } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTableOfContents } from "@/hooks/use-table-of-contents";
+import { cn } from "@/lib/utils";
 
 interface TableOfContentsProps {
 	content: string;

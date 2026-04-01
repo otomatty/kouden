@@ -1,4 +1,4 @@
-import { HelpCircle, Users, ListChecks, ShieldCheck } from "lucide-react";
+import { HelpCircle, ListChecks, ShieldCheck, Users } from "lucide-react";
 import { Section } from "@/components/ui/section";
 import { SectionTitle } from "@/components/ui/section-title";
 

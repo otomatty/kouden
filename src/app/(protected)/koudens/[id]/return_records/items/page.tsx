@@ -1,7 +1,7 @@
-import { Suspense } from "react";
 import type { Metadata } from "next";
-import { ReturnItemsPageClient } from "./ReturnItemsPageClient";
+import { Suspense } from "react";
 import { TableSkeleton } from "@/components/custom/loading/skeletons";
+import { ReturnItemsPageClient } from "./ReturnItemsPageClient";
 
 export const metadata: Metadata = {
 	title: "返礼品管理",

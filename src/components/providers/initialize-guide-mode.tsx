@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
 import { useSetAtom } from "jotai";
+import { useEffect } from "react";
 import { guideModeAtom } from "@/store/guide";
 
 interface InitializeGuideModeProps {
@@ -9,10 +9,7 @@ interface InitializeGuideModeProps {
 	initialValue: boolean;
 }
 
-export function InitializeGuideMode({
-	children,
-	initialValue,
-}: InitializeGuideModeProps) {
+export function InitializeGuideMode({ children, initialValue }: InitializeGuideModeProps) {
 	const setGuideMode = useSetAtom(guideModeAtom);
 
 	useEffect(() => {

@@ -1,16 +1,16 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import logger from "@/lib/logger";
+import { createClient } from "@/lib/supabase/server";
 import type { CellValue } from "@/types/data-table/table";
 import type {
+	AttendanceType,
 	CreateEntryInput,
+	Entry,
 	EntryResponse,
 	UpdateEntryInput,
-	Entry,
-	AttendanceType,
 } from "@/types/entries";
-import logger from "@/lib/logger";
 
 export async function createEntry(input: CreateEntryInput): Promise<EntryResponse> {
 	const supabase = await createClient();

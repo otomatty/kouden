@@ -1,14 +1,14 @@
 "use client";
 
-import { KoudenTitle } from "./kouden-title";
-import { KoudenActionsMenu } from "../actions/kouden-actions-menu";
+import { useState } from "react";
+import { BackLink } from "@/components/custom/back-link";
+import { PlanHoverCard } from "@/components/custom/plan-hover-card";
+import { Badge } from "@/components/ui/badge";
 import type { KoudenPermission } from "@/types/role";
 import type { Database } from "@/types/supabase";
-import { useState } from "react";
+import { KoudenActionsMenu } from "../actions/kouden-actions-menu";
+import { KoudenTitle } from "./kouden-title";
 import PlanUpgradeAlert from "./plan-upgrade-alert";
-import { BackLink } from "@/components/custom/back-link";
-import { Badge } from "@/components/ui/badge";
-import { PlanHoverCard } from "@/components/custom/plan-hover-card";
 
 type Plan = Database["public"]["Tables"]["plans"]["Row"];
 

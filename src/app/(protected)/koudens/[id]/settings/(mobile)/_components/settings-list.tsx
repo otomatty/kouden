@@ -1,5 +1,5 @@
-import type React from "react";
 import { ChevronRight } from "lucide-react";
+import type React from "react";
 
 export type SettingsListItem = {
 	href: string;

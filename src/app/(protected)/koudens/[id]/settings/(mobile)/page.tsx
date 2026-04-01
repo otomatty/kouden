@@ -1,6 +1,6 @@
+import { GiftIcon, HeartIcon, SettingsIcon, TruckIcon, UsersIcon } from "lucide-react";
 import React from "react";
 import { SettingsList } from "./_components/settings-list";
-import { SettingsIcon, UsersIcon, HeartIcon, TruckIcon, GiftIcon } from "lucide-react";
 
 // TODO: モバイル版設定一覧ページの実装
 export default function SettingsMobilePage() {

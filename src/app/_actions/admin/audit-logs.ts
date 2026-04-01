@@ -1,5 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
 import { headers } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
 import type { Json } from "@/types/supabase";
 
 interface AuditLogData {

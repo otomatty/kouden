@@ -1,12 +1,12 @@
 "use server";
 
+import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import type {
 	Announcement,
 	CreateAnnouncementInput,
 	UpdateAnnouncementInput,
 } from "@/types/announcements";
-import logger from "@/lib/logger";
 
 /**
  * アクティブなお知らせを取得（表示用）

@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getGeminiModel, isGeminiConfigured, GEMINI_CONFIGS } from "@/lib/gemini";
+import { GEMINI_CONFIGS, getGeminiModel, isGeminiConfigured } from "@/lib/gemini";
 import logger from "@/lib/logger";
 
 interface TranslateRequestBody {

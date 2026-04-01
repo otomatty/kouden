@@ -1,7 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
+import { updateContactRequestStatus } from "@/app/_actions/admin/contact-requests";
+import { Button } from "@/components/ui/button";
 import {
 	Select,
 	SelectContent,
@@ -9,10 +13,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { updateContactRequestStatus } from "@/app/_actions/admin/contact-requests";
-import { Loader2 } from "lucide-react";
 
 interface ContactRequestStatusUpdaterProps {
 	requestId: string;

@@ -3,6 +3,7 @@ import { useFormContext } from "react-hook-form";
 // ui
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { SearchableCheckboxList } from "@/components/ui/searchable-checkbox-list";
 import {
 	Select,
 	SelectContent,
@@ -13,7 +14,6 @@ import {
 // types
 import type { Entry } from "@/types/entries";
 import type { OfferingFormValues } from "@/types/offerings";
-import { SearchableCheckboxList } from "@/components/ui/searchable-checkbox-list";
 
 interface OfferingFormBasicProps {
 	entries: Entry[];

@@ -1,8 +1,8 @@
 "use client";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import KoudenHeader from "../../_components/_common/kouden-header";
 import type { KoudenPermission } from "@/types/role";
+import KoudenHeader from "../../_components/_common/kouden-header";
 
 interface ArchivedPageClientProps {
 	id: string;

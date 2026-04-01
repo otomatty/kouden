@@ -1,7 +1,7 @@
 import { checkAdminPermission } from "@/app/_actions/admin/permissions";
-import { TelegramsView } from "@/app/(protected)/koudens/[id]/telegrams/_components";
-import { getTelegrams } from "@/app/_actions/telegrams";
 import { getEntriesForAdmin } from "@/app/_actions/entries";
+import { getTelegrams } from "@/app/_actions/telegrams";
+import { TelegramsView } from "@/app/(protected)/koudens/[id]/telegrams/_components";
 
 interface AdminTelegramsPageProps {
 	params: Promise<{ id: string }>;

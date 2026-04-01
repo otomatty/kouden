@@ -1,24 +1,24 @@
 "use client";
 
-import { memo, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
-	BookOpen,
-	Gift,
-	TrendingUp,
 	AlertCircle,
-	Lightbulb,
-	Users,
-	FileText,
-	Heart,
 	ArrowRight,
+	BookOpen,
 	ExternalLink,
+	FileText,
+	Gift,
+	Heart,
+	Lightbulb,
+	TrendingUp,
+	Users,
 } from "lucide-react";
 import Link from "next/link";
-import type { Database } from "@/types/supabase";
+import { memo, useMemo } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Post } from "@/schemas/posts";
+import type { Database } from "@/types/supabase";
 import { RecentBookmarks } from "./recent-bookmarks";
 
 // 拡張した香典帳型（既存の型定義を参考）

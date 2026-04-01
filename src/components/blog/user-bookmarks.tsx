@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Bookmark, Calendar, Eye, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { getUserBookmarks, toggleBookmark } from "@/app/_actions/blog/bookmarks";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { getUserBookmarks, toggleBookmark } from "@/app/_actions/blog/bookmarks";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { BookmarkInfo } from "@/types/blog";
 
 interface UserBookmarksProps {

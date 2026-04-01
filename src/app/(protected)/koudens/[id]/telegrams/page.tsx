@@ -1,6 +1,6 @@
-import { TelegramsView } from "./_components";
-import { getTelegrams } from "@/app/_actions/telegrams";
 import { getEntries } from "@/app/_actions/entries";
+import { getTelegrams } from "@/app/_actions/telegrams";
+import { TelegramsView } from "./_components";
 
 interface TelegramsPageProps {
 	params: Promise<{ id: string }>;

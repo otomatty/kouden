@@ -3,12 +3,12 @@
 import type * as React from "react";
 import {
 	Accordion,
+	AccordionContent,
 	AccordionItem,
 	AccordionTrigger,
-	AccordionContent,
 } from "@/components/ui/accordion";
-import { SectionTitle } from "@/components/ui/section-title";
 import { Section } from "@/components/ui/section";
+import { SectionTitle } from "@/components/ui/section-title";
 import type { FAQ } from "@/types/faq";
 
 const defaultFaqs: FAQ[] = [

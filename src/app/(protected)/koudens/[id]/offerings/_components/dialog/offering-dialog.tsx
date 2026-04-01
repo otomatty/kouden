@@ -1,9 +1,9 @@
 "use client";
 
-import { OfferingForm } from "./offering-form";
 import { CrudDialog } from "@/components/custom/crud-dialog";
 import type { Entry } from "@/types/entries";
 import type { OfferingWithKoudenEntries } from "@/types/offerings";
+import { OfferingForm } from "./offering-form";
 
 export interface OfferingDialogProps {
 	koudenId: string;

@@ -1,47 +1,27 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
 import {
 	Bot,
-	User,
-	Send,
-	Sparkles,
-	FileText,
-	Edit,
-	Lightbulb,
-	Loader2,
 	Check,
-	X,
 	ChevronRight,
+	Edit,
+	Edit3,
+	FileText,
 	FolderOpen,
 	HelpCircle,
-	RotateCcw,
-	Edit3,
+	Lightbulb,
+	Loader2,
 	MoreHorizontal,
+	RotateCcw,
+	Send,
+	Sparkles,
+	User,
+	X,
 } from "lucide-react";
-
-// 分割されたコンポーネントとフックをインポート
-import type {
-	BlogAIAgentProps,
-	ChatMessage,
-	SuggestionOption,
-	ClarifyingQuestion,
-} from "@/types/blog-ai-agent";
-import { ChatMessageContent } from "./chat-markdown";
-import { useBlogAIAgent } from "@/hooks/use-blog-ai-agent";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
@@ -49,6 +29,25 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { useBlogAIAgent } from "@/hooks/use-blog-ai-agent";
+// 分割されたコンポーネントとフックをインポート
+import type {
+	BlogAIAgentProps,
+	ChatMessage,
+	ClarifyingQuestion,
+	SuggestionOption,
+} from "@/types/blog-ai-agent";
+import { ChatMessageContent } from "./chat-markdown";
 
 // UI関連のヘルパー関数群
 const getMessageIcon = (message: ChatMessage) => {

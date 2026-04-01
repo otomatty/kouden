@@ -1,15 +1,15 @@
+import { CloudOff, Smartphone, Users } from "lucide-react";
 import type { Metadata } from "next";
-import { Smartphone, Users, CloudOff } from "lucide-react";
-import { PageHero } from "../../_components/page-hero";
-import { SectionTitle } from "@/components/ui/section-title";
 import { Section } from "@/components/ui/section";
-import { FeaturePointCard } from "../_components/FeaturePointCard";
-import ScenarioVideoWrapper from "./_components/scenario-video-wrapper";
-import { TestimonialsSection } from "../_components/TestimonialsSection";
-import { testimonials } from "./testimonials";
+import { SectionTitle } from "@/components/ui/section-title";
 import { CTASection } from "../../_components/cta-section";
-import { OtherFeaturesList } from "../_components/OtherFeaturesList";
+import { PageHero } from "../../_components/page-hero";
+import { FeaturePointCard } from "../_components/FeaturePointCard";
 import { MediaSection } from "../_components/MediaSection";
+import { OtherFeaturesList } from "../_components/OtherFeaturesList";
+import { TestimonialsSection } from "../_components/TestimonialsSection";
+import ScenarioVideoWrapper from "./_components/scenario-video-wrapper";
+import { testimonials } from "./testimonials";
 
 export const metadata: Metadata = {
 	title: "あらゆる端末で使える | 機能詳細 | 香典帳",

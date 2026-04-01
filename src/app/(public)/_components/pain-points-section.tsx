@@ -1,8 +1,8 @@
+import { Calculator, FileSpreadsheet, History, Users2 } from "lucide-react";
 import { zenOldMincho } from "@/app/fonts";
 import { Card } from "@/components/ui/card";
-import { FileSpreadsheet, Users2, Calculator, History } from "lucide-react";
-import { SectionTitle } from "@/components/ui/section-title";
 import { Section } from "@/components/ui/section";
+import { SectionTitle } from "@/components/ui/section-title";
 
 type Story = {
 	text: string;

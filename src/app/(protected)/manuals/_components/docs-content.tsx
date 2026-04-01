@@ -1,16 +1,16 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { HelpCircle, Play, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { HelpCircle, Sparkles, Play } from "lucide-react";
-import Link from "next/link";
-import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DocMeta } from "@/lib/docs";
 import { getCategoryName } from "@/lib/docs-config";
 import { DocsSearch } from "./docs-search";
-import { QuickStartGuide } from "./quick-start-guide";
 import { GuidedTour } from "./guided-tour";
+import { QuickStartGuide } from "./quick-start-guide";
 
 interface DocsContentProps {
 	docs?: DocMeta[];

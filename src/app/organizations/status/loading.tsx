@@ -1,6 +1,6 @@
+import { CardSkeleton } from "@/components/custom/loading/skeletons";
 import Container from "@/components/ui/container";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CardSkeleton } from "@/components/custom/loading/skeletons";
 
 export default function Loading() {
 	return (

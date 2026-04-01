@@ -1,8 +1,11 @@
-import Image from "next/image";
+import type { Column, Row, Table } from "@tanstack/react-table";
 // ui
-import { ArrowUpDown, Trash2, MoreHorizontal, ImageIcon, Users, Calculator } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowUpDown, Calculator, ImageIcon, MoreHorizontal, Trash2, Users } from "lucide-react";
+import Image from "next/image";
+import { SelectionColumn } from "@/components/custom/data-table/selection-column";
+import { OfferingAllocationDialog } from "@/components/custom/offering-allocation-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -10,19 +13,15 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { SelectionColumn } from "@/components/custom/data-table/selection-column";
-
-// types
-import type { KoudenPermission } from "@/types/role";
-import type { Table, Row, Column } from "@tanstack/react-table";
+import type { CellValue } from "@/types/data-table/table";
 import type { Entry } from "@/types/entries";
 import type { OfferingType, OfferingWithKoudenEntries } from "@/types/offerings";
-import type { CellValue } from "@/types/data-table/table";
+// types
+import type { KoudenPermission } from "@/types/role";
 // utils
 import { formatCurrency } from "@/utils/currency";
 // components
 import { OfferingDialog } from "../dialog/offering-dialog";
-import { OfferingAllocationDialog } from "@/components/custom/offering-allocation-dialog";
 // constants
 import { typeLabels } from "./constants";
 
@@ -71,9 +70,10 @@ export function createColumns({ onDeleteRows, permission, koudenId, entries }: C
 			cell: ({
 				row,
 				table,
-			}: { row: Row<OfferingWithKoudenEntries>; table: Table<OfferingWithKoudenEntries> }) => (
-				<SelectionColumn table={table} row={row} permission={permission} />
-			),
+			}: {
+				row: Row<OfferingWithKoudenEntries>;
+				table: Table<OfferingWithKoudenEntries>;
+			}) => <SelectionColumn table={table} row={row} permission={permission} />,
 			enableSorting: false,
 			enableHiding: false,
 		},

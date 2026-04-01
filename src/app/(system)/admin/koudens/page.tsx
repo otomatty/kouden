@@ -1,5 +1,5 @@
 import { checkAdminPermission } from "@/app/_actions/admin/permissions";
-import { getAllKoudens, type AdminKoudenListItem } from "@/app/_actions/admin/users";
+import { type AdminKoudenListItem, getAllKoudens } from "@/app/_actions/admin/users";
 import AdminKoudensClient from "./_components/AdminKoudensClient";
 
 /**

@@ -1,9 +1,9 @@
-import { Suspense } from "react";
-import { notFound } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { AlertTriangle, Clock, Home, Mail, RefreshCw, Users } from "lucide-react";
 import Link from "next/link";
-import { AlertTriangle, Clock, Users, RefreshCw, Home, Mail } from "lucide-react";
+import { notFound } from "next/navigation";
+import { Suspense } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface InvitationErrorPageProps {
 	searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -11,7 +11,9 @@ interface InvitationErrorPageProps {
 
 function InvitationErrorContent({
 	searchParams,
-}: { searchParams: { [key: string]: string | string[] | undefined } }) {
+}: {
+	searchParams: { [key: string]: string | string[] | undefined };
+}) {
 	const error =
 		typeof searchParams.error === "string" ? searchParams.error : "不明なエラーが発生しました";
 	const type = typeof searchParams.type === "string" ? searchParams.type : "unknown";

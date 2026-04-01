@@ -1,4 +1,4 @@
-import { redirect, notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getKouden } from "@/app/_actions/koudens";
 
 export default async function KoudenPage({ params }: { params: Promise<{ id: string }> }) {

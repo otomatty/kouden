@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { GuideCard } from "./guide-card";
 import { Button } from "@/components/ui/button";
+import { GuideCard } from "./guide-card";
 
 const meta = {
 	title: "Components/GuideCard",

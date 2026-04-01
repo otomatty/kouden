@@ -1,15 +1,15 @@
 "use client";
 
-import React from "react";
-import { DataTable } from "@/components/ui/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import React from "react";
+import { toast } from "sonner";
 import {
 	approveOrganization,
 	rejectOrganization,
 } from "@/app/_actions/common/organizationRequests";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { DataTable } from "@/components/ui/data-table";
 
 export type OrgRequest = {
 	id: string;

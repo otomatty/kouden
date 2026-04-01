@@ -1,13 +1,13 @@
 import { notFound } from "next/navigation";
 import { getPublishedPostBySlug } from "@/app/_actions/blog/posts";
+import { RelatedPosts } from "@/components/blog/related-posts";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import Container from "@/components/ui/container";
-import { BlogNavigation } from "./_components/blog-navigation";
 import { BlogHeader } from "./_components/blog-header";
+import { BlogNavigation } from "./_components/blog-navigation";
 import { MarkdownContent } from "./_components/markdown-content";
-import { TableOfContents } from "./_components/table-of-contents";
 import { PostEngagement } from "./_components/post-engagement";
-import { RelatedPosts } from "@/components/blog/related-posts";
+import { TableOfContents } from "./_components/table-of-contents";
 import { ViewTracker } from "./_components/view-tracker";
 
 interface BlogPostPageProps {

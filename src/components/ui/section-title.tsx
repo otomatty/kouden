@@ -1,5 +1,5 @@
-import { cn } from "@/lib/utils";
 import { zenOldMincho } from "@/app/fonts";
+import { cn } from "@/lib/utils";
 
 interface SectionTitleProps {
 	title: string;

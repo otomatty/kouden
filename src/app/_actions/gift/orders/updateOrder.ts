@@ -6,11 +6,7 @@ import { createClient } from "@/lib/supabase/server";
  *
  * @param data - Object containing id and fields to update.
  */
-export async function updateOrder(data: {
-	id: string;
-	totalAmount?: number;
-	status?: string;
-}) {
+export async function updateOrder(data: { id: string; totalAmount?: number; status?: string }) {
 	const { id, totalAmount, status } = data;
 	const supabase = await createClient();
 	const { data: order, error } = await supabase

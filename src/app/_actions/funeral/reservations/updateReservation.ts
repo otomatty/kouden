@@ -6,11 +6,7 @@ import { createClient } from "@/lib/supabase/server";
  *
  * @param data - Object containing id and fields to update.
  */
-export async function updateReservation(data: {
-	id: string;
-	date?: string;
-	status?: string;
-}) {
+export async function updateReservation(data: { id: string; date?: string; status?: string }) {
 	const { id, date, status } = data;
 	const supabase = await createClient();
 	const { data: reservation, error } = await supabase

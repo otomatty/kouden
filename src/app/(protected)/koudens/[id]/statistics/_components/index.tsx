@@ -1,25 +1,24 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { formatCurrency } from "@/utils/currency";
-import { memo, useState, useEffect } from "react";
+import { memo, useEffect, useState } from "react";
 import {
-	PieChart,
-	Pie,
-	Cell,
-	ResponsiveContainer,
-	BarChart,
 	Bar,
+	BarChart,
+	Cell,
+	Legend,
+	Pie,
+	PieChart,
+	ResponsiveContainer,
+	Tooltip,
 	XAxis,
 	YAxis,
-	Tooltip,
-	Legend,
 } from "recharts";
-
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import type { ReturnStatus } from "@/components/ui/status-badge";
-import { returnStatusMap, returnStatusCustomColors } from "@/components/ui/status-badge";
+import { returnStatusCustomColors, returnStatusMap } from "@/components/ui/status-badge";
 import { attendanceTypeMap } from "@/types/entries";
+import { formatCurrency } from "@/utils/currency";
 
 interface KoudenStatisticsProps {
 	totalAmount: number;
@@ -219,7 +218,8 @@ export const KoudenStatistics = memo(function KoudenStatistics({
 									// スマホではラベルを非表示、デスクトップでは表示
 									label={
 										!isMobile
-											? ({ value, percent }) => `${value}名 (${(percent * 100).toFixed(1)}%)`
+											? ({ value, percent }: { value: number; percent?: number }) =>
+													`${value}名 (${((percent ?? 0) * 100).toFixed(1)}%)`
 											: false
 									}
 									labelLine={false}
@@ -235,7 +235,7 @@ export const KoudenStatistics = memo(function KoudenStatistics({
 								<Legend
 									verticalAlign="bottom"
 									height={36}
-									formatter={(value, entry) => `${value}: ${entry.payload?.value}名`}
+									formatter={(value: string, entry: any) => `${value}: ${entry.payload?.value}名`}
 								/>
 							</PieChart>
 						</ResponsiveContainer>

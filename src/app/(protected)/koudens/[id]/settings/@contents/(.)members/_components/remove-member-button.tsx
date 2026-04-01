@@ -1,16 +1,16 @@
 "use client";
 
+import { type PrimitiveAtom, useSetAtom } from "jotai";
+import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { leaveMember, removeMember } from "@/app/_actions/roles";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { getInitials } from "@/lib/utils";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
-import { removeMember, leaveMember } from "@/app/_actions/roles";
 import type { KoudenMember } from "@/types/member";
-import { type PrimitiveAtom, useSetAtom } from "jotai";
 
 const getRoleDisplayName = (roleName: string) => {
 	const roleMap: Record<string, string> = {

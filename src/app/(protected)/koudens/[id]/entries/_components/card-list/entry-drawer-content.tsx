@@ -1,21 +1,15 @@
 // library
-import { useState } from "react";
-import { useAtom, useAtomValue } from "jotai";
-import { useRouter } from "next/navigation";
 
-// ui
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { useAtom, useAtomValue } from "jotai";
+import { Trash2, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
+// Server Actions
+import { deleteEntry, updateEntryField } from "@/app/_actions/entries";
+// components
+import { EditableField } from "@/components/custom/editable-field";
+import { EditableTextArea } from "@/components/custom/editable-textarea";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -26,22 +20,28 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { toast } from "sonner";
-import { X, Trash2 } from "lucide-react";
+// ui
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { entriesAtom, optimisticEntriesAtom } from "@/store/entries";
+// stores
+import { canDeleteData, canUpdateData, permissionAtom } from "@/store/permission";
 // types
 import type { Entry, OptimisticEntry } from "@/types/entries";
 import type { Relationship } from "@/types/relationships";
 // utils
 import { formatCurrency } from "@/utils/currency";
 import { formatPostalCode } from "@/utils/postal-code";
-// stores
-import { permissionAtom, canUpdateData, canDeleteData } from "@/store/permission";
-import { entriesAtom, optimisticEntriesAtom } from "@/store/entries";
-// Server Actions
-import { updateEntryField, deleteEntry } from "@/app/_actions/entries";
-// components
-import { EditableField } from "@/components/custom/editable-field";
-import { EditableTextArea } from "@/components/custom/editable-textarea";
 
 interface EntryDrawerContentProps {
 	entry: Entry;

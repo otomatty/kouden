@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
 import Link from "next/link";
+import React from "react";
 import { zenOldMincho } from "@/app/fonts";
 import { Button } from "@/components/ui/button";
 import { Section } from "@/components/ui/section";

@@ -1,13 +1,13 @@
 import { Suspense } from "react";
-import { TicketsTable } from "./_components/tickets-table";
-import { TicketFilters } from "./_components/ticket-filters";
 import {
-	getTickets,
-	updateTicketStatus,
-	updateTicketPriority,
 	assignTicket,
+	getTickets,
+	updateTicketPriority,
+	updateTicketStatus,
 } from "@/app/_actions/admin/tickets";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TicketFilters } from "./_components/ticket-filters";
+import { TicketsTable } from "./_components/tickets-table";
 
 async function TicketsContent() {
 	const tickets = await getTickets();

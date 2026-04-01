@@ -1,15 +1,13 @@
 // library
-import { useState } from "react";
-import { useAtom, useAtomValue } from "jotai";
 
-// ui
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SearchableCheckboxList } from "@/components/ui/searchable-checkbox-list";
-import { Textarea } from "@/components/ui/textarea";
+import { useAtom, useAtomValue } from "jotai";
+import { Check, Pencil, Trash2, X } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+// Server Actions
+import { deleteTelegram, updateTelegramField } from "@/app/_actions/telegrams";
+// components
+import { EditableField } from "@/components/custom/editable-field";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -20,22 +18,23 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { toast } from "sonner";
-import { Pencil, Check, X, Trash2 } from "lucide-react";
-
-// types
-import type { Telegram, OptimisticTelegram } from "@/types/telegrams";
-import type { Entry } from "@/types/entries";
+// ui
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { Label } from "@/components/ui/label";
 import type { CheckboxListItem } from "@/components/ui/searchable-checkbox-list";
+import { SearchableCheckboxList } from "@/components/ui/searchable-checkbox-list";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+// store
+import { canDeleteData, canUpdateData, permissionAtom } from "@/store/permission";
+import { optimisticTelegramsAtom, telegramsAtom } from "@/store/telegrams";
+import type { Entry } from "@/types/entries";
+// types
+import type { OptimisticTelegram, Telegram } from "@/types/telegrams";
 // utils
 import { formatCurrency } from "@/utils/currency";
-// store
-import { permissionAtom, canUpdateData, canDeleteData } from "@/store/permission";
-import { telegramsAtom, optimisticTelegramsAtom } from "@/store/telegrams";
-// Server Actions
-import { updateTelegramField, deleteTelegram } from "@/app/_actions/telegrams";
-// components
-import { EditableField } from "@/components/custom/editable-field";
 
 interface TelegramDrawerContentProps {
 	telegram: Telegram;

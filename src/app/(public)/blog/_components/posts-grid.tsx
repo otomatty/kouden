@@ -1,5 +1,5 @@
-import { BlogPostCard } from "./blog-post-card";
 import type { TPost } from "@/types/post";
+import { BlogPostCard } from "./blog-post-card";
 
 interface PostsGridProps {
 	posts: TPost[];

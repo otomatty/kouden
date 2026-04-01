@@ -3,8 +3,8 @@
  * @module bulk-update-helpers
  */
 
-import type { ReturnManagementSummary } from "@/types/return-records/return-records";
 import type { AmountGroupData } from "@/types/return-records/bulk-update";
+import type { ReturnManagementSummary } from "@/types/return-records/return-records";
 
 /**
  * 返礼記録を金額ベースでグループ化する

@@ -1,7 +1,7 @@
 import { checkAdminPermission } from "@/app/_actions/admin/permissions";
-import { MemberView } from "@/app/(protected)/koudens/[id]/members/_components/member-view";
 import { getMembersForAdmin } from "@/app/_actions/members";
 import { getKoudenRolesForAdmin } from "@/app/_actions/roles";
+import { MemberView } from "@/app/(protected)/koudens/[id]/members/_components/member-view";
 
 interface AdminMembersPageProps {
 	params: Promise<{ id: string }>;

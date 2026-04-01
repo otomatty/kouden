@@ -1,9 +1,9 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import logger from "@/lib/logger";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * ヒアリング申し込みフォームのバリデーションスキーマ
@@ -147,7 +147,7 @@ export async function submitHearingApplication(formData: FormData) {
 			return {
 				success: false,
 				error: "入力データが不正です",
-				details: error.errors,
+				details: error.issues,
 			};
 		}
 

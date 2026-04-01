@@ -1,9 +1,9 @@
 "use client";
 
+import Image from "next/image";
+import { VideoPlayer } from "@/components/custom/video-player";
 import { Section } from "@/components/ui/section";
 import { SectionTitle } from "@/components/ui/section-title";
-import { VideoPlayer } from "@/components/custom/video-player";
-import Image from "next/image";
 
 /**
  * 基本的な使い方を3ステップで表示するセクション

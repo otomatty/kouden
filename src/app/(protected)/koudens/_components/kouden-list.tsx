@@ -1,14 +1,14 @@
 "use client";
 import { formatDistanceToNow } from "date-fns";
 import { ja } from "date-fns/locale";
-import type { Database } from "@/types/supabase";
-import Link from "next/link";
-import { ArrowRight, ChevronRight } from "lucide-react";
-import { useSetAtom } from "jotai";
-import { loadingStateAtom } from "@/store/loading-hints";
 import { motion } from "framer-motion";
-import { CreateKoudenForm } from "./create-kouden-form";
+import { useSetAtom } from "jotai";
+import { ArrowRight, ChevronRight } from "lucide-react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { loadingStateAtom } from "@/store/loading-hints";
+import type { Database } from "@/types/supabase";
+import { CreateKoudenForm } from "./create-kouden-form";
 
 // 拡張した香典帳型
 type Plan = Database["public"]["Tables"]["plans"]["Row"];

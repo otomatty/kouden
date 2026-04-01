@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { useAtom } from "jotai";
 import { driver } from "driver.js";
+import { useAtom } from "jotai";
+import { useEffect, useRef } from "react";
 import "driver.js/dist/driver.css";
+import type { DriverRef } from "@/types/tour";
 import { getTourSteps } from "./tour-steps";
 import { tourStateAtom } from "./tour-store";
-import type { DriverRef } from "@/types/tour";
 
 export const TourGuide = ({ children }: { children: React.ReactNode }) => {
 	const [tourState, setTourState] = useAtom(tourStateAtom);

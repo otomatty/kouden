@@ -1,10 +1,10 @@
+import { ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
-import { PageHero } from "../../_components/page-hero";
 import { Button } from "@/components/ui/button";
 import { Section } from "@/components/ui/section";
 import { SectionTitle } from "@/components/ui/section-title";
+import { PageHero } from "../../_components/page-hero";
 
 export const metadata: Metadata = {
 	title: "ギフトショップ向け管理システム | 香典帳",

@@ -1,28 +1,27 @@
 "use client";
 
 // library
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { useTransition } from "react";
-// types
-import type {
-	ReturnManagementSummary,
-	ReturnItem,
-	ReturnStatus,
-	ReturnEntryRecord,
-} from "@/types/return-records/return-records";
-import type { Entry } from "@/types/entries";
-import type { Relationship } from "@/types/relationships";
-// hooks
-import { useMediaQuery } from "@/hooks/use-media-query";
-import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 // actions
 import { getReturnEntriesByKoudenPaginated } from "@/app/_actions/return-records/return-records";
+import { Loading } from "@/components/custom/loading";
+import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
+// hooks
+import { useMediaQuery } from "@/hooks/use-media-query";
+import type { Entry } from "@/types/entries";
+import type { Relationship } from "@/types/relationships";
+// types
+import type {
+	ReturnEntryRecord,
+	ReturnItem,
+	ReturnManagementSummary,
+	ReturnStatus,
+} from "@/types/return-records/return-records";
 // utils
 import { convertToReturnManagementSummaries } from "@/utils/return-records-helpers";
+import { ReturnCardList } from "./card-list/return-card-list";
 // components
 import { DataTable } from "./table/data-table";
-import { ReturnCardList } from "./card-list/return-card-list";
-import { Loading } from "@/components/custom/loading";
 
 // Props
 interface ReturnRecordsViewProps {

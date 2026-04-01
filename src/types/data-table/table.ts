@@ -2,9 +2,9 @@
 import type {
 	ColumnDef,
 	ColumnFiltersState,
+	OnChangeFn,
 	SortingState,
 	VisibilityState,
-	OnChangeFn,
 } from "@tanstack/react-table";
 import type { SelectOption } from "./additional-select";
 

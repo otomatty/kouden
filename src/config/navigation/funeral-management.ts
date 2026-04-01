@@ -1,17 +1,17 @@
 import {
-	LayoutDashboard,
-	Users,
-	Calendar,
-	User,
-	Heart,
-	Mail,
-	FileText,
-	DollarSign,
-	Package,
-	CheckSquare,
-	Phone,
 	BarChart3,
+	Calendar,
+	CheckSquare,
+	DollarSign,
+	FileText,
+	Heart,
+	LayoutDashboard,
+	Mail,
+	Package,
+	Phone,
 	Settings,
+	User,
+	Users,
 } from "lucide-react";
 import type { NavigationItem, NavigationSection } from "./types";
 

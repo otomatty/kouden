@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { GoogleIcon } from "@/components/custom/icons/google";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { createClient } from "@/lib/supabase/client";
-import { GoogleIcon } from "@/components/custom/icons/google";
-import { useRouter } from "next/navigation";
 
 interface AuthFormProps {
 	invitationToken?: string;

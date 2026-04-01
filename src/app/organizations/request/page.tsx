@@ -1,8 +1,8 @@
-import OrganizationRequestForm from "./OrganizationRequestForm";
-import Container from "@/components/ui/container";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import Container from "@/components/ui/container";
+import { createClient } from "@/lib/supabase/server";
+import OrganizationRequestForm from "./OrganizationRequestForm";
 
 export default async function RequestPage() {
 	const supabase = await createClient();

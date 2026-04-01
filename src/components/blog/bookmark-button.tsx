@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
 import { Bookmark, BookmarkCheck } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { toggleBookmark, isPostBookmarked } from "@/app/_actions/blog/bookmarks";
-import { useAuth } from "@/hooks/use-auth";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { isPostBookmarked, toggleBookmark } from "@/app/_actions/blog/bookmarks";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/use-auth";
 
 interface BookmarkButtonProps {
 	postId: string;

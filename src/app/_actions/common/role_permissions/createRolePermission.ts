@@ -6,10 +6,7 @@ import { createClient } from "@/lib/supabase/server";
  *
  * @param data - Object containing roleId and permissionId.
  */
-export async function createRolePermission(data: {
-	roleId: string;
-	permissionId: string;
-}) {
+export async function createRolePermission(data: { roleId: string; permissionId: string }) {
 	const supabase = await createClient();
 	const { data: mapping, error } = await supabase
 		.schema("common")

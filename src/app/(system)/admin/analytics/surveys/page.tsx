@@ -1,18 +1,18 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
+import { getAdminSurveyAnalytics } from "@/app/_actions/user-surveys";
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/server";
-import { getAdminSurveyAnalytics } from "@/app/_actions/user-surveys";
+import { ErrorDisplay } from "./_components/error-display";
 import { SurveyExportButtons } from "./_components/export-buttons";
+import { FeatureRequests } from "./_components/feature-requests";
+import { SurveyAnalyticsSkeleton } from "./_components/loading-skeleton";
 import { MetricsOverview } from "./_components/metrics-overview";
 import { NPSBreakdownCard } from "./_components/nps-breakdown";
-import { SatisfactionDistribution } from "./_components/satisfaction-distribution";
-import { FeatureRequests } from "./_components/feature-requests";
-import { UsabilityImprovements } from "./_components/usability-improvements";
 import { RecentFeedback } from "./_components/recent-feedback";
-import { SurveyAnalyticsSkeleton } from "./_components/loading-skeleton";
-import { ErrorDisplay } from "./_components/error-display";
+import { SatisfactionDistribution } from "./_components/satisfaction-distribution";
+import { UsabilityImprovements } from "./_components/usability-improvements";
 
 export const metadata: Metadata = {
 	title: "アンケート分析 | 管理画面",

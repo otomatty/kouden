@@ -1,5 +1,5 @@
-import type { Step, TourStepConfig } from "@/types/tour";
 import { tourStepsConfig as config } from "@/tour-guide";
+import type { Step, TourStepConfig } from "@/types/tour";
 
 export const tourStepsConfig: TourStepConfig = config;
 

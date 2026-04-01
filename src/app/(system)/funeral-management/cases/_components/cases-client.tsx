@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { Filter, Search } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,10 +11,9 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Search, Filter } from "lucide-react";
-import { CaseStatusStats } from "./case-status-stats";
-import { CaseCard } from "./case-card";
 import type { FuneralCaseWithDetails } from "@/types/funeral-management";
+import { CaseCard } from "./case-card";
+import { CaseStatusStats } from "./case-status-stats";
 
 interface CasesClientProps {
 	initialCases: FuneralCaseWithDetails[];

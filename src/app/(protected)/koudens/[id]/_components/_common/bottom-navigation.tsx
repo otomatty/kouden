@@ -1,29 +1,29 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useNavigationMode } from "@/context/navigation-mode";
-import { cn } from "@/lib/utils";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-	Table2,
-	Box,
 	BarChart3,
-	Gift,
-	Mail,
-	Settings,
-	ChevronUp,
+	Box,
 	ChevronDown,
+	ChevronUp,
 	FileDown,
+	Gift,
 	HelpCircle,
+	Mail,
 	PackageCheck,
 	Plus,
+	Settings,
+	Table2,
 } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { CreateButtonContainer } from "./create-button-container";
+import { Button } from "@/components/ui/button";
+import { useNavigationMode } from "@/context/navigation-mode";
+import { cn } from "@/lib/utils";
 import type { Entry } from "@/types/entries";
 import type { Relationship } from "@/types/relationships";
-import { Button } from "@/components/ui/button";
+import { CreateButtonContainer } from "./create-button-container";
 
 interface BottomNavigationProps {
 	id?: string;

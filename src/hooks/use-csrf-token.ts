@@ -3,7 +3,7 @@
  * トークンの取得・更新・送信を自動化
  */
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface CSRFTokenResponse {
 	csrfToken: string;

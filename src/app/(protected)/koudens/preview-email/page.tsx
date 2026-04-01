@@ -1,9 +1,11 @@
-import { generateInvitationEmailHtml } from "@/utils/emailTemplates";
 import { getKouden } from "@/app/_actions/koudens";
+import { generateInvitationEmailHtml } from "@/utils/emailTemplates";
 
 export default async function PreviewEmailPage({
 	searchParams,
-}: { searchParams: Promise<{ koudenId?: string }> }) {
+}: {
+	searchParams: Promise<{ koudenId?: string }>;
+}) {
 	const { koudenId } = await searchParams;
 	if (!koudenId) {
 		throw new Error("Missing koudenId query parameter");

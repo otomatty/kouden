@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Eye, Bookmark } from "lucide-react";
+import { Bookmark, Eye } from "lucide-react";
+import { useEffect, useState } from "react";
 import { getPostStats } from "@/app/_actions/blog/analytics";
 import { Skeleton } from "@/components/ui/skeleton";
 

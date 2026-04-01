@@ -1,30 +1,30 @@
 "use client";
+import { zodResolver } from "@hookform/resolvers/zod";
 // library
 import { useAtom } from "jotai";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+// Server Actions
+import { createOffering, updateOffering } from "@/app/_actions/offerings";
 // ui
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
-
+import { offeringFormSchema } from "@/schemas/offerings";
+// stores
+import { formSubmissionStateAtom, offeringsAtom, optimisticOfferingsAtom } from "@/store/offerings";
 // types
 import type { Entry } from "@/types/entries";
 import type {
-	OfferingWithKoudenEntries,
-	OfferingType,
 	OfferingFormValues,
+	OfferingType,
+	OfferingWithKoudenEntries,
 } from "@/types/offerings";
-import { offeringFormSchema } from "@/schemas/offerings";
+import { OfferingFormAdditional } from "./offering-form-additional";
 // components
 import { OfferingFormBasic } from "./offering-form-basic";
-import { OfferingFormAdditional } from "./offering-form-additional";
-// stores
-import { offeringsAtom, formSubmissionStateAtom, optimisticOfferingsAtom } from "@/store/offerings";
-// Server Actions
-import { createOffering, updateOffering } from "@/app/_actions/offerings";
+
 // hooks
 interface OfferingFormProps {
 	koudenId: string;
@@ -41,7 +41,8 @@ export function OfferingForm({ koudenId, entries, defaultValues, onSuccess }: Of
 	const [, setPhotos] = useState<File[]>([]);
 
 	const form = useForm<OfferingFormValues>({
-		resolver: zodResolver(offeringFormSchema),
+		// biome-ignore lint: zod v4 と react-hook-form の型互換のため
+		resolver: zodResolver(offeringFormSchema) as any,
 		defaultValues: defaultValues
 			? {
 					type: defaultValues.type as OfferingType,

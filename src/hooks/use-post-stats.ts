@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
-import { getPostStats, getBulkPostStats } from "@/app/_actions/blog/analytics";
+import { useCallback, useEffect, useState } from "react";
+import { getBulkPostStats, getPostStats } from "@/app/_actions/blog/analytics";
 import type { PostStats } from "@/types/blog";
 
 interface UsePostStatsOptions {

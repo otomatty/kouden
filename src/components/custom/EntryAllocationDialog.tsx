@@ -1,7 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Calculator, ExternalLink, Users } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { getEntryOfferingAllocations } from "@/app/_actions/offerings/queries";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
@@ -9,13 +14,7 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Users, Calculator, ExternalLink } from "lucide-react";
-import { toast } from "sonner";
-
-import { getEntryOfferingAllocations } from "@/app/_actions/offerings/queries";
 import type { OfferingAllocation } from "@/types/entries";
 
 interface EntryAllocationDialogProps {

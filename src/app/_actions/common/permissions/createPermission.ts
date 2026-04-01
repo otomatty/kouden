@@ -6,10 +6,7 @@ import { createClient } from "@/lib/supabase/server";
  *
  * @param data - Object containing action and resource.
  */
-export async function createPermission(data: {
-	action: string;
-	resource: string;
-}) {
+export async function createPermission(data: { action: string; resource: string }) {
 	const supabase = await createClient();
 	const { data: permission, error } = await supabase
 		.schema("common")

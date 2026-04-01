@@ -1,16 +1,12 @@
 import React from "react";
-import type { Testimonial } from "@/types/testimonials";
 import { SectionTitle } from "@/components/ui/section-title";
+import type { Testimonial } from "@/types/testimonials";
 import { TestimonialCard } from "./TestimonialCard";
 
 /**
  * TestimonialsSection renders the 利用者の声 section with horizontal scrolling testimonials.
  */
-export function TestimonialsSection({
-	testimonials,
-}: {
-	testimonials: Testimonial[];
-}) {
+export function TestimonialsSection({ testimonials }: { testimonials: Testimonial[] }) {
 	return (
 		<section>
 			<SectionTitle title="利用者の声" className="mb-8" />

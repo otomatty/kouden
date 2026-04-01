@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { useAtomValue } from "jotai";
-import type { ReturnItem } from "@/types/return-records/return-items";
-import { activeReturnItemsByKoudenAtomFamily } from "@/store/return-items";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
 	Command,
@@ -13,6 +11,8 @@ import {
 	CommandItem,
 	CommandList,
 } from "@/components/ui/command";
+import { activeReturnItemsByKoudenAtomFamily } from "@/store/return-items";
+import type { ReturnItem } from "@/types/return-records/return-items";
 import type { ReturnItemSelectorProps } from "./types";
 
 /**

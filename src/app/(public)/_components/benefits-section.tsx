@@ -1,6 +1,6 @@
 import { Clock, Heart, Shield } from "lucide-react";
-import { SectionTitle } from "@/components/ui/section-title";
 import { Section } from "@/components/ui/section";
+import { SectionTitle } from "@/components/ui/section-title";
 
 const benefits = [
 	{

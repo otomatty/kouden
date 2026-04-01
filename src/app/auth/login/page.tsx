@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
-
-import { Header } from "@/app/(public)/_components/header";
-import { LoginForm } from "./_components/login-form";
-import { Footer } from "@/app/(public)/_components/footer";
-import { Section } from "@/components/ui/section";
 import { FAQSection } from "@/app/(public)/_components/faq-section";
+import { Footer } from "@/app/(public)/_components/footer";
+import { Header } from "@/app/(public)/_components/header";
+import { Section } from "@/components/ui/section";
 import type { FAQ } from "@/types/faq";
+import { LoginForm } from "./_components/login-form";
 
 // Version fetched from environment variable
 const version = process.env.NEXT_PUBLIC_APP_VERSION ?? "";

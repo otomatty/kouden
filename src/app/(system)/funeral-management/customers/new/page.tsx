@@ -1,9 +1,9 @@
-import type { Metadata } from "next";
 import { ArrowLeft } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { NewCustomerClient } from "./_components/new-customer-client";
 import { getCurrentUserOrganizationId } from "@/utils/auth";
+import { NewCustomerClient } from "./_components/new-customer-client";
 
 export const metadata: Metadata = {
 	title: "新規顧客登録 | 葬儀会社管理システム",

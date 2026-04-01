@@ -1,6 +1,6 @@
 import React from "react";
-import ContactItem from "./contact-item";
 import type { Database } from "@/types/supabase";
+import ContactItem from "./contact-item";
 
 type ContactRequest = Database["public"]["Tables"]["contact_requests"]["Row"];
 
