@@ -147,7 +147,7 @@ export async function submitHearingApplication(formData: FormData) {
 			return {
 				success: false,
 				error: "入力データが不正です",
-				details: error.errors,
+				details: error.issues,
 			};
 		}
 

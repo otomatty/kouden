@@ -41,7 +41,8 @@ export function OfferingForm({ koudenId, entries, defaultValues, onSuccess }: Of
 	const [, setPhotos] = useState<File[]>([]);
 
 	const form = useForm<OfferingFormValues>({
-		resolver: zodResolver(offeringFormSchema),
+		// biome-ignore lint: zod v4 と react-hook-form の型互換のため
+		resolver: zodResolver(offeringFormSchema) as any,
 		defaultValues: defaultValues
 			? {
 					type: defaultValues.type as OfferingType,

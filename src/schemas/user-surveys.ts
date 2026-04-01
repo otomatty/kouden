@@ -4,7 +4,7 @@ import { z } from "zod";
 export const userSurveySchema = z
 	.object({
 		surveyTrigger: z.enum(["pdf_export", "one_week_usage"], {
-			required_error: "アンケートのトリガータイプが不正です",
+			message: "アンケートのトリガータイプが不正です",
 		}),
 		overallSatisfaction: z
 			.number()
