@@ -4,13 +4,16 @@ import logger from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildReminderEmail } from "@/utils/emailTemplates/reminder";
 
-const apiKey = process.env.RESEND_API_KEY;
-if (!apiKey) {
-	throw new Error("Missing RESEND_API_KEY");
+function getResendClient() {
+	const apiKey = process.env.RESEND_API_KEY;
+	if (!apiKey) {
+		throw new Error("Missing RESEND_API_KEY");
+	}
+	return new Resend(apiKey);
 }
-const resend = new Resend(apiKey);
 
 export async function GET() {
+	const resend = getResendClient();
 	// Supabase 管理クライアント取得
 	const supabase = createAdminClient();
 
