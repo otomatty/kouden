@@ -80,13 +80,15 @@ const KoudenPdfDocument: React.FC<KoudenPdfDocumentProps> = ({ data }) => (
 					<View style={styles.tableRow} wrap={false} key={entry.id}>
 						<Text style={[styles.column, styles.colIndex]}>{index + 1}</Text>
 						<View style={[styles.column, styles.colName]}>
-							{wrapByLength(entry.name, wrapConfig.name).map((line) => (
-								<Text key={`${entry.id}-name-${line}`}>{line}</Text>
+							{wrapByLength(entry.name, wrapConfig.name).map((line, i) => (
+								// biome-ignore lint/suspicious/noArrayIndexKey: static wrapped text segments
+								<Text key={`${entry.id}-name-${i}`}>{line}</Text>
 							))}
 						</View>
 						<View style={[styles.column, styles.colOrg]}>
-							{wrapByLength(entry.organization, wrapConfig.org).map((line) => (
-								<Text key={`${entry.id}-org-${line}`}>{line}</Text>
+							{wrapByLength(entry.organization, wrapConfig.org).map((line, i) => (
+								// biome-ignore lint/suspicious/noArrayIndexKey: static wrapped text segments
+								<Text key={`${entry.id}-org-${i}`}>{line}</Text>
 							))}
 						</View>
 						<Text style={[styles.column, styles.colPostalCode]}>
@@ -96,8 +98,9 @@ const KoudenPdfDocument: React.FC<KoudenPdfDocumentProps> = ({ data }) => (
 							const addressLines = wrapTextWithoutTrailingHyphen(entry.address, wrapConfig.address);
 							return (
 								<View style={[styles.column, styles.colAddress]}>
-									{addressLines.map((line) => (
-										<Text key={line}>{line}</Text>
+									{addressLines.map((line, i) => (
+										// biome-ignore lint/suspicious/noArrayIndexKey: static wrapped text segments
+										<Text key={`${entry.id}-addr-${i}`}>{line}</Text>
 									))}
 								</View>
 							);
@@ -105,8 +108,9 @@ const KoudenPdfDocument: React.FC<KoudenPdfDocumentProps> = ({ data }) => (
 						<Text style={[styles.column, styles.colRelationship]}>{entry.relationship}</Text>
 						<Text style={[styles.column, styles.colAmount]}>{`¥${entry.amount}`}</Text>
 						<View style={[styles.column, styles.colNote]}>
-							{wrapByLength(entry.note || "", wrapConfig.note).map((line) => (
-								<Text key={`${entry.id}-note-${line}`}>{line}</Text>
+							{wrapByLength(entry.note || "", wrapConfig.note).map((line, i) => (
+								// biome-ignore lint/suspicious/noArrayIndexKey: static wrapped text segments
+								<Text key={`${entry.id}-note-${i}`}>{line}</Text>
 							))}
 						</View>
 					</View>

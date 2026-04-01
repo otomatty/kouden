@@ -51,7 +51,7 @@ export function MediaSection({ videoUrl, imageUrl, youtubeUrl, children }: Media
 
 	return (
 		<Section>
-			<div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
+			<div className="relative w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
 				{content}
 			</div>
 		</Section>

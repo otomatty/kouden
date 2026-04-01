@@ -39,6 +39,8 @@ const config: NextConfig = withPWA({
 		imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
 		unoptimized: true, // Cloudflare Pages用の設定
 	},
+	// Turbopack設定（Next.js 16デフォルト、next-pwaのwebpack設定との共存用）
+	turbopack: {},
 	// 本番環境での最適化設定
 	compress: true,
 	poweredByHeader: false,
