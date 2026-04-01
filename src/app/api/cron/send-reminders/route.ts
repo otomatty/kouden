@@ -50,7 +50,10 @@ export async function GET() {
 			.select("id, owner_id")
 			.eq("plan_id", freePlan.id)
 			.gte("created_at", `${dateStr}T00:00:00.000Z`)
-			.lt("created_at", `${dateStr}T23:59:59.999Z`);
+			.lt(
+				"created_at",
+				`${new Date(targetDate.getTime() + 86400000).toISOString().slice(0, 10)}T00:00:00.000Z`,
+			);
 		if (koudenError || !koudenList) {
 			logger.error(
 				{
