@@ -25,6 +25,7 @@ function getPackageVersion() {
 		const packageJson = JSON.parse(fs.readFileSync(PACKAGE_JSON_PATH, "utf8"));
 		return packageJson.version;
 	} catch (_error) {
+		process.stderr.write("Error: package.json の読み込みに失敗しました。\n");
 		process.exit(1);
 	}
 }
@@ -197,6 +198,7 @@ breaking: false
 function validateVersion(version) {
 	const versionRegex = /^\d+\.\d+\.\d+$/;
 	if (!versionRegex.test(version)) {
+		process.stderr.write(`Error: 無効なバージョン形式です: ${version} (正しい形式: X.Y.Z)\n`);
 		process.exit(1);
 	}
 }
@@ -380,6 +382,7 @@ function createChangelog(version) {
 	const filepath = path.join(CHANGELOG_DIR, filename);
 
 	if (fs.existsSync(filepath)) {
+		process.stderr.write(`Error: 更新履歴ファイルは既に存在します: ${filepath}\n`);
 		process.exit(1);
 	}
 
@@ -407,6 +410,7 @@ async function generateChangelog(version, fromVersion, useAI = true) {
 	const filepath = path.join(CHANGELOG_DIR, filename);
 
 	if (fs.existsSync(filepath)) {
+		process.stderr.write(`Error: 更新履歴ファイルは既に存在します: ${filepath}\n`);
 		process.exit(1);
 	}
 
@@ -431,6 +435,7 @@ async function generateChangelog(version, fromVersion, useAI = true) {
 	const commits = getGitCommits(fromTag);
 
 	if (commits.length === 0) {
+		process.stderr.write("Error: コミットが見つかりませんでした。\n");
 		process.exit(1);
 	}
 
@@ -510,6 +515,7 @@ async function main() {
 	switch (command) {
 		case "create":
 			if (args.length < 2) {
+				process.stderr.write("Error: バージョンを指定してください。 例: create 1.2.3\n");
 				process.exit(1);
 			}
 			createChangelog(args[1]);
@@ -522,6 +528,7 @@ async function main() {
 
 		case "generate-simple":
 			if (args.length < 2) {
+				process.stderr.write("Error: バージョンを指定してください。 例: generate-simple 1.2.3\n");
 				process.exit(1);
 			}
 			await generateChangelog(args[1], args[2], false);
@@ -538,6 +545,7 @@ async function main() {
 			break;
 
 		default:
+			process.stderr.write(`Error: 不明なコマンドです: ${command}\n`);
 			showHelp();
 			process.exit(1);
 	}

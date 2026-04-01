@@ -131,6 +131,9 @@ function validatePeriod(period) {
 	const monthRegex = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 	if (!(quarterRegex.test(period) || monthRegex.test(period))) {
+		process.stderr.write(
+			`Error: 無効な期間形式です: ${period} (正しい形式: YYYY-QN または YYYY-MM)\n`,
+		);
 		process.exit(1);
 	}
 }
@@ -352,6 +355,7 @@ function createTemplate(period) {
 			console.log("💡 ファイルを編集して、詳細な内容を追加してください。");
 		})
 		.catch((_error) => {
+			process.stderr.write("Error: マイルストーンの作成に失敗しました。\n");
 			process.exit(1);
 		});
 }
@@ -416,6 +420,7 @@ function main() {
 	switch (command) {
 		case "create":
 			if (args.length < 2) {
+				process.stderr.write("Error: 期間を指定してください。 例: create 2025-q1\n");
 				process.exit(1);
 			}
 			createTemplate(args[1]);
@@ -436,6 +441,7 @@ function main() {
 			break;
 
 		default:
+			process.stderr.write(`Error: 不明なコマンドです: ${command}\n`);
 			showHelp();
 			process.exit(1);
 	}

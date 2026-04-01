@@ -135,7 +135,7 @@ export function PainPointsSection() {
 						<ul className="text-gray-500 dark:text-gray-400 space-y-4 list-disc pl-6">
 							{point.stories.map((story) => (
 								<StoryText
-									key={`${point.id}-story-${story.text.slice(0, 20)}`}
+									key={`${point.id}-story-${story.text}`}
 									text={story.text}
 									emphasizedWords={story.emphasizedWords}
 								/>
