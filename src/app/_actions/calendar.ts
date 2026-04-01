@@ -2,26 +2,26 @@
 
 import { google } from "googleapis";
 
-// 環境変数の取得と必須チェック
-const { GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY, GOOGLE_CALENDAR_ID } =
-	process.env;
-if (!GOOGLE_SERVICE_ACCOUNT_EMAIL) {
-	throw new Error("環境変数 GOOGLE_SERVICE_ACCOUNT_EMAIL が未設定です");
+// Google Calendar クライアント（遅延初期化: ビルド時の環境変数未設定エラーを回避）
+function getCalendarClient() {
+	const { GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY, GOOGLE_CALENDAR_ID } =
+		process.env;
+	if (!GOOGLE_SERVICE_ACCOUNT_EMAIL) {
+		throw new Error("環境変数 GOOGLE_SERVICE_ACCOUNT_EMAIL が未設定です");
+	}
+	if (!GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) {
+		throw new Error("環境変数 GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY が未設定です");
+	}
+	if (!GOOGLE_CALENDAR_ID) {
+		throw new Error("環境変数 GOOGLE_CALENDAR_ID が未設定です");
+	}
+	const auth = new google.auth.JWT({
+		email: GOOGLE_SERVICE_ACCOUNT_EMAIL,
+		key: GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.replace(/\\n/g, "\n"),
+		scopes: ["https://www.googleapis.com/auth/calendar"],
+	});
+	return { calendar: google.calendar({ version: "v3", auth }), calendarId: GOOGLE_CALENDAR_ID };
 }
-if (!GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) {
-	throw new Error("環境変数 GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY が未設定です");
-}
-if (!GOOGLE_CALENDAR_ID) {
-	throw new Error("環境変数 GOOGLE_CALENDAR_ID が未設定です");
-}
-
-// JWT認証クライアントの初期化
-const auth = new google.auth.JWT({
-	email: GOOGLE_SERVICE_ACCOUNT_EMAIL,
-	key: GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.replace(/\\n/g, "\n"),
-	scopes: ["https://www.googleapis.com/auth/calendar"],
-});
-const calendar = google.calendar({ version: "v3", auth });
 
 export type Slot = {
 	start: string; // ISO文字列
@@ -45,8 +45,9 @@ export async function getWeeklyAvailability(weekStart: string): Promise<DayAvail
 	endDate.setDate(endDate.getDate() + 7);
 
 	// カレンダーイベントを取得
+	const { calendar, calendarId } = getCalendarClient();
 	const res = await calendar.events.list({
-		calendarId: GOOGLE_CALENDAR_ID,
+		calendarId,
 		timeMin: startDate.toISOString(),
 		timeMax: endDate.toISOString(),
 		singleEvents: true,
@@ -116,8 +117,9 @@ export async function reserveSlot(formData: FormData): Promise<void> {
 	if (!endDateTime) {
 		throw new Error("フォームデータ endDateTime が不足しています");
 	}
+	const { calendar, calendarId } = getCalendarClient();
 	await calendar.events.insert({
-		calendarId: GOOGLE_CALENDAR_ID,
+		calendarId,
 		requestBody: {
 			summary: summary.toString(),
 			description,

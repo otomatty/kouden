@@ -72,7 +72,9 @@ export function AnnouncementsTable({ announcements, deleteAnnouncement }: Announ
 		if (!selectedAnnouncementId) return;
 		try {
 			await deleteAnnouncement(selectedAnnouncementId);
-		} catch (_error) {}
+		} catch (_error) {
+			return;
+		}
 		setIsDeleteDialogOpen(false);
 		setSelectedAnnouncementId(null);
 	};

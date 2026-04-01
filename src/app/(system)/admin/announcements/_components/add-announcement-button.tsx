@@ -9,7 +9,9 @@ export function AddAnnouncementButton() {
 	const onSubmit = async (values: AnnouncementFormData) => {
 		try {
 			await createAnnouncement(values);
-		} catch (_error) {}
+		} catch (_error) {
+			return;
+		}
 	};
 
 	return (

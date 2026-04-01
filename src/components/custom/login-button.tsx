@@ -34,6 +34,8 @@ export function LoginButton({ invitationToken }: LoginButtonProps) {
 				throw error;
 			}
 		} catch (_error) {
+			// TODO: Display user-facing error feedback (e.g. toast notification)
+			return;
 		} finally {
 			setLoading(false);
 		}

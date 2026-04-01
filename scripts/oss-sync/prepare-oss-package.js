@@ -196,6 +196,7 @@ function main() {
 
 		console.log("✨ OSS package preparation completed successfully!");
 	} catch (_error) {
+		process.stderr.write("Error: OSS package preparation failed.\n");
 		process.exit(1);
 	}
 }

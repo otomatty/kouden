@@ -13,7 +13,9 @@ export function EditAnnouncementButton({ announcement }: EditAnnouncementButtonP
 	const onSubmit = async (values: AnnouncementFormData) => {
 		try {
 			await updateAnnouncement(announcement.id, values);
-		} catch (_error) {}
+		} catch (_error) {
+			return;
+		}
 	};
 
 	return (
