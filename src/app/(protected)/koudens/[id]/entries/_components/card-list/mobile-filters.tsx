@@ -10,7 +10,6 @@ import {
 	User,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { DisplaySettings } from "@/components/custom/data-table/display-settings";
 import { MobileDataTableToolbar } from "@/components/custom/data-table/mobile-toolbar";
 import { StickySearchHeader } from "./sticky-search-header";
 

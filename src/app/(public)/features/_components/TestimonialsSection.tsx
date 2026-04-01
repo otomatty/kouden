@@ -1,4 +1,3 @@
-import React from "react";
 import { SectionTitle } from "@/components/ui/section-title";
 import type { Testimonial } from "@/types/testimonials";
 import { TestimonialCard } from "./TestimonialCard";

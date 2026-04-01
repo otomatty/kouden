@@ -51,8 +51,7 @@ export function BookmarkButton({
 			try {
 				const bookmarked = await isPostBookmarked(postId);
 				setBookmarked(bookmarked);
-			} catch (error) {
-				console.error("Failed to fetch bookmark status:", error);
+			} catch (_error) {
 			} finally {
 				setLoading(false);
 			}
@@ -103,13 +102,12 @@ export function BookmarkButton({
 						description: result.error || "しばらく時間をおいて再度お試しください",
 					});
 				}
-			} catch (error) {
+			} catch (_error) {
 				// ネットワークエラー等の場合も元に戻す
 				setBookmarked(previousBookmarked);
 				toast.error("ネットワークエラーが発生しました", {
 					description: "インターネット接続を確認して再度お試しください",
 				});
-				console.error("Bookmark toggle error:", error);
 			}
 		});
 	};

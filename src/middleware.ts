@@ -34,7 +34,7 @@ async function verifyCSRFToken(token: string): Promise<boolean> {
 		}
 
 		// タイムスタンプチェック（1時間以内）
-		const tokenTime = Number.parseInt(timestamp);
+		const tokenTime = Number.parseInt(timestamp, 10);
 		const now = Date.now();
 		if (now - tokenTime > 3600000) {
 			// 1時間
@@ -61,7 +61,6 @@ async function checkCSRFToken(request: NextRequest): Promise<boolean> {
 
 	// 開発環境では緩和（デバッグ用）
 	if (process.env.NODE_ENV === "development" && process.env.CSRF_DEBUG === "true") {
-		console.warn("CSRF protection is disabled in development mode");
 		return true;
 	}
 
@@ -69,13 +68,11 @@ async function checkCSRFToken(request: NextRequest): Promise<boolean> {
 	const csrfToken = request.headers.get("x-csrf-token") || request.cookies.get("csrf-token")?.value;
 
 	if (!csrfToken) {
-		console.warn("CSRF token is missing");
 		return false;
 	}
 
 	const isValid = await verifyCSRFToken(csrfToken);
 	if (!isValid) {
-		console.warn("CSRF token validation failed");
 	}
 
 	return isValid;

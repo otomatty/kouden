@@ -115,8 +115,7 @@ export function ReturnItemImageUploader({
 				toast.success("画像をアップロードしました", {
 					description: "フォームを保存すると画像が確定されます",
 				});
-			} catch (error) {
-				console.error("[ERROR] Image processing failed:", error);
+			} catch (_error) {
 				toast.error("画像処理エラー", {
 					description: "画像の処理に失敗しました",
 				});

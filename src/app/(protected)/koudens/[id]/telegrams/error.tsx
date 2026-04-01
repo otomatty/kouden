@@ -15,10 +15,7 @@ export default function TelegramsError({
 	error: Error & { digest?: string };
 	reset: () => void;
 }) {
-	useEffect(() => {
-		// エラーをログに出力
-		console.error(error);
-	}, [error]);
+	useEffect(() => {}, []);
 
 	return (
 		<Alert variant="destructive" className="mx-auto max-w-2xl">

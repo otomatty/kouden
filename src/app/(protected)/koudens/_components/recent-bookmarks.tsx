@@ -61,8 +61,7 @@ export function RecentBookmarks({ className = "", limit = 5 }: RecentBookmarksPr
 					.slice(0, limit) as BookmarkInfo[];
 
 				setBookmarks(transformedData);
-			} catch (err) {
-				console.error("Failed to fetch bookmarks:", err);
+			} catch (_err) {
 				setError("ブックマークの取得に失敗しました");
 			} finally {
 				setLoading(false);

@@ -61,8 +61,7 @@ export function CreateKoudenButton({ caseId, defaultTitle }: CreateKoudenButtonP
 					description: result.error || "香典帳の作成に失敗しました",
 				});
 			}
-		} catch (error) {
-			console.error("[ERROR] Failed to create kouden:", error);
+		} catch (_error) {
 			toast.error("エラー", {
 				description: "予期せぬエラーが発生しました",
 			});

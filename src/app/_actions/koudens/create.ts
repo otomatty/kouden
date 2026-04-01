@@ -162,7 +162,7 @@ export async function createKoudenWithPlan({
 				error: error instanceof Error ? error.message : String(error),
 				title,
 				planCode,
-				userId: uid,
+				userId,
 			},
 			"Error creating kouden with plan",
 		);

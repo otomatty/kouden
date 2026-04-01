@@ -7,7 +7,6 @@ import type { z } from "zod";
 import { createPost, updatePost } from "@/app/_actions/blog/posts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import type { CreatePostSchema, UpdatePostSchema } from "@/schemas/posts";
 import type { TPost } from "@/types/post";
@@ -122,8 +121,7 @@ export function BlogEditor({
 
 			setHasUnsavedChanges(false);
 			router.push(`${basePath}/blog`);
-		} catch (error) {
-			console.error("Save error:", error);
+		} catch (_error) {
 			alert("処理中にエラーが発生しました");
 		} finally {
 			setIsSaving(false);

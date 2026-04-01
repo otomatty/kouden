@@ -52,8 +52,7 @@ export default async function EditDonationPage({ params }: EditDonationPageProps
 				</div>
 			</Container>
 		);
-	} catch (error) {
-		console.error("Error loading donation:", error);
+	} catch (_error) {
 		notFound();
 	}
 }

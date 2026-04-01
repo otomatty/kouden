@@ -57,8 +57,7 @@ export function PopularPosts({
 				})) as PopularPost[];
 
 				setPosts(transformedData);
-			} catch (err) {
-				console.error("Failed to fetch popular posts:", err);
+			} catch (_err) {
 				setError("人気記事の取得に失敗しました");
 			} finally {
 				setLoading(false);

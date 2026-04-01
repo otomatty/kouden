@@ -4,11 +4,6 @@ import { getKouden } from "@/app/_actions/koudens";
 import { getRelationships } from "@/app/_actions/relationships";
 import { getReturnItems } from "@/app/_actions/return-records/return-items";
 import { getReturnEntriesByKoudenPaginated } from "@/app/_actions/return-records/return-records";
-import type {
-	ReturnItem,
-	ReturnManagementSummary,
-	ReturnStatus,
-} from "@/types/return-records/return-records";
 import { convertToReturnManagementSummaries } from "@/utils/return-records-helpers";
 import ReturnRecordsPageClient from "./ReturnRecordsPageClient";
 
@@ -74,8 +69,7 @@ export default async function ReturnRecordsPage({ params, searchParams }: Return
 				/>
 			</div>
 		);
-	} catch (error) {
-		console.error("返礼管理ページの初期化エラー:", error);
+	} catch (_error) {
 		return (
 			<div className="container mx-auto py-6">
 				<div className="flex flex-col items-center justify-center py-8">

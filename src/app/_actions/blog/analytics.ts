@@ -115,7 +115,6 @@ export async function getBulkPostStats(postIds: string[]) {
 		.in("post_id", postIds);
 
 	if (error) {
-		console.error("Failed to fetch bulk post stats:", error);
 		return {};
 	}
 
@@ -171,7 +170,6 @@ export async function getPopularPosts(limit = 10, period: "week" | "month" | "al
 	const { data, error } = await query.order("published_at", { ascending: false }).limit(limit * 2); // 多めに取得してからソート
 
 	if (error) {
-		console.error("Failed to fetch popular posts:", error);
 		return { data: [], error: error.message };
 	}
 
@@ -227,7 +225,6 @@ export async function getRelatedPosts(
 	const { data: categoryPosts, error } = await query.limit(limit * 2);
 
 	if (error) {
-		console.error("Failed to fetch related posts:", error);
 		return { data: [], error: error.message };
 	}
 

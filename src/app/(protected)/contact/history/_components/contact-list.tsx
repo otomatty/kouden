@@ -1,4 +1,3 @@
-import React from "react";
 import type { Database } from "@/types/supabase";
 import ContactItem from "./contact-item";
 

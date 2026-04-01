@@ -76,7 +76,6 @@ export function BulkUpdateTableDialog({
 					const initialGroups = groupRecordsByAmount(allRecords);
 					setAmountGroups(initialGroups);
 				} catch (error) {
-					console.error("データ初期化エラー:", error);
 					const errorMessage =
 						error instanceof Error ? error.message : "不明なエラーが発生しました";
 					toast.error(`データの取得に失敗しました: ${errorMessage}`, {
@@ -160,7 +159,6 @@ export function BulkUpdateTableDialog({
 				toast.error("すべての更新に失敗しました。エラー詳細をご確認ください。");
 			}
 		} catch (error) {
-			console.error("一括更新エラー:", error);
 			const errorMessage = error instanceof Error ? error.message : "不明なエラーが発生しました";
 
 			setLastUpdateErrors([`システムエラー: ${errorMessage}`]);

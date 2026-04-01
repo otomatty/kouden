@@ -1,5 +1,4 @@
-import { GiftIcon, HeartIcon, SettingsIcon, TruckIcon, UsersIcon } from "lucide-react";
-import React from "react";
+import { GiftIcon, HeartIcon, SettingsIcon, UsersIcon } from "lucide-react";
 import { SettingsList } from "./_components/settings-list";
 
 // TODO: モバイル版設定一覧ページの実装

@@ -15,7 +15,7 @@ function extractHeadersFromDOM(): TocItem[] {
 	const headers: TocItem[] = [];
 
 	for (const element of headingElements) {
-		const level = Number.parseInt(element.tagName.charAt(1));
+		const level = Number.parseInt(element.tagName.charAt(1), 10);
 		const text = element.textContent || "";
 		const id = element.id || "";
 
@@ -122,7 +122,7 @@ export function useTableOfContents({
 				clearTimeout(scrollTimeoutRef.current);
 			}
 		};
-	}, [tocItems, scrollOffset, activeId]);
+	}, [tocItems, scrollOffset, activeId, syncTocScroll]);
 
 	// 目次の同期スクロール関数
 	const syncTocScroll = useCallback((activeIndex: number, totalItems: number) => {

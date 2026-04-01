@@ -490,7 +490,6 @@ export async function POST(request: NextRequest) {
 			{
 				error: error instanceof Error ? error.message : String(error),
 				errorStack: error instanceof Error ? error.stack : undefined,
-				model,
 			},
 			"AI generation error",
 		);

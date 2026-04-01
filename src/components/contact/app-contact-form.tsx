@@ -111,8 +111,7 @@ export default function AppContactForm({ user, onSuccess }: AppContactFormProps)
 
 			// 成功時のコールバック実行
 			onSuccess?.();
-		} catch (error) {
-			console.error("Failed to send contact:", error);
+		} catch (_error) {
 			toast.error("送信に失敗しました", {
 				description: "しばらく時間をおいて再度お試しください。",
 			});

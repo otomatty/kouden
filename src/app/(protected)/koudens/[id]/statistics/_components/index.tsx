@@ -14,7 +14,6 @@ import {
 	YAxis,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import type { ReturnStatus } from "@/components/ui/status-badge";
 import { returnStatusCustomColors, returnStatusMap } from "@/components/ui/status-badge";
 import { attendanceTypeMap } from "@/types/entries";
@@ -235,7 +234,9 @@ export const KoudenStatistics = memo(function KoudenStatistics({
 								<Legend
 									verticalAlign="bottom"
 									height={36}
-									formatter={(value: string, entry: any) => `${value}: ${entry.payload?.value}名`}
+									formatter={(value: string, entry: { payload?: { value?: number } }) =>
+										`${value}: ${entry.payload?.value}名`
+									}
 								/>
 							</PieChart>
 						</ResponsiveContainer>

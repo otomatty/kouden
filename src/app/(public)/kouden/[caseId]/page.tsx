@@ -207,8 +207,7 @@ export default async function KoudenPage({ params }: KoudenPageProps) {
 				</Container>
 			</div>
 		);
-	} catch (error) {
-		console.error("Error loading kouden page:", error);
+	} catch (_error) {
 		notFound();
 	}
 }

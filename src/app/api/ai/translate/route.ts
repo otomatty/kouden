@@ -44,7 +44,6 @@ export async function POST(request: NextRequest) {
 		logger.error(
 			{
 				error: error instanceof Error ? error.message : String(error),
-				targetLanguage,
 			},
 			"Translation error",
 		);

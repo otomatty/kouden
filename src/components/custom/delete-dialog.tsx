@@ -134,8 +134,7 @@ function DeleteDialogClient({
 			await onDelete();
 			toast.success(successMessage);
 			onSuccess?.();
-		} catch (error) {
-			console.error("Failed to delete:", error);
+		} catch (_error) {
 			toast.error("エラー", {
 				description: errorMessage,
 			});

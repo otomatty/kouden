@@ -27,7 +27,6 @@ export async function validateDuplicateEntries(
 		.eq("kouden_id", koudenId);
 
 	if (error) {
-		console.error("[ERROR] validateDuplicateEntries failed:", error);
 		throw new Error("重複検証中にエラーが発生しました");
 	}
 

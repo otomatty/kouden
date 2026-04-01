@@ -99,8 +99,7 @@ export function BlogMetadataEditor({
 			// 非同期でslugを生成（日本語→英語翻訳対応）
 			const slug = await generateSlugFromTitle(title);
 			handleFormChange("slug", slug);
-		} catch (error) {
-			console.error("Slug generation failed:", error);
+		} catch (_error) {
 			// フォールバックとして同期版を使用
 			const fallbackSlug = generateSlugFromTitleSync(title);
 			handleFormChange("slug", fallbackSlug);

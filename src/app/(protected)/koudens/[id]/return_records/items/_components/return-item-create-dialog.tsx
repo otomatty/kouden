@@ -59,7 +59,6 @@ export function ReturnItemCreateDialog({
 				onClose();
 				onSuccess?.();
 			} catch (error) {
-				console.error("[ERROR] Failed to create return item:", error);
 				toast.error("作成エラー", {
 					description: error instanceof Error ? error.message : "返礼品の作成に失敗しました",
 				});

@@ -54,8 +54,8 @@ function runChangelogManager(args) {
 
 	try {
 		execSync(command, { stdio: "inherit" });
-	} catch {
-		console.error("❌ 更新履歴管理スクリプトの実行中にエラーが発生しました");
+	} catch (error) {
+		console.error("更新履歴管理スクリプトの実行中にエラーが発生しました:", error.message);
 		process.exit(1);
 	}
 }
@@ -66,8 +66,8 @@ function runMilestoneManager(args) {
 
 	try {
 		execSync(command, { stdio: "inherit" });
-	} catch {
-		console.error("❌ マイルストーン管理スクリプトの実行中にエラーが発生しました");
+	} catch (error) {
+		console.error("マイルストーン管理スクリプトの実行中にエラーが発生しました:", error.message);
 		process.exit(1);
 	}
 }
@@ -86,7 +86,6 @@ function main() {
 	switch (command) {
 		case "changelog":
 			if (subArgs.length === 0) {
-				console.error("❌ changelogのサブコマンドを指定してください");
 				showHelp();
 				process.exit(1);
 			}
@@ -95,7 +94,6 @@ function main() {
 
 		case "milestone":
 			if (subArgs.length === 0) {
-				console.error("❌ milestoneのサブコマンドを指定してください");
 				showHelp();
 				process.exit(1);
 			}
@@ -109,7 +107,6 @@ function main() {
 			break;
 
 		default:
-			console.error(`❌ 不明なコマンド: ${command}`);
 			showHelp();
 			process.exit(1);
 	}

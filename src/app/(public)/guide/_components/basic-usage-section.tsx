@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { VideoPlayer } from "@/components/custom/video-player";
 import { Section } from "@/components/ui/section";
 import { SectionTitle } from "@/components/ui/section-title";

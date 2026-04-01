@@ -3,8 +3,6 @@
 import { unstable_cache as cache } from "next/cache";
 import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
-import { getCampaignApplicationStats } from "./campaign-applications";
-import { getContactRequestStats } from "./contact-requests";
 
 // 1. getDashboardSummary
 export async function getDashboardSummary() {

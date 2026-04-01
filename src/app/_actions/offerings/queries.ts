@@ -46,8 +46,7 @@ export async function getOfferingAllocations(offeringId: string): Promise<{
 			success: true,
 			data: data || [],
 		};
-	} catch (error) {
-		console.error("お供物配分取得エラー:", error);
+	} catch (_error) {
 		return {
 			success: false,
 			error: "配分データの取得に失敗しました",
@@ -114,8 +113,7 @@ export async function getEntryOfferingAllocations(koudenEntryId: string): Promis
 			success: true,
 			data: transformedData,
 		};
-	} catch (error) {
-		console.error("香典エントリー配分取得エラー:", error);
+	} catch (_error) {
 		return {
 			success: false,
 			error: "香典エントリーの配分データ取得に失敗しました",
@@ -189,8 +187,7 @@ export async function checkOfferingAllocationIntegrity(offeringId?: string): Pro
 			success: true,
 			data: integrityData,
 		};
-	} catch (error) {
-		console.error("配分整合性チェックエラー:", error);
+	} catch (_error) {
 		return {
 			success: false,
 			error: "配分整合性チェックに失敗しました",
@@ -250,8 +247,7 @@ export async function calculateEntryTotalAmount(koudenEntryId: string): Promise<
 				calculated_total: entry.amount + offeringTotal,
 			},
 		};
-	} catch (error) {
-		console.error("合計金額計算エラー:", error);
+	} catch (_error) {
 		return {
 			success: false,
 			error: "合計金額の計算に失敗しました",

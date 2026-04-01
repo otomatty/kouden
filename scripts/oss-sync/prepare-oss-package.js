@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import fs from "node:fs";
-import path from "node:path";
+const fs = require("node:fs");
+const path = require("node:path");
 
 /**
  * OSS版用のpackage.jsonを準備する
@@ -25,16 +25,15 @@ function prepareOSSPackage() {
 
 	// 依存関係から削除
 	for (const dep of premiumDependencies) {
-		if (packageJson.dependencies && packageJson.dependencies[dep]) {
+		if (packageJson.dependencies?.[dep]) {
 			delete packageJson.dependencies[dep];
 			console.log(`❌ Removed premium dependency: ${dep}`);
 		}
-		if (packageJson.devDependencies && packageJson.devDependencies[dep]) {
+		if (packageJson.devDependencies?.[dep]) {
 			delete packageJson.devDependencies[dep];
 			console.log(`❌ Removed premium devDependency: ${dep}`);
 		}
 	}
-	)
 
 	// OSS版用の設定に変更
 	packageJson.name = "kouden-oss";
@@ -50,7 +49,7 @@ function prepareOSSPackage() {
 	};
 
 	// プライベート設定を削除
-	delete packageJson.private;
+	packageJson.private = undefined;
 
 	// スクリプトをOSS版用に調整
 	const ossScripts = {
@@ -196,8 +195,7 @@ function main() {
 		prepareDockerfile();
 
 		console.log("✨ OSS package preparation completed successfully!");
-	} catch (error) {
-		console.error("❌ Error preparing OSS package:", error);
+	} catch (_error) {
 		process.exit(1);
 	}
 }

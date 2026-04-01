@@ -1,18 +1,10 @@
 "use client";
 
 import { pdf } from "@react-pdf/renderer";
-import { useAtom, useAtomValue } from "jotai";
-import {
-	Copy,
-	EllipsisVertical,
-	FileSpreadsheet,
-	FileText,
-	Trash2,
-	UserPlus,
-	XCircle,
-} from "lucide-react";
+import { useAtom } from "jotai";
+import { Copy, EllipsisVertical, FileSpreadsheet, FileText, UserPlus, XCircle } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { exportKoudenToCsv, exportKoudenToExcel } from "@/app/_actions/export";
@@ -22,7 +14,6 @@ import { validateDuplicateEntries } from "@/app/_actions/validateDuplicateEntrie
 import KoudenPdfDocument from "@/components/pdf/KoudenPdfDocument";
 import { PdfExportSurveyTrigger } from "@/components/survey";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { duplicateEntriesAtom } from "@/store/duplicateEntries";
 import { canDeleteKouden, canUpdateKouden } from "@/store/permission";
@@ -216,8 +207,7 @@ export function KoudenActionsMenuMobile({
 
 			// PDF出力成功時のみアンケート表示
 			setShowSurvey(true);
-		} catch (error) {
-			console.error("PDF出力エラー:", error);
+		} catch (_error) {
 			toast.error("PDF出力に失敗しました。時間を置いてお試しください。");
 		} finally {
 			setIsLoading(null);

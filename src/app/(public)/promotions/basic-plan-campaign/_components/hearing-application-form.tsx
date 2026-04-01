@@ -88,9 +88,7 @@ export function HearingApplicationForm() {
 					form.setValue("name", user.user_metadata?.full_name || user.email?.split("@")[0] || "");
 					form.setValue("email", user.email || "");
 				}
-			} catch (error) {
-				console.warn("ユーザー情報の取得に失敗しました:", error);
-			}
+			} catch (_error) {}
 		};
 
 		loadUserInfo();
@@ -113,9 +111,7 @@ export function HearingApplicationForm() {
 					setInitialAvailability(availability);
 					setInitialWeekStart(weekStart);
 				}
-			} catch (error) {
-				console.warn("カレンダー情報の取得に失敗しました:", error);
-			}
+			} catch (_error) {}
 		};
 
 		loadInitialCalendar();
@@ -157,7 +153,6 @@ export function HearingApplicationForm() {
 				throw new Error(result.error || "申し込み処理に失敗しました");
 			}
 		} catch (error) {
-			console.error("申し込み処理でエラーが発生しました:", error);
 			// TODO: エラー表示UIを実装
 			alert(error instanceof Error ? error.message : "申し込み処理に失敗しました");
 		}

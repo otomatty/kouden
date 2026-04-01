@@ -49,7 +49,8 @@ export async function GET() {
 			.from("koudens")
 			.select("id, owner_id")
 			.eq("plan_id", freePlan.id)
-			.eq("created_at::date", dateStr);
+			.gte("created_at", `${dateStr}T00:00:00.000Z`)
+			.lt("created_at", `${dateStr}T23:59:59.999Z`);
 		if (koudenError || !koudenList) {
 			logger.error(
 				{

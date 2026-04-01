@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { updateContactRequestStatus } from "@/app/_actions/admin/contact-requests";
-import { Button } from "@/components/ui/button";
 import {
 	Select,
 	SelectContent,
@@ -48,8 +47,7 @@ export function ContactRequestStatusUpdater({
 
 			// ページを再読み込みして最新の状態を反映
 			router.refresh();
-		} catch (error) {
-			console.error("Failed to update status:", error);
+		} catch (_error) {
 			toast.error("ステータスの更新に失敗しました", {
 				description: "しばらく時間をおいて再度お試しください。",
 			});

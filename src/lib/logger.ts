@@ -70,24 +70,20 @@ function createBrowserLogger(): BrowserLogger {
 	};
 
 	return {
-		debug: (obj: Record<string, unknown>, msg?: string) => {
+		debug: (_obj: Record<string, unknown>, _msg?: string) => {
 			if (shouldLog("debug")) {
-				console.debug(msg || "", obj);
 			}
 		},
-		info: (obj: Record<string, unknown>, msg?: string) => {
+		info: (_obj: Record<string, unknown>, _msg?: string) => {
 			if (shouldLog("info")) {
-				console.info(msg || "", obj);
 			}
 		},
-		warn: (obj: Record<string, unknown>, msg?: string) => {
+		warn: (_obj: Record<string, unknown>, _msg?: string) => {
 			if (shouldLog("warn")) {
-				console.warn(msg || "", obj);
 			}
 		},
-		error: (obj: Record<string, unknown>, msg?: string) => {
+		error: (_obj: Record<string, unknown>, _msg?: string) => {
 			if (shouldLog("error")) {
-				console.error(msg || "", obj);
 			}
 		},
 	};

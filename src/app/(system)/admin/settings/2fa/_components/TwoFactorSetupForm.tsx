@@ -58,8 +58,7 @@ export default function TwoFactorSetupForm({
 				} else {
 					setError(result.error || "設定に失敗しました");
 				}
-			} catch (error) {
-				console.error("2FA setup error:", error);
+			} catch (_error) {
 				setError("設定中にエラーが発生しました");
 			}
 		});

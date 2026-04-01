@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Container from "@/components/ui/container";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { ShareForm } from "../_components/share-form";
 
 interface ShareDonationPageProps {
@@ -186,8 +185,7 @@ export default async function ShareDonationPage({ params }: ShareDonationPagePro
 				</div>
 			</Container>
 		);
-	} catch (error) {
-		console.error("Error loading case for sharing:", error);
+	} catch (_error) {
 		notFound();
 	}
 }

@@ -231,8 +231,7 @@ export default async function CaseDonationsPage({ params }: CaseDonationsPagePro
 				</div>
 			</Container>
 		);
-	} catch (error) {
-		console.error("Error loading case donations:", error);
+	} catch (_error) {
 		notFound();
 	}
 }

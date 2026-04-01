@@ -1,31 +1,4 @@
-/**
- * モバイル向けのデータテーブルツールバーコンポーネント
- *
- * 検索、フィルタリング、ソート機能を提供するモバイル最適化されたツールバー。
- * Drawerを使用してフィルターとソートのオプションを表示します。
- *
- * @example
- * ```tsx
- * <MobileDataTableToolbar
- *   searchOptions={[
- *     { value: 'name', label: '名前で検索' },
- *     { value: 'email', label: 'メールで検索' }
- *   ]}
- *   filterOptions={[
- *     { value: 'active', label: 'アクティブ' },
- *     { value: 'inactive', label: '非アクティブ' }
- *   ]}
- *   sortOptions={[
- *     { value: 'name_asc', label: '名前（昇順）' },
- *     { value: 'name_desc', label: '名前（降順）' }
- *   ]}
- *   onSearchChange={(value) => console.log(value)}
- * />
- * ```
- */
-
-import type { Table } from "@tanstack/react-table";
-import { ArrowDownAZ, ArrowUpAZ, Columns, Filter, Search, SlidersHorizontal } from "lucide-react";
+import { ArrowDownAZ, ArrowUpAZ, Search, SlidersHorizontal } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import {

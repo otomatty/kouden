@@ -91,8 +91,7 @@ export function EntryDrawerContent({
 			toast.success("データを更新しました", {
 				description: "データを更新しました",
 			});
-		} catch (error) {
-			console.error("Failed to update entry:", error);
+		} catch (_error) {
 			// エラーの場合は楽観的更新を削除
 			setOptimisticEntries(optimisticEntries.filter((e) => e.id !== entry.id));
 			toast.error("データの更新に失敗しました", {
@@ -123,8 +122,7 @@ export function EntryDrawerContent({
 				description: "データを削除しました",
 			});
 			onClose();
-		} catch (error) {
-			console.error("Failed to delete entry:", error);
+		} catch (_error) {
 			// エラーの場合は楽観的更新を削除
 			setOptimisticEntries(optimisticEntries.filter((e) => e.id !== entry.id));
 			toast.error("データの削除に失敗しました", {

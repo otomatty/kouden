@@ -59,8 +59,7 @@ export function UpgradePlanSelector({
 			} else {
 				setError("購入URLが取得できませんでした");
 			}
-		} catch (e) {
-			console.error("[ERROR] 購入エラー:", e);
+		} catch (_e) {
 			setError("購入処理中にエラーが発生しました");
 		} finally {
 			setLoading(false);

@@ -12,7 +12,6 @@ import {
 	CommandList,
 } from "@/components/ui/command";
 import { activeReturnItemsByKoudenAtomFamily } from "@/store/return-items";
-import type { ReturnItem } from "@/types/return-records/return-items";
 import type { ReturnItemSelectorProps } from "./types";
 
 /**

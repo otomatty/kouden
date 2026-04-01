@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import type { Database } from "@/types/supabase";
 import ResponseItem from "./response-item";
 

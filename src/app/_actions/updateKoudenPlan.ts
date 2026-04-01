@@ -1,7 +1,6 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import type { Database } from "@/types/supabase";
 
 /**
  * プランアップグレード後の処理
@@ -64,8 +63,7 @@ export async function updateKoudenPlan({
 			throw purchaseError;
 		}
 		return {};
-	} catch (error) {
-		console.error("[ERROR] Error updating plan:", error);
+	} catch (_error) {
 		return { error: "プラン変更に失敗しました" };
 	}
 }

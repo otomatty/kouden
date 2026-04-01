@@ -10,6 +10,11 @@ export default defineConfig({
 		},
 	},
 	test: {
+		coverage: {
+			provider: "v8",
+			reporter: ["text", "html", "lcov", "json"],
+			reportsDirectory: "./coverage",
+		},
 		globals: true,
 		environment: "jsdom",
 		setupFiles: ["./vitest.setup.ts"],

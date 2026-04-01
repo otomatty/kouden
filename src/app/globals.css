@@ -115,8 +115,8 @@
   
   /* コードブロックのダークモード対応 */
   .dark .hljs {
-    background: hsl(var(--muted)) !important;
-    color: hsl(var(--foreground)) !important;
+    background: hsl(var(--muted));
+    color: hsl(var(--foreground));
   }
   
   /* インラインコードのスタイル調整 */

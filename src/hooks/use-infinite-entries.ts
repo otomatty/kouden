@@ -62,8 +62,7 @@ export function useInfiniteEntries({
 				setEntries((prev) => (pageToFetch === 1 ? newEntries : [...prev, ...newEntries]));
 				setTotalCount(count);
 				setIsError(false);
-			} catch (err) {
-				console.error("[useInfiniteEntries] fetch error", err);
+			} catch (_err) {
 				setIsError(true);
 			} finally {
 				setIsLoading(false);

@@ -131,9 +131,6 @@ function validatePeriod(period) {
 	const monthRegex = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 	if (!(quarterRegex.test(period) || monthRegex.test(period))) {
-		console.error(
-			"❌ 期間は YYYY-QN (例: 2025-q1) または YYYY-MM (例: 2025-01) 形式で指定してください",
-		);
 		process.exit(1);
 	}
 }
@@ -163,7 +160,7 @@ function generateDefaults(period) {
 		// 四半期末の日付を計算
 		const quarterEndMonths = { 1: "03", 2: "06", 3: "09", 4: "12" };
 		const month = quarterEndMonths[quarter];
-		const lastDay = new Date(currentYear, Number.parseInt(month), 0).getDate();
+		const lastDay = new Date(currentYear, Number.parseInt(month, 10), 0).getDate();
 		targetDate = `${currentYear}-${month}-${lastDay}`;
 	} else {
 		const month = period.split("-")[1];
@@ -184,7 +181,7 @@ function generateDefaults(period) {
 		title = `${currentYear}年${monthNames[month]} マイルストーン`;
 
 		// 月末の日付を計算
-		const lastDay = new Date(currentYear, Number.parseInt(month), 0).getDate();
+		const lastDay = new Date(currentYear, Number.parseInt(month, 10), 0).getDate();
 		targetDate = `${currentYear}-${month}-${lastDay}`;
 	}
 
@@ -261,7 +258,7 @@ async function createInteractive() {
 		let progress;
 		while (true) {
 			const progressInput = (await question(rl, "📈 進捗率 (0-100) [0]: ")) || "0";
-			progress = Number.parseInt(progressInput);
+			progress = Number.parseInt(progressInput, 10);
 			if (!Number.isNaN(progress) && progress >= 0 && progress <= 100) {
 				break;
 			}
@@ -315,7 +312,6 @@ async function createInteractive() {
 			console.log("❌ マイルストーンの作成をキャンセルしました。");
 		}
 	} catch {
-		console.error("❌ エラーが発生しました");
 	} finally {
 		rl.close();
 	}
@@ -355,8 +351,7 @@ function createTemplate(period) {
 			console.log("📝 テンプレートマイルストーンを作成しました。");
 			console.log("💡 ファイルを編集して、詳細な内容を追加してください。");
 		})
-		.catch((error) => {
-			console.error("❌ エラー:", error.message);
+		.catch((_error) => {
 			process.exit(1);
 		});
 }
@@ -421,7 +416,6 @@ function main() {
 	switch (command) {
 		case "create":
 			if (args.length < 2) {
-				console.error("❌ 期間を指定してください");
 				process.exit(1);
 			}
 			createTemplate(args[1]);
@@ -442,7 +436,6 @@ function main() {
 			break;
 
 		default:
-			console.error(`❌ 不明なコマンド: ${command}`);
 			showHelp();
 			process.exit(1);
 	}

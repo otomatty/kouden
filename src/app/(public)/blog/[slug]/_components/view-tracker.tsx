@@ -26,7 +26,7 @@ export function ViewTracker({ postId }: ViewTrackerProps) {
 	const componentIdRef = useRef(Math.random().toString(36).substr(2, 9));
 
 	useEffect(() => {
-		const componentId = componentIdRef.current;
+		const _componentId = componentIdRef.current;
 
 		// グローバル重複防止セットの初期化
 		if (typeof window !== "undefined" && !window.__blogViewRecording) {
@@ -107,15 +107,12 @@ export function ViewTracker({ postId }: ViewTrackerProps) {
 				}
 
 				// result.recorded が false の場合（重複スキップ）は、フラグはそのまま有効にしておく
-			} catch (error) {
-				// エラーが発生した場合はフラグをリセット（リトライ可能にする）
-				console.error(`❌ [ViewTracker] ${componentId} - Exception occurred for ${postId}:`, error);
+			} catch (_error) {
 				hasRecordedRef.current = false;
 				if (typeof window !== "undefined") {
 					sessionStorage.removeItem(sessionKey);
 					window.__blogViewRecording?.delete(postId);
 				}
-				console.error("Failed to record view:", error);
 			}
 		};
 

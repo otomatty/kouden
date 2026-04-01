@@ -1,4 +1,3 @@
-import React from "react";
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 
 // UIコンポーネントをモック化

@@ -1,18 +1,7 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import {
-	BarChart2,
-	BarChart3,
-	Box,
-	Gift,
-	List,
-	Mail,
-	RefreshCcw,
-	Send,
-	Settings,
-	Table2,
-} from "lucide-react";
+import { BarChart3, Box, Gift, Mail, Settings, Table2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 

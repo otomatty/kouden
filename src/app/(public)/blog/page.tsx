@@ -1,5 +1,4 @@
 import { ArrowRight, Download } from "lucide-react";
-import Link from "next/link";
 import { getPublishedPosts } from "@/app/_actions/blog/posts";
 import { PageHero } from "@/app/(public)/_components/page-hero";
 import Container from "@/components/ui/container";

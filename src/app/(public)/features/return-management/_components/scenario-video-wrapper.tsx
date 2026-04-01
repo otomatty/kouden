@@ -1,7 +1,6 @@
 "use client";
 
 import { Bell, Calendar, FileText, Gift, List } from "lucide-react";
-import type React from "react";
 import { type Scenario, ScenarioVideoSection } from "../../_components/ScenarioVideoSection";
 
 const scenarios: Scenario[] = [

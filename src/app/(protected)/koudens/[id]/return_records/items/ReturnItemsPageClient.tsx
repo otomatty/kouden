@@ -36,8 +36,7 @@ export function ReturnItemsPageClient({ koudenId }: ReturnItemsPageClientProps) 
 				setIsLoading(true);
 				const data = await getReturnItems(koudenId);
 				setItems(data);
-			} catch (error) {
-				console.error("[ERROR] Failed to load initial return items:", error);
+			} catch (_error) {
 				toast.error("データ読み込みエラー", {
 					description: "返礼品データの読み込みに失敗しました",
 				});
@@ -59,8 +58,7 @@ export function ReturnItemsPageClient({ koudenId }: ReturnItemsPageClientProps) 
 			toast.success("更新完了", {
 				description: "返礼品データを更新しました",
 			});
-		} catch (error) {
-			console.error("[ERROR] Failed to refresh return items:", error);
+		} catch (_error) {
 			toast.error("更新エラー", {
 				description: "データの更新に失敗しました",
 			});
@@ -92,8 +90,7 @@ export function ReturnItemsPageClient({ koudenId }: ReturnItemsPageClientProps) 
 				toast.success("削除完了", {
 					description: "返礼品を削除しました",
 				});
-			} catch (error) {
-				console.error("[ERROR] Failed to delete return item:", error);
+			} catch (_error) {
 				toast.error("削除エラー", {
 					description: "返礼品の削除に失敗しました",
 				});
@@ -117,8 +114,7 @@ export function ReturnItemsPageClient({ koudenId }: ReturnItemsPageClientProps) 
 				toast.success("更新完了", {
 					description: `返礼品を${isActive ? "表示" : "非表示"}に設定しました`,
 				});
-			} catch (error) {
-				console.error("[ERROR] Failed to toggle return item active:", error);
+			} catch (_error) {
 				toast.error("更新エラー", {
 					description: "返礼品の状態更新に失敗しました",
 				});

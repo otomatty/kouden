@@ -5,32 +5,34 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { exportReceiptToPdf } from "../exportReceipt";
 
 // モック設定
-vi.mock("pdfkit", () => ({
-	__esModule: true,
-	default: vi.fn().mockImplementation(() => {
-		return {
-			fontSize: vi.fn().mockReturnThis(),
-			text: vi.fn().mockReturnThis(),
-			moveDown: vi.fn().mockReturnThis(),
-			end: vi.fn(),
-			on: vi.fn((event: string, cb: () => void) => {
-				if (event === "end") setImmediate(cb);
-			}),
-		};
-	}),
-}));
-
+vi.mock("pdfkit");
 vi.mock("@/lib/supabase/admin", () => ({
 	createAdminClient: vi.fn(),
 }));
+vi.mock("resend");
 
-vi.mock("resend", () => ({
-	Resend: vi.fn().mockImplementation(() => ({
-		emails: {
-			send: vi.fn().mockResolvedValue({}),
-		},
-	})),
-}));
+function createPdfDocMockImplementation() {
+	return () => {
+		const listeners: Record<string, ((...args: unknown[]) => void)[]> = {};
+		return {
+			registerFont: vi.fn().mockReturnThis(),
+			font: vi.fn().mockReturnThis(),
+			fontSize: vi.fn().mockReturnThis(),
+			text: vi.fn().mockReturnThis(),
+			moveDown: vi.fn().mockReturnThis(),
+			end: vi.fn().mockImplementation(() => {
+				setImmediate(() => {
+					for (const cb of listeners.end || []) cb();
+				});
+			}),
+			on: vi.fn().mockImplementation(function (this: unknown, event: string, cb: (...args: unknown[]) => void) {
+				if (!listeners[event]) listeners[event] = [];
+				listeners[event].push(cb);
+				return this;
+			}),
+		};
+	};
+}
 
 // Set RESEND_API_KEY for tests to prevent missing env errors
 vi.stubEnv("RESEND_API_KEY", "test_key");
@@ -53,6 +55,13 @@ describe("exportReceiptToPdf", () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks();
+		// Re-apply mock implementations after clearAllMocks
+		(PDFDocument as unknown as Mock).mockImplementation(createPdfDocMockImplementation());
+		(Resend as unknown as Mock).mockImplementation(() => ({
+			emails: {
+				send: vi.fn().mockResolvedValue({}),
+			},
+		}));
 		// Supabase Admin Client のモックセットアップ
 		supabaseMock = {
 			from: vi

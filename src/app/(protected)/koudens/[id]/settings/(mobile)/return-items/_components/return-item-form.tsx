@@ -22,6 +22,8 @@ const formSchema = z.object({
 	price: z.coerce.number().min(0, "価格は0以上を入力してください"),
 });
 
+type FormValues = z.infer<typeof formSchema>;
+
 type Props = {
 	koudenId: string;
 	returnItem?: ReturnItem;
@@ -29,8 +31,8 @@ type Props = {
 };
 
 export function ReturnItemForm({ koudenId, returnItem, onSuccess }: Props) {
-	const form = useForm<z.infer<typeof formSchema>>({
-		resolver: zodResolver(formSchema),
+	const form = useForm<FormValues>({
+		resolver: zodResolver(formSchema) as Parameters<typeof useForm<FormValues>>[0]["resolver"],
 		defaultValues: {
 			name: returnItem?.name ?? "",
 			description: returnItem?.description ?? "",
@@ -55,8 +57,7 @@ export function ReturnItemForm({ koudenId, returnItem, onSuccess }: Props) {
 				toast.success("返礼品を作成しました");
 			}
 			onSuccess?.();
-		} catch (error) {
-			console.error(error);
+		} catch (_error) {
 			toast.error("返礼品の保存に失敗しました", {
 				description: "しばらく時間をおいてから再度お試しください",
 			});

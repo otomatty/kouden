@@ -1,6 +1,6 @@
 /// <reference types="vitest" />
 
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as userSurveysActions from "@/app/_actions/user-surveys";
 import { OneWeekSurveyTrigger, PdfExportSurveyTrigger, SurveyTrigger } from "../survey-trigger";

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { Customer, CustomerStatus } from "@/types/funeral-management";
+import type { Customer } from "@/types/funeral-management";
 
 interface CustomerCardProps {
 	customer: Customer;

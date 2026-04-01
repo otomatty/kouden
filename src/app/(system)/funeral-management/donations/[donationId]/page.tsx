@@ -164,8 +164,7 @@ export default async function DonationDetailPage({ params }: DonationDetailPageP
 				</div>
 			</Container>
 		);
-	} catch (error) {
-		console.error("Error loading donation:", error);
+	} catch (_error) {
 		notFound();
 	}
 }

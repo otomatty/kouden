@@ -39,8 +39,7 @@ export function EntryFormBasic() {
 							description: "郵便番号を確認してください",
 						});
 					}
-				} catch (error: unknown) {
-					console.error("住所検索中にエラーが発生しました:", error);
+				} catch (_error: unknown) {
 					setAddressSearchState({
 						isSearching: false,
 						error: "住所の検索に失敗しました。しばらく時間をおいて再度お試しください。",

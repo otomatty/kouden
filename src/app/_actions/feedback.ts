@@ -45,8 +45,7 @@ ${validatedData.description}
 
 		await transporter.sendMail(mailOptions);
 		return { success: true };
-	} catch (error) {
-		console.error("フィードバック送信エラー:", error);
+	} catch (_error) {
 		return { success: false, error: "フィードバックの送信に失敗しました" };
 	}
 }

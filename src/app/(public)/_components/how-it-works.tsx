@@ -1,4 +1,4 @@
-import { Check, PenLine, Send, UserPlus, UserSearch } from "lucide-react";
+import { Check, PenLine, UserPlus, UserSearch } from "lucide-react";
 import { Section } from "@/components/ui/section";
 import { SectionTitle } from "@/components/ui/section-title";
 

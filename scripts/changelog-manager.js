@@ -24,8 +24,7 @@ function getPackageVersion() {
 	try {
 		const packageJson = JSON.parse(fs.readFileSync(PACKAGE_JSON_PATH, "utf8"));
 		return packageJson.version;
-	} catch (error) {
-		console.error("❌ package.jsonの読み込みに失敗しました:", error.message);
+	} catch (_error) {
 		process.exit(1);
 	}
 }
@@ -35,7 +34,6 @@ async function generateChangelogWithGemini(commits, version) {
 	// 環境変数からGemini APIキーを取得
 	const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY;
 	if (!apiKey) {
-		console.error("❌ GOOGLE_AI_API_KEY または GEMINI_API_KEY 環境変数が設定されていません");
 		console.log("💡 .envファイルにGOOGLE_AI_API_KEY=your_api_keyを追加してください");
 		return null;
 	}
@@ -135,8 +133,7 @@ breaking: false
 		}
 
 		return generatedText.trim();
-	} catch (error) {
-		console.error("❌ Gemini API呼び出しに失敗しました:", error.message);
+	} catch (_error) {
 		return null;
 	}
 }
@@ -200,7 +197,6 @@ breaking: false
 function validateVersion(version) {
 	const versionRegex = /^\d+\.\d+\.\d+$/;
 	if (!versionRegex.test(version)) {
-		console.error("❌ バージョン番号は major.minor.patch 形式で指定してください (例: 1.2.3)");
 		process.exit(1);
 	}
 }
@@ -217,8 +213,7 @@ function getGitCommits(fromTag, toTag = "HEAD") {
 
 		const output = execSync(command, { encoding: "utf8" }).trim();
 		return output ? output.split("\n") : [];
-	} catch (error) {
-		console.error("❌ Gitコミット履歴の取得に失敗しました:", error.message);
+	} catch (_error) {
 		return [];
 	}
 }
@@ -385,7 +380,6 @@ function createChangelog(version) {
 	const filepath = path.join(CHANGELOG_DIR, filename);
 
 	if (fs.existsSync(filepath)) {
-		console.error(`❌ バージョン ${version} の更新履歴は既に存在します`);
 		process.exit(1);
 	}
 
@@ -413,7 +407,6 @@ async function generateChangelog(version, fromVersion, useAI = true) {
 	const filepath = path.join(CHANGELOG_DIR, filename);
 
 	if (fs.existsSync(filepath)) {
-		console.error(`❌ バージョン ${version} の更新履歴は既に存在します`);
 		process.exit(1);
 	}
 
@@ -438,7 +431,6 @@ async function generateChangelog(version, fromVersion, useAI = true) {
 	const commits = getGitCommits(fromTag);
 
 	if (commits.length === 0) {
-		console.error("❌ コミットが見つかりませんでした");
 		process.exit(1);
 	}
 
@@ -518,7 +510,6 @@ async function main() {
 	switch (command) {
 		case "create":
 			if (args.length < 2) {
-				console.error("❌ バージョン番号を指定してください");
 				process.exit(1);
 			}
 			createChangelog(args[1]);
@@ -531,7 +522,6 @@ async function main() {
 
 		case "generate-simple":
 			if (args.length < 2) {
-				console.error("❌ バージョン番号を指定してください");
 				process.exit(1);
 			}
 			await generateChangelog(args[1], args[2], false);
@@ -548,7 +538,6 @@ async function main() {
 			break;
 
 		default:
-			console.error(`❌ 不明なコマンド: ${command}`);
 			showHelp();
 			process.exit(1);
 	}

@@ -48,8 +48,7 @@ export default async function AdminKoudensPage({
 			total,
 			hasMore,
 		});
-	} catch (error) {
-		console.error("Failed to fetch koudens in page:", error);
+	} catch (_error) {
 		// エラーが発生した場合は空の結果を返す
 		koudens = [];
 		total = 0;

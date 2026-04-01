@@ -53,9 +53,7 @@ export function DeleteKoudenDialog({
 				description: "香典帳が正常に削除されました",
 			});
 			router.replace("/koudens");
-		} catch (error) {
-			console.error("[DeleteKoudenDialog] deleteKouden threw error:", error);
-			console.error("Failed to delete kouden:", error);
+		} catch (_error) {
 			toast.error("香典帳の削除に失敗しました", {
 				description: "しばらく時間をおいてから再度お試しください",
 			});

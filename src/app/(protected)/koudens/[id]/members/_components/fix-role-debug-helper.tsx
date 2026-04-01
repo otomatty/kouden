@@ -45,7 +45,6 @@ export function FixRoleDebugHelper({ members, roles, koudenId }: FixRoleDebugHel
 			// ページをリロードして変更を反映
 			window.location.reload();
 		} catch (error) {
-			console.error("Role fix error:", error);
 			toast.error("ロール修正に失敗しました", {
 				description: error instanceof Error ? error.message : "未知のエラー",
 			});

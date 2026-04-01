@@ -81,8 +81,7 @@ export function NewKoudenPlanSelector({ plans, userId }: NewKoudenPlanSelectorPr
 					throw new Error("購入URLが取得できませんでした");
 				}
 			}
-		} catch (err) {
-			console.error("[ERROR] 作成エラー:", err);
+		} catch (_err) {
 			// TODO: user feedback with toast
 		} finally {
 			setLoading(false);

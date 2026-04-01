@@ -1,6 +1,6 @@
 "use client";
 
-import { Calculator, ExternalLink, Users } from "lucide-react";
+import { ExternalLink, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { getEntryOfferingAllocations } from "@/app/_actions/offerings/queries";
@@ -50,7 +50,7 @@ export function EntryAllocationDialog({
 		if (open) {
 			loadAllocations();
 		}
-	}, [open]);
+	}, [open, loadAllocations]);
 
 	const loadAllocations = async () => {
 		setLoading(true);
@@ -61,8 +61,7 @@ export function EntryAllocationDialog({
 			} else {
 				toast.error(result.error || "配分データの取得に失敗しました");
 			}
-		} catch (error) {
-			console.error("配分データ取得エラー:", error);
+		} catch (_error) {
 			toast.error("配分データの取得中にエラーが発生しました");
 		} finally {
 			setLoading(false);

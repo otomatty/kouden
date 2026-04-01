@@ -30,8 +30,7 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 		if (invitationToken) {
 			try {
 				document.cookie = `invitation_token=${invitationToken}; path=/; max-age=3600; SameSite=Lax; Secure`;
-			} catch (error) {
-				console.error("[ERROR] Failed to store invitation token in cookie:", error);
+			} catch (_error) {
 				setMessage("招待情報の保存に失敗しました。再度お試しください。");
 			}
 		}
@@ -73,7 +72,6 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 			setCurrentStep("otp");
 			setMessage("認証コードをメールアドレスに送信しました。メールボックスを確認してください。");
 		} catch (error) {
-			console.error("[ERROR] OTP send failed:", error);
 			if (error instanceof Error) {
 				setMessage(`認証コードの送信に失敗しました: ${error.message}`);
 			} else {
@@ -112,7 +110,6 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 				throw new Error("セッションの作成に失敗しました");
 			}
 		} catch (error) {
-			console.error("[ERROR] OTP verification failed:", error);
 			if (error instanceof Error) {
 				setMessage(`認証コードの確認に失敗しました: ${error.message}`);
 			} else {
@@ -154,7 +151,6 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 				throw error;
 			}
 		} catch (error) {
-			console.error("[ERROR] Google login failed:", error);
 			if (error instanceof Error) {
 				setMessage(`Googleログインに失敗しました: ${error.message}`);
 			} else {

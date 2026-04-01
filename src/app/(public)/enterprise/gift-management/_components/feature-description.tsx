@@ -1,5 +1,3 @@
-import { Check } from "lucide-react";
-
 interface Feature {
 	title: string;
 	description: string;

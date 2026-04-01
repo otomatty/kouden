@@ -37,7 +37,7 @@ export function CasesClient({ initialCases }: CasesClientProps) {
 				statusFilter === "all" || getStatusKey(funeralCase.status || "") === statusFilter;
 			return matchesSearch && matchesStatus;
 		});
-	}, [initialCases, searchTerm, statusFilter]);
+	}, [initialCases, searchTerm, statusFilter, getStatusKey]);
 
 	// ステータスのキーを取得するヘルパー関数
 	function getStatusKey(status: string): string {

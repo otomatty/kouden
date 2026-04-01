@@ -1,7 +1,7 @@
 // library
 
 import { useAtom, useAtomValue } from "jotai";
-import { Check, Pencil, Trash2, X } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 // Server Actions
@@ -98,8 +98,7 @@ export function TelegramDrawerContent({
 			toast.success("データを更新しました", {
 				description: "変更内容が正常に保存されました",
 			});
-		} catch (error) {
-			console.error("Failed to update telegram:", error);
+		} catch (_error) {
 			// エラーの場合は楽観的更新を削除
 			setOptimisticTelegrams(optimisticTelegrams.filter((t) => t.id !== telegram.id));
 			toast.error("データの更新に失敗しました", {
@@ -130,8 +129,7 @@ export function TelegramDrawerContent({
 				description: "弔電情報が正常に削除されました",
 			});
 			onClose();
-		} catch (error) {
-			console.error("Failed to delete telegram:", error);
+		} catch (_error) {
 			// エラーの場合は楽観的更新を削除
 			setOptimisticTelegrams(optimisticTelegrams.filter((t) => t.id !== telegram.id));
 			toast.error("データの削除に失敗しました", {

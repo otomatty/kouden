@@ -104,7 +104,6 @@ export function DataTable({
 	// データの正規化
 	const normalizedReturns = useMemo(() => {
 		if (!Array.isArray(returns)) {
-			console.error("[ERROR] Invalid returns data:", returns);
 			return [];
 		}
 		return returns.filter(
@@ -116,7 +115,6 @@ export function DataTable({
 	// 関係性データの正規化
 	const normalizedRelationships = useMemo(() => {
 		if (!Array.isArray(relationships)) {
-			console.error("[ERROR] Invalid relationships data:", relationships);
 			return [];
 		}
 		return relationships;
@@ -136,7 +134,6 @@ export function DataTable({
 
 			setError(null);
 		} catch (err) {
-			console.error("[ERROR] DataTable initialization failed:", err);
 			setError(err instanceof Error ? err : new Error("Unknown error"));
 		} finally {
 			setIsTableLoading(false);
@@ -177,8 +174,7 @@ export function DataTable({
 					toast.success("データを更新しました", {
 						description: `${columnLabels[columnId] || columnId}を更新しました`,
 					});
-				} catch (error) {
-					console.error("[ERROR] Optimistic cell edit failed:", error);
+				} catch (_error) {
 					toast.error("データの更新に失敗しました", {
 						description: "しばらく時間をおいてから再度お試しください",
 					});
@@ -191,8 +187,7 @@ export function DataTable({
 					toast.success("データを更新しました", {
 						description: `${columnLabels[columnId] || columnId}を更新しました`,
 					});
-				} catch (error) {
-					console.error("[ERROR] Cell edit failed:", error);
+				} catch (_error) {
 					toast.error("データの更新に失敗しました", {
 						description: "しばらく時間をおいてから再度お試しください",
 					});
@@ -213,8 +208,7 @@ export function DataTable({
 				toast.success(`${rowIds.length}件の返礼記録を削除しました`, {
 					description: "削除処理が正常に完了しました",
 				});
-			} catch (error) {
-				console.error("[ERROR] Row deletion failed:", error);
+			} catch (_error) {
 				toast.error("データの削除に失敗しました", {
 					description: "しばらく時間をおいてから再度お試しください",
 				});

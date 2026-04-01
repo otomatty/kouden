@@ -1,16 +1,6 @@
 "use client";
 
-import {
-	BarChart2,
-	Book,
-	Calendar,
-	Cloud,
-	FileText,
-	Gift,
-	LayoutDashboard,
-	Lock,
-	Monitor,
-} from "lucide-react";
+import { BarChart2, Cloud, FileText, Gift, LayoutDashboard, Lock, Monitor } from "lucide-react";
 import Link from "next/link";
 import type * as React from "react";
 import {

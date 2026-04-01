@@ -64,7 +64,6 @@ export function EntryDialog({
 			onOpenChange?.(false);
 			onSuccess?.(defaultValues);
 		} catch (error) {
-			console.error("Failed to delete entry:", error);
 			toast.error("削除に失敗しました", {
 				description:
 					error instanceof Error ? error.message : "しばらく時間をおいてから再度お試しください",

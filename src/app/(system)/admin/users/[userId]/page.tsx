@@ -23,8 +23,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
 				</Suspense>
 			</div>
 		);
-	} catch (error) {
-		console.error("Error loading user detail:", error);
+	} catch (_error) {
 		notFound();
 	}
 }

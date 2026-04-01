@@ -13,6 +13,7 @@ import {
 	Trash2,
 	User,
 } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
@@ -118,8 +119,7 @@ export function ReturnItemDetailPageClient({
 			toast.success("更新完了", {
 				description: `返礼品を${newActiveState ? "表示" : "非表示"}に設定しました`,
 			});
-		} catch (error) {
-			console.error("[ERROR] Failed to toggle return item active:", error);
+		} catch (_error) {
 			toast.error("更新エラー", {
 				description: "返礼品の状態更新に失敗しました",
 			});
@@ -141,8 +141,7 @@ export function ReturnItemDetailPageClient({
 
 			// 一覧ページに戻る
 			router.push(`/koudens/${koudenId}/return_records/items`);
-		} catch (error) {
-			console.error("[ERROR] Failed to delete return item:", error);
+		} catch (_error) {
 			toast.error("削除エラー", {
 				description: "返礼品の削除に失敗しました",
 			});
@@ -260,11 +259,12 @@ export function ReturnItemDetailPageClient({
 						</CardHeader>
 						<CardContent className="space-y-4">
 							{/* 商品画像 */}
-							<div className="aspect-video w-full bg-muted rounded-lg overflow-hidden">
+							<div className="aspect-video w-full bg-muted rounded-lg overflow-hidden relative">
 								{item.image_url && !imageError ? (
-									<img
+									<Image
 										src={item.image_url}
 										alt={item.name}
+										fill
 										className="w-full h-full object-cover"
 										onError={() => setImageError(true)}
 									/>

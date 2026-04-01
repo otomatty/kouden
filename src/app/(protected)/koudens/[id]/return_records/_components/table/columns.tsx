@@ -89,12 +89,7 @@ export function createColumns({
 				default:
 					return String(value) || "-";
 			}
-		} catch (error) {
-			console.error("[ERROR] Cell format failed:", {
-				value,
-				format,
-				error,
-			});
+		} catch (_error) {
 			return "-";
 		}
 	};

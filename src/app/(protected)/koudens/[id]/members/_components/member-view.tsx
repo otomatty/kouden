@@ -41,8 +41,7 @@ function MemberViewComponent({
 					previousMembersRef.current = members;
 				}
 				setIsDataReady(true);
-			} catch (error) {
-				console.error("[MemberView] Data initialization error:", error);
+			} catch (_error) {
 			} finally {
 				setIsLoading(false);
 			}

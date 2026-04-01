@@ -3,7 +3,6 @@
 import { useAtomValue } from "jotai";
 import { ChevronRight } from "lucide-react";
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
 // ui
 import { Card, CardContent } from "@/components/ui/card";
 import { Drawer, DrawerTrigger } from "@/components/ui/drawer";

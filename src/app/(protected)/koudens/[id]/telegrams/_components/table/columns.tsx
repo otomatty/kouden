@@ -4,7 +4,6 @@ import { EditableCell } from "@/components/custom/data-table/editable-cell";
 import { SelectionColumn } from "@/components/custom/data-table/selection-column";
 import { SearchableSelectorDialog } from "@/components/custom/searchable-selector-dialog";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
 	DropdownMenu,
 	DropdownMenuContent,

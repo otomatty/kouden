@@ -200,8 +200,7 @@ export default async function ContactRequestDetailPage({ params }: ContactReques
 				</div>
 			</div>
 		);
-	} catch (error) {
-		console.error("Failed to fetch contact request:", error);
+	} catch (_error) {
 		notFound();
 	}
 }

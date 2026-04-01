@@ -6,7 +6,7 @@ import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
 import "highlight.js/styles/github.css";
 import { BlogContentStyles, COMMON_PROSE_CLASSES } from "@/components/blog/blog-content-styles";
-import { extractHeaders, generateHeaderId, getUniqueHeaderId } from "@/utils/markdown-utils";
+import { extractHeaders, generateHeaderId } from "@/utils/markdown-utils";
 
 interface MarkdownContentProps {
 	content: string;

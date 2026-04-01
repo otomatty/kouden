@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { removeMember as deleteMember, leaveMember, updateMemberRole } from "@/app/_actions/roles";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";

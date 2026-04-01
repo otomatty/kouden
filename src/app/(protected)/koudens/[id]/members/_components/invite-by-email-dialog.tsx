@@ -87,12 +87,20 @@ export function InviteByEmailDialog({ koudenId, roles }: InviteByEmailDialogProp
 						</SelectContent>
 					</Select>
 				</div>
-				{Array.from({ length: numInputs }, (_, idx) => (
-					<div key={`email-input-field-${idx + 1}`} className="space-y-2">
-						<Label htmlFor={`emails-${idx}`}>メールアドレス {idx + 1}</Label>
-						<Input type="email" id={`emails-${idx}`} name="emails" placeholder="user@example.com" />
-					</div>
-				))}
+				{Array.from({ length: numInputs }, (_, idx) => {
+					const fieldNumber = idx + 1;
+					return (
+						<div key={`email-input-field-${fieldNumber}`} className="space-y-2">
+							<Label htmlFor={`emails-${fieldNumber}`}>メールアドレス {fieldNumber}</Label>
+							<Input
+								type="email"
+								id={`emails-${fieldNumber}`}
+								name="emails"
+								placeholder="user@example.com"
+							/>
+						</div>
+					);
+				})}
 				{/* メールアドレス追加ボタン */}
 				{numInputs < 5 && (
 					<Button

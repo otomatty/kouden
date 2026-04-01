@@ -108,8 +108,7 @@ export function CustomerForm({
 					description: result.error || "処理に失敗しました",
 				});
 			}
-		} catch (error) {
-			console.error("フォーム送信エラー:", error);
+		} catch (_error) {
 			toast.error("エラー", {
 				description: "システムエラーが発生しました",
 			});

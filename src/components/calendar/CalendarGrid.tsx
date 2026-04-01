@@ -1,5 +1,5 @@
 "use client";
-import type { DayAvailability, Slot } from "@/app/_actions/calendar";
+import type { DayAvailability } from "@/app/_actions/calendar";
 import { reserveSlot } from "@/app/_actions/calendar";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 import { Button } from "@/components/ui/button";

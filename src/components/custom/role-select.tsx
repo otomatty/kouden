@@ -33,7 +33,6 @@ export function RoleSelect({ koudenId, value, onValueChange }: RoleSelectProps) 
 				.order("created_at", { ascending: true });
 
 			if (error) {
-				console.error("Error fetching roles:", error);
 				return;
 			}
 

@@ -30,11 +30,9 @@ export function LoginButton({ invitationToken }: LoginButtonProps) {
 			});
 
 			if (error) {
-				console.error("[DEBUG] OAuth error:", error);
 				throw error;
 			}
-		} catch (error) {
-			console.error("[DEBUG] Login error:", error);
+		} catch (_error) {
 		} finally {
 			setLoading(false);
 		}

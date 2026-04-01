@@ -193,8 +193,11 @@ export function ReturnCard({ returnRecord, relationships, onEditReturn }: Return
 					<div className="mt-3 pt-3 border-t">
 						<p className="text-xs text-muted-foreground mb-2">返礼品</p>
 						<div className="space-y-1">
-							{returnRecord.returnItems.map((item, index) => (
-								<div key={`${item.name}-${index}`} className="flex justify-between text-xs">
+							{returnRecord.returnItems.map((item) => (
+								<div
+									key={`${item.name}-${item.price}-${item.quantity}`}
+									className="flex justify-between text-xs"
+								>
 									<span>
 										{item.name} x{item.quantity || 1}
 									</span>

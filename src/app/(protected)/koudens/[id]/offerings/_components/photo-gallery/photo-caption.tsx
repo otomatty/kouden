@@ -22,8 +22,7 @@ export function PhotoCaption({ photo, onCaptionChange }: PhotoCaptionProps) {
 			setIsSubmitting(true);
 			await onCaptionChange(photo.id, caption);
 			setIsEditing(false);
-		} catch (error) {
-			console.error(error);
+		} catch (_error) {
 		} finally {
 			setIsSubmitting(false);
 		}

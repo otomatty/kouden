@@ -1,4 +1,4 @@
-import { Bookmark, Calendar, Eye } from "lucide-react";
+import { Calendar } from "lucide-react";
 import Link from "next/link";
 import { PopularPosts } from "@/components/blog/popular-posts";
 import { Badge } from "@/components/ui/badge";

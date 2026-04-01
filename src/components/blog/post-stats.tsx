@@ -35,8 +35,7 @@ export function PostStats({ postId, showLabels = false, className = "" }: PostSt
 				setError(null);
 				const data = await getPostStats(postId);
 				setStats(data);
-			} catch (err) {
-				console.error("Failed to fetch post stats:", err);
+			} catch (_err) {
 				setError("統計情報の取得に失敗しました");
 			} finally {
 				setLoading(false);

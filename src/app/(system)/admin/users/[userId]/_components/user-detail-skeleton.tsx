@@ -1,4 +1,4 @@
-import { ArrowLeft, BookOpen, FileText, Users } from "lucide-react";
+import { BookOpen, FileText, Users } from "lucide-react";
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 

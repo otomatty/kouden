@@ -102,8 +102,6 @@ export default async function AdminEntriesPage({
 			</div>
 		);
 	} catch (error) {
-		console.error("[ERROR] Admin Entries Page - Failed to fetch data:", error);
-
 		// エラー情報を表示するための簡単なUI
 		return (
 			<div className="mt-4 p-4 border border-red-300 bg-red-50 rounded-md">

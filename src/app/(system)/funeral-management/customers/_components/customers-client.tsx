@@ -25,7 +25,7 @@ export function CustomersClient({ initialCustomers }: CustomersClientProps) {
 			const matchesStatus = statusFilter === "all" || getStatusKey(customerStatus) === statusFilter;
 			return matchesSearch && matchesStatus;
 		});
-	}, [initialCustomers, searchTerm, statusFilter]);
+	}, [initialCustomers, searchTerm, statusFilter, getStatusKey]);
 
 	// ステータスのキーを取得するヘルパー関数
 	function getStatusKey(status: string): string {

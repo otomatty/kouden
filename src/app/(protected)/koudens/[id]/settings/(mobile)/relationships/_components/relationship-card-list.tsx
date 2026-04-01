@@ -37,8 +37,7 @@ export function RelationshipCardList({ koudenId, relationships }: RelationshipCa
 		try {
 			await deleteRelationship(id);
 			toast.success("関係性を削除しました");
-		} catch (error) {
-			console.error(error);
+		} catch (_error) {
 			toast.error("関係性の削除に失敗しました", {
 				description: "しばらく時間をおいてから再度お試しください",
 			});
@@ -50,8 +49,7 @@ export function RelationshipCardList({ koudenId, relationships }: RelationshipCa
 			await updateRelationship(id, {
 				is_default: isDefault,
 			});
-		} catch (error) {
-			console.error(error);
+		} catch (_error) {
 			toast.error("設定の更新に失敗しました", {
 				description: "しばらく時間をおいてから再度お試しください",
 			});

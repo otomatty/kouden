@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
-import type { Database } from "@/types/supabase";
 
 // すべての関係性を取得
 export async function getAllRelationships() {

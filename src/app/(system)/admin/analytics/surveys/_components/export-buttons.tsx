@@ -55,8 +55,7 @@ export function SurveyExportButtons() {
 			} else {
 				toast.error(result.error || "エクスポートに失敗しました");
 			}
-		} catch (error) {
-			console.error("エクスポートエラー:", error);
+		} catch (_error) {
 			toast.error("予期しないエラーが発生しました");
 		} finally {
 			setIsExporting(null);
@@ -77,8 +76,7 @@ export function SurveyExportButtons() {
 			} else {
 				toast.error(result.error || "エクスポートに失敗しました");
 			}
-		} catch (error) {
-			console.error("エクスポートエラー:", error);
+		} catch (_error) {
 			toast.error("予期しないエラーが発生しました");
 		} finally {
 			setIsExporting(null);
@@ -153,8 +151,7 @@ export function ExportRawDataButton() {
 			} else {
 				toast.error(result.error || "エクスポートに失敗しました");
 			}
-		} catch (error) {
-			console.error("エクスポートエラー:", error);
+		} catch (_error) {
 			toast.error("予期しないエラーが発生しました");
 		} finally {
 			setIsExporting(false);
@@ -196,8 +193,7 @@ export function ExportSummaryButton() {
 			} else {
 				toast.error(result.error || "エクスポートに失敗しました");
 			}
-		} catch (error) {
-			console.error("エクスポートエラー:", error);
+		} catch (_error) {
 			toast.error("予期しないエラーが発生しました");
 		} finally {
 			setIsExporting(false);

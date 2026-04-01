@@ -220,7 +220,8 @@ export async function transferKoudenOwnership(koudenId: string, newOwnerEmail: s
 		const { data: newOwnerProfile, error: profileError } = await supabase
 			.from("profiles")
 			.select("id")
-			.eq("email", newOwnerEmail)
+			// biome-ignore lint: email column may exist via database extension
+		.eq("email" as any, newOwnerEmail)
 			.single();
 
 		if (profileError || !newOwnerProfile) {

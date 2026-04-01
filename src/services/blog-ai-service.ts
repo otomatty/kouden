@@ -63,26 +63,20 @@ export async function callAI(params: CallAIParams): Promise<AIResponse> {
 			maxThinkingTokens: 4000,
 		},
 	};
+	const response = await fetch("/api/ai/generate", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify(requestBody),
+	});
 
-	try {
-		const response = await fetch("/api/ai/generate", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify(requestBody),
-		});
-
-		if (!response.ok) {
-			throw new Error(`HTTP error! status: ${response.status}`);
-		}
-
-		const aiResponse: AIResponse = await response.json();
-		return aiResponse;
-	} catch (error) {
-		console.error("Error calling AI service:", error);
-		throw error;
+	if (!response.ok) {
+		throw new Error(`HTTP error! status: ${response.status}`);
 	}
+
+	const aiResponse: AIResponse = await response.json();
+	return aiResponse;
 }
 
 /**

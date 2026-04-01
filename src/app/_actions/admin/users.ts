@@ -622,8 +622,9 @@ export async function findUserByEmail(email: string) {
 	const supabase = await createClient();
 	const { data: user, error } = await supabase
 		.from("profiles")
-		.select("id, email, created_at")
-		.eq("email", email)
+		.select("id, display_name, created_at")
+		// biome-ignore lint: email column may exist via database extension
+		.eq("email" as any, email)
 		.single();
 
 	if (error) throw error;

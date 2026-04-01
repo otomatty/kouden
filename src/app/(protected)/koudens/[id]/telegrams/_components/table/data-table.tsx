@@ -11,8 +11,6 @@ import {
 } from "@tanstack/react-table";
 import { useAtomValue } from "jotai";
 import { Trash2 } from "lucide-react";
-// library
-import * as React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 // Server Actions
@@ -63,7 +61,6 @@ export function DataTable({ koudenId, telegrams, entries, onDataChange }: DataTa
 	// データの検証
 	useEffect(() => {
 		if (!Array.isArray(normalizedTelegrams)) {
-			console.error("[ERROR] Invalid telegrams data in DataTable:", normalizedTelegrams);
 			return;
 		}
 	}, [normalizedTelegrams]);
@@ -103,8 +100,7 @@ export function DataTable({ koudenId, telegrams, entries, onDataChange }: DataTa
 				toast.success(`${ids.length}件のデータを削除しました`, {
 					description: "削除処理が正常に完了しました",
 				});
-			} catch (error) {
-				console.error("Failed to delete telegrams:", error);
+			} catch (_error) {
 				toast.error("データの削除に失敗しました", {
 					description: "しばらく時間をおいてから再度お試しください",
 				});
@@ -121,11 +117,6 @@ export function DataTable({ koudenId, telegrams, entries, onDataChange }: DataTa
 			const targetTelegram = normalizedTelegrams[index];
 
 			if (!targetTelegram) {
-				console.error("[ERROR] Telegram not found:", {
-					rowId,
-					index,
-					telegramsCount: normalizedTelegrams.length,
-				});
 				toast.error("対象のデータが見つかりません", {
 					description: "データが存在しないか、既に削除されている可能性があります",
 				});
@@ -157,16 +148,7 @@ export function DataTable({ koudenId, telegrams, entries, onDataChange }: DataTa
 				toast.success("データを更新しました", {
 					description: "変更内容が正常に保存されました",
 				});
-			} catch (error) {
-				console.error("[ERROR] Update failed:", {
-					error,
-					targetTelegram: {
-						id: targetTelegram.id,
-					},
-					columnId,
-					fieldKey: columnId,
-					value,
-				});
+			} catch (_error) {
 				toast.error("データの更新に失敗しました", {
 					description: "しばらく時間をおいてから再度お試しください",
 				});

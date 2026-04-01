@@ -35,7 +35,6 @@ export async function approveOrganization(id: string) {
 		if (memberError) {
 			// unique constraint violation means member already exists
 			if (memberError.code === "23505") {
-				console.warn("Organization member already exists, skipping insert");
 			} else {
 				throw new Error(memberError.message);
 			}

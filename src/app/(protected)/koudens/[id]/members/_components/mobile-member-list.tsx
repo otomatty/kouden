@@ -1,6 +1,6 @@
 import type { PrimitiveAtom } from "jotai";
 import { ChevronRight, Search, Users } from "lucide-react";
-import React, { useState } from "react";
+import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";

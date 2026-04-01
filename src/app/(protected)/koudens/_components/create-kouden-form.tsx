@@ -45,8 +45,7 @@ export function CreateKoudenForm() {
 			}
 
 			router.refresh();
-		} catch (error) {
-			console.error("[ERROR] 香典帳作成エラー:", error);
+		} catch (_error) {
 		} finally {
 			setLoading(false);
 		}

@@ -25,8 +25,7 @@ async function translateToEnglish(japaneseText: string): Promise<string> {
 
 		const data = await response.json();
 		return data.translatedText || japaneseText;
-	} catch (error) {
-		console.error("Translation error:", error);
+	} catch (_error) {
 		// 翻訳に失敗した場合は元のテキストを返す
 		return japaneseText;
 	}
@@ -72,9 +71,7 @@ export async function generateSlugFromTitle(title: string): Promise<string> {
 			if (slug.length > 0) {
 				return slug;
 			}
-		} catch (error) {
-			console.error("Slug generation error:", error);
-		}
+		} catch (_error) {}
 
 		// 翻訳に失敗した場合のフォールバック
 		const timestamp = Date.now().toString().slice(-6);

@@ -14,16 +14,10 @@ export async function sendInvitationEmail(to: string, link: string, title: strin
 	const apiKey = process.env.RESEND_API_KEY;
 	if (!apiKey) throw new Error("Missing RESEND_API_KEY environment variable");
 	const resend = new Resend(apiKey);
-
-	try {
-		await resend.emails.send({
-			from: process.env.RESEND_FROM_EMAIL ?? "noreply@kouden.app",
-			to,
-			subject: `香典帳「${title}」への招待`,
-			html: generateInvitationEmailHtml(title, link),
-		});
-	} catch (error) {
-		console.error("[ERROR] sendInvitationEmail failed:", error);
-		throw error;
-	}
+	await resend.emails.send({
+		from: process.env.RESEND_FROM_EMAIL ?? "noreply@kouden.app",
+		to,
+		subject: `香典帳「${title}」への招待`,
+		html: generateInvitationEmailHtml(title, link),
+	});
 }

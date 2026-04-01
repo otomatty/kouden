@@ -54,7 +54,7 @@ export function verifyCSRFToken(token: string): boolean {
 		}
 
 		// タイムスタンプチェック（1時間以内）
-		const tokenTime = Number.parseInt(timestamp);
+		const tokenTime = Number.parseInt(timestamp, 10);
 		const now = Date.now();
 		if (now - tokenTime > 3600000) {
 			// 1時間
