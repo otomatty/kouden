@@ -25,7 +25,6 @@ export default async function RequestPage() {
 
 	// If there's an error or no data, show error message
 	if (typesError) {
-		console.error("Failed to fetch organization types:", typesError);
 		return (
 			<Container className="py-8">
 				<div className="max-w-md mx-auto text-center">

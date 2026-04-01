@@ -64,7 +64,6 @@ export function ReturnItemEditDialog({
 				onClose();
 				onSuccess?.();
 			} catch (error) {
-				console.error("[ERROR] Failed to update return item:", error);
 				toast.error("更新エラー", {
 					description: error instanceof Error ? error.message : "返礼品の更新に失敗しました",
 				});

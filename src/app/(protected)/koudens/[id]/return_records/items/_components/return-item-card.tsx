@@ -10,6 +10,7 @@ import {
 	Package,
 	Trash2,
 } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -138,11 +139,12 @@ export function ReturnItemCard({
 
 			<CardHeader className="pb-3">
 				{/* 商品画像 */}
-				<div className="aspect-square w-full bg-muted rounded-lg overflow-hidden mb-3">
+				<div className="aspect-square w-full bg-muted rounded-lg overflow-hidden mb-3 relative">
 					{item.image_url && !imageError ? (
-						<img
+						<Image
 							src={item.image_url}
 							alt={item.name}
+							fill
 							className="w-full h-full object-cover"
 							onError={() => setImageError(true)}
 						/>

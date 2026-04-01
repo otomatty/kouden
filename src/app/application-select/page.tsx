@@ -23,7 +23,6 @@ export default async function ApplicationSelectPage() {
 		`)
 		.eq("user_id", user.id);
 	if (typeError) {
-		console.error("Error fetching organization types:", typeError);
 	}
 	const typeSlugs =
 		membershipsWithTypes?.map((m) => m.organizations.organization_types.slug).filter(Boolean) ?? [];

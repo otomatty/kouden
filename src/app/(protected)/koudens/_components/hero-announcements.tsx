@@ -30,9 +30,7 @@ export function HeroAnnouncements({
 			if (dismissed) {
 				setDismissedIds(new Set(JSON.parse(dismissed)));
 			}
-		} catch (error) {
-			console.warn("Failed to load dismissed announcements from localStorage:", error);
-		}
+		} catch (_error) {}
 	}, []);
 
 	// 非表示にしたお知らせを除外
@@ -65,9 +63,7 @@ export function HeroAnnouncements({
 		// ローカルストレージに保存
 		try {
 			localStorage.setItem("dismissed-announcements", JSON.stringify(Array.from(newDismissedIds)));
-		} catch (error) {
-			console.warn("Failed to save dismissed announcements to localStorage:", error);
-		}
+		} catch (_error) {}
 	};
 
 	const handlePrevious = () => {

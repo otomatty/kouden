@@ -8,7 +8,6 @@ import { getReturnEntriesByKoudenPaginated } from "@/app/_actions/return-records
 import ReturnRecordsPageClient from "@/app/(protected)/koudens/[id]/return_records/ReturnRecordsPageClient";
 import type {
 	ReturnEntryRecordWithKoudenEntry,
-	ReturnItem,
 	ReturnManagementSummary,
 	ReturnStatus,
 } from "@/types/return-records/return-records";

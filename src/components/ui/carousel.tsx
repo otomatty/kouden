@@ -113,6 +113,7 @@ function Carousel({
 				canScrollNext,
 			}}
 		>
+			{/* biome-ignore lint/a11y/useAriaPropsSupportedByRole: aria-roledescription is a valid WAI-ARIA carousel pattern */}
 			<section
 				onKeyDownCapture={handleKeyDown}
 				className={cn("relative", className)}
@@ -143,6 +144,7 @@ function CarouselItem({ className, ...props }: React.ComponentProps<"div">) {
 	const { orientation } = useCarousel();
 
 	return (
+		// biome-ignore lint/a11y/useSemanticElements: div with role="group" is the standard WAI-ARIA carousel slide pattern
 		<div
 			role="group"
 			aria-roledescription="slide"

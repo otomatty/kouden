@@ -74,9 +74,7 @@ class PremiumRefRemover {
 				this.modifiedFiles++;
 				console.log(`✏️  Modified: ${path.relative(this.sourceDir, filePath)}`);
 			}
-		} catch (error) {
-			console.error(`❌ Error processing ${filePath}:`, error.message);
-		}
+		} catch (_error) {}
 	}
 
 	/**
@@ -230,7 +228,6 @@ function main() {
 	const sourceDir = path.join(__dirname, "../../oss-temp");
 
 	if (!fs.existsSync(sourceDir)) {
-		console.error("❌ Source directory not found:", sourceDir);
 		console.log("💡 Make sure to run prepare-oss-package.js first");
 		process.exit(1);
 	}

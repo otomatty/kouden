@@ -71,6 +71,7 @@ export function OfferingAllocationDialog({
 	} | null>(null);
 
 	// 既存の配分データを読み込み
+	// biome-ignore lint/correctness/useExhaustiveDependencies: loadAllocations uses state setters and props that don't change; including it would cause infinite loops
 	useEffect(() => {
 		if (open) {
 			loadAllocations();
@@ -131,8 +132,7 @@ export function OfferingAllocationDialog({
 			} else {
 				toast.error(result.error || "配分の保存に失敗しました");
 			}
-		} catch (error) {
-			console.error("配分保存エラー:", error);
+		} catch (_error) {
 			toast.error("配分の保存中にエラーが発生しました");
 		} finally {
 			setLoading(false);
@@ -159,8 +159,7 @@ export function OfferingAllocationDialog({
 			} else {
 				toast.error(result.error || "再計算に失敗しました");
 			}
-		} catch (error) {
-			console.error("再計算エラー:", error);
+		} catch (_error) {
 			toast.error("再計算中にエラーが発生しました");
 		} finally {
 			setLoading(false);
@@ -305,6 +304,7 @@ export function OfferingAllocationDialog({
 										</div>
 										{/* 手動配分の場合の入力フィールド */}
 										{allocationMethod === "manual" && selectedEntries.includes(entry.id) && (
+											// biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation prevents parent checkbox toggle when interacting with child input
 											<div
 												className="mt-2"
 												onClick={(e) => e.stopPropagation()}

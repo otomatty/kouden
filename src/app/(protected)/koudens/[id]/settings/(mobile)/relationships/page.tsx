@@ -1,4 +1,3 @@
-import React from "react";
 import { getRelationships } from "@/app/_actions/relationships";
 import { BackLink } from "@/components/custom/back-link";
 import { RelationshipCardList } from "./_components/relationship-card-list";

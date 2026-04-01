@@ -1,5 +1,4 @@
 import Link from "next/link";
-import React from "react";
 import type { Database } from "@/types/supabase";
 
 type ContactRequest = Database["public"]["Tables"]["contact_requests"]["Row"];

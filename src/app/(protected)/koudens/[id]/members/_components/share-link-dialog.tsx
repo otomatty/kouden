@@ -63,7 +63,6 @@ export function ShareLinkForm({ koudenId, roles }: ShareLinkFormProps) {
 				description: "リンクをコピーして共有してください",
 			});
 		} catch (error) {
-			console.error("Error creating invitation:", error);
 			toast.error(error instanceof Error ? error.message : "招待リンクの作成に失敗しました", {
 				description: "しばらく時間をおいてから再度お試しください",
 			});
@@ -82,8 +81,7 @@ export function ShareLinkForm({ koudenId, roles }: ShareLinkFormProps) {
 			setTimeout(() => {
 				setCopied(false);
 			}, 2000);
-		} catch (error) {
-			console.error("Error copying link:", error);
+		} catch (_error) {
 			toast.error("リンクのコピーに失敗しました", {
 				description: "手動でリンクをコピーしてください",
 			});

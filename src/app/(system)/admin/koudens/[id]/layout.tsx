@@ -111,11 +111,8 @@ export default async function AdminKoudenLayout({ params, children }: AdminKoude
 			</div>
 		);
 	} catch (error) {
-		console.error("Admin kouden layout error:", error);
-
 		// 権限エラーの場合は適切なメッセージを表示
 		if (error instanceof Error && error.message.includes("管理者権限")) {
-			console.warn("Access denied: User is not an admin");
 			redirect("/admin/users?error=access_denied");
 		}
 

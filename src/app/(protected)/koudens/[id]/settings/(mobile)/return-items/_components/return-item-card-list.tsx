@@ -38,8 +38,7 @@ function ReturnItemCard({ returnItem, koudenId }: ReturnItemCardProps) {
 		try {
 			await deleteReturnItem(returnItem.id, koudenId);
 			toast.success("返礼品を削除しました");
-		} catch (error) {
-			console.error(error);
+		} catch (_error) {
 			toast.error("返礼品の削除に失敗しました", {
 				description: "しばらく時間をおいてから再度お試しください",
 			});

@@ -13,8 +13,6 @@ import { useAtomValue } from "jotai";
 // ui
 import { Trash2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-// library
-import * as React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 // Server Actions
@@ -142,7 +140,6 @@ export function DataTable({
 	// 関係性データの正規化
 	const normalizedRelationships = useMemo(() => {
 		if (!Array.isArray(relationships)) {
-			console.error("[ERROR] Invalid relationships data:", relationships);
 			return [];
 		}
 		return relationships;
@@ -151,14 +148,12 @@ export function DataTable({
 	// エントリーデータの正規化
 	const normalizedEntries = useMemo(() => {
 		if (!Array.isArray(entries)) {
-			console.error("[ERROR] Invalid entries data:", entries);
 			return [];
 		}
 
 		return entries
 			.map((entry) => {
 				if (!entry) {
-					console.error("[ERROR] Invalid entry:", entry);
 					return null;
 				}
 
@@ -202,16 +197,10 @@ export function DataTable({
 			);
 
 			if (entriesWithInvalidRelationships.length > 0) {
-				console.warn("[WARN] Entries with invalid relationship IDs:", {
-					entriesCount: entriesWithInvalidRelationships.length,
-					firstFewEntries: entriesWithInvalidRelationships.slice(0, 3),
-					validRelationshipIds: Array.from(relationshipIds),
-				});
 			}
 
 			setError(null);
 		} catch (err) {
-			console.error("[ERROR] Data validation failed:", err);
 			setError(err as Error);
 		} finally {
 			setIsLoading(false);
@@ -241,8 +230,7 @@ export function DataTable({
 				toast.success(`${ids.length}件のデータを削除しました`, {
 					description: "削除処理が正常に完了しました",
 				});
-			} catch (error) {
-				console.error("Failed to delete entries:", error);
+			} catch (_error) {
 				toast.error("削除処理に失敗しました", {
 					description: "しばらく時間をおいてから再度お試しください",
 				});
@@ -258,11 +246,6 @@ export function DataTable({
 			const targetEntry = normalizedEntries.find((e) => e.id === rowId);
 
 			if (!targetEntry) {
-				console.error("[DEBUG handleCellEdit] targetEntry not found for rowId=", rowId);
-				console.error("[ERROR] Entry not found:", {
-					rowId,
-					entriesCount: normalizedEntries.length,
-				});
 				toast.error("対象のデータが見つかりません", {
 					description: "エントリーが存在しないか、既に削除されている可能性があります",
 				});
@@ -295,16 +278,7 @@ export function DataTable({
 				toast.success("データを更新しました", {
 					description: "変更内容が正常に保存されました",
 				});
-			} catch (error) {
-				console.error("[ERROR] Update failed:", {
-					error,
-					targetEntry: {
-						id: targetEntry.id,
-					},
-					columnId,
-					fieldKey: columnId === "relationshipId" ? "relationship_id" : columnId,
-					value,
-				});
+			} catch (_error) {
 				toast.error("データの更新に失敗しました", {
 					description: "しばらく時間をおいてから再度お試しください",
 				});
@@ -379,9 +353,7 @@ export function DataTable({
 						label: m.profile?.display_name || m.user_id,
 					})),
 				);
-			} catch (error) {
-				console.error("[ERROR] Failed to fetch members:", error);
-			}
+			} catch (_error) {}
 		})();
 	}, [koudenId, isAdminMode]);
 

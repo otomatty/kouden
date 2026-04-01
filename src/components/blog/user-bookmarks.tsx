@@ -69,8 +69,7 @@ export function UserBookmarks({
 				// limitが指定されている場合はスライス
 				const finalData = limit ? transformedData.slice(0, limit) : transformedData;
 				setBookmarks(finalData);
-			} catch (err) {
-				console.error("Failed to fetch bookmarks:", err);
+			} catch (_err) {
 				setError("ブックマークの取得に失敗しました");
 			} finally {
 				setLoading(false);
@@ -98,8 +97,7 @@ export function UserBookmarks({
 			} else {
 				throw new Error(result.error || "削除に失敗しました");
 			}
-		} catch (err) {
-			console.error("Failed to remove bookmark:", err);
+		} catch (_err) {
 			toast.error("削除に失敗しました", {
 				description: "しばらく時間をおいて再度お試しください",
 			});

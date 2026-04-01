@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Upload, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -110,7 +110,6 @@ export function ReturnItemForm({
 					form.setValue("image_url", "");
 				}
 			} catch (error) {
-				console.error("[ERROR] Image upload/delete failed:", error);
 				toast.error("画像処理エラー", {
 					description: error instanceof Error ? error.message : "画像の処理に失敗しました",
 				});
@@ -124,8 +123,7 @@ export function ReturnItemForm({
 		async (data: ReturnItemFormData) => {
 			try {
 				await onSubmit(data);
-			} catch (error) {
-				console.error("[ERROR] Form submission failed:", error);
+			} catch (_error) {
 				toast.error("送信エラー", {
 					description: "フォームの送信に失敗しました",
 				});

@@ -77,9 +77,15 @@ describe("funeral cases server actions", () => {
 
 	// Test case: getCase が正常にケースを返す
 	it("getCase returns case", async () => {
-		supabaseMock.single.mockResolvedValue({ data: fakeCase, error: null });
+		// getCase makes multiple chained queries:
+		// 1) case lookup: schema().from().select().eq().single()
+		// 2) customer lookup: schema().from().select().eq().single()
+		// 3) customer_details lookup: schema().from().select().eq().single()
+		supabaseMock.single
+			.mockResolvedValueOnce({ data: fakeCase, error: null }) // case
+			.mockResolvedValueOnce({ data: null, error: { message: "not found", code: "PGRST116" } }); // customer (not found)
 		const result = await getCase("case-uuid");
-		expect(result).toEqual(fakeCase);
+		expect(result).toEqual({ ...fakeCase, customer: undefined });
 	});
 
 	// Test case: getCase がエラーを返した場合に例外を投げる

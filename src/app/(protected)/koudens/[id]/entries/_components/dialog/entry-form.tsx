@@ -2,7 +2,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 // library
 import { useAtom } from "jotai";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 // Server Actions
@@ -98,6 +98,47 @@ export function EntryForm({
 		return () => subscription.unsubscribe();
 	}, [form, isCreate, setDraftValues]);
 
+	const onSubmit = useCallback(
+		async (values: EntryFormValues) => {
+			try {
+				setSubmissionState({ isSubmitting: true, error: null });
+
+				if (values.relationshipId === undefined) {
+					values.relationshipId = null;
+				}
+				const result = await handleEntrySubmission(values, koudenId, defaultValues);
+
+				if (!result) {
+					throw new Error("エントリーの保存に失敗しました");
+				}
+
+				// 成功時の処理
+				onSuccess?.(result);
+				toast.success(defaultValues ? "エントリーを更新しました" : "エントリーを登録しました", {
+					description: `${result.name || "名称未設定"}を${defaultValues ? "更新" : "登録"}しました`,
+				});
+
+				// フォーム送信後にドラフトをリセット
+				setDraftValues(undefined);
+				if (!defaultValues) {
+					form.reset();
+				}
+			} catch (error) {
+				setSubmissionState({
+					isSubmitting: false,
+					error: error instanceof Error ? error.message : "保存に失敗しました",
+				});
+				toast.error("エントリーの保存に失敗しました", {
+					description:
+						error instanceof Error ? error.message : "しばらく時間をおいてから再度お試しください",
+				});
+			} finally {
+				setSubmissionState((prev) => ({ ...prev, isSubmitting: false }));
+			}
+		},
+		[koudenId, defaultValues, onSuccess, setDraftValues, setSubmissionState, form],
+	);
+
 	// 外部からフォーム送信をトリガーできるようにする
 	useEffect(() => {
 		if (onFormReady) {
@@ -105,66 +146,11 @@ export function EntryForm({
 				form.handleSubmit(onSubmit)();
 			});
 		}
-	}, [form, onFormReady]);
-
-	const onSubmit = async (values: EntryFormValues) => {
-		try {
-			setSubmissionState({ isSubmitting: true, error: null });
-
-			if (values.relationshipId === undefined) {
-				values.relationshipId = null;
-			}
-			const result = await handleEntrySubmission(values, koudenId, defaultValues);
-
-			if (!result) {
-				throw new Error("エントリーの保存に失敗しました");
-			}
-
-			// 成功時の処理
-			onSuccess?.(result);
-			toast.success(defaultValues ? "エントリーを更新しました" : "エントリーを登録しました", {
-				description: `${result.name || "名称未設定"}を${defaultValues ? "更新" : "登録"}しました`,
-			});
-
-			// フォーム送信後にドラフトをリセット
-			setDraftValues(undefined);
-			if (!defaultValues) {
-				form.reset();
-			}
-		} catch (error) {
-			console.error("[DEBUG] Entry submission failed:", {
-				error,
-				errorMessage: error instanceof Error ? error.message : "Unknown error",
-				errorStack: error instanceof Error ? error.stack : undefined,
-				values,
-				koudenId,
-				defaultValues,
-			});
-			setSubmissionState({
-				isSubmitting: false,
-				error: error instanceof Error ? error.message : "保存に失敗しました",
-			});
-			toast.error("エントリーの保存に失敗しました", {
-				description:
-					error instanceof Error ? error.message : "しばらく時間をおいてから再度お試しください",
-			});
-		} finally {
-			setSubmissionState((prev) => ({ ...prev, isSubmitting: false }));
-		}
-	};
+	}, [form, onFormReady, onSubmit]);
 
 	return (
 		<Form {...form}>
-			<form
-				onSubmit={form.handleSubmit(onSubmit, (errors) => {
-					console.error("[DEBUG] Form validation errors:", {
-						errors,
-						formValues: form.getValues(),
-						formState: form.formState,
-					});
-				})}
-				className="grid gap-4"
-			>
+			<form onSubmit={form.handleSubmit(onSubmit, (_errors) => {})} className="grid gap-4">
 				<Tabs defaultValue="basic" className="w-full">
 					<TabsList className="grid w-full grid-cols-2">
 						<TabsTrigger value="basic">基本情報</TabsTrigger>
@@ -204,8 +190,7 @@ export async function searchAddress(postalCode: string): Promise<string | null> 
 			return `${address1}${address2}${address3}`;
 		}
 		return null;
-	} catch (error) {
-		console.error("Failed to fetch address:", error);
+	} catch (_error) {
 		return null;
 	}
 }

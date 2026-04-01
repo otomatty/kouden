@@ -1,5 +1,3 @@
-import type { Json } from "./supabase";
-
 /**
  * 通知アイテムの型定義
  */

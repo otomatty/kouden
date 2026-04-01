@@ -1,6 +1,5 @@
 import { atom } from "jotai";
-import type { AttendanceType, Entry, EntryForm, EntryFormValues } from "@/types/entries";
-import type { KoudenPermission } from "@/types/role";
+import type { Entry, EntryForm, EntryFormValues } from "@/types/entries";
 
 // 香典データを管理するatom
 export const entriesAtom = atom<Entry[]>([]);

@@ -194,7 +194,11 @@ export function ReturnCard({ returnRecord, relationships, onEditReturn }: Return
 						<p className="text-xs text-muted-foreground mb-2">返礼品</p>
 						<div className="space-y-1">
 							{returnRecord.returnItems.map((item, index) => (
-								<div key={`${item.name}-${index}`} className="flex justify-between text-xs">
+								<div
+									// biome-ignore lint/suspicious/noArrayIndexKey: index needed for duplicate item uniqueness
+									key={`${item.name}-${item.price}-${item.quantity}-${index}`}
+									className="flex justify-between text-xs"
+								>
 									<span>
 										{item.name} x{item.quantity || 1}
 									</span>

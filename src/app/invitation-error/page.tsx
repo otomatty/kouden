@@ -1,4 +1,4 @@
-import { AlertTriangle, Clock, Home, Mail, RefreshCw, Users } from "lucide-react";
+import { AlertTriangle, Home, Mail, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";

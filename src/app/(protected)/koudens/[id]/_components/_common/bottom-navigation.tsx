@@ -11,7 +11,6 @@ import {
 	HelpCircle,
 	Mail,
 	PackageCheck,
-	Plus,
 	Settings,
 	Table2,
 } from "lucide-react";

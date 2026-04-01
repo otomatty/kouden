@@ -81,7 +81,6 @@ export default function OrganizationRequestForm({ types }: Props) {
 
 			router.push("/organizations/request/success");
 		} catch (err) {
-			console.error("Request failed:", err);
 			setError(err instanceof Error ? err.message : "リクエストの送信に失敗しました");
 		} finally {
 			setIsSubmitting(false);

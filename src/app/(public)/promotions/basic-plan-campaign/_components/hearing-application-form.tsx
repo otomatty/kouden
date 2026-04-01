@@ -88,9 +88,7 @@ export function HearingApplicationForm() {
 					form.setValue("name", user.user_metadata?.full_name || user.email?.split("@")[0] || "");
 					form.setValue("email", user.email || "");
 				}
-			} catch (error) {
-				console.warn("ユーザー情報の取得に失敗しました:", error);
-			}
+			} catch (_error) {}
 		};
 
 		loadUserInfo();
@@ -113,9 +111,7 @@ export function HearingApplicationForm() {
 					setInitialAvailability(availability);
 					setInitialWeekStart(weekStart);
 				}
-			} catch (error) {
-				console.warn("カレンダー情報の取得に失敗しました:", error);
-			}
+			} catch (_error) {}
 		};
 
 		loadInitialCalendar();
@@ -157,7 +153,6 @@ export function HearingApplicationForm() {
 				throw new Error(result.error || "申し込み処理に失敗しました");
 			}
 		} catch (error) {
-			console.error("申し込み処理でエラーが発生しました:", error);
 			// TODO: エラー表示UIを実装
 			alert(error instanceof Error ? error.message : "申し込み処理に失敗しました");
 		}
@@ -473,13 +468,14 @@ function HearingCalendarView({
 			</div>
 			{isLoading ? (
 				<div className="grid grid-cols-7 gap-2">
-					{Array.from({ length: 7 }).map((_, dayIdx) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-						<div key={dayIdx} className="flex flex-col gap-1">
+					{["mon", "tue", "wed", "thu", "fri", "sat", "sun"].map((day) => (
+						<div key={`skeleton-day-${day}`} className="flex flex-col gap-1">
 							<div className="h-8 bg-gray-200 rounded animate-pulse" />
-							{Array.from({ length: 8 }).map((_, slotIdx) => (
-								// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-								<div key={slotIdx} className="h-8 bg-gray-100 rounded animate-pulse" />
+							{["09", "10", "11", "12", "13", "14", "15", "16"].map((hour) => (
+								<div
+									key={`skeleton-slot-${day}-${hour}`}
+									className="h-8 bg-gray-100 rounded animate-pulse"
+								/>
 							))}
 						</div>
 					))}

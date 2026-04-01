@@ -6,7 +6,6 @@ import { getActiveAnnouncements } from "@/app/_actions/announcements";
 import { getPublishedPosts } from "@/app/_actions/blog/posts";
 import { getKoudens } from "@/app/_actions/koudens";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { createClient } from "@/lib/supabase/server";
 import { ContextualInfoSection } from "./_components/contextual-info-section";
 import { HeroAnnouncements } from "./_components/hero-announcements";

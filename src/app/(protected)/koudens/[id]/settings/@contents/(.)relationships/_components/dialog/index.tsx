@@ -37,8 +37,7 @@ export function RelationshipDialog({
 				await onSubmit(values);
 				onOpenChange(false);
 				toast.success(relationship ? "関係性を更新しました" : "関係性を作成しました");
-			} catch (error) {
-				console.error(error);
+			} catch (_error) {
 				toast.error(relationship ? "関係性の更新に失敗しました" : "関係性の作成に失敗しました", {
 					description: "しばらく時間をおいてから再度お試しください",
 				});

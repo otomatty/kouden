@@ -88,7 +88,6 @@ export async function setupTwoFactorAuth(
 		logger.error(
 			{
 				error: error instanceof Error ? error.message : String(error),
-				userId: user?.id,
 			},
 			"2FA setup error",
 		);
@@ -151,7 +150,6 @@ export async function disableTwoFactorAuth(): Promise<TwoFactorActionResult> {
 		logger.error(
 			{
 				error: error instanceof Error ? error.message : String(error),
-				userId: user?.id,
 			},
 			"2FA disable error",
 		);
@@ -225,7 +223,6 @@ export async function verifyTwoFactorLogin(
 		logger.error(
 			{
 				error: error instanceof Error ? error.message : String(error),
-				userId: user?.id,
 			},
 			"2FA verification error",
 		);

@@ -32,7 +32,8 @@ export function RecentItemsList({
 				</CardHeader>
 				<CardContent className="space-y-4">
 					{[...Array(itemLimit)].map((_, i) => (
-						<div key={i} className="space-y-1">
+						// biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholder items have no unique identifier
+						<div key={`skeleton-${i}`} className="space-y-1">
 							<Skeleton className="h-4 w-full" />
 							<Skeleton className="h-3 w-3/4" />
 						</div>

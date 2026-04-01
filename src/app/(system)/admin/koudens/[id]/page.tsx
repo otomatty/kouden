@@ -23,8 +23,6 @@ export default async function AdminKoudenPage({ params }: { params: Promise<{ id
 		if (error instanceof Error && error.message.includes("NEXT_REDIRECT")) {
 			throw error; // リダイレクトエラーは再スロー
 		}
-
-		console.error("Admin kouden page error:", error);
 		redirect("/admin/users");
 	}
 }

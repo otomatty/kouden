@@ -180,8 +180,7 @@ export function SurveyModal({ trigger, isOpen, onClose, onSuccess }: SurveyModal
 			} else {
 				toast.error(result.error);
 			}
-		} catch (error) {
-			console.error("アンケート送信エラー:", error);
+		} catch (_error) {
 			toast.error("送信中にエラーが発生しました。時間を置いてお試しください。");
 		} finally {
 			setIsSubmitting(false);
@@ -199,8 +198,7 @@ export function SurveyModal({ trigger, isOpen, onClose, onSuccess }: SurveyModal
 			} else {
 				toast.error(result.error);
 			}
-		} catch (error) {
-			console.error("アンケートスキップエラー:", error);
+		} catch (_error) {
 			toast.error("スキップ中にエラーが発生しました。時間を置いてお試しください。");
 		} finally {
 			setIsSubmitting(false);

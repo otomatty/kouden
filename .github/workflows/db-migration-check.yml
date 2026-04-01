@@ -1,0 +1,91 @@
+name: Database Migration Check
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'supabase/migrations/**'
+      - 'database/**'
+      - '.github/workflows/db-migration-check.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  migration-check:
+    name: Migration Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Check migration files syntax
+        run: |
+          # マイグレーションファイルの存在確認
+          if [ -d "supabase/migrations" ]; then
+            shopt -s nullglob
+            files=(supabase/migrations/*.sql)
+            if [ ${#files[@]} -gt 0 ]; then
+              echo "✅ Migration files found"
+              warnings=0
+              # 基本的なSQL構文チェック（PostgreSQL）
+              for file in "${files[@]}"; do
+                echo "Checking $file..."
+                # SQLファイルが空でないことを確認（警告のみ、既存マイグレーション履歴を考慮）
+                if [ ! -s "$file" ]; then
+                  echo "⚠️ Warning: $file is empty (may be intentional placeholder)"
+                  warnings=$((warnings + 1))
+                  continue
+                fi
+                # 基本的な構文エラーをチェック（簡単な検証、大文字小文字を区別しない）
+                if grep -qi "CREATE\|ALTER\|DROP\|INSERT\|UPDATE\|DELETE" "$file"; then
+                  echo "✅ $file contains valid SQL keywords"
+                else
+                  echo "⚠️ Warning: $file may not contain valid SQL statements"
+                fi
+              done
+
+              if [ $warnings -gt 0 ]; then
+                echo "⚠️ Found $warnings warning(s) in migration files"
+              fi
+              echo "✅ Migration check completed"
+            else
+              echo "ℹ️ No migration files found, skipping check"
+            fi
+          else
+            echo "ℹ️ No migrations directory found, skipping check"
+          fi
+
+      - name: Validate database schema files
+        if: hashFiles('database/**/*.sql') != ''
+        run: |
+          echo "Checking database schema files..."
+          # databaseディレクトリ内のSQLファイルの存在確認
+          if [ -d "database" ]; then
+            echo "✅ Database directory found"
+            errors=0
+            # SQLファイルの基本的な検証
+            while IFS= read -r file; do
+              echo "Checking $file..."
+              if [ ! -s "$file" ]; then
+                echo "❌ Error: $file is empty"
+                errors=$((errors + 1))
+              fi
+            done < <(find database -name "*.sql" -type f)
+
+            if [ $errors -gt 0 ]; then
+              echo "❌ Found $errors empty database schema file(s)"
+              exit 1
+            fi
+          fi

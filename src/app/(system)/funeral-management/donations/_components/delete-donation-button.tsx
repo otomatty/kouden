@@ -34,8 +34,7 @@ export function DeleteDonationButton({ donationId }: DeleteDonationButtonProps) 
 			toast.success("香典記録を削除しました");
 			router.push("/funeral-management/donations");
 			router.refresh();
-		} catch (error) {
-			console.error("Error deleting donation:", error);
+		} catch (_error) {
 			toast.error("削除に失敗しました");
 		} finally {
 			setIsDeleting(false);

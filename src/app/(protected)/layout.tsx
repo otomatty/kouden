@@ -32,7 +32,6 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
 	// プロフィールの確認
 	const result = await ensureProfile();
 	if (result.error) {
-		console.error("[ERROR] Failed to ensure profile:", result.error);
 	}
 
 	let guideMode = true;

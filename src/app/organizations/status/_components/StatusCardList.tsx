@@ -1,5 +1,3 @@
-import React from "react";
-
 interface OrgStatus {
 	id: string;
 	name: string;

@@ -1,9 +1,7 @@
 "use client";
 
-import { Calendar } from "lucide-react";
 // library
 import type { UseFormReturn } from "react-hook-form";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 // components
 import {
 	FormControl,
@@ -15,8 +13,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-// types
-import type { Entry } from "@/types/entries";
 
 interface ReturnFormData {
 	kouden_entry_id: string;

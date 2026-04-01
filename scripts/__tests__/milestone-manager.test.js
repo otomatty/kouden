@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import readline from "node:readline";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Import functions to test

@@ -71,7 +71,6 @@ export async function allocateOfferingToEntries(
 		revalidatePath("/koudens");
 		return { success: true };
 	} catch (error) {
-		console.error("お供物配分エラー:", error);
 		// 配分計算のエラーの場合は具体的なメッセージを返す
 		if (error instanceof Error) {
 			return {
@@ -131,8 +130,7 @@ export async function removeOfferingAllocation(
 
 		revalidatePath("/koudens");
 		return { success: true };
-	} catch (error) {
-		console.error("お供物配分削除エラー:", error);
+	} catch (_error) {
 		return {
 			success: false,
 			error: "お供物配分の削除に失敗しました",
@@ -176,8 +174,7 @@ export async function recalculateOfferingAllocation(
 			manual_amounts: manualAmounts,
 			primary_contributor_id: primaryContributorId,
 		});
-	} catch (error) {
-		console.error("お供物配分再計算エラー:", error);
+	} catch (_error) {
 		return {
 			success: false,
 			error: "お供物配分の再計算に失敗しました",

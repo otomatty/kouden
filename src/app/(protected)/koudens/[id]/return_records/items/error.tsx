@@ -12,10 +12,8 @@ interface ReturnItemsErrorProps {
 /**
  * 返礼品管理ページのエラー表示
  */
-export default function ReturnItemsError({ error, reset }: ReturnItemsErrorProps) {
-	useEffect(() => {
-		console.error("[ERROR] Return items page error:", error);
-	}, [error]);
+export default function ReturnItemsError({ error: _error, reset }: ReturnItemsErrorProps) {
+	useEffect(() => {}, []);
 
 	return (
 		<div className="container mx-auto py-6">

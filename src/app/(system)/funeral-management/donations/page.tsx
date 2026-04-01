@@ -1,4 +1,4 @@
-import { Edit, Eye, FileText, Plus, Share2, Trash2 } from "lucide-react";
+import { Edit, Eye, FileText, Plus, Share2 } from "lucide-react";
 import Link from "next/link";
 import { listCases } from "@/app/_actions/funeral/cases/listCases";
 import { listDonations } from "@/app/_actions/funeral/donations/listDonations";

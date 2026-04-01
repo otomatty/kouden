@@ -46,8 +46,7 @@ export function SurveyTrigger({ trigger, shouldShow = false, onShown }: SurveyTr
 				default:
 					return false;
 			}
-		} catch (error) {
-			console.error("アンケート表示判定エラー:", error);
+		} catch (_error) {
 			return false;
 		} finally {
 			isCheckingRef.current = false;

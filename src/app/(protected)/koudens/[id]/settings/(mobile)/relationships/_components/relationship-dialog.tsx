@@ -39,8 +39,7 @@ export function RelationshipDialog({
 				toast.success("関係性を作成しました");
 			}
 			onOpenChange(false);
-		} catch (error) {
-			console.error(error);
+		} catch (_error) {
 			toast.error("関係性の保存に失敗しました", {
 				description: "しばらく時間をおいてから再度お試しください",
 			});

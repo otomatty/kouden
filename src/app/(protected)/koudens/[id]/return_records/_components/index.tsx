@@ -1,7 +1,7 @@
 "use client";
 
 // library
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 // actions
 import { getReturnEntriesByKoudenPaginated } from "@/app/_actions/return-records/return-records";
 import { Loading } from "@/components/custom/loading";
@@ -11,12 +11,7 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import type { Entry } from "@/types/entries";
 import type { Relationship } from "@/types/relationships";
 // types
-import type {
-	ReturnEntryRecord,
-	ReturnItem,
-	ReturnManagementSummary,
-	ReturnStatus,
-} from "@/types/return-records/return-records";
+import type { ReturnManagementSummary } from "@/types/return-records/return-records";
 // utils
 import { convertToReturnManagementSummaries } from "@/utils/return-records-helpers";
 import { ReturnCardList } from "./card-list/return-card-list";

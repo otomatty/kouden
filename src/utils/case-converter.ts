@@ -65,19 +65,19 @@ export type OfferingWithCamelCase = KeysToCamelCase<BaseOffering>;
  * @param obj スネークケースのオブジェクト
  * @returns キャメルケースのオブジェクト
  */
-export function toCamelCase<T extends Record<string, any>>(obj: T): KeysToCamelCase<T> {
+export function toCamelCase<T extends Record<string, unknown>>(obj: T): KeysToCamelCase<T> {
 	if (Array.isArray(obj)) {
-		return obj.map((item) => toCamelCase(item)) as any;
+		return obj.map((item) => toCamelCase(item)) as unknown as KeysToCamelCase<T>;
 	}
 
 	if (obj !== null && typeof obj === "object") {
 		return Object.fromEntries(
 			Object.entries(obj).map(([key, value]) => [
 				key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase()),
-				toCamelCase(value),
+				toCamelCase(value as Record<string, unknown>),
 			]),
 		) as KeysToCamelCase<T>;
 	}
 
-	return obj as any;
+	return obj as unknown as KeysToCamelCase<T>;
 }

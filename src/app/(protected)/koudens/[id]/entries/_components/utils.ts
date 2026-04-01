@@ -79,9 +79,7 @@ const getAddressCache = (): Record<string, AddressCache> => {
 const setAddressCache = (cache: Record<string, AddressCache>) => {
 	try {
 		localStorage.setItem("postalCodeCache", JSON.stringify(cache));
-	} catch (error) {
-		console.error("キャッシュの保存に失敗しました:", error);
-	}
+	} catch (_error) {}
 };
 
 // キャッシュのクリーンアップ（期限切れのエントリを削除）
@@ -132,8 +130,7 @@ export const searchAddress = async (postalCode: string): Promise<{ address: stri
 			return { address };
 		}
 		return null;
-	} catch (error) {
-		console.error("郵便番号検索エラー:", error);
+	} catch (_error) {
 		return null;
 	}
 };

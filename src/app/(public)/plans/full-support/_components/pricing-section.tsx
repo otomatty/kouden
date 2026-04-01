@@ -212,6 +212,12 @@ export default function PricingSection() {
 						</div>
 						<div
 							ref={sliderRef}
+							role="slider"
+							tabIndex={0}
+							aria-label="香典件数スライダー"
+							aria-valuemin={0}
+							aria-valuemax={500}
+							aria-valuenow={kodenCount === "" ? 0 : Number(kodenCount)}
 							onMouseDown={handleMouseDown}
 							className="relative w-full h-6 bg-muted rounded-full cursor-pointer group"
 						>

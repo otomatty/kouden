@@ -15,7 +15,7 @@ function extractHeadersFromDOM(): TocItem[] {
 	const headers: TocItem[] = [];
 
 	for (const element of headingElements) {
-		const level = Number.parseInt(element.tagName.charAt(1));
+		const level = Number.parseInt(element.tagName.charAt(1), 10);
 		const text = element.textContent || "";
 		const id = element.id || "";
 
@@ -65,6 +65,56 @@ export function useTableOfContents({
 		setTocItems(headers);
 		return undefined;
 	}, [content, extractFromDOM]);
+
+	// 目次の同期スクロール関数
+	const syncTocScroll = useCallback((activeIndex: number, totalItems: number) => {
+		const container = tocContainerRef.current;
+		if (!container) return;
+
+		const containerHeight = container.clientHeight;
+		const containerScrollHeight = container.scrollHeight;
+
+		// スクロールが不要な場合は何もしない
+		if (containerScrollHeight <= containerHeight) return;
+
+		// アクティブ項目の進行率を計算（0-1の範囲）
+		const progress = totalItems > 1 ? activeIndex / (totalItems - 1) : 0;
+
+		// 目次のスクロール位置を進行率に基づいて計算
+		const maxScroll = containerScrollHeight - containerHeight;
+		const targetScrollTop = progress * maxScroll;
+
+		// スクロール中フラグを設定
+		isScrollingRef.current = true;
+
+		// カスタムスムーズスクロール
+		const startScrollTop = container.scrollTop;
+		const scrollDistance = targetScrollTop - startScrollTop;
+		const duration = 200;
+		const startTime = performance.now();
+
+		const animateScroll = (currentTime: number) => {
+			const elapsed = currentTime - startTime;
+			const progress = Math.min(elapsed / duration, 1);
+
+			// easeOutQuart イージング関数
+			const easeProgress = 1 - (1 - progress) ** 4;
+
+			const currentScrollTop = startScrollTop + scrollDistance * easeProgress;
+			container.scrollTop = currentScrollTop;
+
+			if (progress < 1) {
+				requestAnimationFrame(animateScroll);
+			} else {
+				// スクロール完了後にフラグをリセット
+				setTimeout(() => {
+					isScrollingRef.current = false;
+				}, 50);
+			}
+		};
+
+		requestAnimationFrame(animateScroll);
+	}, []);
 
 	// スクロールイベントの設定
 	useEffect(() => {
@@ -122,57 +172,7 @@ export function useTableOfContents({
 				clearTimeout(scrollTimeoutRef.current);
 			}
 		};
-	}, [tocItems, scrollOffset, activeId]);
-
-	// 目次の同期スクロール関数
-	const syncTocScroll = useCallback((activeIndex: number, totalItems: number) => {
-		const container = tocContainerRef.current;
-		if (!container) return;
-
-		const containerHeight = container.clientHeight;
-		const containerScrollHeight = container.scrollHeight;
-
-		// スクロールが不要な場合は何もしない
-		if (containerScrollHeight <= containerHeight) return;
-
-		// アクティブ項目の進行率を計算（0-1の範囲）
-		const progress = totalItems > 1 ? activeIndex / (totalItems - 1) : 0;
-
-		// 目次のスクロール位置を進行率に基づいて計算
-		const maxScroll = containerScrollHeight - containerHeight;
-		const targetScrollTop = progress * maxScroll;
-
-		// スクロール中フラグを設定
-		isScrollingRef.current = true;
-
-		// カスタムスムーズスクロール
-		const startScrollTop = container.scrollTop;
-		const scrollDistance = targetScrollTop - startScrollTop;
-		const duration = 200;
-		const startTime = performance.now();
-
-		const animateScroll = (currentTime: number) => {
-			const elapsed = currentTime - startTime;
-			const progress = Math.min(elapsed / duration, 1);
-
-			// easeOutQuart イージング関数
-			const easeProgress = 1 - (1 - progress) ** 4;
-
-			const currentScrollTop = startScrollTop + scrollDistance * easeProgress;
-			container.scrollTop = currentScrollTop;
-
-			if (progress < 1) {
-				requestAnimationFrame(animateScroll);
-			} else {
-				// スクロール完了後にフラグをリセット
-				setTimeout(() => {
-					isScrollingRef.current = false;
-				}, 50);
-			}
-		};
-
-		requestAnimationFrame(animateScroll);
-	}, []);
+	}, [tocItems, scrollOffset, activeId, syncTocScroll]);
 
 	// 目次項目クリック時のスムーススクロール
 	const handleItemClick = useCallback((id: string) => {

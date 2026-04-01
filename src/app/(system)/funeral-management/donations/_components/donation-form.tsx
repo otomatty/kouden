@@ -82,8 +82,7 @@ export function DonationForm({
 
 			router.push("/funeral-management/donations");
 			router.refresh();
-		} catch (error) {
-			console.error("Error saving donation:", error);
+		} catch (_error) {
 			toast.error("保存に失敗しました");
 		} finally {
 			setIsLoading(false);

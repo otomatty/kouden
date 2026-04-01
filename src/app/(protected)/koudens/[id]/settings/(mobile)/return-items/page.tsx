@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { ReturnItemCardList } from "./_components/return-item-card-list";
 import { ReturnItemDialog } from "./_components/return-item-dialog";
 

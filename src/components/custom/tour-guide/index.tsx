@@ -19,7 +19,6 @@ export const TourGuide = ({ children }: { children: React.ReactNode }) => {
 		const steps = getTourSteps(tourState.currentPage);
 
 		if (steps.length === 0) {
-			console.warn("No tour steps found for current page:", tourState.currentPage);
 			setTourState((prev) => ({ ...prev, isActive: false }));
 			return;
 		}
@@ -28,9 +27,7 @@ export const TourGuide = ({ children }: { children: React.ReactNode }) => {
 		if (driverObj.current) {
 			try {
 				driverObj.current.destroy();
-			} catch (error) {
-				console.warn("Failed to destroy existing driver:", error);
-			}
+			} catch (_error) {}
 			driverObj.current = null;
 		}
 
@@ -48,7 +45,6 @@ export const TourGuide = ({ children }: { children: React.ReactNode }) => {
 				},
 				onHighlightStarted: (element) => {
 					if (!element) {
-						console.warn("Tour element not found, skipping step");
 						return;
 					}
 				},
@@ -62,8 +58,7 @@ export const TourGuide = ({ children }: { children: React.ReactNode }) => {
 				doneBtnText: "終了",
 				allowClose: true,
 			});
-		} catch (error) {
-			console.error("Failed to create driver instance:", error);
+		} catch (_error) {
 			setTourState((prev) => ({ ...prev, isActive: false }));
 			return;
 		}
@@ -174,8 +169,7 @@ export const TourGuide = ({ children }: { children: React.ReactNode }) => {
 				if (driverObj.current) {
 					driverObj.current.drive();
 				}
-			} catch (error) {
-				console.error("Failed to start tour:", error);
+			} catch (_error) {
 				setTourState((prev) => ({ ...prev, isActive: false }));
 			}
 		};
@@ -188,9 +182,7 @@ export const TourGuide = ({ children }: { children: React.ReactNode }) => {
 			if (driverObj.current) {
 				try {
 					driverObj.current.destroy();
-				} catch (error) {
-					console.warn("Failed to destroy driver on cleanup:", error);
-				}
+				} catch (_error) {}
 				driverObj.current = null;
 			}
 			const styleElement = document.getElementById("tour-guide-styles");

@@ -65,8 +65,7 @@ export function RelatedPosts({
 						bookmark_count: post.post_stats?.bookmark_count ?? 0,
 					})) as RelatedPost[],
 				);
-			} catch (err) {
-				console.error("Failed to fetch related posts:", err);
+			} catch (_err) {
 				setError("関連記事の取得に失敗しました");
 			} finally {
 				setLoading(false);

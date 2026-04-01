@@ -36,9 +36,7 @@ export function BlogNavigation({
 				await navigator.clipboard.writeText(window.location.href);
 				// TODO: トースト通知を表示
 				alert("URLをクリップボードにコピーしました");
-			} catch (error) {
-				console.error("Failed to copy URL:", error);
-			}
+			} catch (_error) {}
 		}
 	};
 

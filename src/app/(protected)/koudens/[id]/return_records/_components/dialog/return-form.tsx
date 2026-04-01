@@ -149,14 +149,6 @@ export function ReturnForm({
 				description: "返礼情報を更新しました",
 			});
 		} catch (error) {
-			console.error("[DEBUG] Return form submission failed:", {
-				error,
-				errorMessage: error instanceof Error ? error.message : "Unknown error",
-				errorStack: error instanceof Error ? error.stack : undefined,
-				data,
-				koudenId,
-				defaultValues,
-			});
 			setSubmissionState({
 				isSubmitting: false,
 				error: error instanceof Error ? error.message : "保存に失敗しました",
@@ -171,16 +163,7 @@ export function ReturnForm({
 
 	return (
 		<Form {...form}>
-			<form
-				onSubmit={form.handleSubmit(onSubmit, (errors) => {
-					console.error("[DEBUG] Return form validation errors:", {
-						errors,
-						formValues: form.getValues(),
-						formState: form.formState,
-					});
-				})}
-				className="space-y-6"
-			>
+			<form onSubmit={form.handleSubmit(onSubmit, (_errors) => {})} className="space-y-6">
 				<Tabs defaultValue="basic" className="w-full">
 					<TabsList className="grid w-full grid-cols-3">
 						<TabsTrigger value="basic">基本情報</TabsTrigger>

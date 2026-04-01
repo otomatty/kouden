@@ -1,5 +1,4 @@
 import type { Database } from "@/types/supabase";
-import type { SnakeToCamelCaseNested } from "@/utils/case-converter";
 import type { KeysToCamelCase } from "@/utils/case-converter";
 import type { z } from "zod";
 import type { offeringFormSchema } from "@/schemas/offerings";

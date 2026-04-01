@@ -1,7 +1,6 @@
 "use client";
 
 import { ChevronDown, ChevronUp, Lock, ShoppingCart, Trash2 } from "lucide-react";
-import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

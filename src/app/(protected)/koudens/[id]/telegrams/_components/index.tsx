@@ -31,7 +31,6 @@ export function TelegramsView({ telegrams, koudenId, entries }: TelegramsViewPro
 
 	useEffect(() => {
 		if (!Array.isArray(telegrams)) {
-			console.error("Invalid telegrams data:", telegrams);
 			return;
 		}
 		setData(telegrams);

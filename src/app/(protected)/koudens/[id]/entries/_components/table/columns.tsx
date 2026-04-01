@@ -70,12 +70,7 @@ export function createColumns({ onDeleteRows, relationships, permission, koudenI
 				default:
 					return String(value) || "";
 			}
-		} catch (error) {
-			console.error("[ERROR] Cell format failed:", {
-				value,
-				format,
-				error,
-			});
+		} catch (_error) {
 			return "-";
 		}
 	};

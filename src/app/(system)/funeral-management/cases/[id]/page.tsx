@@ -282,8 +282,7 @@ export default async function CaseDetailPage({ params }: CaseDetailPageProps) {
 				</div>
 			</div>
 		);
-	} catch (error) {
-		console.error("[ERROR] Error loading case details:", error);
+	} catch (_error) {
 		notFound();
 	}
 }

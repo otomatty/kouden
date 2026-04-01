@@ -97,13 +97,15 @@ const ChartTooltip = RechartsPrimitive.Tooltip;
 
 const ChartTooltipContent = React.forwardRef<
 	HTMLDivElement,
-	// biome-ignore lint: recharts v3 の型互換のため any を使用
 	React.ComponentProps<"div"> & {
 		active?: boolean;
+		// biome-ignore lint/suspicious/noExplicitAny: recharts v3 の型互換のため any を使用
 		payload?: Array<Record<string, any>>;
 		label?: string;
+		// biome-ignore lint/suspicious/noExplicitAny: recharts v3 の型互換のため any を使用
 		labelFormatter?: (value: any, payload: any[]) => React.ReactNode;
 		labelClassName?: string;
+		// biome-ignore lint/suspicious/noExplicitAny: recharts v3 の型互換のため any を使用
 		formatter?: (value: any, name: any, item: any, index: number, payload: any) => React.ReactNode;
 		color?: string;
 		hideLabel?: boolean;
@@ -254,8 +256,8 @@ const ChartLegend = RechartsPrimitive.Legend;
 
 const ChartLegendContent = React.forwardRef<
 	HTMLDivElement,
-	// biome-ignore lint: recharts v3 の型互換のため any を使用
 	React.ComponentProps<"div"> & {
+		// biome-ignore lint/suspicious/noExplicitAny: recharts v3 の型互換のため any を使用
 		payload?: Array<Record<string, any>>;
 		verticalAlign?: "top" | "bottom";
 		hideIcon?: boolean;
@@ -277,13 +279,13 @@ const ChartLegendContent = React.forwardRef<
 				className,
 			)}
 		>
-			{payload.map((item: any) => {
+			{payload.map((item: Record<string, unknown>) => {
 				const key = `${nameKey || item.dataKey || "value"}`;
 				const itemConfig = getPayloadConfigFromPayload(config, item, key);
 
 				return (
 					<div
-						key={item.value}
+						key={item.value as React.Key}
 						className={cn(
 							"flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-muted-foreground",
 						)}
@@ -294,7 +296,7 @@ const ChartLegendContent = React.forwardRef<
 							<div
 								className="h-2 w-2 shrink-0 rounded-[2px]"
 								style={{
-									backgroundColor: item.color,
+									backgroundColor: item.color as string,
 								}}
 							/>
 						)}

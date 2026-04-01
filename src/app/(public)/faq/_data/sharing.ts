@@ -1,4 +1,4 @@
-import type { FAQCategory, FAQItem } from "../_components/FAQClient";
+import type { FAQCategory } from "../_components/FAQClient";
 
 export const sharing: FAQCategory = {
 	category: "共有・コラボレーション",

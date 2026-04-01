@@ -52,8 +52,7 @@ export function GeneralSettingsForm({ koudenId, defaultValues }: GeneralSettings
 				toast.success("設定を保存しました", {
 					description: "香典帳の基本情報が更新されました",
 				});
-			} catch (error) {
-				console.error(error);
+			} catch (_error) {
 				toast.error("設定の保存に失敗しました", {
 					description: "しばらく時間をおいてから再度お試しください",
 				});

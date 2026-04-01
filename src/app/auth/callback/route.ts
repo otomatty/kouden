@@ -1,5 +1,4 @@
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import { acceptInvitation } from "@/app/_actions/invitations";
 import { createClient } from "@/lib/supabase/server";
 
@@ -22,7 +21,6 @@ export async function GET(request: Request) {
 		if (code) {
 			const { error: authError } = await supabase.auth.exchangeCodeForSession(code);
 			if (authError) {
-				console.error("[ERROR] Auth error during exchange:", authError);
 				return Response.redirect(
 					new URL(
 						`/auth/login?error=${encodeURIComponent("認証に失敗しました")}`,
@@ -44,7 +42,6 @@ export async function GET(request: Request) {
 		} = await supabase.auth.getUser();
 
 		if (!user) {
-			console.error("[ERROR] No user found after authentication");
 			return Response.redirect(
 				new URL(
 					`/auth/login?error=${encodeURIComponent("ユーザー情報を取得できませんでした")}`,
@@ -64,8 +61,6 @@ export async function GET(request: Request) {
 				// Redirect to koudens page with success message
 				return Response.redirect(new URL("/koudens?invitation=accepted", requestUrl.origin));
 			} catch (error) {
-				console.error("[ERROR] Error accepting invitation:", error);
-
 				// Clean up invitation token cookie even on error
 				cookieStore.delete("invitation_token");
 
@@ -122,15 +117,13 @@ export async function GET(request: Request) {
 			if ((memberships?.length ?? 0) > 0) {
 				return Response.redirect(new URL("/application-select", requestUrl.origin));
 			}
-		} catch (error) {
-			console.error("[ERROR] Failed to check organization membership:", error);
+		} catch (_error) {
 			// Continue to default redirect even if organization check fails
 		}
 
 		// default to main app
 		return Response.redirect(new URL("/koudens", requestUrl.origin));
 	} catch (error) {
-		console.error("[ERROR] Unexpected error in auth callback:", error);
 		const errorMessage =
 			error instanceof Error ? error.message : "認証処理中にエラーが発生しました";
 		return Response.redirect(

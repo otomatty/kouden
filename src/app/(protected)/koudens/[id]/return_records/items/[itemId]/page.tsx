@@ -30,8 +30,7 @@ export default async function ReturnItemDetailPage({ params }: ReturnItemDetailP
 		}
 
 		return <ReturnItemDetailPageClient returnItem={returnItem} koudenId={koudenId} />;
-	} catch (error) {
-		console.error("[ERROR] Failed to fetch return item details:", error);
+	} catch (_error) {
 		notFound();
 	}
 }

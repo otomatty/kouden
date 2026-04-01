@@ -59,7 +59,7 @@ export function BlogSEO({
 		<Script
 			id={`blog-structured-data-${slug}`}
 			type="application/ld+json"
-			// biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
+			// biome-ignore lint/security/noDangerouslySetInnerHtml: structured data must be injected as raw JSON-LD for SEO
 			dangerouslySetInnerHTML={{
 				__html: JSON.stringify(structuredData),
 			}}

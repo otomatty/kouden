@@ -6,13 +6,10 @@ import {
 	ChevronLeft,
 	ChevronRight,
 	Clock,
-	ExternalLink,
 	FileText,
 	HelpCircle,
 	Loader2,
 	Mail,
-	MessageCircle,
-	Phone,
 	Search,
 	Settings,
 } from "lucide-react";
@@ -82,8 +79,7 @@ export function HelpPageClient() {
 
 				setHelpItems(result.items);
 				setTotalCount(result.totalCount);
-			} catch (err) {
-				console.error("Help items fetch error:", err);
+			} catch (_err) {
 				setError("データの取得中にエラーが発生しました");
 			} finally {
 				setIsLoading(false);

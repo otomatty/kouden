@@ -36,7 +36,6 @@ export function DuplicateKoudenButton({ koudenId }: DuplicateKoudenButtonProps) 
 
 			router.push(`/koudens/${kouden.id}`);
 		} catch (error) {
-			console.error("Error:", error);
 			toast.error("香典帳の複製に失敗しました", {
 				description:
 					error instanceof Error ? error.message : "しばらく時間をおいてから再度お試しください",

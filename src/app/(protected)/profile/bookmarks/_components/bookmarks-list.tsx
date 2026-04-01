@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Bookmark, BookOpen, Calendar, Eye, Trash2 } from "lucide-react";
+import { AlertCircle, BookOpen, Calendar, Eye, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -88,8 +88,7 @@ export function BookmarksList({ category, sortBy, search }: BookmarksListProps) 
 				})) as BookmarkInfo[];
 
 				setBookmarks(transformedData);
-			} catch (err) {
-				console.error("Failed to fetch bookmarks:", err);
+			} catch (_err) {
 				setError("ブックマークの取得に失敗しました");
 			} finally {
 				setLoading(false);
@@ -166,8 +165,7 @@ export function BookmarksList({ category, sortBy, search }: BookmarksListProps) 
 			} else {
 				throw new Error(result.error || "削除に失敗しました");
 			}
-		} catch (err) {
-			console.error("Failed to remove bookmark:", err);
+		} catch (_err) {
 			toast.error("削除に失敗しました", {
 				description: "しばらく時間をおいて再度お試しください",
 			});

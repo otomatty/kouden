@@ -42,7 +42,6 @@ export function KoudenTitle({
 			setIsEditing(false);
 			toast.success("香典帳の情報を更新しました");
 		} catch (error) {
-			console.error("Failed to update kouden:", error);
 			const errorMessage = error instanceof Error ? error.message : "更新に失敗しました";
 			toast.error(errorMessage);
 		} finally {

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { createAnnouncement } from "@/app/_actions/admin/announcements";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 import { Button } from "@/components/ui/button";
@@ -10,8 +9,8 @@ export function AddAnnouncementButton() {
 	const onSubmit = async (values: AnnouncementFormData) => {
 		try {
 			await createAnnouncement(values);
-		} catch (error) {
-			console.error("Failed to create announcement:", error);
+		} catch (_error) {
+			return;
 		}
 	};
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { Mail, Send } from "lucide-react";
+import { Send } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -60,8 +60,7 @@ ${shareUrl}
 				recipientEmail: "",
 				recipientName: "",
 			}));
-		} catch (error) {
-			console.error("Error sending share email:", error);
+		} catch (_error) {
 			toast.error("メール送信に失敗しました");
 		} finally {
 			setIsLoading(false);

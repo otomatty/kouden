@@ -1,5 +1,4 @@
 "use client";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 // library
 import { useEffect, useRef, useState } from "react";
 import { Loading } from "@/components/custom/loading";

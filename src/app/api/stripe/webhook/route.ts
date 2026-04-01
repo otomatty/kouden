@@ -6,18 +6,20 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 
-// Initialize Stripe
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-if (!stripeSecretKey) {
-	throw new Error("STRIPE_SECRET_KEY must be defined");
+// Initialize Stripe (lazy to avoid build-time errors when secrets are not set)
+function getStripe() {
+	const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+	if (!stripeSecretKey) {
+		throw new Error("STRIPE_SECRET_KEY must be defined");
+	}
+	// 開発環境では環境変数STRIPE_API_VERSIONを使い、それ以外は既存バージョンを使用
+	const stripeApiVersion = (
+		process.env.NODE_ENV === "development" && process.env.STRIPE_API_VERSION
+			? process.env.STRIPE_API_VERSION
+			: "2025-05-28.basil"
+	) as Stripe.StripeConfig["apiVersion"];
+	return new Stripe(stripeSecretKey, { apiVersion: stripeApiVersion });
 }
-// FIRST_EDIT: 開発環境では環境変数STRIPE_API_VERSIONを使い、それ以外は既存バージョンを使用
-const stripeApiVersion = (
-	process.env.NODE_ENV === "development" && process.env.STRIPE_API_VERSION
-		? process.env.STRIPE_API_VERSION
-		: "2025-05-28.basil"
-) as Stripe.StripeConfig["apiVersion"];
-const stripe = new Stripe(stripeSecretKey, { apiVersion: stripeApiVersion });
 
 export async function POST(req: Request) {
 	const signature = req.headers.get("stripe-signature");
@@ -31,6 +33,7 @@ export async function POST(req: Request) {
 	const body = await req.text();
 	let event: Stripe.Event;
 	try {
+		const stripe = getStripe();
 		event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
 	} catch (error: unknown) {
 		const message = error instanceof Error ? error.message : String(error);

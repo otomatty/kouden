@@ -17,9 +17,8 @@ export const Default: Story = {
 	args: {
 		koudenId: "sample-kouden-id",
 		value: "",
-		onValueChange: (value) => {
-			// biome-ignore lint/suspicious/noConsoleLog: テスト用
-			console.log("Selected value:", value);
+		onValueChange: (_value) => {
+			// no-op for storybook
 		},
 	},
 };
@@ -28,9 +27,8 @@ export const WithPreselectedValue: Story = {
 	args: {
 		koudenId: "sample-kouden-id",
 		value: "role-1",
-		onValueChange: (value) => {
-			// biome-ignore lint/suspicious/noConsoleLog: テスト用
-			console.log("Selected value:", value);
+		onValueChange: (_value) => {
+			// no-op for storybook
 		},
 	},
 };

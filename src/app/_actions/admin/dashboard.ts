@@ -3,8 +3,6 @@
 import { unstable_cache as cache } from "next/cache";
 import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
-import { getCampaignApplicationStats } from "./campaign-applications";
-import { getContactRequestStats } from "./contact-requests";
 
 // 1. getDashboardSummary
 export async function getDashboardSummary() {
@@ -50,7 +48,7 @@ export async function getDashboardSummary() {
 }
 
 // 2. getServiceStatus
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+// biome-ignore lint/suspicious/noExplicitAny: fetchServiceStatus returns varying response shapes from different service endpoints
 const fetchServiceStatus = async (url: string, serviceName: string): Promise<any> => {
 	try {
 		const response = await fetch(url, { next: { revalidate: 300 } }); // 5分キャッシュ

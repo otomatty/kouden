@@ -118,8 +118,7 @@ async function getManualHelpItems(): Promise<QuickHelpItem[]> {
 				priority: doc.categoryOrder + doc.docOrder,
 			};
 		});
-	} catch (error) {
-		console.error("Failed to load manual help items:", error);
+	} catch (_error) {
 		return [];
 	}
 }
@@ -187,8 +186,7 @@ async function getBlogHelpItems(): Promise<QuickHelpItem[]> {
 				lastUpdated: post.updated_at,
 			};
 		});
-	} catch (error) {
-		console.error("Failed to load blog help items:", error);
+	} catch (_error) {
 		return [];
 	}
 }
@@ -285,8 +283,7 @@ export async function searchHelpItems(params: HelpSearchParams = {}): Promise<He
 			totalCount: filteredItems.length,
 			categories,
 		};
-	} catch (error) {
-		console.error("Failed to search help items:", error);
+	} catch (_error) {
 		return {
 			items: [],
 			totalCount: 0,

@@ -29,6 +29,22 @@ export function CasesClient({ initialCases }: CasesClientProps) {
 
 	// 検索とフィルタリングロジック
 	const filteredCases = useMemo(() => {
+		// ステータスのキーを取得するヘルパー関数
+		function getStatusKey(status: string): string {
+			switch (status) {
+				case "準備中":
+					return "preparation";
+				case "施行中":
+					return "in-progress";
+				case "完了":
+					return "completed";
+				case "要注意":
+					return "attention";
+				default:
+					return "preparation";
+			}
+		}
+
 		return initialCases.filter((funeralCase) => {
 			const matchesSearch = funeralCase.deceased_name
 				.toLowerCase()
@@ -38,22 +54,6 @@ export function CasesClient({ initialCases }: CasesClientProps) {
 			return matchesSearch && matchesStatus;
 		});
 	}, [initialCases, searchTerm, statusFilter]);
-
-	// ステータスのキーを取得するヘルパー関数
-	function getStatusKey(status: string): string {
-		switch (status) {
-			case "準備中":
-				return "preparation";
-			case "施行中":
-				return "in-progress";
-			case "完了":
-				return "completed";
-			case "要注意":
-				return "attention";
-			default:
-				return "preparation";
-		}
-	}
 
 	// ステータス統計の計算
 	const statusStats = useMemo(() => {

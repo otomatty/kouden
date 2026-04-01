@@ -4,6 +4,7 @@
  */
 
 import { ShieldCheck, Smartphone } from "lucide-react";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -80,7 +81,13 @@ export default async function TwoFactorSetupPage({ searchParams }: PageProps) {
 							<div className="text-center">
 								<h3 className="text-lg font-semibold mb-2">1. アプリでQRコードをスキャン</h3>
 								<div className="bg-white p-4 rounded-lg border inline-block">
-									<img src={twoFactorSetup.qrCodeUrl} alt="2FA QR Code" className="w-48 h-48" />
+									<Image
+										src={twoFactorSetup.qrCodeUrl}
+										alt="2FA QR Code"
+										width={192}
+										height={192}
+										className="w-48 h-48"
+									/>
 								</div>
 								<p className="text-sm text-muted-foreground mt-2">
 									Google Authenticator、Authy等のアプリを使用

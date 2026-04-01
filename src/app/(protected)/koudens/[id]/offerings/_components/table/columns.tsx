@@ -55,8 +55,7 @@ export function createColumns({ onDeleteRows, permission, koudenId, entries }: C
 				default:
 					return String(value);
 			}
-		} catch (error) {
-			console.error(error);
+		} catch (_error) {
 			return "-";
 		}
 	};

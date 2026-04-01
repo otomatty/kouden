@@ -32,7 +32,6 @@ export function OfferingView({ koudenId, entries, offerings }: OfferingViewProps
 
 	useEffect(() => {
 		if (!Array.isArray(offerings)) {
-			console.error("[DEBUG] OfferingView - Invalid offerings data:", offerings);
 			return;
 		}
 		setData(offerings);

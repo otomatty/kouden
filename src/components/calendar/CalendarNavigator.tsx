@@ -68,11 +68,11 @@ export default function CalendarNavigator({
 			{isLoading ? (
 				<div className="grid grid-cols-7 gap-4">
 					{Array.from({ length: 7 }).map((_, dayIdx) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+						// biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholder items have no unique identifier
 						<div key={dayIdx} className="flex flex-col items-center gap-2">
 							<Skeleton className="w-full h-6" />
 							{Array.from({ length: 8 }).map((_, idx) => (
-								// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+								// biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholder items have no unique identifier
 								<Skeleton key={idx} className="w-full h-10" />
 							))}
 						</div>

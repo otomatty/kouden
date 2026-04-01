@@ -53,8 +53,7 @@ const PdfDownloadButton: React.FC<PdfDownloadButtonProps> = ({ koudenId }) => {
 
 			// PDF出力成功時のみアンケート表示
 			setShowSurvey(true);
-		} catch (error) {
-			console.error("PDF出力エラー:", error);
+		} catch (_error) {
 			toast.error("PDF出力に失敗しました。時間を置いてお試しください。");
 			// エラー時はアンケート表示しない
 		} finally {

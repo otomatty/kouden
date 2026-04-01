@@ -1,7 +1,7 @@
 "use client";
 
 import { useSetAtom } from "jotai";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { returnItemsByKoudenAtomFamily } from "@/store/return-items";
 import type { Entry } from "@/types/entries";
 import type { Relationship } from "@/types/relationships";

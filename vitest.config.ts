@@ -10,6 +10,11 @@ export default defineConfig({
 		},
 	},
 	test: {
+		coverage: {
+			provider: "v8",
+			reporter: ["text", "html", "lcov", "json"],
+			reportsDirectory: "./coverage",
+		},
 		globals: true,
 		environment: "jsdom",
 		setupFiles: ["./vitest.setup.ts"],
@@ -40,6 +45,6 @@ export default defineConfig({
 		clearMocks: true,
 		restoreMocks: true,
 		// Enable vi global for all test environments
-		isolate: false,
+		isolate: true,
 	},
 });

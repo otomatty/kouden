@@ -11,8 +11,6 @@ import {
 import { useAtomValue } from "jotai";
 // ui
 import { Trash2 } from "lucide-react";
-// library
-import * as React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 // Server Actions
@@ -82,8 +80,7 @@ export function DataTable({ koudenId, entries, offerings, onDataChange }: DataTa
 				toast.success("削除完了", {
 					description: `${ids.length}件のデータを削除しました`,
 				});
-			} catch (error) {
-				console.error("[handleDeleteRows] Delete failed:", error);
+			} catch (_error) {
 				toast.error("エラーが発生しました", {
 					description: "データの削除に失敗しました",
 				});
@@ -129,8 +126,7 @@ export function DataTable({ koudenId, entries, offerings, onDataChange }: DataTa
 				toast.success("更新完了", {
 					description: "データを更新しました",
 				});
-			} catch (error) {
-				console.error("[handleCellEdit] Update failed:", error);
+			} catch (_error) {
 				toast.error("エラーが発生しました", {
 					description: "データの更新に失敗しました",
 				});

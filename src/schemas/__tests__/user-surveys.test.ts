@@ -132,8 +132,8 @@ describe("user-surveys schemas", () => {
 			it("数値項目に文字列を渡すとエラーになる", () => {
 				const dataWithStringNumbers = {
 					...validFormData,
-					overallSatisfaction: "4" as any,
-					npsScore: "8" as any,
+					overallSatisfaction: "4" as unknown as number,
+					npsScore: "8" as unknown as number,
 				};
 				const result = userSurveyFormSchema.safeParse(dataWithStringNumbers);
 				expect(result.success).toBe(false);
@@ -142,8 +142,8 @@ describe("user-surveys schemas", () => {
 			it("boolean項目に数値を渡すとエラーになる", () => {
 				const dataWithNumberBooleans = {
 					...validFormData,
-					usabilityEasierInput: 1 as any,
-					usabilityBetterUi: 0 as any,
+					usabilityEasierInput: 1 as unknown as boolean,
+					usabilityBetterUi: 0 as unknown as boolean,
 				};
 				const result = userSurveyFormSchema.safeParse(dataWithNumberBooleans);
 				expect(result.success).toBe(false);

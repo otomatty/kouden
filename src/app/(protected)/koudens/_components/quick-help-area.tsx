@@ -56,8 +56,7 @@ export const QuickHelpArea = memo(function QuickHelpArea({
 				});
 
 				setHelpItems(result.items);
-			} catch (err) {
-				console.error("Help items fetch error:", err);
+			} catch (_err) {
 				setError("データの取得中にエラーが発生しました");
 			} finally {
 				setIsLoading(false);

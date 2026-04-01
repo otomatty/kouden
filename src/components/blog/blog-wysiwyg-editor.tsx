@@ -24,7 +24,6 @@ import {
 	Redo,
 	Strikethrough,
 	Table as TableIcon,
-	Underline,
 	Undo,
 } from "lucide-react";
 import { marked } from "marked";
@@ -75,8 +74,7 @@ const convertMarkdownToHtml = async (markdown: string): Promise<string> => {
 
 		const html = await marked(markdown);
 		return html;
-	} catch (error) {
-		console.error("Markdown conversion error:", error);
+	} catch (_error) {
 		return markdown; // 変換に失敗した場合は元のテキストを返す
 	}
 };
@@ -115,8 +113,7 @@ export function BlogWysiwygEditor({
 				try {
 					const htmlContent = await convertMarkdownToHtml(content);
 					setInitialContent(htmlContent);
-				} catch (error) {
-					console.error("Failed to convert markdown:", error);
+				} catch (_error) {
 					setInitialContent(content);
 				} finally {
 					setIsConverting(false);

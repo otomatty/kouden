@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 

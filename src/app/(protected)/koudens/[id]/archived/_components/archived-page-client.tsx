@@ -1,5 +1,4 @@
 "use client";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import type { KoudenPermission } from "@/types/role";
 import KoudenHeader from "../../_components/_common/kouden-header";

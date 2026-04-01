@@ -2,7 +2,7 @@ import type { MDXComponents } from "mdx/types";
 import Image from "next/image";
 import type React from "react";
 import { AccordionMDX } from "@/components/ui/accordion-mdx";
-import { convertGyazoUrl, isGyazoUrl } from "@/utils/image-utils";
+import { convertGyazoUrl } from "@/utils/image-utils";
 import { generateHeaderId } from "@/utils/markdown-utils";
 
 // ページごとのID管理用（ページ遷移時にリセット）
@@ -121,16 +121,14 @@ export const mdxComponents: MDXComponents = {
 		const convertedSrc = convertGyazoUrl(src);
 
 		return (
-			<>
-				<Image
-					src={convertedSrc}
-					alt={alt || ""}
-					width={800}
-					height={600}
-					className="rounded-lg border border-border shadow-sm max-w-full h-auto my-6"
-					unoptimized
-				/>
-			</>
+			<Image
+				src={convertedSrc}
+				alt={alt || ""}
+				width={800}
+				height={600}
+				className="rounded-lg border border-border shadow-sm max-w-full h-auto my-6"
+				unoptimized
+			/>
 		);
 	},
 	code: ({ children, ...props }) => (

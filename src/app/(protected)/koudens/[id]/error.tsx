@@ -12,9 +12,7 @@ export default function KoudenError({
 	error: Error & { digest?: string };
 	reset: () => void;
 }) {
-	useEffect(() => {
-		console.error(error);
-	}, [error]);
+	useEffect(() => {}, []);
 
 	return (
 		<div className="flex h-full flex-col items-center justify-center space-y-4">

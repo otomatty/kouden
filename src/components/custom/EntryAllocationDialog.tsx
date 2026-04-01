@@ -1,6 +1,6 @@
 "use client";
 
-import { Calculator, ExternalLink, Users } from "lucide-react";
+import { ExternalLink, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { getEntryOfferingAllocations } from "@/app/_actions/offerings/queries";
@@ -46,6 +46,7 @@ export function EntryAllocationDialog({
 	const [allocations, setAllocations] = useState<AllocationWithOffering[]>([]);
 
 	// 配分データを読み込み
+	// biome-ignore lint/correctness/useExhaustiveDependencies: loadAllocations uses state setters and props that don't change; including it would cause infinite loops
 	useEffect(() => {
 		if (open) {
 			loadAllocations();
@@ -61,8 +62,7 @@ export function EntryAllocationDialog({
 			} else {
 				toast.error(result.error || "配分データの取得に失敗しました");
 			}
-		} catch (error) {
-			console.error("配分データ取得エラー:", error);
+		} catch (_error) {
 			toast.error("配分データの取得中にエラーが発生しました");
 		} finally {
 			setLoading(false);

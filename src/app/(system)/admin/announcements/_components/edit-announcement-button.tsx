@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { type Announcement, updateAnnouncement } from "@/app/_actions/admin/announcements";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 import { Button } from "@/components/ui/button";
@@ -14,8 +13,8 @@ export function EditAnnouncementButton({ announcement }: EditAnnouncementButtonP
 	const onSubmit = async (values: AnnouncementFormData) => {
 		try {
 			await updateAnnouncement(announcement.id, values);
-		} catch (error) {
-			console.error("Failed to update announcement:", error);
+		} catch (_error) {
+			return;
 		}
 	};
 

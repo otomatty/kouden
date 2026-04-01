@@ -16,7 +16,6 @@ import {
 	Send,
 	Sparkles,
 	User,
-	X,
 } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -36,17 +35,11 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { useBlogAIAgent } from "@/hooks/use-blog-ai-agent";
 // 分割されたコンポーネントとフックをインポート
-import type {
-	BlogAIAgentProps,
-	ChatMessage,
-	ClarifyingQuestion,
-	SuggestionOption,
-} from "@/types/blog-ai-agent";
+import type { BlogAIAgentProps, ChatMessage, ClarifyingQuestion } from "@/types/blog-ai-agent";
 import { ChatMessageContent } from "./chat-markdown";
 
 // UI関連のヘルパー関数群

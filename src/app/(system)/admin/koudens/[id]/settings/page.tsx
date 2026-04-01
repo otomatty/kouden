@@ -39,11 +39,15 @@ export default async function AdminSettingsPage({ params }: AdminSettingsPagePro
 				<CardContent className="space-y-4">
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div>
-							<label className="text-sm font-medium text-muted-foreground">香典帳名</label>
+							<span className="text-sm font-medium text-muted-foreground" aria-hidden="true">
+								香典帳名
+							</span>
 							<p className="text-lg font-semibold">{kouden.title}</p>
 						</div>
 						<div>
-							<label className="text-sm font-medium text-muted-foreground">ステータス</label>
+							<span className="text-sm font-medium text-muted-foreground" aria-hidden="true">
+								ステータス
+							</span>
 							<div className="mt-1">
 								<Badge variant={kouden.status === "active" ? "default" : "secondary"}>
 									{kouden.status === "active" ? "アクティブ" : "アーカイブ済み"}
@@ -51,14 +55,18 @@ export default async function AdminSettingsPage({ params }: AdminSettingsPagePro
 							</div>
 						</div>
 						<div>
-							<label className="text-sm font-medium text-muted-foreground">作成日</label>
+							<span className="text-sm font-medium text-muted-foreground" aria-hidden="true">
+								作成日
+							</span>
 							<p className="flex items-center gap-2">
 								<Calendar className="h-4 w-4" />
 								{format(new Date(kouden.created_at), "yyyy年MM月dd日 HH:mm", { locale: ja })}
 							</p>
 						</div>
 						<div>
-							<label className="text-sm font-medium text-muted-foreground">最終更新</label>
+							<span className="text-sm font-medium text-muted-foreground" aria-hidden="true">
+								最終更新
+							</span>
 							<p className="flex items-center gap-2">
 								<Calendar className="h-4 w-4" />
 								{format(new Date(kouden.updated_at), "yyyy年MM月dd日 HH:mm", { locale: ja })}
@@ -67,7 +75,9 @@ export default async function AdminSettingsPage({ params }: AdminSettingsPagePro
 					</div>
 					{kouden.description && (
 						<div>
-							<label className="text-sm font-medium text-muted-foreground">説明</label>
+							<span className="text-sm font-medium text-muted-foreground" aria-hidden="true">
+								説明
+							</span>
 							<p className="mt-1 text-sm">{kouden.description}</p>
 						</div>
 					)}

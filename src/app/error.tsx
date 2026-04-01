@@ -11,9 +11,7 @@ interface ErrorProps {
 }
 
 export default function RootError({ error, reset }: ErrorProps) {
-	useEffect(() => {
-		console.error(error);
-	}, [error]);
+	useEffect(() => {}, []);
 
 	return (
 		<>

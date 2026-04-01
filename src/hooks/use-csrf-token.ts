@@ -37,7 +37,6 @@ export function useCSRFToken() {
 		} catch (err) {
 			const errorMessage = err instanceof Error ? err.message : "Failed to fetch CSRF token";
 			setError(errorMessage);
-			console.error("CSRF token fetch error:", err);
 		} finally {
 			setIsLoading(false);
 		}

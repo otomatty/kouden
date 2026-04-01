@@ -48,8 +48,7 @@ export async function toggleBookmark(postId: string) {
 		revalidatePath("/blog");
 		revalidatePath(`/blog/${postId}`);
 		return { success: true, bookmarked: true };
-	} catch (error) {
-		console.error("Failed to toggle bookmark:", error);
+	} catch (_error) {
 		return { success: false, error: "Failed to update bookmark" };
 	}
 }
@@ -91,7 +90,6 @@ export async function getUserBookmarks(userId?: string) {
 		.order("created_at", { ascending: false });
 
 	if (error) {
-		console.error("Failed to fetch bookmarks:", error);
 		return { data: [], error: error.message };
 	}
 
@@ -151,7 +149,6 @@ export async function getBulkBookmarkStatus(postIds: string[], userId?: string) 
 		.in("post_id", postIds);
 
 	if (error) {
-		console.error("Failed to fetch bulk bookmark status:", error);
 		return {};
 	}
 
@@ -192,7 +189,6 @@ export async function getBookmarkStats(userId?: string) {
 		.eq("user_id", targetUserId);
 
 	if (error) {
-		console.error("Failed to fetch bookmark stats:", error);
 		return { total: 0, byCategory: {} };
 	}
 

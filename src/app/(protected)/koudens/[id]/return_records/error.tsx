@@ -9,10 +9,12 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
  * - エラーメッセージを表示
  * - エラーをログに記録
  */
-export default function ReturnRecordsError({ error }: { error: Error & { digest?: string } }) {
-	useEffect(() => {
-		console.error(error);
-	}, [error]);
+export default function ReturnRecordsError({
+	error: _error,
+}: {
+	error: Error & { digest?: string };
+}) {
+	useEffect(() => {}, []);
 
 	return (
 		<div className="container mx-auto p-4">

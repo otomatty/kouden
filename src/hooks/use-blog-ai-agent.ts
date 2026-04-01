@@ -156,8 +156,7 @@ export function useBlogAIAgent({
 					// 質問状態をリセット
 					setPendingQuestions([]);
 					setQuestionAnswers([]);
-				} catch (error) {
-					console.error("Error processing question answers:", error);
+				} catch (_error) {
 					const errorMessage: ChatMessage = {
 						id: `error-${Date.now()}`,
 						role: "assistant",
@@ -217,8 +216,7 @@ export function useBlogAIAgent({
 								const updatedMetadata = { ...newMetadata, slug };
 								onMetadataChange(updatedMetadata);
 							})
-							.catch((error) => {
-								console.error("Slug generation failed:", error);
+							.catch((_error) => {
 								// フォールバックとして同期版を使用
 								const fallbackSlug = generateSlugFromTitleSync(option.data?.metadata?.title || "");
 								const updatedMetadata = { ...newMetadata, slug: fallbackSlug };
@@ -341,8 +339,7 @@ export function useBlogAIAgent({
 
 				setMessages((prev) => [...prev, assistantMessage]);
 			}
-		} catch (error) {
-			console.error("Error sending message:", error);
+		} catch (_error) {
 			const errorMessage: ChatMessage = {
 				id: (Date.now() + 1).toString(),
 				role: "assistant",

@@ -1,6 +1,6 @@
 "use client";
 
-import { Gift, HeartHandshake, Settings, Truck, Users } from "lucide-react";
+import { HeartHandshake, Settings, Truck, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";

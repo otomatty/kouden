@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, ExternalLink, Gift, Loader2, Mail, UserCheck, Users } from "lucide-react";
+import { BookOpen, ExternalLink, Gift, Loader2, UserCheck, Users } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -90,8 +90,7 @@ export function KoudenManagementCard({ koudenCase }: KoudenManagementCardProps) 
 					description: result.error || "所有権の移譲に失敗しました",
 				});
 			}
-		} catch (error) {
-			console.error("[ERROR] Failed to transfer ownership:", error);
+		} catch (_error) {
 			toast.error("エラー", {
 				description: "予期せぬエラーが発生しました",
 			});

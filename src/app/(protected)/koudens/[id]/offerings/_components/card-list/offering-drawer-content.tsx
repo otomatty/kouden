@@ -102,8 +102,7 @@ export function OfferingDrawerContent({
 			setOptimisticOfferings(optimisticOfferings.filter((o) => o.id !== offering.id));
 
 			toast.success("データを更新しました");
-		} catch (error) {
-			console.error("Failed to update offering:", error);
+		} catch (_error) {
 			// エラーの場合は楽観的更新を削除
 			setOptimisticOfferings(optimisticOfferings.filter((o) => o.id !== offering.id));
 			toast.error("データの更新に失敗しました", {
@@ -133,8 +132,7 @@ export function OfferingDrawerContent({
 
 			toast.success("データを削除しました");
 			onClose();
-		} catch (error) {
-			console.error("Failed to delete offering:", error);
+		} catch (_error) {
 			// エラーの場合は楽観的更新を削除
 			setOptimisticOfferings(optimisticOfferings.filter((o) => o.id !== offering.id));
 			toast.error("データの削除に失敗しました", {

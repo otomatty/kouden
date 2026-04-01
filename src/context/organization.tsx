@@ -66,8 +66,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
 			try {
 				const parsedOrg = JSON.parse(savedOrg) as Org;
 				setSelectedOrgState(parsedOrg);
-			} catch (error) {
-				console.warn("Failed to parse saved organization:", error);
+			} catch (_error) {
 				localStorage.removeItem(STORAGE_KEY);
 			}
 		}

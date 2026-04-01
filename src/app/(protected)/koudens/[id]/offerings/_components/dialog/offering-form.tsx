@@ -117,7 +117,6 @@ export function OfferingForm({ koudenId, entries, defaultValues, onSuccess }: Of
 				form.reset();
 			}
 		} catch (error) {
-			console.error("[ERROR] Offering submission failed:", error);
 			toast.error(error instanceof Error ? error.message : "予期せぬエラーが発生しました", {
 				description: "しばらく時間をおいてから再度お試しください",
 			});
