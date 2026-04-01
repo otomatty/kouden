@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 
 // UIコンポーネントをモック化
 vi.mock("@/components/custom/OfferingAllocationDialog", () => ({
+	// biome-ignore lint/suspicious/noExplicitAny: test mock requires flexible typing for component props
 	OfferingAllocationDialog: ({ children, ...props }: any) => (
 		<div data-testid="offering-allocation-dialog" {...props}>
 			{children}

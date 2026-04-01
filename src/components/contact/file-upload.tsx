@@ -88,6 +88,7 @@ export default function FileUpload({ name, onChange, ...rest }: FileUploadProps)
 			{file && (
 				<div className="mt-2 flex items-center space-x-4">
 					{previewUrl ? (
+						// biome-ignore lint/performance/noImgElement: preview uses a blob URL from FileReader which is incompatible with next/image
 						<img src={previewUrl} alt="preview" className="w-20 h-20 object-cover rounded" />
 					) : (
 						<div className="p-2 border rounded text-sm">{file.name}</div>

@@ -32,7 +32,8 @@ type Props = {
 
 export function ReturnItemForm({ koudenId, returnItem, onSuccess }: Props) {
 	const form = useForm<FormValues>({
-		resolver: zodResolver(formSchema) as Parameters<typeof useForm<FormValues>>[0]["resolver"],
+		// biome-ignore lint/suspicious/noExplicitAny: zodResolver type mismatch with react-hook-form requires explicit any cast
+		resolver: zodResolver(formSchema) as any,
 		defaultValues: {
 			name: returnItem?.name ?? "",
 			description: returnItem?.description ?? "",

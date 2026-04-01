@@ -46,11 +46,12 @@ export function EntryAllocationDialog({
 	const [allocations, setAllocations] = useState<AllocationWithOffering[]>([]);
 
 	// 配分データを読み込み
+	// biome-ignore lint/correctness/useExhaustiveDependencies: loadAllocations uses state setters and props that don't change; including it would cause infinite loops
 	useEffect(() => {
 		if (open) {
 			loadAllocations();
 		}
-	}, [open, loadAllocations]);
+	}, [open]);
 
 	const loadAllocations = async () => {
 		setLoading(true);

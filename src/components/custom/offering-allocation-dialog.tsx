@@ -71,11 +71,12 @@ export function OfferingAllocationDialog({
 	} | null>(null);
 
 	// 既存の配分データを読み込み
+	// biome-ignore lint/correctness/useExhaustiveDependencies: loadAllocations uses state setters and props that don't change; including it would cause infinite loops
 	useEffect(() => {
 		if (open) {
 			loadAllocations();
 		}
-	}, [open, loadAllocations]);
+	}, [open]);
 
 	const loadAllocations = async () => {
 		const result = await getOfferingAllocations(offeringId);
@@ -303,6 +304,7 @@ export function OfferingAllocationDialog({
 										</div>
 										{/* 手動配分の場合の入力フィールド */}
 										{allocationMethod === "manual" && selectedEntries.includes(entry.id) && (
+											// biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation prevents parent checkbox toggle when interacting with child input
 											<div
 												className="mt-2"
 												onClick={(e) => e.stopPropagation()}

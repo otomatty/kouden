@@ -19,29 +19,29 @@ export function CustomersClient({ initialCustomers }: CustomersClientProps) {
 
 	// 検索とフィルタリングロジック
 	const filteredCustomers = useMemo(() => {
+		// ステータスのキーを取得するヘルパー関数
+		function getStatusKey(status: string): string {
+			switch (status) {
+				case "アクティブ":
+					return "active";
+				case "案件進行中":
+					return "in-progress";
+				case "フォロー中":
+					return "follow-up";
+				case "完了":
+					return "completed";
+				default:
+					return "active";
+			}
+		}
+
 		return initialCustomers.filter((customer) => {
 			const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase());
 			const customerStatus = customer.details?.status || "アクティブ";
 			const matchesStatus = statusFilter === "all" || getStatusKey(customerStatus) === statusFilter;
 			return matchesSearch && matchesStatus;
 		});
-	}, [initialCustomers, searchTerm, statusFilter, getStatusKey]);
-
-	// ステータスのキーを取得するヘルパー関数
-	function getStatusKey(status: string): string {
-		switch (status) {
-			case "アクティブ":
-				return "active";
-			case "案件進行中":
-				return "in-progress";
-			case "フォロー中":
-				return "follow-up";
-			case "完了":
-				return "completed";
-			default:
-				return "active";
-		}
-	}
+	}, [initialCustomers, searchTerm, statusFilter]);
 
 	return (
 		<div className="space-y-6">

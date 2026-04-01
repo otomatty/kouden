@@ -29,6 +29,7 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 		// Store invitation token in cookie before authentication
 		if (invitationToken) {
 			try {
+				// biome-ignore lint/suspicious/noDocumentCookie: Cookie Store API is not widely supported; direct cookie assignment is necessary for auth token storage
 				document.cookie = `invitation_token=${invitationToken}; path=/; max-age=3600; SameSite=Lax; Secure`;
 			} catch (_error) {
 				setMessage("招待情報の保存に失敗しました。再度お試しください。");
@@ -57,6 +58,7 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 
 			// Store post-login redirect in cookie if provided
 			if (propRedirectTo) {
+				// biome-ignore lint/suspicious/noDocumentCookie: Cookie Store API is not widely supported; direct cookie assignment is necessary for auth redirect
 				document.cookie = `post_auth_redirect=${encodeURIComponent(propRedirectTo)}; path=/; SameSite=Lax; Secure`;
 			}
 
@@ -139,6 +141,7 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 
 			// Store post-login redirect in cookie if provided
 			if (propRedirectTo) {
+				// biome-ignore lint/suspicious/noDocumentCookie: Cookie Store API is not widely supported; direct cookie assignment is necessary for auth redirect
 				document.cookie = `post_auth_redirect=${encodeURIComponent(propRedirectTo)}; path=/; SameSite=Lax; Secure`;
 			}
 

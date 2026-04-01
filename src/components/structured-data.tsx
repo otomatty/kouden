@@ -16,7 +16,7 @@ export function StructuredData({ type, data }: StructuredDataProps) {
 		<Script
 			id={`structured-data-${type.toLowerCase()}`}
 			type="application/ld+json"
-			// biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
+			// biome-ignore lint/security/noDangerouslySetInnerHtml: structured data must be injected as raw JSON-LD for SEO
 			dangerouslySetInnerHTML={{
 				__html: JSON.stringify(structuredData),
 			}}

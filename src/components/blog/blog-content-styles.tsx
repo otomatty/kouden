@@ -91,6 +91,7 @@ export const BlogContentStyles = {
 		</a>
 	),
 	img: ({ src, alt }: { src?: string | Blob; alt?: string }) => (
+		// biome-ignore lint/performance/noImgElement: Markdown-rendered images have dynamic external URLs incompatible with next/image
 		<img
 			src={typeof src === "string" ? src : undefined}
 			alt={alt}

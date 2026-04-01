@@ -468,13 +468,14 @@ function HearingCalendarView({
 			</div>
 			{isLoading ? (
 				<div className="grid grid-cols-7 gap-2">
-					{Array.from({ length: 7 }).map((_, dayIdx) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-						<div key={dayIdx} className="flex flex-col gap-1">
+					{["mon", "tue", "wed", "thu", "fri", "sat", "sun"].map((day) => (
+						<div key={`skeleton-day-${day}`} className="flex flex-col gap-1">
 							<div className="h-8 bg-gray-200 rounded animate-pulse" />
-							{Array.from({ length: 8 }).map((_, slotIdx) => (
-								// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-								<div key={slotIdx} className="h-8 bg-gray-100 rounded animate-pulse" />
+							{["09", "10", "11", "12", "13", "14", "15", "16"].map((hour) => (
+								<div
+									key={`skeleton-slot-${day}-${hour}`}
+									className="h-8 bg-gray-100 rounded animate-pulse"
+								/>
 							))}
 						</div>
 					))}

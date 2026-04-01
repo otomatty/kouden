@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Section } from "@/components/ui/section";
 import { SectionTitle } from "@/components/ui/section-title";
 
@@ -26,9 +27,11 @@ export function SecuritySection() {
 					<div className="space-y-4">
 						{/* Example team member card */}
 						<div className="flex items-center gap-4">
-							<img
+							<Image
 								src="/images/team-member.jpg"
 								alt="開発メンバー"
+								width={64}
+								height={64}
 								className="h-16 w-16 rounded-full object-cover"
 							/>
 							<div>

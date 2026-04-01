@@ -83,7 +83,7 @@ describe("funeral cases server actions", () => {
 		// 3) customer_details lookup: schema().from().select().eq().single()
 		supabaseMock.single
 			.mockResolvedValueOnce({ data: fakeCase, error: null }) // case
-			.mockResolvedValueOnce({ data: null, error: { message: "not found", code: "PGRST116" } }) // customer (not found)
+			.mockResolvedValueOnce({ data: null, error: { message: "not found", code: "PGRST116" } }); // customer (not found)
 		const result = await getCase("case-uuid");
 		expect(result).toEqual({ ...fakeCase, customer: undefined });
 	});

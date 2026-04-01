@@ -43,7 +43,7 @@ export async function getCase(id: string): Promise<FuneralCaseWithDetails | null
 	}
 
 	// 顧客詳細情報を別途取得
-	let customerDetails;
+	let customerDetails: Record<string, unknown> | null | undefined;
 	if (customer) {
 		const { data: details } = await supabase
 			.schema("funeral")
@@ -72,6 +72,6 @@ export async function getCase(id: string): Promise<FuneralCaseWithDetails | null
 
 	return {
 		...caseRecord,
-		customer: customerWithDetails,
+		customer: customerWithDetails as FuneralCaseWithDetails["customer"],
 	};
 }

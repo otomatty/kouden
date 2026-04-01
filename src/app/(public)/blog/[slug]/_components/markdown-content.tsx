@@ -83,7 +83,10 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
 					a: ({ children, href }) => (
 						<BlogContentStyles.a href={href}>{children}</BlogContentStyles.a>
 					),
-					img: ({ src, alt }) => <BlogContentStyles.img src={src || ""} alt={alt || ""} />,
+					img: ({ src, alt }) => (
+						// biome-ignore lint/performance/noImgElement: Markdown-rendered images have dynamic external URLs incompatible with next/image
+						<BlogContentStyles.img src={src || ""} alt={alt || ""} />
+					),
 					hr: () => <BlogContentStyles.hr />,
 					strong: ({ children }) => <BlogContentStyles.strong>{children}</BlogContentStyles.strong>,
 					em: ({ children }) => <BlogContentStyles.em>{children}</BlogContentStyles.em>,

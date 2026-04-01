@@ -25,7 +25,11 @@ function createPdfDocMockImplementation() {
 					for (const cb of listeners.end || []) cb();
 				});
 			}),
-			on: vi.fn().mockImplementation(function (this: unknown, event: string, cb: (...args: unknown[]) => void) {
+			on: vi.fn().mockImplementation(function (
+				this: unknown,
+				event: string,
+				cb: (...args: unknown[]) => void,
+			) {
 				if (!listeners[event]) listeners[event] = [];
 				listeners[event].push(cb);
 				return this;
@@ -38,7 +42,7 @@ function createPdfDocMockImplementation() {
 vi.stubEnv("RESEND_API_KEY", "test_key");
 
 describe("exportReceiptToPdf", () => {
-	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+	// biome-ignore lint/suspicious/noExplicitAny: test mock requires flexible typing
 	let supabaseMock: any;
 	const mockPurchase = {
 		id: "1",

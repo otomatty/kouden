@@ -24,6 +24,8 @@ export function VideoPlayer({ src, title, className }: VideoPlayerProps) {
 	return (
 		<Dialog open={isOpen} onOpenChange={setIsOpen}>
 			<DialogTrigger asChild>
+				{/* biome-ignore lint/a11y/noStaticElementInteractions: this div is wrapped in DialogTrigger with asChild, which handles accessibility */}
+				{/* biome-ignore lint/a11y/useAriaPropsSupportedByRole: aria props are managed by DialogTrigger */}
 				<div
 					className={`rounded-lg overflow-hidden border shadow-sm cursor-pointer hover:shadow-md transition-shadow ${className}`}
 					onClick={(e) => {

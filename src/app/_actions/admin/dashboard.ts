@@ -48,7 +48,7 @@ export async function getDashboardSummary() {
 }
 
 // 2. getServiceStatus
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+// biome-ignore lint/suspicious/noExplicitAny: fetchServiceStatus returns varying response shapes from different service endpoints
 const fetchServiceStatus = async (url: string, serviceName: string): Promise<any> => {
 	try {
 		const response = await fetch(url, { next: { revalidate: 300 } }); // 5分キャッシュ

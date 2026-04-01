@@ -80,13 +80,13 @@ const KoudenPdfDocument: React.FC<KoudenPdfDocumentProps> = ({ data }) => (
 					<View style={styles.tableRow} wrap={false} key={entry.id}>
 						<Text style={[styles.column, styles.colIndex]}>{index + 1}</Text>
 						<View style={[styles.column, styles.colName]}>
-							{wrapByLength(entry.name, wrapConfig.name).map((line, i) => (
-								<Text key={`${entry.id}-name-${i}`}>{line}</Text>
+							{wrapByLength(entry.name, wrapConfig.name).map((line) => (
+								<Text key={`${entry.id}-name-${line}`}>{line}</Text>
 							))}
 						</View>
 						<View style={[styles.column, styles.colOrg]}>
-							{wrapByLength(entry.organization, wrapConfig.org).map((line, i) => (
-								<Text key={`${entry.id}-org-${i}`}>{line}</Text>
+							{wrapByLength(entry.organization, wrapConfig.org).map((line) => (
+								<Text key={`${entry.id}-org-${line}`}>{line}</Text>
 							))}
 						</View>
 						<Text style={[styles.column, styles.colPostalCode]}>
@@ -105,8 +105,8 @@ const KoudenPdfDocument: React.FC<KoudenPdfDocumentProps> = ({ data }) => (
 						<Text style={[styles.column, styles.colRelationship]}>{entry.relationship}</Text>
 						<Text style={[styles.column, styles.colAmount]}>{`¥${entry.amount}`}</Text>
 						<View style={[styles.column, styles.colNote]}>
-							{wrapByLength(entry.note || "", wrapConfig.note).map((line, i) => (
-								<Text key={`${entry.id}-note-${i}`}>{line}</Text>
+							{wrapByLength(entry.note || "", wrapConfig.note).map((line) => (
+								<Text key={`${entry.id}-note-${line}`}>{line}</Text>
 							))}
 						</View>
 					</View>

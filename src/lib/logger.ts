@@ -70,20 +70,28 @@ function createBrowserLogger(): BrowserLogger {
 	};
 
 	return {
-		debug: (_obj: Record<string, unknown>, _msg?: string) => {
+		debug: (obj: Record<string, unknown>, msg?: string) => {
 			if (shouldLog("debug")) {
+				// biome-ignore lint/suspicious/noConsole: logger utility intentionally wraps console methods
+				console.debug(msg || "", obj);
 			}
 		},
-		info: (_obj: Record<string, unknown>, _msg?: string) => {
+		info: (obj: Record<string, unknown>, msg?: string) => {
 			if (shouldLog("info")) {
+				// biome-ignore lint/suspicious/noConsole: logger utility intentionally wraps console methods
+				console.info(msg || "", obj);
 			}
 		},
-		warn: (_obj: Record<string, unknown>, _msg?: string) => {
+		warn: (obj: Record<string, unknown>, msg?: string) => {
 			if (shouldLog("warn")) {
+				// biome-ignore lint/suspicious/noConsole: logger utility intentionally wraps console methods
+				console.warn(msg || "", obj);
 			}
 		},
-		error: (_obj: Record<string, unknown>, _msg?: string) => {
+		error: (obj: Record<string, unknown>, msg?: string) => {
 			if (shouldLog("error")) {
+				// biome-ignore lint/suspicious/noConsole: logger utility intentionally wraps console methods
+				console.error(msg || "", obj);
 			}
 		},
 	};

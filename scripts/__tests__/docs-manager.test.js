@@ -10,6 +10,7 @@ vi.mock("node:child_process");
 describe("docs-manager", () => {
 	let consoleSpy;
 	let processExitSpy;
+	let stderrSpy;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -18,6 +19,8 @@ describe("docs-manager", () => {
 			log: vi.spyOn(console, "log").mockImplementation(() => {}),
 			error: vi.spyOn(console, "error").mockImplementation(() => {}),
 		};
+
+		stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
 
 		processExitSpy = vi.spyOn(process, "exit").mockImplementation((code) => {
 			throw new Error(`process.exit unexpectedly called with "${code}"`);
@@ -70,7 +73,7 @@ describe("docs-manager", () => {
 			expect(() => runChangelogManager(["create", "1.2.3"])).toThrow(
 				/process.exit unexpectedly called/,
 			);
-			expect(consoleSpy.error).toHaveBeenCalledWith(
+			expect(stderrSpy).toHaveBeenCalledWith(
 				expect.stringContaining("更新履歴管理スクリプトの実行中にエラーが発生しました"),
 			);
 		});
@@ -125,7 +128,7 @@ describe("docs-manager", () => {
 			expect(() => runMilestoneManager(["create", "2025-q1"])).toThrow(
 				/process.exit unexpectedly called/,
 			);
-			expect(consoleSpy.error).toHaveBeenCalledWith(
+			expect(stderrSpy).toHaveBeenCalledWith(
 				expect.stringContaining("マイルストーン管理スクリプトの実行中にエラーが発生しました"),
 			);
 		});
@@ -242,7 +245,7 @@ describe("docs-manager", () => {
 				});
 
 				expect(() => runChangelogManager(["test"])).toThrow(/process.exit unexpectedly called/);
-				expect(consoleSpy.error).toHaveBeenCalled();
+				expect(stderrSpy).toHaveBeenCalled();
 			}
 		});
 
@@ -254,7 +257,7 @@ describe("docs-manager", () => {
 			expect(() => runMilestoneManager(["create", "2025-q1"])).toThrow(
 				/process.exit unexpectedly called/,
 			);
-			expect(consoleSpy.error).toHaveBeenCalledWith(
+			expect(stderrSpy).toHaveBeenCalledWith(
 				expect.stringContaining("マイルストーン管理スクリプトの実行中にエラーが発生しました"),
 			);
 		});

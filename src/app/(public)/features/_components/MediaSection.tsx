@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import type { ReactNode } from "react";
 import { Section } from "@/components/ui/section";
 
@@ -43,7 +44,7 @@ export function MediaSection({ videoUrl, imageUrl, youtubeUrl, children }: Media
 			<video src={videoUrl} controls muted loop className="w-full h-full object-cover rounded-lg" />
 		);
 	} else if (imageUrl) {
-		content = <img src={imageUrl} alt="デモ" className="w-full h-full object-cover rounded-lg" />;
+		content = <Image src={imageUrl} alt="デモ" fill className="object-cover rounded-lg" />;
 	} else {
 		content = children ?? "動画/スクリーンショット";
 	}

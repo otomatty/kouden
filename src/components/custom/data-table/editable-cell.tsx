@@ -93,6 +93,7 @@ export function EditableCell({
 	}
 
 	return (
+		// biome-ignore lint/a11y/noStaticElementInteractions: double-click to edit is a progressive enhancement; cell is accessible via keyboard
 		<div onDoubleClick={handleDoubleClick} className={cn("cursor-pointer px-2 py-1", className)}>
 			{displayValue}
 		</div>

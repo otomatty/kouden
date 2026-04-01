@@ -45,6 +45,6 @@ export default defineConfig({
 		clearMocks: true,
 		restoreMocks: true,
 		// Enable vi global for all test environments
-		isolate: false,
+		isolate: true,
 	},
 });

@@ -140,7 +140,9 @@ describe("お供物配分システム", () => {
 
 			await allocateOfferingToEntries(request);
 
+			// biome-ignore lint/style/noNonNullAssertion: test assertion - mock call is guaranteed to exist
 			const insertedData = insertMock.mock.calls[0]![0];
+			// biome-ignore lint/suspicious/noExplicitAny: test mock data has dynamic shape
 			const primaryEntry = insertedData.find((data: any) => data.is_primary_contributor);
 			expect(primaryEntry.kouden_entry_id).toBe("entry2");
 		});
@@ -284,8 +286,10 @@ describe("お供物配分システム", () => {
 
 			await allocateOfferingToEntries(request);
 
+			// biome-ignore lint/style/noNonNullAssertion: test assertion - mock call is guaranteed to exist
 			const insertedData = insertMock.mock.calls[0]![0];
 			const totalAllocated = insertedData.reduce(
+				// biome-ignore lint/suspicious/noExplicitAny: test mock data has dynamic shape
 				(sum: number, data: any) => sum + data.allocated_amount,
 				0,
 			);

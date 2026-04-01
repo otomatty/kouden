@@ -55,7 +55,9 @@ function runChangelogManager(args) {
 	try {
 		execSync(command, { stdio: "inherit" });
 	} catch (error) {
-		console.error("更新履歴管理スクリプトの実行中にエラーが発生しました:", error.message);
+		process.stderr.write(
+			`更新履歴管理スクリプトの実行中にエラーが発生しました: ${error.message}\n`,
+		);
 		process.exit(1);
 	}
 }
@@ -67,7 +69,9 @@ function runMilestoneManager(args) {
 	try {
 		execSync(command, { stdio: "inherit" });
 	} catch (error) {
-		console.error("マイルストーン管理スクリプトの実行中にエラーが発生しました:", error.message);
+		process.stderr.write(
+			`マイルストーン管理スクリプトの実行中にエラーが発生しました: ${error.message}\n`,
+		);
 		process.exit(1);
 	}
 }

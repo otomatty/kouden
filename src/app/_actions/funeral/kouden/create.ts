@@ -221,7 +221,7 @@ export async function transferKoudenOwnership(koudenId: string, newOwnerEmail: s
 			.from("profiles")
 			.select("id")
 			// biome-ignore lint: email column may exist via database extension
-		.eq("email" as any, newOwnerEmail)
+			.eq("email" as any, newOwnerEmail)
 			.single();
 
 		if (profileError || !newOwnerProfile) {

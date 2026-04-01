@@ -19,6 +19,7 @@ export function LoginButton({ invitationToken }: LoginButtonProps) {
 
 			// 認証前にinvitation_tokenをクッキーに保存
 			if (invitationToken) {
+				// biome-ignore lint/suspicious/noDocumentCookie: Cookie Store API is not widely supported; direct cookie assignment is necessary for auth token storage
 				document.cookie = `invitation_token=${invitationToken}; path=/; max-age=3600; SameSite=Lax`;
 			}
 

@@ -15,7 +15,8 @@
 			"!**/build",
 			"!**/coverage",
 			"!**/public",
-			"!**/*.html"
+			"!**/*.html",
+			"!**/*.css"
 		]
 	},
 	"formatter": {
