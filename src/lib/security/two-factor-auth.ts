@@ -3,9 +3,9 @@
  * TOTP (Time-based One-Time Password) を使用
  */
 
-import { createAdminClient } from "@/lib/supabase/admin";
 import QRCode from "qrcode";
 import speakeasy from "speakeasy";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface TwoFactorSetup {
 	secret: string;

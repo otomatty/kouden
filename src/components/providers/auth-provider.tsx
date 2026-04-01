@@ -1,8 +1,8 @@
 "use client";
-import { useEffect, type ReactNode } from "react";
-import { useSetAtom } from "jotai";
 import type { User } from "@supabase/supabase-js";
-import { userAtom, isLoadingUserAtom } from "@/store/auth";
+import { useSetAtom } from "jotai";
+import { type ReactNode, useEffect } from "react";
+import { isLoadingUserAtom, userAtom } from "@/store/auth";
 
 interface AuthProviderProps {
 	initialUser: User | null;

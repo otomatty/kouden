@@ -1,7 +1,7 @@
+import { Calendar } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar } from "lucide-react";
 import type { TPost } from "@/types/post";
 
 interface BlogPostCardProps {

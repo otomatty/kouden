@@ -1,6 +1,3 @@
-import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	AlertCircle,
 	AlertTriangle,
@@ -11,8 +8,11 @@ import {
 	Sparkles,
 	Zap,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ChangelogMeta } from "@/lib/changelogs";
+import { cn } from "@/lib/utils";
 
 interface ChangelogItemProps {
 	changelog: ChangelogMeta;

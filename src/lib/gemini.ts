@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, type GenerativeModel } from "@google/generative-ai";
+import { type GenerativeModel, GoogleGenerativeAI } from "@google/generative-ai";
 
 /**
  * Gemini APIクライアント
@@ -145,5 +145,5 @@ export const GEMINI_CONFIGS = {
 	},
 } as const;
 
-export { GeminiClient };
 export type { GenerativeModel };
+export { GeminiClient };

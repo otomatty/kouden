@@ -1,4 +1,4 @@
-import type { FAQItem, FAQCategory } from "../_components/FAQClient";
+import type { FAQCategory, FAQItem } from "../_components/FAQClient";
 
 export const records: FAQCategory = {
 	category: "記帳・検索",

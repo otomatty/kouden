@@ -1,14 +1,14 @@
+import { AlertCircle, Calculator, TrendingUp } from "lucide-react";
 import type { Metadata } from "next";
-import { Calculator, TrendingUp, AlertCircle } from "lucide-react";
-import { PageHero } from "../../_components/page-hero";
-import { SectionTitle } from "@/components/ui/section-title";
-import { FeaturePointCard } from "../_components/FeaturePointCard";
-import ScenarioVideoWrapper from "./_components/scenario-video-wrapper";
-import { TestimonialsSection } from "../_components/TestimonialsSection";
-import { testimonials } from "./testimonials";
-import { OtherFeaturesList } from "../_components/OtherFeaturesList";
-import { CTASection } from "../../_components/cta-section";
 import { Section } from "@/components/ui/section";
+import { SectionTitle } from "@/components/ui/section-title";
+import { CTASection } from "../../_components/cta-section";
+import { PageHero } from "../../_components/page-hero";
+import { FeaturePointCard } from "../_components/FeaturePointCard";
+import { OtherFeaturesList } from "../_components/OtherFeaturesList";
+import { TestimonialsSection } from "../_components/TestimonialsSection";
+import ScenarioVideoWrapper from "./_components/scenario-video-wrapper";
+import { testimonials } from "./testimonials";
 
 export const metadata: Metadata = {
 	title: "自動計算＆グラフ表示 | 機能詳細 | 香典帳",

@@ -1,8 +1,8 @@
-import { getAllChangelogs } from "@/lib/changelogs";
+import type { Metadata } from "next";
 import { ChangelogsTimeline } from "@/components/changelogs/changelogs-timeline";
 import Container from "@/components/ui/container";
+import { getAllChangelogs } from "@/lib/changelogs";
 import { PageHero } from "../_components/page-hero";
-import type { Metadata } from "next";
 
 export const metadata: Metadata = {
 	title: "更新履歴 - 香典帳アプリ",

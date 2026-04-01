@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { getPlans } from "@/app/_actions/plans";
-import { getKoudenWithPlan } from "@/app/_actions/koudens";
-import PlansPageClient from "./_components/PlansPageClient";
-import { checkKoudenPermission } from "@/app/_actions/permissions";
 import { notFound } from "next/navigation";
+import { getKoudenWithPlan } from "@/app/_actions/koudens";
+import { checkKoudenPermission } from "@/app/_actions/permissions";
+import { getPlans } from "@/app/_actions/plans";
+import PlansPageClient from "./_components/PlansPageClient";
 
 interface PlansPageProps {
 	params: Promise<{ id: string }>;

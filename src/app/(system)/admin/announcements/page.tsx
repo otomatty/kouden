@@ -1,9 +1,6 @@
-import {
-	getAnnouncements,
-	deleteAnnouncement,
-} from "@/app/_actions/admin/announcements";
-import { AnnouncementsTable } from "./_components/announcements-table";
+import { deleteAnnouncement, getAnnouncements } from "@/app/_actions/admin/announcements";
 import { AddAnnouncementButton } from "./_components/add-announcement-button";
+import { AnnouncementsTable } from "./_components/announcements-table";
 
 export default async function AnnouncementsPage() {
 	const announcements = await getAnnouncements();
@@ -15,10 +12,7 @@ export default async function AnnouncementsPage() {
 				<AddAnnouncementButton />
 			</div>
 			<div className="mt-6">
-				<AnnouncementsTable
-					announcements={announcements}
-					deleteAnnouncement={deleteAnnouncement}
-				/>
+				<AnnouncementsTable announcements={announcements} deleteAnnouncement={deleteAnnouncement} />
 			</div>
 		</div>
 	);

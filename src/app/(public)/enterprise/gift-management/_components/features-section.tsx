@@ -1,6 +1,6 @@
+import { BarChart2, Database, Gift, Mail, Package, ShoppingCart, Users } from "lucide-react";
 import { Section } from "@/components/ui/section";
 import { SectionTitle } from "@/components/ui/section-title";
-import { Users, Gift, Mail, ShoppingCart, Package, Database, BarChart2 } from "lucide-react";
 
 /**
  * ギフトショップ向けの主な機能を表示するセクション

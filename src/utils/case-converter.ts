@@ -1,5 +1,5 @@
-import snakecaseKeys from "snakecase-keys";
 import camelcaseKeys from "camelcase-keys";
+import snakecaseKeys from "snakecase-keys";
 import type { BaseOffering } from "@/types/offerings";
 
 /**

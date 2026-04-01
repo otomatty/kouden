@@ -1,8 +1,8 @@
+import { BarChart2, Cloud, FileText, Gift, LayoutDashboard, Lock, Monitor } from "lucide-react";
 import Link from "next/link";
-import { SectionTitle } from "@/components/ui/section-title";
-import { Cloud, BarChart2, FileText, Monitor, Gift, Lock, LayoutDashboard } from "lucide-react";
 import type React from "react";
 import { Section } from "@/components/ui/section";
+import { SectionTitle } from "@/components/ui/section-title";
 
 type FeatureItem = {
 	id: string;

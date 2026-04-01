@@ -1,15 +1,15 @@
 "use client";
 
-import * as React from "react";
 import { useRouter } from "next/navigation";
-import { useOrganization } from "@/context/organization";
+import * as React from "react";
 import {
 	Select,
-	SelectTrigger,
-	SelectValue,
 	SelectContent,
 	SelectItem,
+	SelectTrigger,
+	SelectValue,
 } from "@/components/ui/select";
+import { useOrganization } from "@/context/organization";
 
 export function OrganizationSwitcher() {
 	const router = useRouter();

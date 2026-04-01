@@ -1,5 +1,5 @@
-import { Badge } from "@/components/ui/badge";
 import { Calendar, User } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface BlogHeaderProps {
 	title: string;

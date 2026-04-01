@@ -7,8 +7,8 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import type { ReturnStatus } from "@/types/return-records/return-records";
 import { returnStatusMap } from "@/components/ui/status-badge";
+import type { ReturnStatus } from "@/types/return-records/return-records";
 
 interface StatusSelectProps {
 	/** 現在の値 */

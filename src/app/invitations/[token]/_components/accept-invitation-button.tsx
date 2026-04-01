@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { motion } from "framer-motion";
+import { Loader2, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
 import { toast } from "sonner";
 import { acceptInvitation } from "@/app/_actions/invitations";
-import { Loader2, UserPlus } from "lucide-react";
-import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
 
 interface AcceptInvitationButtonProps {
 	token: string;

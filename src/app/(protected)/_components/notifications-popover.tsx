@@ -1,14 +1,14 @@
 "use client";
 
 import { Bell } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { formatDate } from "@/lib/utils";
-import { useState, useMemo } from "react";
-import type { NotificationItem } from "@/types/notifications";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { createClient } from "@/lib/supabase/client";
+import { formatDate } from "@/lib/utils";
+import type { NotificationItem } from "@/types/notifications";
 
 interface NotificationsPopoverProps {
 	notifications: NotificationItem[];

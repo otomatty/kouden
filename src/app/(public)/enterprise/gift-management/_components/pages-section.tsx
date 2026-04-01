@@ -1,7 +1,7 @@
+import { ChevronRight } from "lucide-react";
+import Link from "next/link";
 import { Section } from "@/components/ui/section";
 import { SectionTitle } from "@/components/ui/section-title";
-import Link from "next/link";
-import { ChevronRight } from "lucide-react";
 
 /**
  * ギフトショップ向けのページ一覧を表示するセクション

@@ -1,8 +1,8 @@
 "use client";
 
+import { Pencil, Plus, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Pencil, Trash } from "lucide-react";
 // types
 import type { Relationship } from "@/types/relationships";
 

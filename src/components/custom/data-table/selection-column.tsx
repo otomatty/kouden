@@ -1,7 +1,7 @@
+import type { Row, Table } from "@tanstack/react-table";
 import { Checkbox } from "@/components/ui/checkbox";
-import type { Table, Row } from "@tanstack/react-table";
-import type { KoudenPermission } from "@/types/role";
 import { canUpdateKouden } from "@/store/permission";
+import type { KoudenPermission } from "@/types/role";
 
 interface SelectionColumnProps<TData> {
 	table: Table<TData>;

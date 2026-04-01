@@ -3,8 +3,8 @@
  * @module return-records
  */
 
-import type { Database } from "@/types/supabase";
 import type { AttendanceType } from "@/types/entries";
+import type { Database } from "@/types/supabase";
 
 /**
  * 返礼状況の型定義

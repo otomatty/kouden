@@ -1,7 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { AlertTriangle, Calculator, CheckCircle, Users } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import {
+	allocateOfferingToEntries,
+	recalculateOfferingAllocation,
+} from "@/app/_actions/offerings/allocation";
+import {
+	checkOfferingAllocationIntegrity,
+	getOfferingAllocations,
+} from "@/app/_actions/offerings/queries";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
@@ -9,6 +21,8 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
 	Select,
 	SelectContent,
@@ -16,22 +30,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { AlertTriangle, CheckCircle, Users, Calculator } from "lucide-react";
-import { toast } from "sonner";
-
-import {
-	allocateOfferingToEntries,
-	recalculateOfferingAllocation,
-} from "@/app/_actions/offerings/allocation";
-import {
-	getOfferingAllocations,
-	checkOfferingAllocationIntegrity,
-} from "@/app/_actions/offerings/queries";
 import type { OfferingAllocation, OfferingAllocationRequest } from "@/types/entries";
 
 interface OfferingAllocationDialogProps {

@@ -1,8 +1,8 @@
 "use server";
 
+import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/supabase";
-import logger from "@/lib/logger";
 
 type Plan = Database["public"]["Tables"]["plans"]["Row"];
 

@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import fs from "node:fs";
 import readline from "node:readline";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Import functions to test
-import { createMilestoneFile, showTemplate, showHelp } from "../milestone-manager.js";
+import { createMilestoneFile, showHelp, showTemplate } from "../milestone-manager.js";
 
 // Mock external dependencies
 vi.mock("node:fs");

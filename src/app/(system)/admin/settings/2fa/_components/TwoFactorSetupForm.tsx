@@ -5,15 +5,15 @@
 
 "use client";
 
-import { useState, useTransition } from "react";
+import { AlertCircle, Check, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { setupTwoFactorAuth } from "@/app/_actions/admin/admin-2fa";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Check, AlertCircle } from "lucide-react";
-import { setupTwoFactorAuth } from "@/app/_actions/admin/admin-2fa";
 
 interface TwoFactorSetupFormProps {
 	secret: string;

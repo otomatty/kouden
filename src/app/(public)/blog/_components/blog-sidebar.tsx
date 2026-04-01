@@ -1,8 +1,8 @@
+import { Bookmark, Calendar, Eye } from "lucide-react";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { PopularPosts } from "@/components/blog/popular-posts";
-import { Eye, Bookmark, Calendar } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { TPost } from "@/types/post";
 
 interface BlogSidebarProps {

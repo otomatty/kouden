@@ -1,6 +1,6 @@
+import { Activity, Crown, Search, Users } from "lucide-react";
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, Users, Crown, Activity } from "lucide-react";
 
 export function UserManagementSkeleton() {
 	// スケルトンローディング用の固定キー

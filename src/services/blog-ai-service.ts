@@ -1,5 +1,5 @@
-import type { BlogMetadata, AIResponse } from "@/types/blog-ai-agent";
 import { GeminiClient } from "@/lib/gemini";
+import type { AIResponse, BlogMetadata } from "@/types/blog-ai-agent";
 
 interface CallAIParams {
 	userMessage: string;

@@ -1,12 +1,12 @@
-import type { Metadata } from "next";
-import { FeatureDescription } from "../_components/feature-description";
-import { ScreenshotShowcase } from "../_components/screenshot-showcase";
-import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { Section } from "@/components/ui/section";
 import { SectionTitle } from "@/components/ui/section-title";
-import { Button } from "@/components/ui/button";
 import { DetailPageLayout } from "../../_components/detail-page-layout";
+import { FeatureDescription } from "../_components/feature-description";
+import { ScreenshotShowcase } from "../_components/screenshot-showcase";
 
 export const metadata: Metadata = {
 	title: "ロイヤルティ管理 | ギフトショップ向け管理システム",

@@ -1,18 +1,18 @@
-import { MobileDataTableToolbar } from "@/components/custom/data-table/mobile-toolbar";
-import { DisplaySettings } from "@/components/custom/data-table/display-settings";
-import { StickySearchHeader } from "./sticky-search-header";
 import {
-	User,
-	Building2,
-	MapPin,
-	BadgeIcon,
-	CalendarClock,
-	CalendarCheck,
-	BanknoteIcon,
-	Coins,
 	ArrowDownAZ,
+	BadgeIcon,
+	BanknoteIcon,
+	Building2,
+	CalendarCheck,
+	CalendarClock,
+	Coins,
+	MapPin,
+	User,
 } from "lucide-react";
-import { useRef, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { DisplaySettings } from "@/components/custom/data-table/display-settings";
+import { MobileDataTableToolbar } from "@/components/custom/data-table/mobile-toolbar";
+import { StickySearchHeader } from "./sticky-search-header";
 
 interface MobileFiltersProps {
 	searchQuery: string;

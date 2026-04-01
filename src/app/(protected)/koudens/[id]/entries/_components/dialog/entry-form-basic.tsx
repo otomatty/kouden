@@ -1,15 +1,15 @@
 "use client";
 
+import { useSetAtom } from "jotai";
 import { useEffect } from "react";
 import { useFormContext } from "react-hook-form";
-import { useSetAtom } from "jotai";
-import { FormControl, FormField, FormItem, FormMessage, FormLabel } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { formatCurrency, formatInputCurrency } from "@/utils/currency";
-import { formatPostalCode, searchAddress } from "./entry-form";
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { addressSearchStateAtom } from "@/store/entries";
+import { formatCurrency, formatInputCurrency } from "@/utils/currency";
 import { normalizeNumericInput } from "@/utils/normalize";
+import { formatPostalCode, searchAddress } from "./entry-form";
 
 export function EntryFormBasic() {
 	const form = useFormContext();

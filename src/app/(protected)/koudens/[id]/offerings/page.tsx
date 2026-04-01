@@ -1,6 +1,6 @@
-import { OfferingView } from "./_components";
-import { getOfferings } from "@/app/_actions/offerings";
 import { getEntries } from "@/app/_actions/entries";
+import { getOfferings } from "@/app/_actions/offerings";
+import { OfferingView } from "./_components";
 
 interface OfferingsPageProps {
 	params: Promise<{ id: string }>;

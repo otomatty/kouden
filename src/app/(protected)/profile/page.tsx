@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { ProfileForm } from "./_components/profile-form";
-import { AvatarUpload } from "./_components/avatar-upload";
-import { ActivityStats } from "./_components/activity-stats";
+import { getActivityStats, getProfile } from "@/app/_actions/profiles";
 import { RecentBookmarks } from "@/app/(protected)/koudens/_components/recent-bookmarks";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BackLink } from "@/components/custom/back-link";
-import { getProfile, getActivityStats } from "@/app/_actions/profiles";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { createClient } from "@/lib/supabase/server";
+import { ActivityStats } from "./_components/activity-stats";
+import { AvatarUpload } from "./_components/avatar-upload";
+import { ProfileForm } from "./_components/profile-form";
 
 export const metadata: Metadata = {
 	title: "プロフィール | 香典帳",

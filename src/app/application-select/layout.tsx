@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import AppSelectHeader from "./_components/app-select-header";
 import { createClient } from "@/lib/supabase/server";
+import AppSelectHeader from "./_components/app-select-header";
 
 // Version fetched from environment variable
 const version = process.env.NEXT_PUBLIC_APP_VERSION ?? "";

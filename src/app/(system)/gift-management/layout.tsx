@@ -1,8 +1,8 @@
-import { requireOrganizationAccess } from "@/lib/access";
-import { createClient } from "@/lib/supabase/server";
+import type { ReactNode } from "react";
 import { isAdmin } from "@/app/_actions/admin/permissions";
 import { SystemHeader } from "@/components/ui/system-header";
-import type { ReactNode } from "react";
+import { requireOrganizationAccess } from "@/lib/access";
+import { createClient } from "@/lib/supabase/server";
 
 // Version fetched from environment variable
 const version = process.env.NEXT_PUBLIC_APP_VERSION ?? "";

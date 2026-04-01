@@ -1,7 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CustomerCard } from "./customer-card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Customer } from "@/types/funeral-management";
+import { CustomerCard } from "./customer-card";
 
 interface CustomerListProps {
 	customers: Customer[];

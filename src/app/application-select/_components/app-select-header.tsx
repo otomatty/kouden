@@ -1,6 +1,7 @@
 +"use client";
-import Link from "next/link";
+
 import type { User } from "@supabase/supabase-js";
+import Link from "next/link";
 import Container from "@/components/ui/container";
 
 interface OrganizationsHeaderProps {

@@ -1,16 +1,15 @@
 import type { Metadata } from "next";
-import { checkKoudenPermission } from "@/app/_actions/permissions";
-import ClientProviders from "@/components/providers/ClientProviders";
-// Server Actions
-import { getKouden, getKoudenWithPlan } from "@/app/_actions/koudens";
-
 // components
 import { notFound, redirect } from "next/navigation";
-import ArchivedPage from "./archived/page";
+// Server Actions
+import { getKouden, getKoudenWithPlan } from "@/app/_actions/koudens";
+import { checkKoudenPermission } from "@/app/_actions/permissions";
+import { BottomNavigation } from "@/app/(protected)/koudens/[id]/_components/_common/bottom-navigation";
+import ClientProviders from "@/components/providers/ClientProviders";
+import type { Kouden } from "@/types/kouden";
 import KoudenHeader from "./_components/_common/kouden-header";
 import TabNavigation from "./_components/_common/tab-navigation";
-import { BottomNavigation } from "@/app/(protected)/koudens/[id]/_components/_common/bottom-navigation";
-import type { Kouden } from "@/types/kouden";
+import ArchivedPage from "./archived/page";
 
 /**
  * 動的ルートのメタデータを生成する
@@ -18,7 +17,9 @@ import type { Kouden } from "@/types/kouden";
  */
 export async function generateMetadata({
 	params,
-}: { params: Promise<{ id: string }> }): Promise<Metadata> {
+}: {
+	params: Promise<{ id: string }>;
+}): Promise<Metadata> {
 	const { id: koudenId } = await params;
 	let kouden: Kouden | null;
 	try {

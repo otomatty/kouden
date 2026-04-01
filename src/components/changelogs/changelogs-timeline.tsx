@@ -1,5 +1,5 @@
-import { ChangelogItem } from "./changelog-item";
 import type { ChangelogMeta } from "@/lib/changelogs";
+import { ChangelogItem } from "./changelog-item";
 
 interface ChangelogsTimelineProps {
 	changelogs: ChangelogMeta[];

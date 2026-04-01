@@ -1,26 +1,24 @@
 "use client";
+import { zodResolver } from "@hookform/resolvers/zod";
 // library
 import { useAtom } from "jotai";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { entryFormDraftAtom } from "@/store/entries";
 import { useEffect } from "react";
-// ui
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Form } from "@/components/ui/form";
-
-// types
-import type { Entry, AttendanceType, EntryFormValues } from "@/types/entries";
-import type { Relationship } from "@/types/relationships";
-import { entryFormSchema } from "@/schemas/entries";
-// components
-import { EntryFormBasic } from "./entry-form-basic";
-import { EntryFormAdditional } from "./entry-form-additional";
-// stores
-import { formSubmissionStateAtom } from "@/store/entries";
 // Server Actions
 import { handleEntrySubmission } from "@/app/_actions/entry-form";
+import { Form } from "@/components/ui/form";
+// ui
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { entryFormSchema } from "@/schemas/entries";
+// stores
+import { entryFormDraftAtom, formSubmissionStateAtom } from "@/store/entries";
+// types
+import type { AttendanceType, Entry, EntryFormValues } from "@/types/entries";
+import type { Relationship } from "@/types/relationships";
+import { EntryFormAdditional } from "./entry-form-additional";
+// components
+import { EntryFormBasic } from "./entry-form-basic";
 
 export interface EntryFormProps {
 	/**

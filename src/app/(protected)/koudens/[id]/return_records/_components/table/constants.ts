@@ -1,5 +1,5 @@
-import type { EditableColumnConfig } from "@/types/data-table/table";
 import type { SelectColorConfig } from "@/types/data-table/select-colors";
+import type { EditableColumnConfig } from "@/types/data-table/table";
 
 // 返礼状況の優先順位（ソート用）
 // ※ マッピングと色設定は共通コンポーネント（StatusBadge）に移行

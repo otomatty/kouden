@@ -1,8 +1,8 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import logger from "@/lib/logger";
+import { createClient } from "@/lib/supabase/server";
 
 interface UpdateProfileParams {
 	display_name: string;

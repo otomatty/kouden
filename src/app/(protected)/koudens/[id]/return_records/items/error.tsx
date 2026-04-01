@@ -1,8 +1,8 @@
 "use client";
 
+import { AlertTriangle } from "lucide-react";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle } from "lucide-react";
 
 interface ReturnItemsErrorProps {
 	error: Error & { digest?: string };

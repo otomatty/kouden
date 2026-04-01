@@ -1,10 +1,10 @@
 "use client";
-import { reserveSlot } from "@/app/_actions/calendar";
 import type { DayAvailability, Slot } from "@/app/_actions/calendar";
-import { cn } from "@/lib/utils";
+import { reserveSlot } from "@/app/_actions/calendar";
+import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
+import { cn } from "@/lib/utils";
 
 interface CalendarGridProps {
 	availability: DayAvailability[];

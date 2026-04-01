@@ -1,15 +1,8 @@
 // ui
-import { ArrowUpDown, Trash2, MoreHorizontal } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { StatusBadge, type ReturnStatus } from "@/components/ui/status-badge";
+
+import type { Column, Row, Table } from "@tanstack/react-table";
+import { ArrowUpDown, MoreHorizontal, Trash2 } from "lucide-react";
 import { SelectionColumn } from "@/components/custom/data-table/selection-column";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -21,13 +14,20 @@ import {
 	AlertDialogTitle,
 	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { type ReturnStatus, StatusBadge } from "@/components/ui/status-badge";
+import type { CellValue } from "@/types/data-table/table";
+import type { AttendanceType, Entry } from "@/types/entries";
+import type { Relationship } from "@/types/relationships";
 // types
 import type { KoudenPermission } from "@/types/role";
-import type { Table, Row, Column } from "@tanstack/react-table";
-import type { Entry, AttendanceType } from "@/types/entries";
-import type { Relationship } from "@/types/relationships";
-import type { CellValue } from "@/types/data-table/table";
 // utils
 import { formatCurrency } from "@/utils/currency";
 import { formatPostalCode } from "@/utils/postal-code";
@@ -37,9 +37,9 @@ import { EntryDialog } from "../dialog/entry-dialog";
 import {
 	attendanceTypeMap,
 	attendanceTypePriority,
-	returnStatusPriority,
 	offeringMap,
 	offeringPriority,
+	returnStatusPriority,
 } from "./constants";
 
 interface ColumnProps {

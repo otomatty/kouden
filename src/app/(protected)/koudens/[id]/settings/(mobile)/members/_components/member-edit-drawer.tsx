@@ -1,23 +1,23 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-	Drawer,
-	DrawerContent,
-	DrawerHeader,
-	DrawerTitle,
-	DrawerDescription,
-	DrawerFooter,
-} from "@/components/ui/drawer";
+import { toast } from "sonner";
+import { removeMember as deleteMember, leaveMember, updateMemberRole } from "@/app/_actions/roles";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+	Drawer,
+	DrawerContent,
+	DrawerDescription,
+	DrawerFooter,
+	DrawerHeader,
+	DrawerTitle,
+} from "@/components/ui/drawer";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { toast } from "sonner";
 import { getInitials } from "@/lib/utils";
 import type { Member } from "./types";
-import { updateMemberRole, removeMember as deleteMember, leaveMember } from "@/app/_actions/roles";
 
 interface MemberEditDrawerProps {
 	member: Member | null;

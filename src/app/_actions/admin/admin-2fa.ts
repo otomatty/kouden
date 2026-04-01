@@ -5,16 +5,16 @@
 
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
-import {
-	verifyTwoFactorToken,
-	saveTwoFactorSecret,
-	disableTwoFactor,
-	isTwoFactorEnabled,
-} from "@/lib/security/two-factor-auth";
-import { logTwoFactorEventServerAction } from "@/lib/security/security-logger";
 import { revalidatePath } from "next/cache";
 import logger from "@/lib/logger";
+import { logTwoFactorEventServerAction } from "@/lib/security/security-logger";
+import {
+	disableTwoFactor,
+	isTwoFactorEnabled,
+	saveTwoFactorSecret,
+	verifyTwoFactorToken,
+} from "@/lib/security/two-factor-auth";
+import { createClient } from "@/lib/supabase/server";
 
 export interface TwoFactorActionResult {
 	success: boolean;

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
-import { SurveyModal } from "./survey-modal";
-import { getUserSurveyStatus, checkOneWeekOwnershipSurvey } from "@/app/_actions/user-surveys";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { checkOneWeekOwnershipSurvey, getUserSurveyStatus } from "@/app/_actions/user-surveys";
 import type { SurveyTrigger as SurveyTriggerType } from "@/schemas/user-surveys";
+import { SurveyModal } from "./survey-modal";
 
 interface SurveyTriggerProps {
 	trigger: SurveyTriggerType;

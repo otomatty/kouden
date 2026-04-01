@@ -1,7 +1,7 @@
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
+import Link from "next/link";
 import { zenOldMincho } from "@/app/fonts";
+import { Button } from "@/components/ui/button";
 
 interface CTAButton {
 	label: string;

@@ -1,12 +1,22 @@
 "use client";
 
-// types
-import type { ReturnManagementSummary } from "@/types/return-records/return-records";
-import type { Relationship } from "@/types/relationships";
-import type { Entry } from "@/types/entries";
+import type { Column, Row, Table } from "@tanstack/react-table";
+import {
+	ArrowUpDown,
+	Calculator,
+	ChevronRight,
+	DollarSign,
+	MapPin,
+	MoreHorizontal,
+	Package,
+	Phone,
+	Trash,
+	Users,
+} from "lucide-react";
+import { SelectionColumn } from "@/components/custom/data-table/selection-column";
+import { EntryAllocationDialog } from "@/components/custom/EntryAllocationDialog";
 // components
 import { Badge } from "@/components/ui/badge";
-import { StatusBadge, type ReturnStatus } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -14,29 +24,19 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-	ArrowUpDown,
-	MoreHorizontal,
-	Trash,
-	MapPin,
-	Phone,
-	DollarSign,
-	Users,
-	Calculator,
-	ChevronRight,
-	Package,
-} from "lucide-react";
-import { EntryAllocationDialog } from "@/components/custom/EntryAllocationDialog";
-import { SelectionColumn } from "@/components/custom/data-table/selection-column";
-
+import { type ReturnStatus, StatusBadge } from "@/components/ui/status-badge";
+import type { CellValue } from "@/types/data-table/table";
+import type { Entry } from "@/types/entries";
+import type { Relationship } from "@/types/relationships";
+// types
+import type { ReturnManagementSummary } from "@/types/return-records/return-records";
 // types
 import type { KoudenPermission } from "@/types/role";
-import type { Table, Row, Column } from "@tanstack/react-table";
-import type { CellValue } from "@/types/data-table/table";
 // utils
 import { formatCurrency } from "@/utils/currency";
 // components
 import { ReturnDialog } from "../dialog/return-dialog";
+
 // 不要になったため削除（共通コンポーネントを使用）
 
 interface ColumnProps {
@@ -115,9 +115,10 @@ export function createColumns({
 			cell: ({
 				row,
 				table,
-			}: { row: Row<ReturnManagementSummary>; table: Table<ReturnManagementSummary> }) => (
-				<SelectionColumn table={table} row={row} permission={permission} />
-			),
+			}: {
+				row: Row<ReturnManagementSummary>;
+				table: Table<ReturnManagementSummary>;
+			}) => <SelectionColumn table={table} row={row} permission={permission} />,
 			enableSorting: false,
 			enableHiding: false,
 		},

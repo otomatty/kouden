@@ -1,8 +1,8 @@
 "use client";
 
+import { Archive, Calendar, FileSpreadsheet, FileText, SlidersHorizontal } from "lucide-react";
 import type React from "react";
-import { ScenarioVideoSection, type Scenario } from "../../_components/ScenarioVideoSection";
-import { FileSpreadsheet, FileText, SlidersHorizontal, Calendar, Archive } from "lucide-react";
+import { type Scenario, ScenarioVideoSection } from "../../_components/ScenarioVideoSection";
 
 const scenarios: Scenario[] = [
 	{

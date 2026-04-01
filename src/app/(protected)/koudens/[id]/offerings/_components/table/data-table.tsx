@@ -1,44 +1,43 @@
 "use client";
-// library
-import * as React from "react";
 import {
-	useReactTable,
+	type ColumnFiltersState,
 	getCoreRowModel,
 	getFilteredRowModel,
 	getSortedRowModel,
 	type SortingState,
-	type ColumnFiltersState,
+	useReactTable,
 	type VisibilityState,
 } from "@tanstack/react-table";
 import { useAtomValue } from "jotai";
-import { useState, useCallback, useEffect, useMemo } from "react";
-
 // ui
 import { Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+// library
+import * as React from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-// types
-import type { Offering, OfferingWithKoudenEntries } from "@/types/offerings";
-import type { Entry } from "@/types/entries";
-import type { CellValue } from "@/types/data-table/table";
 // Server Actions
 import { deleteOffering, updateOfferingField } from "@/app/_actions/offerings";
+// components
+import { DataTable as BaseDataTable } from "@/components/custom/data-table";
+import { DataTableToolbar } from "@/components/custom/data-table/toolbar";
+import { Button } from "@/components/ui/button";
 // hooks
 import { useMediaQuery } from "@/hooks/use-media-query";
 // stores
 import { permissionAtom } from "@/store/permission";
-// components
-import { DataTable as BaseDataTable } from "@/components/custom/data-table";
-import { DataTableToolbar } from "@/components/custom/data-table/toolbar";
+import type { CellValue } from "@/types/data-table/table";
+import type { Entry } from "@/types/entries";
+// types
+import type { Offering, OfferingWithKoudenEntries } from "@/types/offerings";
 import { OfferingDialog } from "../dialog/offering-dialog";
 import { createColumns } from "./columns";
 import {
 	columnLabels,
+	defaultColumnVisibility,
+	editableColumns,
 	searchOptions,
 	sortOptions,
-	defaultColumnVisibility,
 	tabletColumnVisibility,
-	editableColumns,
 } from "./constants";
 
 interface DataTableProps {

@@ -1,10 +1,10 @@
+import { ArrowRight, Calendar, CheckCircle, Clock, Gift, Users, Zap } from "lucide-react";
 import type { Metadata } from "next";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import Container from "@/components/ui/container";
-import { CheckCircle, Calendar, Users, Zap, Gift, Clock, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import Container from "@/components/ui/container";
 import { HearingApplicationForm } from "./_components/hearing-application-form";
 
 export const metadata: Metadata = {

@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { AnnouncementCard } from "./announcement-card";
-import type { Announcement } from "@/types/announcements";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import type { Announcement } from "@/types/announcements";
+import { AnnouncementCard } from "./announcement-card";
 
 interface HeroAnnouncementsProps {
 	announcements: Announcement[];

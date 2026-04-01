@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { MemberList } from "./member-list";
 import { MemberEditDrawer } from "./member-edit-drawer";
+import { MemberList } from "./member-list";
 import type { Member } from "./types";
 
 interface MemberClientWrapperProps {

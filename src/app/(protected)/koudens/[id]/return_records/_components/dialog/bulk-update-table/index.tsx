@@ -1,6 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { AlertTriangle, Loader2, Settings } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+// actions
+import {
+	getReturnItemsForBulkUpdate,
+	// 通常版
+	// executeBulkUpdateMultipleGroups,
+} from "@/app/_actions/return-records/bulk-update";
+// 最適化版（超高速）
+import { executeBulkUpdateOptimized } from "@/app/_actions/return-records/bulk-update-optimized";
+import { getAllReturnRecordsForBulkUpdate } from "@/app/_actions/return-records/return-records";
+import { BulkUpdateLoadingScreen } from "@/components/custom/bulk-update-loading-screen";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -11,31 +24,14 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { toast } from "sonner";
-import { Settings, Loader2, AlertTriangle } from "lucide-react";
-
+import { returnRecordsBulkUpdateHints } from "@/store/loading-hints";
+import type { AmountGroupData, ReturnItemMaster } from "@/types/return-records/bulk-update";
 // types
 import type { ReturnManagementSummary } from "@/types/return-records/return-records";
-import type { AmountGroupData, ReturnItemMaster } from "@/types/return-records/bulk-update";
-
 // utils
 import { groupRecordsByAmount } from "@/utils/bulk-update-helpers";
-
-// actions
-import {
-	getReturnItemsForBulkUpdate,
-	// 通常版
-	// executeBulkUpdateMultipleGroups,
-} from "@/app/_actions/return-records/bulk-update";
-// 最適化版（超高速）
-import { executeBulkUpdateOptimized } from "@/app/_actions/return-records/bulk-update-optimized";
-import { getAllReturnRecordsForBulkUpdate } from "@/app/_actions/return-records/return-records";
-
 // components
 import { BulkUpdateTable } from "./bulk-update-table";
-import { BulkUpdateLoadingScreen } from "@/components/custom/bulk-update-loading-screen";
-import { returnRecordsBulkUpdateHints } from "@/store/loading-hints";
 
 interface BulkUpdateTableDialogProps {
 	koudenId: string;

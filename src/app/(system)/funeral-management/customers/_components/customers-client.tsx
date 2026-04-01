@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { CustomerSearchFilter } from "./customer-search-filter";
-import { CustomerList } from "./customer-list";
+import { useMemo, useState } from "react";
 import type { Customer } from "@/types/funeral-management";
+import { CustomerList } from "./customer-list";
+import { CustomerSearchFilter } from "./customer-search-filter";
 
 interface CustomersClientProps {
 	initialCustomers: Customer[];

@@ -1,5 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
 import type { AdminUser } from "@/types/admin";
 
 export async function getAdminUsers() {

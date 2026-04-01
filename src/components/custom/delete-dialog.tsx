@@ -46,11 +46,11 @@
 
 "use client";
 
-import { useState } from "react";
 import { Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
+import { useState } from "react";
 import { toast } from "sonner";
+import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
+import { Button } from "@/components/ui/button";
 
 export interface DeleteDialogProps {
 	/**

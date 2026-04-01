@@ -1,8 +1,8 @@
 "use client";
 
+import { HeartHandshake, Settings, Truck, Users } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Settings, Users, HeartHandshake, Truck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SettingCard {

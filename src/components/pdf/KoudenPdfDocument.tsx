@@ -1,6 +1,6 @@
+import { Document, Page, Text, View } from "@react-pdf/renderer";
 import type React from "react";
 import type { KoudenData } from "@/types/entries";
-import { Document, Page, View, Text } from "@react-pdf/renderer";
 import styles from "./pdfStyles";
 
 interface KoudenPdfDocumentProps {

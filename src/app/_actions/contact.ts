@@ -1,7 +1,7 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import logger from "@/lib/logger";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * Create a new contact request (support unauthenticated and authenticated users).

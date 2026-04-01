@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
 import { useSetAtom } from "jotai";
+import { useEffect } from "react";
 import { permissionAtom } from "@/store/permission";
 import type { KoudenPermission } from "@/types/role";
 

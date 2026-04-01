@@ -1,12 +1,13 @@
 "use client";
 
+import { X } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 // library
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Badge } from "@/components/ui/badge";
 // components
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
 	Select,
 	SelectContent,
@@ -14,7 +15,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { X } from "lucide-react";
 
 interface MobileFiltersProps {
 	className?: string;

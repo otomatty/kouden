@@ -1,8 +1,8 @@
 "use client";
 
+import { LayoutDashboard, Moon, SlidersHorizontal, Smartphone, Sun } from "lucide-react";
 import type React from "react";
-import { ScenarioVideoSection, type Scenario } from "../../_components/ScenarioVideoSection";
-import { LayoutDashboard, SlidersHorizontal, Moon, Sun, Smartphone } from "lucide-react";
+import { type Scenario, ScenarioVideoSection } from "../../_components/ScenarioVideoSection";
 
 const scenarios: Scenario[] = [
 	{

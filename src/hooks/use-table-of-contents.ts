@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { extractHeaders, type TocItem } from "@/utils/markdown-utils";
 
 interface UseTableOfContentsOptions {

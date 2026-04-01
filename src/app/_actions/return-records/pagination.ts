@@ -5,9 +5,9 @@
  * @module return-records/pagination
  */
 
+import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import type { ReturnEntryRecordWithKoudenEntry } from "@/types/return-records/return-records";
-import logger from "@/lib/logger";
 
 /**
  * 香典帳IDに紐づく返礼情報をページング付きで取得する（無限スクロール用）

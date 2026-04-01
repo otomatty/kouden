@@ -1,6 +1,6 @@
 import React from "react";
-import { SectionTitle } from "@/components/ui/section-title";
 import { Section } from "@/components/ui/section";
+import { SectionTitle } from "@/components/ui/section-title";
 
 /**
  * 安心・安全への取り組みセクション

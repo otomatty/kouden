@@ -1,27 +1,27 @@
 "use client";
 
-import type * as React from "react";
+import {
+	BarChart2,
+	Book,
+	Calendar,
+	Cloud,
+	FileText,
+	Gift,
+	LayoutDashboard,
+	Lock,
+	Monitor,
+} from "lucide-react";
 import Link from "next/link";
+import type * as React from "react";
 import {
 	NavigationMenu,
-	NavigationMenuList,
-	NavigationMenuItem,
-	NavigationMenuTrigger,
 	NavigationMenuContent,
+	NavigationMenuItem,
 	NavigationMenuLink,
+	NavigationMenuList,
+	NavigationMenuTrigger,
 	navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
-import {
-	Cloud,
-	BarChart2,
-	FileText,
-	Monitor,
-	Gift,
-	Lock,
-	LayoutDashboard,
-	Calendar,
-	Book,
-} from "lucide-react";
 
 /** サイトの機能とその詳細ページ */
 interface NavSubItem {

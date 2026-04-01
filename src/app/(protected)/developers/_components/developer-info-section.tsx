@@ -1,6 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ExternalLink, Globe, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Mail, Globe } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 function GithubIcon({ className }: { className?: string }) {
 	return (
@@ -14,6 +14,7 @@ function GithubIcon({ className }: { className?: string }) {
 		</svg>
 	);
 }
+
 import Link from "next/link";
 
 export function DeveloperInfoSection() {

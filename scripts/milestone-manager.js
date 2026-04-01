@@ -453,4 +453,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 	main();
 }
 
-export { createTemplate, createInteractive, createMilestoneFile, showTemplate, showHelp };
+export { createInteractive, createMilestoneFile, createTemplate, showHelp, showTemplate };

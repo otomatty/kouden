@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { callAI, processQuestionAnswers } from "@/services/blog-ai-service";
 import type {
-	ChatMessage,
 	BlogMetadata,
-	SuggestionOption,
+	ChatMessage,
 	ClarifyingQuestion,
+	SuggestionOption,
 } from "@/types/blog-ai-agent";
 import { generateInitialMessage } from "@/utils/blog-ai-agent";
-import { callAI, processQuestionAnswers } from "@/services/blog-ai-service";
 import { generateSlugFromTitle, generateSlugFromTitleSync } from "@/utils/slug-generator";
 
 interface UseBlogAIAgentParams {

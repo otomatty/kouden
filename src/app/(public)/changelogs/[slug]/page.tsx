@@ -1,23 +1,19 @@
-import { getChangelogBySlug, getChangelogNavigation } from "@/lib/changelogs";
-import { MDXRemote } from "next-mdx-remote/rsc";
-import { mdxComponents } from "@/lib/mdx-components";
-import { mdxOptions } from "@/lib/mdx";
-import Container from "@/components/ui/container";
-import { ChangelogNavigation } from "@/components/changelogs/changelog-navigation";
-import { Badge } from "@/components/ui/badge";
-import { BackLink } from "@/components/custom/back-link";
 import { AlertCircle, AlertTriangle, Bug, Plus, Shield, Sparkles, Zap } from "lucide-react";
 import type { Metadata } from "next";
+import { MDXRemote } from "next-mdx-remote/rsc";
+import { ChangelogNavigation } from "@/components/changelogs/changelog-navigation";
+import { BackLink } from "@/components/custom/back-link";
+import { Badge } from "@/components/ui/badge";
+import Container from "@/components/ui/container";
+import { getChangelogBySlug, getChangelogNavigation } from "@/lib/changelogs";
+import { mdxOptions } from "@/lib/mdx";
+import { mdxComponents } from "@/lib/mdx-components";
 
 type PageParams = Promise<{
 	slug: string;
 }>;
 
-export async function generateMetadata({
-	params,
-}: {
-	params: PageParams;
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: PageParams }): Promise<Metadata> {
 	const resolvedParams = await params;
 
 	try {
@@ -38,11 +34,7 @@ export async function generateMetadata({
 	}
 }
 
-export default async function ChangelogDetailPage({
-	params,
-}: {
-	params: PageParams;
-}) {
+export default async function ChangelogDetailPage({ params }: { params: PageParams }) {
 	const resolvedParams = await params;
 
 	try {

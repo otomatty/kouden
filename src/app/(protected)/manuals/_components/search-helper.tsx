@@ -1,9 +1,9 @@
 "use client";
 
+import { ChevronDown, ChevronUp, HelpCircle, Lightbulb, Search } from "lucide-react";
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Search, HelpCircle, Lightbulb, ChevronDown, ChevronUp } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface SearchSuggestion {
 	category: string;

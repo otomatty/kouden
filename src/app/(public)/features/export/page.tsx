@@ -1,15 +1,15 @@
-import type { Metadata } from "next";
 import { FileSpreadsheet, FileText, SlidersHorizontal } from "lucide-react";
-import { PageHero } from "../../_components/page-hero";
-import { SectionTitle } from "@/components/ui/section-title";
+import type { Metadata } from "next";
 import { Section } from "@/components/ui/section";
-import { MediaSection } from "../_components/MediaSection";
-import { FeaturePointCard } from "../_components/FeaturePointCard";
-import ScenarioVideoWrapper from "./_components/scenario-video-wrapper";
-import { TestimonialsSection } from "../_components/TestimonialsSection";
-import { testimonials } from "./testimonials";
+import { SectionTitle } from "@/components/ui/section-title";
 import { CTASection } from "../../_components/cta-section";
+import { PageHero } from "../../_components/page-hero";
+import { FeaturePointCard } from "../_components/FeaturePointCard";
+import { MediaSection } from "../_components/MediaSection";
 import { OtherFeaturesList } from "../_components/OtherFeaturesList";
+import { TestimonialsSection } from "../_components/TestimonialsSection";
+import ScenarioVideoWrapper from "./_components/scenario-video-wrapper";
+import { testimonials } from "./testimonials";
 
 export const metadata: Metadata = {
 	title: "Excel/PDF出力 | 機能詳細 | 香典帳",

@@ -1,14 +1,14 @@
 "use client";
-import { NavigationModeProvider } from "@/context/navigation-mode";
+import type { User } from "@supabase/supabase-js";
+import { usePathname } from "next/navigation";
+import type { ReactNode } from "react";
 import { BottomNavigation } from "@/app/(protected)/koudens/[id]/_components/_common/bottom-navigation";
-import { Header } from "./_components/header";
-import { AppFooter } from "./_components/app-footer";
 import { FeedbackButton } from "@/components/custom/feedback-button";
 import { OneWeekSurveyTrigger } from "@/components/survey";
-import type { ReactNode } from "react";
-import type { User } from "@supabase/supabase-js";
+import { NavigationModeProvider } from "@/context/navigation-mode";
 import type { NotificationItem } from "@/types/notifications";
-import { usePathname } from "next/navigation";
+import { AppFooter } from "./_components/app-footer";
+import { Header } from "./_components/header";
 
 interface ProtectedClientLayoutProps {
 	children: ReactNode;

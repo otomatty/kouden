@@ -1,11 +1,11 @@
 /// <reference types="vitest" />
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createClient } from "@/lib/supabase/server";
 import { createTier } from "../createTier";
-import { listTiers } from "../listTiers";
-import { getTier } from "../getTier";
-import { updateTier } from "../updateTier";
 import { deleteTier } from "../deleteTier";
+import { getTier } from "../getTier";
+import { listTiers } from "../listTiers";
+import { updateTier } from "../updateTier";
 
 vi.mock("@/lib/supabase/server", () => ({
 	createClient: vi.fn(),

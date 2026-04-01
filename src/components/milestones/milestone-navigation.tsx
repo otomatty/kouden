@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import Link from "next/link";
 import type { MilestoneMeta } from "@/lib/milestones";
 
 interface MilestoneNavigationProps {

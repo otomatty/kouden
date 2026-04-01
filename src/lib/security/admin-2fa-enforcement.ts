@@ -4,10 +4,10 @@
  */
 
 import { redirect } from "next/navigation";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { logSecurityEvent } from "./security-logger";
 import type { NextRequest } from "next/server";
 import logger from "@/lib/logger";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { logSecurityEvent } from "./security-logger";
 
 export interface TwoFactorEnforcementResult {
 	isEnforced: boolean;

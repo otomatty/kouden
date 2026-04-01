@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { AlertCircle, Bookmark, BookOpen, Calendar, Eye, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { getUserBookmarks, toggleBookmark } from "@/app/_actions/blog/bookmarks";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -18,6 +17,9 @@ import {
 	AlertDialogTitle,
 	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
 	Pagination,
 	PaginationContent,
@@ -27,9 +29,7 @@ import {
 	PaginationNext,
 	PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Bookmark, Calendar, Eye, Trash2, BookOpen, AlertCircle } from "lucide-react";
-import { getUserBookmarks, toggleBookmark } from "@/app/_actions/blog/bookmarks";
-import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { BookmarkInfo } from "@/types/blog";
 
 interface BookmarksListProps {

@@ -1,8 +1,8 @@
+import { ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { Section } from "@/components/ui/section";
 import { SectionTitle } from "@/components/ui/section-title";
-import { Button } from "@/components/ui/button";
-import { ChevronRight } from "lucide-react";
 
 /**
  * サポート情報セクション

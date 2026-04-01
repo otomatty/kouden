@@ -1,6 +1,6 @@
+import { ArrowLeft, BookOpen, FileText, Users } from "lucide-react";
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Users, BookOpen, FileText } from "lucide-react";
 
 export function UserDetailSkeleton() {
 	// スケルトンローディング用の固定キー

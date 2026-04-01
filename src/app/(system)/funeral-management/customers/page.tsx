@@ -1,10 +1,10 @@
-import type { Metadata } from "next";
-import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { CustomersClient } from "./_components/customers-client";
-import type { Customer } from "@/types/funeral-management";
+import { Button } from "@/components/ui/button";
 import Container from "@/components/ui/container";
+import type { Customer } from "@/types/funeral-management";
+import { CustomersClient } from "./_components/customers-client";
 
 export const metadata: Metadata = {
 	title: "顧客管理 | 葬儀会社管理システム",

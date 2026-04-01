@@ -1,15 +1,15 @@
 import {
-	LayoutDashboard,
-	Package,
-	ShoppingCart,
-	Users,
-	Gift,
-	Truck,
 	BarChart3,
 	FileText,
+	Gift,
+	LayoutDashboard,
+	Package,
 	Settings,
-	Tag,
+	ShoppingCart,
 	Store,
+	Tag,
+	Truck,
+	Users,
 } from "lucide-react";
 import type { NavigationItem, NavigationSection } from "./types";
 

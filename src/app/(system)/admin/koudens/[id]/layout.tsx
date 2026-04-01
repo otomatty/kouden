@@ -1,12 +1,12 @@
-import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { getKoudenForAdmin, getKoudenWithPlanForAdmin } from "@/app/_actions/koudens/read";
+import { notFound, redirect } from "next/navigation";
 import { checkAdminPermission } from "@/app/_actions/admin/permissions";
+import { getKoudenForAdmin, getKoudenWithPlanForAdmin } from "@/app/_actions/koudens/read";
 import KoudenHeader from "@/app/(protected)/koudens/[id]/_components/_common/kouden-header";
 import TabNavigation from "@/app/(protected)/koudens/[id]/_components/_common/tab-navigation";
+import { Button } from "@/components/ui/button";
 import type { Kouden } from "@/types/kouden";
 import type { KoudenPermission } from "@/types/role";
 
@@ -16,7 +16,9 @@ import type { KoudenPermission } from "@/types/role";
  */
 export async function generateMetadata({
 	params,
-}: { params: Promise<{ id: string }> }): Promise<Metadata> {
+}: {
+	params: Promise<{ id: string }>;
+}): Promise<Metadata> {
 	const { id: koudenId } = await params;
 	let kouden: Kouden | null;
 	try {

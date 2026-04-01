@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { CrudDialog } from "./crud-dialog";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import { CrudDialog } from "./crud-dialog";
 
 const meta = {
 	title: "Components/CrudDialog",

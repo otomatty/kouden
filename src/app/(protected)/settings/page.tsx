@@ -1,8 +1,8 @@
-import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { SettingsForm } from "./_components/settings-form";
 import { getUserSettings } from "@/app/_actions/settings";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { createClient } from "@/lib/supabase/server";
+import { SettingsForm } from "./_components/settings-form";
 
 export default async function SettingsPage() {
 	const supabase = await createClient();

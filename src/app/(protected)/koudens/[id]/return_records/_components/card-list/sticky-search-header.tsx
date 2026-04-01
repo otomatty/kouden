@@ -1,10 +1,13 @@
 "use client";
 
+import { Filter, Plus, Search, X } from "lucide-react";
 // library
 import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 // components
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import {
 	Select,
 	SelectContent,
@@ -13,9 +16,6 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
-import { Search, Filter, Plus, X } from "lucide-react";
-import { Label } from "@/components/ui/label";
 
 // Props
 interface StickySearchHeaderProps {

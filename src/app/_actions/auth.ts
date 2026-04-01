@@ -1,7 +1,7 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import logger from "@/lib/logger";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * プロフィールの存在確認

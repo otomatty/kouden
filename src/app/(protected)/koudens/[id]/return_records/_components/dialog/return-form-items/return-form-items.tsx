@@ -1,9 +1,10 @@
 "use client";
 
+import { Plus, ShoppingCart } from "lucide-react";
 import { useState } from "react";
 import { useFieldArray } from "react-hook-form";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
@@ -12,12 +13,11 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, ShoppingCart } from "lucide-react";
 import type { ReturnItem } from "@/types/return-records/return-items";
-import { ReturnItemSelector } from "./return-item-selector";
-import { ReturnItemCard } from "./return-item-card";
-import { ReturnRateInfo } from "./return-rate-info";
 import { EmptyState } from "./empty-state";
+import { ReturnItemCard } from "./return-item-card";
+import { ReturnItemSelector } from "./return-item-selector";
+import { ReturnRateInfo } from "./return-rate-info";
 import type { ReturnFormItemsProps } from "./types";
 
 /**

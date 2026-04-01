@@ -6,10 +6,7 @@ import { createClient } from "@/lib/supabase/server";
  *
  * @param data - Object containing roleId and permissionId.
  */
-export async function deleteRolePermission(data: {
-	roleId: string;
-	permissionId: string;
-}) {
+export async function deleteRolePermission(data: { roleId: string; permissionId: string }) {
 	const supabase = await createClient();
 	const { error } = await supabase
 		.schema("common")

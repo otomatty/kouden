@@ -1,38 +1,38 @@
 "use client";
 
-import { useEditor, EditorContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
-import Table from "@tiptap/extension-table";
-import TableRow from "@tiptap/extension-table-row";
-import TableHeader from "@tiptap/extension-table-header";
-import TableCell from "@tiptap/extension-table-cell";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { marked } from "marked";
-import { useEffect, useState } from "react";
-import { TIPTAP_EDITOR_STYLES } from "./blog-content-styles";
+import Link from "@tiptap/extension-link";
+import { Table } from "@tiptap/extension-table";
+import { TableCell } from "@tiptap/extension-table-cell";
+import { TableHeader } from "@tiptap/extension-table-header";
+import { TableRow } from "@tiptap/extension-table-row";
+import { EditorContent, useEditor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
 import {
 	Bold,
-	Italic,
-	Underline,
-	Strikethrough,
 	Code,
+	FileText,
 	Heading1,
 	Heading2,
 	Heading3,
+	Image as ImageIcon,
+	Italic,
+	Link as LinkIcon,
 	List,
 	ListOrdered,
 	Quote,
-	Undo,
 	Redo,
-	Link as LinkIcon,
-	Image as ImageIcon,
+	Strikethrough,
 	Table as TableIcon,
-	FileText,
+	Underline,
+	Undo,
 } from "lucide-react";
+import { marked } from "marked";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { TIPTAP_EDITOR_STYLES } from "./blog-content-styles";
 
 interface BlogWysiwygEditorProps {
 	content: string;
@@ -55,7 +55,7 @@ const isMarkdownContent = (content: string): boolean => {
 		/\*.*\*/m, // 斜体
 		/`.*`/m, // インラインコード
 		/```[\s\S]*```/m, // コードブロック
-		/^\>\s+/m, // 引用
+		/^>\s+/m, // 引用
 		/\[.*\]\(.*\)/m, // リンク
 	];
 

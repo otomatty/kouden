@@ -1,8 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
-import { useState } from "react";
 import { GoogleIcon } from "./icons/google";
 
 interface LoginButtonProps {

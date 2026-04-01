@@ -5,15 +5,15 @@
  * @module return-records/bulk-operations
  */
 
-import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { convertToReturnManagementSummaries } from "@/utils/return-records-helpers";
-import type { Entry, AttendanceType } from "@/types/entries";
-import type {
-	ReturnManagementSummary,
-	BulkUpdateConfig,
-} from "@/types/return-records/return-records";
 import logger from "@/lib/logger";
+import { createClient } from "@/lib/supabase/server";
+import type { AttendanceType, Entry } from "@/types/entries";
+import type {
+	BulkUpdateConfig,
+	ReturnManagementSummary,
+} from "@/types/return-records/return-records";
+import { convertToReturnManagementSummaries } from "@/utils/return-records-helpers";
 
 /**
  * 一括変更用：香典帳の全返礼記録を取得する（ReturnManagementSummary形式）

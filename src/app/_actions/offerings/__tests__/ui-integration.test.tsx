@@ -1,5 +1,5 @@
 import React from "react";
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
+import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 
 // UIコンポーネントをモック化
 vi.mock("@/components/custom/OfferingAllocationDialog", () => ({

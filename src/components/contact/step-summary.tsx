@@ -1,6 +1,6 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { Building, Check, FileText, Mail, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Check, FileText, User, Mail, Building } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface StepSummaryProps {
 	currentStep: number;

@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import { BackLink } from "@/components/custom/back-link";
 import Container from "@/components/ui/container";
 import {
-	HeroSection,
-	DevelopmentStorySection,
-	PersonalDevelopmentBenefitsSection,
-	DeveloperMessageSection,
 	DeveloperInfoSection,
+	DeveloperMessageSection,
+	DevelopmentStorySection,
+	HeroSection,
+	PersonalDevelopmentBenefitsSection,
 } from "./_components";
 
 export const metadata: Metadata = {

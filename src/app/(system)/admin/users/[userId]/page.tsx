@@ -1,8 +1,8 @@
-import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
+import { getUserDetail } from "@/app/_actions/admin/users";
 import { UserDetail } from "./_components/user-detail";
 import { UserDetailSkeleton } from "./_components/user-detail-skeleton";
-import { getUserDetail } from "@/app/_actions/admin/users";
 
 interface UserDetailPageProps {
 	params: Promise<{

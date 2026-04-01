@@ -6,10 +6,7 @@ interface ComingSoonBadgeProps {
 	className?: string;
 }
 
-export function ComingSoonBadge({
-	label = "実装予定",
-	className,
-}: ComingSoonBadgeProps) {
+export function ComingSoonBadge({ label = "実装予定", className }: ComingSoonBadgeProps) {
 	return (
 		<div
 			className={cn(

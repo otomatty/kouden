@@ -1,6 +1,6 @@
-import { Badge } from "@/components/ui/badge";
 import type { VariantProps } from "class-variance-authority";
 import type { BadgeProps } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 
 interface BadgeCellProps extends VariantProps<typeof Badge> {
 	value: string;

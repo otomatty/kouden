@@ -1,7 +1,7 @@
-import { PageHero } from "@/app/(public)/_components/page-hero";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { PageHero } from "@/app/(public)/_components/page-hero";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function ContactSuccessPage() {
 	return (

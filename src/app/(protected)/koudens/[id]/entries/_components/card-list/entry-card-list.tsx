@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
-import type { Entry } from "@/types/entries";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteEntries } from "@/hooks/use-infinite-entries";
-import { MobileFilters, filterOptions } from "./mobile-filters";
-import { EntryCard } from "./entry-card";
+import type { Entry } from "@/types/entries";
 import type { Relationship } from "@/types/relationships";
+import { EntryCard } from "./entry-card";
+import { filterOptions, MobileFilters } from "./mobile-filters";
 
 interface EntryCardListProps {
 	entries: Entry[];

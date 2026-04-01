@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import PDFDocument from "pdfkit";
 import { Resend } from "resend";
-import { exportReceiptToPdf } from "../exportReceipt";
+import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { exportReceiptToPdf } from "../exportReceipt";
 
 // モック設定
 vi.mock("pdfkit", () => ({
@@ -110,7 +110,7 @@ describe("exportReceiptToPdf", () => {
 
 	it("should send email with attachment", async () => {
 		await exportReceiptToPdf("1");
-		// @ts-ignore: mock is guaranteed by vi.mock
+		// @ts-expect-error: mock is guaranteed by vi.mock
 		const resendInstance = (Resend as unknown as Mock).mock.results[0].value;
 		expect(resendInstance.emails.send).toHaveBeenCalledWith(
 			expect.objectContaining({

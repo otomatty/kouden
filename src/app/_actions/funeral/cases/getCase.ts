@@ -1,8 +1,8 @@
 "use server";
 
+import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import type { FuneralCaseWithDetails } from "@/types/funeral-management";
-import logger from "@/lib/logger";
 
 /**
  * Get a single funeral case by ID with customer details.
@@ -43,7 +43,7 @@ export async function getCase(id: string): Promise<FuneralCaseWithDetails | null
 	}
 
 	// 顧客詳細情報を別途取得
-	let customerDetails = undefined;
+	let customerDetails;
 	if (customer) {
 		const { data: details } = await supabase
 			.schema("funeral")

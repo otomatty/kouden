@@ -1,4 +1,4 @@
-import { Zen_Old_Mincho, Noto_Sans_JP } from "next/font/google";
+import { Noto_Sans_JP, Zen_Old_Mincho } from "next/font/google";
 
 export const zenOldMincho = Zen_Old_Mincho({
 	subsets: ["latin"],

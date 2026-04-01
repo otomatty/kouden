@@ -1,7 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Calendar, CheckCircle, Clock, TrendingUp, Users, XCircle } from "lucide-react";
 import { getCampaignApplicationStats } from "@/app/_actions/admin/campaign-applications";
-import { Calendar, Clock, CheckCircle, XCircle, Users, TrendingUp } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const statusConfig = {
 	submitted: {

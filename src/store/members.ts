@@ -1,7 +1,7 @@
-import { atomFamily } from "jotai/utils";
 import { atom } from "jotai";
+import { atomFamily } from "jotai/utils";
 import type { KoudenMember } from "@/types/member";
-import type { KoudenRole, KoudenPermission } from "@/types/role";
+import type { KoudenPermission, KoudenRole } from "@/types/role";
 
 export interface MembersState {
 	members: KoudenMember[];

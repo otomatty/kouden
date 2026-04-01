@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { getPostById } from "@/app/_actions/blog/posts";
 import { getAccessibleOrganizations } from "@/app/_actions/blog/organizations";
+import { getPostById } from "@/app/_actions/blog/posts";
 import { BlogEditor } from "@/components/blog/blog-editor";
 
 interface AdminEditBlogPostPageProps {

@@ -1,11 +1,12 @@
 "use client";
 
 import { useMediaQuery } from "@/hooks/use-media-query";
-// components
-import { RelationshipTable } from "./table/table";
-import { RelationshipCardList } from "./card-list/card-list";
 // types
 import type { Relationship } from "@/types/relationships";
+import { RelationshipCardList } from "./card-list/card-list";
+// components
+import { RelationshipTable } from "./table/table";
+
 // actions
 
 interface RelationshipsViewProps {

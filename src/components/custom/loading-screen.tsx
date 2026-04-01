@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import {
 	Carousel,
@@ -10,6 +9,7 @@ import {
 	CarouselNext,
 	CarouselPrevious,
 } from "@/components/ui/carousel";
+import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
 interface LoadingScreenProps {
@@ -19,12 +19,7 @@ interface LoadingScreenProps {
 	className?: string;
 }
 
-export function LoadingScreen({
-	title,
-	hints,
-	onLoadingComplete,
-	className,
-}: LoadingScreenProps) {
+export function LoadingScreen({ title, hints, onLoadingComplete, className }: LoadingScreenProps) {
 	const [progress, setProgress] = useState(0);
 
 	useEffect(() => {

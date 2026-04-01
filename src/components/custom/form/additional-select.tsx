@@ -1,5 +1,7 @@
+import { PlusCircle } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import {
 	Select,
 	SelectContent,
@@ -7,10 +9,8 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { PlusCircle } from "lucide-react";
-import { AddOptionInput } from "./add-option-input";
 import type { AdditionalSelectProps } from "@/types/data-table/additional-select";
+import { AddOptionInput } from "./add-option-input";
 
 export function AdditionalSelect({
 	label,

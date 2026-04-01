@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { Providers } from "./providers";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { notoSansJP, zenOldMincho } from "./fonts";
 import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { getUser } from "./_actions/user";
+import { notoSansJP, zenOldMincho } from "./fonts";
+import { Providers } from "./providers";
 
 export const viewport: Viewport = {
 	width: "device-width",
@@ -74,11 +74,7 @@ export const metadata: Metadata = {
 	},
 };
 
-export default async function RootLayout({
-	children,
-}: {
-	children: React.ReactNode;
-}) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
 	const user = await getUser();
 
 	return (

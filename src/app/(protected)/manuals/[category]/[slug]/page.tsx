@@ -1,22 +1,18 @@
-import { getDocBySlug, getAllDocs } from "@/lib/docs";
-import { MDXRemote } from "next-mdx-remote/rsc";
 import type { Metadata } from "next";
+import { MDXRemote } from "next-mdx-remote/rsc";
+import { getAllDocs, getDocBySlug } from "@/lib/docs";
 import { mdxOptions } from "@/lib/mdx";
-import { BreadcrumbNav } from "../../_components/breadcrumb-nav";
-import { TableOfContents } from "../../_components/table-of-contents";
-import { DocNavigation } from "../../_components/doc-navigation";
 import { mdxComponents } from "@/lib/mdx-components";
+import { BreadcrumbNav } from "../../_components/breadcrumb-nav";
+import { DocNavigation } from "../../_components/doc-navigation";
+import { TableOfContents } from "../../_components/table-of-contents";
 
 type PageParams = Promise<{
 	category: string;
 	slug: string;
 }>;
 
-export async function generateMetadata({
-	params,
-}: {
-	params: PageParams;
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: PageParams }): Promise<Metadata> {
 	const resolvedParams = await params;
 	const { meta } = await getDocBySlug(resolvedParams.category, resolvedParams.slug);
 	return {
@@ -25,11 +21,7 @@ export async function generateMetadata({
 	};
 }
 
-export default async function DocsPage({
-	params,
-}: {
-	params: PageParams;
-}) {
+export default async function DocsPage({ params }: { params: PageParams }) {
 	const resolvedParams = await params;
 	const { meta, content } = await getDocBySlug(resolvedParams.category, resolvedParams.slug);
 
