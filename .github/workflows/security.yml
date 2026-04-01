@@ -9,6 +9,9 @@ on:
     # 毎週月曜日の午前9時（UTC）に実行
     - cron: '0 9 * * 1'
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
