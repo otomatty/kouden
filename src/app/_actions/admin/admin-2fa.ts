@@ -29,6 +29,7 @@ export async function setupTwoFactorAuth(
 	secret: string,
 	verificationCode: string,
 ): Promise<TwoFactorActionResult> {
+	let userId: string | undefined;
 	try {
 		const supabase = await createClient();
 		const {
@@ -38,6 +39,7 @@ export async function setupTwoFactorAuth(
 		if (!user) {
 			return { success: false, error: "認証が必要です" };
 		}
+		userId = user.id;
 
 		// 管理者かどうかを確認
 		const { data: isAdmin } = await supabase.rpc("is_admin", {
@@ -88,7 +90,7 @@ export async function setupTwoFactorAuth(
 		logger.error(
 			{
 				error: error instanceof Error ? error.message : String(error),
-				userId: user?.id,
+				userId,
 			},
 			"2FA setup error",
 		);
@@ -103,6 +105,7 @@ export async function setupTwoFactorAuth(
  * 2FAを無効化する
  */
 export async function disableTwoFactorAuth(): Promise<TwoFactorActionResult> {
+	let userId: string | undefined;
 	try {
 		const supabase = await createClient();
 		const {
@@ -112,6 +115,7 @@ export async function disableTwoFactorAuth(): Promise<TwoFactorActionResult> {
 		if (!user) {
 			return { success: false, error: "認証が必要です" };
 		}
+		userId = user.id;
 
 		// 管理者かどうかを確認
 		const { data: isAdmin } = await supabase.rpc("is_admin", {
@@ -151,7 +155,7 @@ export async function disableTwoFactorAuth(): Promise<TwoFactorActionResult> {
 		logger.error(
 			{
 				error: error instanceof Error ? error.message : String(error),
-				userId: user?.id,
+				userId,
 			},
 			"2FA disable error",
 		);
@@ -168,6 +172,7 @@ export async function disableTwoFactorAuth(): Promise<TwoFactorActionResult> {
 export async function verifyTwoFactorLogin(
 	verificationCode: string,
 ): Promise<TwoFactorActionResult> {
+	let userId: string | undefined;
 	try {
 		const supabase = await createClient();
 		const {
@@ -177,6 +182,7 @@ export async function verifyTwoFactorLogin(
 		if (!user) {
 			return { success: false, error: "認証が必要です" };
 		}
+		userId = user.id;
 
 		// 管理者かどうかを確認
 		const { data: isAdmin } = await supabase.rpc("is_admin", {
@@ -225,7 +231,7 @@ export async function verifyTwoFactorLogin(
 		logger.error(
 			{
 				error: error instanceof Error ? error.message : String(error),
-				userId: user?.id,
+				userId,
 			},
 			"2FA verification error",
 		);
