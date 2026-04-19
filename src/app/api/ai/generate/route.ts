@@ -324,6 +324,7 @@ ${
 }
 
 export async function POST(request: NextRequest) {
+	let model: string | undefined;
 	try {
 		// APIキーの確認
 		if (!isGeminiConfigured()) {
@@ -331,7 +332,8 @@ export async function POST(request: NextRequest) {
 		}
 
 		const body: RequestBody = await request.json();
-		const { model = "gemini-2.5-flash", prompt, context, tools = [], thinkingConfig } = body;
+		const { prompt, context, tools = [], thinkingConfig } = body;
+		model = body.model ?? "gemini-2.5-flash";
 
 		if (!prompt) {
 			return NextResponse.json({ error: "Prompt is required" }, { status: 400 });

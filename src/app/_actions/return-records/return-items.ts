@@ -208,8 +208,8 @@ export async function updateReturnItem(
 		logger.error(
 			{
 				error: error instanceof Error ? error.message : String(error),
-				id,
-				koudenId: kouden_id,
+				id: input.id,
+				koudenId: input.kouden_id,
 			},
 			"返礼品マスター情報の更新エラー",
 		);

@@ -112,9 +112,9 @@ export async function createKoudenWithPlan({
 	planCode,
 	expectedCount,
 }: CreateKoudenWithPlanParams): Promise<{ koudenId?: string; error?: string }> {
+	let uid = userId;
 	try {
 		const supabase = createAdminClient();
-		let uid = userId;
 		if (!uid) {
 			const {
 				data: { user },
