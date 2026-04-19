@@ -77,8 +77,9 @@ export function PopularPosts({
 
 	const skeletonItems = useMemo(
 		() =>
-			Array.from({ length: Math.min(limit, 5) }, () => (
-				<div key={crypto.randomUUID()} className="flex items-start gap-3 p-3">
+			Array.from({ length: Math.min(limit, 5) }, (_, index) => (
+				// biome-ignore lint/suspicious/noArrayIndexKey: スケルトンは安定した順序のため
+				<div key={`skeleton-${index}`} className="flex items-start gap-3 p-3">
 					<Skeleton className="w-8 h-8 rounded-full" />
 					<div className="flex-1 space-y-2">
 						<Skeleton className="h-4 w-3/4" />

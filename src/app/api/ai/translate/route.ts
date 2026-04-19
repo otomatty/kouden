@@ -8,6 +8,7 @@ interface TranslateRequestBody {
 }
 
 export async function POST(request: NextRequest) {
+	let targetLanguage: string | undefined;
 	try {
 		// APIキーの確認
 		if (!isGeminiConfigured()) {
@@ -15,7 +16,8 @@ export async function POST(request: NextRequest) {
 		}
 
 		const body: TranslateRequestBody = await request.json();
-		const { text, targetLanguage } = body;
+		const { text } = body;
+		targetLanguage = body.targetLanguage;
 
 		if (!text) {
 			return NextResponse.json({ error: "Text is required" }, { status: 400 });

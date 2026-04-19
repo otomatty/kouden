@@ -66,8 +66,9 @@ export function UserBookmarks({
 					},
 				})) as BookmarkInfo[];
 
-				// limitが指定されている場合はスライス
-				const finalData = limit ? transformedData.slice(0, limit) : transformedData;
+				// limitが指定されている場合はスライス（0の場合は0件として扱う）
+				const finalData =
+					limit == null ? transformedData : transformedData.slice(0, Math.max(0, limit));
 				setBookmarks(finalData);
 			} catch (err) {
 				console.error("Failed to fetch bookmarks:", err);
@@ -187,8 +188,9 @@ export function UserBookmarks({
 		if (loading) {
 			return (
 				<div className="space-y-4">
-					{Array.from({ length: Math.min(limit || 5, 5) }).map(() => (
-						<div key={crypto.randomUUID()} className="p-4 border border-border rounded-lg">
+					{Array.from({ length: Math.min(limit ?? 5, 5) }).map((_, index) => (
+						// biome-ignore lint/suspicious/noArrayIndexKey: スケルトンは安定した順序のため
+						<div key={`skeleton-${index}`} className="p-4 border border-border rounded-lg">
 							<Skeleton className="h-4 w-3/4 mb-2" />
 							<Skeleton className="h-3 w-1/2 mb-3" />
 							<div className="flex justify-between items-center">
