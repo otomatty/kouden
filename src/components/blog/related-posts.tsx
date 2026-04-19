@@ -143,8 +143,9 @@ export function RelatedPosts({
 		if (loading) {
 			return (
 				<div className="space-y-4">
-					{Array.from({ length: Math.min(limit, 3) }).map(() => (
-						<div key={crypto.randomUUID()} className="space-y-2">
+					{Array.from({ length: Math.min(limit, 3) }).map((_, index) => (
+						// biome-ignore lint/suspicious/noArrayIndexKey: スケルトンは安定した順序のため
+						<div key={`skeleton-${index}`} className="space-y-2">
 							<Skeleton className="h-4 w-full" />
 							<Skeleton className="h-3 w-3/4" />
 							<div className="flex justify-between items-center">
