@@ -187,7 +187,7 @@ export function UserBookmarks({
 		if (loading) {
 			return (
 				<div className="space-y-4">
-					{Array.from({ length: Math.min(limit || 5, 5) }).map((_, index) => (
+					{Array.from({ length: Math.min(limit ?? 5, 5) }).map((_, index) => (
 						// biome-ignore lint/suspicious/noArrayIndexKey: スケルトンは安定した順序のため
 						<div key={`skeleton-${index}`} className="p-4 border border-border rounded-lg">
 							<Skeleton className="h-4 w-3/4 mb-2" />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -78,6 +78,28 @@ export function RelatedPosts({
 		}
 	}, [currentPostId, category, tags, limit]);
 
+	const skeletonItems = useMemo(
+		() =>
+			Array.from({ length: Math.min(limit, 3) }, (_, index) => (
+				// biome-ignore lint/suspicious/noArrayIndexKey: スケルトンは安定した順序のため
+				<div key={`skeleton-${index}`} className="space-y-2">
+					<Skeleton className="h-4 w-full" />
+					<Skeleton className="h-3 w-3/4" />
+					<div className="flex justify-between items-center">
+						<div className="flex gap-2">
+							<Skeleton className="h-4 w-16" />
+							<Skeleton className="h-4 w-20" />
+						</div>
+						<div className="flex gap-2">
+							<Skeleton className="h-4 w-8" />
+							<Skeleton className="h-4 w-8" />
+						</div>
+					</div>
+				</div>
+			)),
+		[limit],
+	);
+
 	const renderPostItem = (post: RelatedPost) => (
 		<div key={post.id} className="border-b border-border last:border-b-0 pb-4 last:pb-0">
 			<Link href={`/blog/${post.slug}`} className="block hover:text-primary transition-colors">
@@ -141,27 +163,7 @@ export function RelatedPosts({
 
 	const renderContent = () => {
 		if (loading) {
-			return (
-				<div className="space-y-4">
-					{Array.from({ length: Math.min(limit, 3) }).map((_, index) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: スケルトンは安定した順序のため
-						<div key={`skeleton-${index}`} className="space-y-2">
-							<Skeleton className="h-4 w-full" />
-							<Skeleton className="h-3 w-3/4" />
-							<div className="flex justify-between items-center">
-								<div className="flex gap-2">
-									<Skeleton className="h-4 w-16" />
-									<Skeleton className="h-4 w-20" />
-								</div>
-								<div className="flex gap-2">
-									<Skeleton className="h-4 w-8" />
-									<Skeleton className="h-4 w-8" />
-								</div>
-							</div>
-						</div>
-					))}
-				</div>
-			);
+			return <div className="space-y-4">{skeletonItems}</div>;
 		}
 
 		if (error) {
