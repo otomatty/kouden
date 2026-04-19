@@ -66,8 +66,9 @@ export function UserBookmarks({
 					},
 				})) as BookmarkInfo[];
 
-				// limitが指定されている場合はスライス
-				const finalData = limit ? transformedData.slice(0, limit) : transformedData;
+				// limitが指定されている場合はスライス（0の場合は0件として扱う）
+				const finalData =
+					limit == null ? transformedData : transformedData.slice(0, Math.max(0, limit));
 				setBookmarks(finalData);
 			} catch (err) {
 				console.error("Failed to fetch bookmarks:", err);
