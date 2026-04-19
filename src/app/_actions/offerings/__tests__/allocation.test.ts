@@ -140,7 +140,9 @@ describe("お供物配分システム", () => {
 
 			await allocateOfferingToEntries(request);
 
+			expect(insertMock).toHaveBeenCalledTimes(1);
 			const insertedData = insertMock.mock.calls[0]?.[0];
+			expect(insertedData).toBeDefined();
 			const primaryEntry = insertedData.find((data: any) => data.is_primary_contributor);
 			expect(primaryEntry.kouden_entry_id).toBe("entry2");
 		});
@@ -284,7 +286,9 @@ describe("お供物配分システム", () => {
 
 			await allocateOfferingToEntries(request);
 
+			expect(insertMock).toHaveBeenCalledTimes(1);
 			const insertedData = insertMock.mock.calls[0]?.[0];
+			expect(insertedData).toBeDefined();
 			const totalAllocated = insertedData.reduce(
 				(sum: number, data: any) => sum + data.allocated_amount,
 				0,
