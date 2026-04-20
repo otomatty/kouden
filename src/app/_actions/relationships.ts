@@ -78,7 +78,7 @@ export async function getRelationshipsForAdmin(koudenId: string) {
 		const { isAdmin } = await import("@/app/_actions/admin/permissions");
 		const adminCheck = await isAdmin();
 		if (!adminCheck) {
-			throw new KoudenError("管理者権限が必要です", ErrorCodes.UNAUTHORIZED);
+			throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
 		}
 
 		// 管理者用クライアント（RLSバイパス）を使用
@@ -180,20 +180,23 @@ export async function updateRelationship(
 export async function deleteRelationship(id: string) {
 	return withErrorHandling(async () => {
 		const supabase = await createClient();
+		// 削除は冪等にしたいため、対象が存在しない場合（PGRST116）は成功扱いとする。
+		// 以下では `.maybeSingle()` を使用し、null ↔ row 不在を区別する。
 		const { data: relationship, error: fetchError } = await supabase
 			.from("relationships")
 			.select("kouden_id")
 			.eq("id", id)
-			.single();
+			.maybeSingle();
 
 		if (fetchError) throw fetchError;
+
+		// 既に削除済み（または存在しない）：何もせず成功で終了
+		if (!relationship) return;
 
 		const { error: deleteError } = await supabase.from("relationships").delete().eq("id", id);
 
 		if (deleteError) throw deleteError;
-		if (relationship) {
-			revalidatePath(`/koudens/${relationship.kouden_id}`);
-		}
+		revalidatePath(`/koudens/${relationship.kouden_id}`);
 	}, "関係性の削除");
 }
 
