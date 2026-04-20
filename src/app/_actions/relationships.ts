@@ -1,7 +1,6 @@
 "use server";
 
 import { ErrorCodes, KoudenError, withErrorHandling } from "@/lib/errors";
-import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
@@ -39,9 +38,8 @@ export async function getRelationships(koudenId: string) {
 
 		if (countError) throw countError;
 
-		// 関係性が存在しない場合はすぐに空配列を返す
+		// 関係性が存在しない場合はすぐに空配列を返す（正常系）
 		if (count === 0) {
-			logger.warn({ koudenId }, "No relationships found for kouden");
 			return [];
 		}
 
@@ -93,9 +91,8 @@ export async function getRelationshipsForAdmin(koudenId: string) {
 
 		if (countError) throw countError;
 
-		// 関係性が存在しない場合はすぐに空配列を返す
+		// 関係性が存在しない場合はすぐに空配列を返す（正常系）
 		if (count === 0) {
-			logger.warn({ koudenId }, "No relationships found for kouden");
 			return [];
 		}
 

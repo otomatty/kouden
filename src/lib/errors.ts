@@ -150,9 +150,10 @@ function isSupabaseLikeError(error: unknown): error is SupabaseLikeError {
 	if (!error || typeof error !== "object") return false;
 	const e = error as Record<string, unknown>;
 	// Supabaseのエラー（PostgrestError / PostgREST / Postgres）は
-	// いずれも `code` プロパティを持つ。
+	// いずれも `code` と `message` を持つ。
 	// PostgrestError は Error を継承しているため、Errorインスタンスも除外しない。
-	return typeof e.code === "string";
+	// `code` だけ持つ任意オブジェクトを誤検出しないよう `message` の存在も要求する。
+	return typeof e.code === "string" && typeof e.message === "string";
 }
 
 /**
