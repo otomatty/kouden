@@ -1,55 +1,45 @@
 "use server";
 
+import { ErrorCodes, KoudenError, withErrorHandling } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
-import type { Database } from "@/types/supabase";
 import { revalidatePath } from "next/cache";
-import logger from "@/lib/logger";
 
 // すべての関係性を取得
 export async function getAllRelationships() {
-	const supabase = await createClient();
-	const { data, error } = await supabase
-		.from("relationships")
-		.select(`
-			*,
-			kouden:koudens(
-				id,
-				title
-			)
-		`)
-		.order("is_default", { ascending: false })
-		.order("name");
+	return withErrorHandling(async () => {
+		const supabase = await createClient();
+		const { data, error } = await supabase
+			.from("relationships")
+			.select(`
+				*,
+				kouden:koudens(
+					id,
+					title
+				)
+			`)
+			.order("is_default", { ascending: false })
+			.order("name");
 
-	if (error) throw error;
-	return data;
+		if (error) throw error;
+		return data;
+	}, "関係性一覧の取得");
 }
 
 // 香典帳の関係性を取得
 export async function getRelationships(koudenId: string) {
-	const supabase = await createClient();
+	return withErrorHandling(async () => {
+		const supabase = await createClient();
 
-	try {
 		// 1. まず関係性の存在確認
 		const { count, error: countError } = await supabase
 			.from("relationships")
 			.select("*", { count: "exact", head: true })
 			.eq("kouden_id", koudenId);
 
-		if (countError) {
-			logger.error(
-				{
-					error: countError.message,
-					code: countError.code,
-					koudenId,
-				},
-				"Failed to count relationships",
-			);
-			throw countError;
-		}
+		if (countError) throw countError;
 
-		// 関係性が存在しない場合はすぐに空配列を返す
+		// 関係性が存在しない場合はすぐに空配列を返す（正常系）
 		if (count === 0) {
-			logger.warn({ koudenId }, "No relationships found for kouden");
 			return [];
 		}
 
@@ -71,73 +61,38 @@ export async function getRelationships(koudenId: string) {
 			.order("is_default", { ascending: false })
 			.order("name");
 
-		if (error) {
-			logger.error(
-				{
-					error: error.message,
-					code: error.code,
-					koudenId,
-				},
-				"Failed to fetch relationships",
-			);
-			throw error;
-		}
+		if (error) throw error;
 
-		if (!data || data.length === 0) {
-			logger.warn({ koudenId }, "No relationships data returned for kouden");
-			return [];
-		}
-
-		return data;
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				koudenId,
-			},
-			"Error in getRelationships",
-		);
-		throw error;
-	}
+		return data ?? [];
+	}, "香典帳の関係性取得");
 }
 
 /**
  * 管理者用: 香典帳の関係性を取得
  */
 export async function getRelationshipsForAdmin(koudenId: string) {
-	// 管理者権限をチェック
-	const { isAdmin } = await import("@/app/_actions/admin/permissions");
-	const adminCheck = await isAdmin();
-	if (!adminCheck) {
-		throw new Error("管理者権限が必要です");
-	}
+	return withErrorHandling(async () => {
+		// 管理者権限をチェック
+		const { isAdmin } = await import("@/app/_actions/admin/permissions");
+		const adminCheck = await isAdmin();
+		if (!adminCheck) {
+			throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
+		}
 
-	// 管理者用クライアント（RLSバイパス）を使用
-	const { createAdminClient } = await import("@/lib/supabase/admin");
-	const supabase = createAdminClient();
+		// 管理者用クライアント（RLSバイパス）を使用
+		const { createAdminClient } = await import("@/lib/supabase/admin");
+		const supabase = createAdminClient();
 
-	try {
 		// 1. まず関係性の存在確認
 		const { count, error: countError } = await supabase
 			.from("relationships")
 			.select("*", { count: "exact", head: true })
 			.eq("kouden_id", koudenId);
 
-		if (countError) {
-			logger.error(
-				{
-					error: countError.message,
-					code: countError.code,
-					koudenId,
-				},
-				"Failed to count relationships for admin",
-			);
-			throw countError;
-		}
+		if (countError) throw countError;
 
-		// 関係性が存在しない場合はすぐに空配列を返す
+		// 関係性が存在しない場合はすぐに空配列を返す（正常系）
 		if (count === 0) {
-			logger.warn({ koudenId }, "No relationships found for kouden");
 			return [];
 		}
 
@@ -159,34 +114,10 @@ export async function getRelationshipsForAdmin(koudenId: string) {
 			.order("is_default", { ascending: false })
 			.order("name");
 
-		if (error) {
-			logger.error(
-				{
-					error: error.message,
-					code: error.code,
-					koudenId,
-				},
-				"Failed to fetch relationships for admin",
-			);
-			throw error;
-		}
+		if (error) throw error;
 
-		if (!data || data.length === 0) {
-			logger.warn({ koudenId }, "No relationships data returned for kouden");
-			return [];
-		}
-
-		return data;
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				koudenId,
-			},
-			"Error in getRelationshipsForAdmin",
-		);
-		throw error;
-	}
+		return data ?? [];
+	}, "管理者用の香典帳関係性取得");
 }
 
 // 香典帳に新しい関係性を追加
@@ -195,27 +126,29 @@ export async function createRelationship(input: {
 	name: string;
 	description?: string;
 }) {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-	if (!user) throw new Error("Not authenticated");
+	return withErrorHandling(async () => {
+		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
+		if (!user) throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
 
-	const { data, error } = await supabase
-		.from("relationships")
-		.insert({
-			kouden_id: input.koudenId,
-			name: input.name,
-			description: input.description,
-			is_default: false,
-			created_by: user.id,
-		})
-		.select()
-		.single();
+		const { data, error } = await supabase
+			.from("relationships")
+			.insert({
+				kouden_id: input.koudenId,
+				name: input.name,
+				description: input.description,
+				is_default: false,
+				created_by: user.id,
+			})
+			.select()
+			.single();
 
-	if (error) throw error;
-	revalidatePath(`/koudens/${input.koudenId}`);
-	return data;
+		if (error) throw error;
+		revalidatePath(`/koudens/${input.koudenId}`);
+		return data;
+	}, "関係性の追加");
 }
 
 // 関係性を更新
@@ -223,47 +156,56 @@ export async function updateRelationship(
 	id: string,
 	input: { name?: string; description?: string; is_default?: boolean },
 ) {
-	const supabase = await createClient();
-	const { data, error } = await supabase
-		.from("relationships")
-		.update({
-			...input,
-		})
-		.eq("id", id)
-		.select()
-		.single();
+	return withErrorHandling(async () => {
+		const supabase = await createClient();
+		const { data, error } = await supabase
+			.from("relationships")
+			.update({
+				...input,
+			})
+			.eq("id", id)
+			.select()
+			.single();
 
-	if (error) throw error;
-	revalidatePath(`/koudens/${data.kouden_id}`);
-	return data;
+		if (error) throw error;
+		revalidatePath(`/koudens/${data.kouden_id}`);
+		return data;
+	}, "関係性の更新");
 }
 
 // 関係性を削除
 export async function deleteRelationship(id: string) {
-	const supabase = await createClient();
-	const { data: relationship } = await supabase
-		.from("relationships")
-		.select("kouden_id")
-		.eq("id", id)
-		.single();
+	return withErrorHandling(async () => {
+		const supabase = await createClient();
+		// 削除は冪等にしたいため、対象が存在しない場合（PGRST116）は成功扱いとする。
+		// 以下では `.maybeSingle()` を使用し、null ↔ row 不在を区別する。
+		const { data: relationship, error: fetchError } = await supabase
+			.from("relationships")
+			.select("kouden_id")
+			.eq("id", id)
+			.maybeSingle();
 
-	const { error } = await supabase.from("relationships").delete().eq("id", id);
+		if (fetchError) throw fetchError;
 
-	if (error) throw error;
-	if (relationship) {
+		// 既に削除済み（または存在しない）：何もせず成功で終了
+		if (!relationship) return;
+
+		const { error: deleteError } = await supabase.from("relationships").delete().eq("id", id);
+
+		if (deleteError) throw deleteError;
 		revalidatePath(`/koudens/${relationship.kouden_id}`);
-	}
+	}, "関係性の削除");
 }
 
 // 香典帳作成時にデフォルトの関係性を初期化
 // TODO: デフォルトの関係性作成はfunctionsの方で実装していた気がするので確認する
 export async function initializeDefaultRelationships(koudenId: string) {
-	try {
+	return withErrorHandling(async () => {
 		const supabase = await createClient();
 		const {
 			data: { user },
 		} = await supabase.auth.getUser();
-		if (!user) throw new Error("Not authenticated");
+		if (!user) throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
 
 		const defaultRelationships = [
 			{ name: "仕事関係", description: "職場や仕事上の関係者" },
@@ -286,14 +228,5 @@ export async function initializeDefaultRelationships(koudenId: string) {
 
 		if (error) throw error;
 		revalidatePath(`/koudens/${koudenId}`);
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				koudenId,
-			},
-			"Error initializing default relationships",
-		);
-		throw new Error("デフォルトの関係性の初期化に失敗しました");
-	}
+	}, "デフォルト関係性の初期化");
 }
