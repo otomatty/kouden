@@ -180,15 +180,17 @@ export async function updateRelationship(
 export async function deleteRelationship(id: string) {
 	return withErrorHandling(async () => {
 		const supabase = await createClient();
-		const { data: relationship } = await supabase
+		const { data: relationship, error: fetchError } = await supabase
 			.from("relationships")
 			.select("kouden_id")
 			.eq("id", id)
 			.single();
 
-		const { error } = await supabase.from("relationships").delete().eq("id", id);
+		if (fetchError) throw fetchError;
 
-		if (error) throw error;
+		const { error: deleteError } = await supabase.from("relationships").delete().eq("id", id);
+
+		if (deleteError) throw deleteError;
 		if (relationship) {
 			revalidatePath(`/koudens/${relationship.kouden_id}`);
 		}

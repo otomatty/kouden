@@ -55,11 +55,50 @@ describe("KoudenError", () => {
 });
 
 describe("KoudenError.fromSupabase", () => {
-	it("PostgREST PGRST116 を NOT_FOUND に変換する", () => {
-		const err = KoudenError.fromSupabase({ code: "PGRST116", message: "No rows" }, "メンバー取得");
+	it("PostgREST PGRST116（0行）を NOT_FOUND に変換する", () => {
+		const err = KoudenError.fromSupabase(
+			{
+				code: "PGRST116",
+				message: "JSON object requested, multiple (or no) rows returned",
+				details: "The result contains 0 rows",
+			},
+			"メンバー取得",
+		);
 		expect(err.code).toBe(ErrorCodes.NOT_FOUND);
 		expect(err.userMessage).toBe("対象のデータが見つかりませんでした。");
 		expect(err.status).toBe(404);
+	});
+
+	it("PostgREST PGRST116（複数行）は NOT_FOUND ではなく DB_FETCH_ERROR に分類する", () => {
+		const err = KoudenError.fromSupabase(
+			{
+				code: "PGRST116",
+				message: "JSON object requested, multiple (or no) rows returned",
+				details: "The result contains 3 rows",
+			},
+			"メンバー取得",
+		);
+		expect(err.code).toBe(ErrorCodes.DB_FETCH_ERROR);
+		expect(err.userMessage).toContain("想定と一致しませんでした");
+	});
+
+	it("PostgrestError（Error 継承）でも Supabase エラーとして変換される", () => {
+		class PostgrestError extends Error {
+			code = "23505";
+			details = "Key (name)=(foo) already exists.";
+			hint = null;
+			constructor(msg: string) {
+				super(msg);
+				this.name = "PostgrestError";
+			}
+		}
+		const err = KoudenError.fromSupabase(
+			new PostgrestError("duplicate key value violates unique constraint"),
+			"関係性の作成",
+		);
+		expect(err.code).toBe(ErrorCodes.ALREADY_EXISTS);
+		expect(err.status).toBe(409);
+		expect(err.userMessage).toContain("すでに同じデータ");
 	});
 
 	it("Postgres 23505（重複）を ALREADY_EXISTS に変換する", () => {
@@ -164,8 +203,24 @@ describe("toActionError", () => {
 				code: "FORBIDDEN",
 				message: "この操作を行う権限がありません。",
 				status: 403,
-				details: undefined,
 			},
 		});
+	});
+
+	it("内部の details はクライアント向け ActionResult には含めない（情報漏洩防止）", () => {
+		const err = KoudenError.fromSupabase(
+			{
+				code: "23505",
+				message: "dup",
+				details: "Key (name)=(x) already exists.",
+				hint: null,
+			},
+			"作成",
+		);
+		const result = toActionError(err, "作成");
+		expect(result.ok).toBe(false);
+		if (!result.ok) {
+			expect(result.error).not.toHaveProperty("details");
+		}
 	});
 });

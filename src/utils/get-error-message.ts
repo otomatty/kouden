@@ -13,7 +13,10 @@ const ENGLISH_TO_JAPANESE_MESSAGES: Array<{ pattern: RegExp; translation: string
 	{ pattern: /^forbidden$/i, translation: "この操作を行う権限がありません" },
 	{ pattern: /^not found$/i, translation: "対象のデータが見つかりませんでした" },
 	{ pattern: /failed to fetch/i, translation: "通信エラーが発生しました" },
-	{ pattern: /timeout/i, translation: "通信がタイムアウトしました" },
+	{
+		pattern: /(?:request\s+timeout|timeout\s+occurred|timed?\s+out)/i,
+		translation: "通信がタイムアウトしました",
+	},
 ];
 
 function translateEnglishMessage(message: string): string {

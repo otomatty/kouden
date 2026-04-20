@@ -81,34 +81,34 @@ const SUPABASE_ERROR_CODE_MAP: Record<string, { code: string; message: string }>
 	// PostgREST
 	PGRST116: {
 		code: ErrorCodes.NOT_FOUND,
-		message: "対象のデータが見つかりませんでした",
+		message: "対象のデータが見つかりませんでした。",
 	},
-	PGRST301: { code: ErrorCodes.UNAUTHORIZED, message: "認証が必要です" },
+	PGRST301: { code: ErrorCodes.UNAUTHORIZED, message: "認証が必要です。" },
 
 	// Postgres
 	"23505": {
 		code: ErrorCodes.ALREADY_EXISTS,
-		message: "すでに同じデータが存在します",
+		message: "すでに同じデータが存在します。",
 	},
 	"23503": {
 		code: ErrorCodes.DB_CONSTRAINT_ERROR,
-		message: "関連するデータが存在するため処理できませんでした",
+		message: "関連するデータが存在するため処理できませんでした。",
 	},
 	"23502": {
 		code: ErrorCodes.VALIDATION_ERROR,
-		message: "必須項目が入力されていません",
+		message: "必須項目が入力されていません。",
 	},
 	"23514": {
 		code: ErrorCodes.VALIDATION_ERROR,
-		message: "入力値が制約を満たしていません",
+		message: "入力値が制約を満たしていません。",
 	},
 	"42501": {
 		code: ErrorCodes.FORBIDDEN,
-		message: "この操作を行う権限がありません",
+		message: "この操作を行う権限がありません。",
 	},
 	"42P01": {
 		code: ErrorCodes.DB_FETCH_ERROR,
-		message: "データの取得に失敗しました",
+		message: "データの取得に失敗しました。",
 	},
 };
 
@@ -148,12 +148,45 @@ interface SupabaseLikeError {
 
 function isSupabaseLikeError(error: unknown): error is SupabaseLikeError {
 	if (!error || typeof error !== "object") return false;
-	// Errorインスタンスは Supabase のエラーオブジェクトではなく、
-	// 通常の JavaScript エラーとして扱う
-	if (error instanceof Error) return false;
 	const e = error as Record<string, unknown>;
-	// Supabaseのエラーは `code` プロパティを持つ（PostgREST/Postgres由来）
+	// Supabaseのエラー（PostgrestError / PostgREST / Postgres）は
+	// いずれも `code` プロパティを持つ。
+	// PostgrestError は Error を継承しているため、Errorインスタンスも除外しない。
 	return typeof e.code === "string";
+}
+
+/**
+ * Supabase エラーコードを `KoudenError` の分類にマッピングする。
+ *
+ * 一部のエラーコード（`PGRST116` 等）は状況によって意味が変わるため、
+ * `details` や `message` の内容から推定して分岐する。
+ */
+function resolveSupabaseMapping(
+	error: SupabaseLikeError,
+): { code: string; message: string } | undefined {
+	const code = error.code;
+	if (!code) return undefined;
+
+	// PGRST116 は「想定外の行数」で発火する。
+	// 0 行 → NOT_FOUND、それ以外（複数行） → データ整合性エラーとして DB_FETCH_ERROR に倒す。
+	if (code === "PGRST116") {
+		const details = typeof error.details === "string" ? error.details : "";
+		const message = typeof error.message === "string" ? error.message : "";
+		const combined = `${details} ${message}`.toLowerCase();
+		const isZeroRows = /\b0\s+rows?\b/.test(combined) || /no\s+rows/.test(combined);
+		if (isZeroRows) {
+			return {
+				code: ErrorCodes.NOT_FOUND,
+				message: "対象のデータが見つかりませんでした。",
+			};
+		}
+		return {
+			code: ErrorCodes.DB_FETCH_ERROR,
+			message: "データの取得結果が想定と一致しませんでした。",
+		};
+	}
+
+	return SUPABASE_ERROR_CODE_MAP[code];
 }
 
 export interface KoudenErrorOptions {
@@ -210,11 +243,11 @@ export class KoudenError extends Error {
 		if (error instanceof KoudenError) return error;
 
 		if (isSupabaseLikeError(error)) {
-			const mapped = error.code ? SUPABASE_ERROR_CODE_MAP[error.code] : undefined;
+			const mapped = resolveSupabaseMapping(error);
 			const code = mapped?.code ?? ErrorCodes.DB_FETCH_ERROR;
-			const userMessage = mapped?.message ?? `${context}に失敗しました`;
+			const userMessage = mapped?.message ?? `${context}に失敗しました。`;
 			return new KoudenError(error.message ?? `${context} failed`, code, {
-				userMessage: `${userMessage}。`,
+				userMessage,
 				details: {
 					supabaseCode: error.code,
 					supabaseDetails: error.details,
@@ -255,6 +288,10 @@ export class KoudenError extends Error {
  * Server Action等で利用する統一レスポンス型。
  *
  * `ok: true` の成功ケースと、`ok: false` の失敗ケースを判別可能ユニオンとして表現する。
+ *
+ * ※ `details` はサーバー内部情報（DBの制約名・テーブル名等）を含む恐れがあるため、
+ *   クライアントに返却するこの型からは意図的に除外している。
+ *   サーバーサイドでは `KoudenError.details` を直接参照すればよい。
  */
 export type ActionResult<T> =
 	| { ok: true; data: T }
@@ -264,12 +301,13 @@ export type ActionResult<T> =
 				code: string;
 				message: string;
 				status: number;
-				details?: Record<string, unknown>;
 			};
 	  };
 
 /**
  * `KoudenError`（または任意のエラー）を `ActionResult` のエラー形式に変換する。
+ *
+ * `details` は内部情報の漏洩を避けるためクライアントには返さない。
  */
 export function toActionError<T = never>(error: unknown, context: string): ActionResult<T> {
 	const kErr = error instanceof KoudenError ? error : KoudenError.from(error, context);
@@ -279,9 +317,25 @@ export function toActionError<T = never>(error: unknown, context: string): Actio
 			code: kErr.code,
 			message: kErr.userMessage,
 			status: kErr.status,
-			details: kErr.details,
 		},
 	};
+}
+
+/**
+ * `KoudenError` を構造化ログとして出力する内部ヘルパー。
+ */
+function logKoudenError(err: KoudenError, errorContext: string): void {
+	logger.error(
+		{
+			errorContext,
+			error: err.message,
+			errorCode: err.code,
+			errorStatus: err.status,
+			errorStack: err.stack,
+			errorDetails: err.details,
+		},
+		`[ERROR] ${errorContext}`,
+	);
 }
 
 /**
@@ -299,19 +353,7 @@ export const withErrorHandling = async <T>(
 		return await action();
 	} catch (error) {
 		const koudenError = KoudenError.fromSupabase(error, errorContext);
-
-		logger.error(
-			{
-				errorContext,
-				error: koudenError.message,
-				errorCode: koudenError.code,
-				errorStatus: koudenError.status,
-				errorStack: koudenError.stack,
-				errorDetails: koudenError.details,
-			},
-			`[ERROR] ${errorContext}`,
-		);
-
+		logKoudenError(koudenError, errorContext);
 		throw koudenError;
 	}
 };
@@ -331,18 +373,7 @@ export const withActionResult = async <T>(
 		return { ok: true, data };
 	} catch (error) {
 		const koudenError = KoudenError.fromSupabase(error, errorContext);
-
-		logger.error(
-			{
-				errorContext,
-				error: koudenError.message,
-				errorCode: koudenError.code,
-				errorStatus: koudenError.status,
-				errorDetails: koudenError.details,
-			},
-			`[ERROR] ${errorContext}`,
-		);
-
+		logKoudenError(koudenError, errorContext);
 		return toActionError<T>(koudenError, errorContext);
 	}
 };
