@@ -205,9 +205,13 @@ export interface KoudenErrorOptions {
  * 本アプリケーション独自のエラークラス。
  *
  * - `code`: エラーコード（機械可読）
- * - `message`: 開発者向けメッセージ
+ * - `message`: UIにも露出しうる安全な文脈メッセージ（`userMessage` と同等）
  * - `userMessage`: エンドユーザー向け日本語メッセージ
  * - `status`: 対応するHTTPステータス
+ *
+ * ※ `message` は `Error.message` として UI（例: Next.js の `error.tsx`）で
+ *   そのまま表示されることがあるため、DB/内部情報は含めないこと。
+ *   生のSupabaseメッセージや例外の詳細は `details` と `cause` に保持する。
  */
 export class KoudenError extends Error {
 	public readonly code: string;
@@ -237,6 +241,9 @@ export class KoudenError extends Error {
 	/**
 	 * Supabase（PostgREST/Postgres）由来のエラーを `KoudenError` に変換する。
 	 *
+	 * `KoudenError.message` には UI に露出しうるため安全な文脈メッセージを設定し、
+	 * 生の Supabase メッセージはログ用途に `details.supabaseMessage` と `cause` に保持する。
+	 *
 	 * @param error Supabaseから返されたエラー
 	 * @param context 失敗した操作の説明（「メンバー一覧の取得」など）
 	 */
@@ -247,10 +254,11 @@ export class KoudenError extends Error {
 			const mapped = resolveSupabaseMapping(error);
 			const code = mapped?.code ?? ErrorCodes.DB_FETCH_ERROR;
 			const userMessage = mapped?.message ?? `${context}に失敗しました。`;
-			return new KoudenError(error.message ?? `${context} failed`, code, {
+			return new KoudenError(userMessage, code, {
 				userMessage,
 				details: {
 					supabaseCode: error.code,
+					supabaseMessage: error.message,
 					supabaseDetails: error.details,
 					supabaseHint: error.hint,
 				},
@@ -263,25 +271,22 @@ export class KoudenError extends Error {
 
 	/**
 	 * 任意のthrowされた値を `KoudenError` に変換する。
+	 *
+	 * 元の例外メッセージは UI 露出を避けるため `message` には反映せず、
+	 * ログ用途として `details.originalMessage` と `cause` に保持する。
 	 */
 	static from(error: unknown, context: string): KoudenError {
 		if (error instanceof KoudenError) return error;
 
-		if (error instanceof Error) {
-			return new KoudenError(error.message || `${context} failed`, ErrorCodes.UNKNOWN_ERROR, {
-				userMessage: `${context}に失敗しました。`,
-				cause: error,
-			});
-		}
+		const userMessage = `${context}に失敗しました。`;
+		const originalMessage =
+			error instanceof Error ? error.message : typeof error === "string" ? error : undefined;
 
-		return new KoudenError(
-			typeof error === "string" ? error : `${context} failed`,
-			ErrorCodes.UNKNOWN_ERROR,
-			{
-				userMessage: `${context}に失敗しました。`,
-				cause: error,
-			},
-		);
+		return new KoudenError(userMessage, ErrorCodes.UNKNOWN_ERROR, {
+			userMessage,
+			details: originalMessage !== undefined ? { originalMessage } : undefined,
+			cause: error,
+		});
 	}
 }
 

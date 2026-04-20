@@ -134,6 +134,34 @@ describe("KoudenError.fromSupabase", () => {
 		expect(err.userMessage).toBe("処理に失敗しました。");
 		expect((err as Error & { cause?: unknown }).cause).toBeInstanceOf(Error);
 	});
+
+	it("KoudenError.message に生の Supabase メッセージを漏らさない（UI露出対策）", () => {
+		const rawMessage = 'duplicate key value violates unique constraint "relationships_name_key"';
+		const err = KoudenError.fromSupabase(
+			{
+				code: "23505",
+				message: rawMessage,
+				details: "Key (name)=(foo) already exists.",
+				hint: null,
+			},
+			"関係性の作成",
+		);
+		expect(err.message).not.toContain("duplicate key");
+		expect(err.message).not.toContain("relationships_name_key");
+		expect(err.message).toBe(err.userMessage);
+		// 生メッセージはログ向けに details / cause に退避される
+		expect(err.details).toMatchObject({ supabaseMessage: rawMessage });
+	});
+});
+
+describe("KoudenError.from", () => {
+	it("生の Error.message を KoudenError.message に反映しない（UI露出対策）", () => {
+		const raw = "Internal server detail: connection string=postgres://...";
+		const err = KoudenError.from(new Error(raw), "処理");
+		expect(err.message).toBe("処理に失敗しました。");
+		expect(err.message).not.toContain("connection string");
+		expect(err.details).toMatchObject({ originalMessage: raw });
+	});
 });
 
 describe("withErrorHandling", () => {
