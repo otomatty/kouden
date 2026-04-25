@@ -12,6 +12,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { HELP_CATEGORIES } from "@/config/help-categories";
 import { cn } from "@/lib/utils";
 import type { QuickHelpItem } from "@/types/help";
 import { getActionIcon, getIcon } from "@/utils/help-icons";
@@ -28,7 +29,6 @@ import {
 	MessageCircle,
 	Phone,
 	Search,
-	Settings,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -49,13 +49,12 @@ export function HelpPageClient() {
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
-	// カテゴリ定義
-	const categoryOptions = [
-		{ value: "all", label: "すべて", icon: HelpCircle },
-		{ value: "basic", label: "基本操作", icon: BookOpen },
-		{ value: "advanced", label: "応用機能", icon: Settings },
-		{ value: "troubleshooting", label: "トラブル", icon: HelpCircle },
-	];
+	// カテゴリ定義（共通定義を React コンポーネントに解決）
+	const categoryOptions = HELP_CATEGORIES.map((c) => ({
+		value: c.value,
+		label: c.label,
+		icon: getIcon(c.iconName),
+	}));
 
 	// ソート定義
 	const sortOptions = [

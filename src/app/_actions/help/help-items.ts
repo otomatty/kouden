@@ -1,5 +1,6 @@
 "use server";
 
+import { HELP_CATEGORIES } from "@/config/help-categories";
 import { getAllDocs } from "@/lib/docs";
 import type { HelpSearchParams, HelpSearchResult, QuickHelpItem } from "@/types/help";
 
@@ -201,13 +202,12 @@ export async function searchHelpItems(params: HelpSearchParams = {}): Promise<He
 		// ページネーション
 		const paginatedItems = filteredItems.slice(offset, offset + limit);
 
-		// カテゴリ一覧
-		const categories = [
-			{ value: "all", label: "すべて", icon: "HelpCircle" },
-			{ value: "basic", label: "基本操作", icon: "BookOpen" },
-			{ value: "advanced", label: "応用機能", icon: "Settings" },
-			{ value: "troubleshooting", label: "トラブル", icon: "HelpCircle" },
-		];
+		// カテゴリ一覧（共通定義を API 応答用に整形）
+		const categories = HELP_CATEGORIES.map((c) => ({
+			value: c.value,
+			label: c.label,
+			icon: c.iconName,
+		}));
 
 		return {
 			items: paginatedItems,

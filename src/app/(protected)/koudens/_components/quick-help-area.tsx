@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { HELP_CATEGORIES } from "@/config/help-categories";
 import { cn } from "@/lib/utils";
 import type { QuickHelpItem } from "@/types/help";
 import { getActionIcon, getIcon } from "@/utils/help-icons";
@@ -33,13 +34,12 @@ export const QuickHelpArea = memo(function QuickHelpArea({
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
-	// カテゴリ定義
-	const categoryOptions = [
-		{ value: "all", label: "すべて", icon: HelpCircle },
-		{ value: "basic", label: "基本操作", icon: getIcon("BookOpen") },
-		{ value: "advanced", label: "応用機能", icon: getIcon("Settings") },
-		{ value: "troubleshooting", label: "トラブル", icon: HelpCircle },
-	];
+	// カテゴリ定義（共通定義を React コンポーネントに解決）
+	const categoryOptions = HELP_CATEGORIES.map((c) => ({
+		value: c.value,
+		label: c.label,
+		icon: getIcon(c.iconName),
+	}));
 
 	// データ取得
 	useEffect(() => {
