@@ -2,7 +2,7 @@ export interface QuickHelpItem {
 	id: string;
 	title: string;
 	description: string;
-	category: "basic" | "advanced" | "troubleshooting" | "manners";
+	category: "basic" | "advanced" | "troubleshooting";
 	actionType: "guide" | "tool" | "external" | "modal";
 	actionHref: string;
 	actionLabel: string;

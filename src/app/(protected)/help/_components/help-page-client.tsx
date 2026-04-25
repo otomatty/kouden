@@ -22,7 +22,6 @@ import {
 	ChevronRight,
 	Clock,
 	ExternalLink,
-	FileText,
 	HelpCircle,
 	Loader2,
 	Mail,
@@ -54,7 +53,6 @@ export function HelpPageClient() {
 	const categoryOptions = [
 		{ value: "all", label: "すべて", icon: HelpCircle },
 		{ value: "basic", label: "基本操作", icon: BookOpen },
-		{ value: "manners", label: "マナー", icon: FileText },
 		{ value: "advanced", label: "応用機能", icon: Settings },
 		{ value: "troubleshooting", label: "トラブル", icon: HelpCircle },
 	];
@@ -107,8 +105,6 @@ export function HelpPageClient() {
 		switch (category) {
 			case "basic":
 				return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-			case "manners":
-				return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
 			case "advanced":
 				return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
 			case "troubleshooting":

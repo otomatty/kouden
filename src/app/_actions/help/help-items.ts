@@ -205,7 +205,6 @@ export async function searchHelpItems(params: HelpSearchParams = {}): Promise<He
 		const categories = [
 			{ value: "all", label: "すべて", icon: "HelpCircle" },
 			{ value: "basic", label: "基本操作", icon: "BookOpen" },
-			{ value: "manners", label: "マナー", icon: "FileText" },
 			{ value: "advanced", label: "応用機能", icon: "Settings" },
 			{ value: "troubleshooting", label: "トラブル", icon: "HelpCircle" },
 		];
