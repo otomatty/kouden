@@ -1,27 +1,13 @@
 "use client";
 
-import { memo, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	BookOpen,
-	Gift,
-	TrendingUp,
-	AlertCircle,
-	Lightbulb,
-	Users,
-	FileText,
-	Heart,
-	ArrowRight,
-	ExternalLink,
-} from "lucide-react";
-import Link from "next/link";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Database } from "@/types/supabase";
-import type { Post } from "@/schemas/posts";
-import { RecentBookmarks } from "./recent-bookmarks";
+import { AlertCircle, ArrowRight, BookOpen, Gift, Heart, Lightbulb, Users } from "lucide-react";
+import Link from "next/link";
+import { memo, useMemo } from "react";
 
-// 拡張した香典帳型（既存の型定義を参考）
 type Plan = Database["public"]["Tables"]["plans"]["Row"];
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 type KoudenWithPlan = Database["public"]["Tables"]["koudens"]["Row"] & {
@@ -33,17 +19,10 @@ type KoudenWithPlan = Database["public"]["Tables"]["koudens"]["Row"] & {
 
 interface ContextualInfoSectionProps {
 	koudens: KoudenWithPlan[];
-	blogPosts: Post[];
 	className?: string;
 }
 
-// コンテンツタイプの定義
-type ContentType =
-	| "getting-started"
-	| "plan-renewal"
-	| "return-management"
-	| "seasonal-manners"
-	| "advanced-tips";
+type ContentType = "getting-started" | "plan-renewal" | "return-management" | "seasonal-manners";
 
 interface InfoContent {
 	type: ContentType;
@@ -54,22 +33,14 @@ interface InfoContent {
 	variant: "default" | "warning" | "info" | "tip";
 	actionLabel: string;
 	actionHref: string;
-	isExternal?: boolean;
 	tips?: string[];
 }
 
-/**
- * コンテキスト型インフォメーションセクション
- * ユーザーの香典帳の状態に応じて最適な情報を表示
- */
 export const ContextualInfoSection = memo(function ContextualInfoSection({
 	koudens,
-	blogPosts,
 	className = "",
 }: ContextualInfoSectionProps) {
-	// コンテキストに応じたコンテンツを決定
 	const contextualContent = useMemo((): InfoContent => {
-		// 1. 香典帳がない場合 - はじめてガイド（最優先）
 		if (koudens.length === 0) {
 			return {
 				type: "getting-started",
@@ -85,7 +56,6 @@ export const ContextualInfoSection = memo(function ContextualInfoSection({
 			};
 		}
 
-		// 2. 期限切れプランがある場合 - プラン更新案内
 		const expiredKoudens = koudens.filter((k) => k.expired);
 		if (expiredKoudens.length > 0) {
 			return {
@@ -101,7 +71,6 @@ export const ContextualInfoSection = memo(function ContextualInfoSection({
 			};
 		}
 
-		// 3. アクティブな香典帳がある場合 - 返礼品管理のコツ
 		const activeKoudens = koudens.filter((k) => k.status !== "archived");
 		if (activeKoudens.length > 0) {
 			return {
@@ -117,7 +86,6 @@ export const ContextualInfoSection = memo(function ContextualInfoSection({
 			};
 		}
 
-		// 4. デフォルト - 季節のマナー情報
 		const currentMonth = new Date().getMonth() + 1;
 		const isMemorialSeason = [3, 4, 9, 10].includes(currentMonth);
 
@@ -130,41 +98,11 @@ export const ContextualInfoSection = memo(function ContextualInfoSection({
 				: "いざという時に慌てないための、香典に関する基本的なマナーをご紹介します。",
 			icon: isMemorialSeason ? Users : Heart,
 			variant: "default",
-			actionLabel: "マナーガイドを見る",
-			actionHref: "/blog",
-			isExternal: true,
+			actionLabel: "よくある質問を見る",
+			actionHref: "/faq",
 			tips: ["地域による違いも解説", "実例を交えた具体的アドバイス", "よくある疑問をQ&A形式で"],
 		};
 	}, [koudens]);
-
-	// 関連記事をコンテンツタイプに応じてフィルタリング
-	const relevantPosts = useMemo(() => {
-		const categoryMap: Record<ContentType, string[]> = {
-			"getting-started": ["マナー", "基本"],
-			"plan-renewal": ["プラン", "機能"],
-			"return-management": ["返礼品", "お礼状"],
-			"seasonal-manners": ["マナー"],
-			"advanced-tips": ["応用", "効率化"],
-		};
-
-		const relevantCategories = categoryMap[contextualContent.type] || ["マナー"];
-
-		// 実際のブログ記事データから関連記事を取得
-		return blogPosts
-			.filter(
-				(post) =>
-					post.category && relevantCategories.some((category) => post.category?.includes(category)),
-			)
-			.slice(0, 2)
-			.map((post) => ({
-				id: post.id,
-				title: post.title,
-				excerpt: post.excerpt || "",
-				category: post.category || "未分類",
-				href: `/blog/${post.slug}`,
-				publishedAt: post.published_at || post.created_at,
-			}));
-	}, [contextualContent.type, blogPosts]);
 
 	const getVariantStyles = (variant: InfoContent["variant"]) => {
 		switch (variant) {
@@ -194,7 +132,6 @@ export const ContextualInfoSection = memo(function ContextualInfoSection({
 
 	return (
 		<div data-tour="contextual-info-section" className={`space-y-4 sm:space-y-6 ${className}`}>
-			{/* メインコンテンツカード */}
 			<Card
 				className={`${getVariantStyles(contextualContent.variant)} transition-all duration-200`}
 			>
@@ -219,7 +156,6 @@ export const ContextualInfoSection = memo(function ContextualInfoSection({
 					</div>
 				</CardHeader>
 				<CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-6 pt-0">
-					{/* ポイント一覧 */}
 					{contextualContent.tips && contextualContent.tips.length > 0 && (
 						<ul className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
 							{contextualContent.tips.map((tip) => (
@@ -231,7 +167,6 @@ export const ContextualInfoSection = memo(function ContextualInfoSection({
 						</ul>
 					)}
 
-					{/* アクションボタン */}
 					<div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-0 pt-2">
 						<Button
 							asChild
@@ -240,80 +175,18 @@ export const ContextualInfoSection = memo(function ContextualInfoSection({
 						>
 							<Link href={contextualContent.actionHref}>
 								<span className="truncate">{contextualContent.actionLabel}</span>
-								{contextualContent.isExternal ? (
-									<ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-								) : (
-									<ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-								)}
+								<ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
 							</Link>
 						</Button>
 
 						{contextualContent.variant === "warning" && (
 							<span className="text-xs text-muted-foreground text-center sm:text-right">
-								🚨 対応をお急ぎください
+								対応をお急ぎください
 							</span>
 						)}
 					</div>
 				</CardContent>
 			</Card>
-
-			{/* 関連記事セクション */}
-			{relevantPosts.length > 0 && (
-				<Card>
-					<CardHeader className="pb-3 sm:pb-4 p-3 sm:p-6">
-						<CardTitle className="text-sm sm:text-base font-medium flex items-center gap-2">
-							<FileText className="h-3 w-3 sm:h-4 sm:w-4" />
-							こちらもチェック
-						</CardTitle>
-					</CardHeader>
-					<CardContent className="p-3 sm:p-6 pt-0">
-						<div className="space-y-2 sm:space-y-3">
-							{relevantPosts.map((post) => (
-								<Link
-									key={post.id}
-									href={post.href}
-									className="block group p-2 sm:p-3 rounded-lg border border-transparent hover:border-border hover:bg-muted/50 transition-all duration-200"
-								>
-									<div className="flex items-start justify-between gap-2">
-										<div className="flex-1 min-w-0">
-											<h4 className="font-medium text-xs sm:text-sm group-hover:text-primary transition-colors break-words">
-												{post.title}
-											</h4>
-											<p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
-												{post.excerpt}
-											</p>
-										</div>
-										<div className="flex flex-col sm:flex-row items-end sm:items-center space-y-1 sm:space-y-0 sm:space-x-2 ml-2 sm:ml-3 flex-shrink-0">
-											<Badge variant="secondary" className="text-xs">
-												{post.category}
-											</Badge>
-											<ArrowRight className="h-3 w-3 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-200" />
-										</div>
-									</div>
-								</Link>
-							))}
-						</div>
-
-						{/* 全記事リンク */}
-						<div className="pt-2 sm:pt-3 mt-2 sm:mt-3 border-t border-border">
-							<Button
-								variant="ghost"
-								size="sm"
-								asChild
-								className="w-full justify-center text-xs sm:text-sm"
-							>
-								<Link href="/blog" className="flex items-center gap-2">
-									<span>すべての記事を見る</span>
-									<TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
-								</Link>
-							</Button>
-						</div>
-					</CardContent>
-				</Card>
-			)}
-
-			{/* 最近のブックマーク */}
-			<RecentBookmarks className="lg:col-span-2" />
 		</div>
 	);
 });

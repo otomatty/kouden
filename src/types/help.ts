@@ -9,8 +9,8 @@ export interface QuickHelpItem {
 	keywords: string[];
 	isPopular?: boolean;
 	estimatedTime?: string;
-	sourceType: "manual" | "blog" | "static";
-	sourceId?: string; // マニュアルのslugやブログのid
+	sourceType: "manual" | "static";
+	sourceId?: string; // マニュアルのslug
 	icon?: string; // アイコン名を文字列で保存
 	priority?: number; // 表示優先度
 	lastUpdated?: string;

@@ -1,8 +1,8 @@
 "use client";
 
+import { BookOpen, CreditCard, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import type React from "react";
-import { CreditCard, SlidersHorizontal, BookOpen, Briefcase } from "lucide-react";
 
 interface NavItem {
 	name: string;
@@ -14,7 +14,6 @@ const navItems: NavItem[] = [
 	{ name: "料金", href: "/pricing", icon: CreditCard },
 	{ name: "機能", href: "/features", icon: SlidersHorizontal },
 	{ name: "使い方", href: "/guide", icon: BookOpen },
-	{ name: "企業", href: "/enterprise", icon: Briefcase },
 ];
 
 /**

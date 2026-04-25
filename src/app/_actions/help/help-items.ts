@@ -1,8 +1,7 @@
 "use server";
 
 import { getAllDocs } from "@/lib/docs";
-import { getPublishedPosts } from "@/app/_actions/blog/posts";
-import type { QuickHelpItem, HelpSearchResult, HelpSearchParams } from "@/types/help";
+import type { HelpSearchParams, HelpSearchResult, QuickHelpItem } from "@/types/help";
 
 /**
  * 静的ヘルプアイテムの定義
@@ -125,81 +124,12 @@ async function getManualHelpItems(): Promise<QuickHelpItem[]> {
 }
 
 /**
- * ブログ記事からヘルプアイテムを生成
- */
-async function getBlogHelpItems(): Promise<QuickHelpItem[]> {
-	try {
-		const { data: posts } = await getPublishedPosts();
-		if (!posts) return [];
-
-		// 香典帳アプリに関連する記事のみを抽出
-		const relevantPosts = posts.filter((post) => {
-			const content = `${post.title} ${post.excerpt || ""} ${post.category || ""}`.toLowerCase();
-			const relevantKeywords = [
-				"香典",
-				"お礼状",
-				"返礼品",
-				"マナー",
-				"相場",
-				"葬儀",
-				"法要",
-				"弔問",
-				"供物",
-				"電報",
-			];
-			return relevantKeywords.some((keyword) => content.includes(keyword));
-		});
-
-		return relevantPosts.map((post): QuickHelpItem => {
-			// カテゴリマッピング（ブログのカテゴリから）
-			const categoryMap: Record<string, QuickHelpItem["category"]> = {
-				マナー: "manners",
-				基本操作: "basic",
-				応用機能: "advanced",
-				トラブルシューティング: "troubleshooting",
-			};
-
-			// 推定読了時間を計算
-			const contentLength = post.content?.length || 0;
-			const estimatedMinutes = Math.max(3, Math.ceil(contentLength / 600)); // 1分間約600文字
-
-			// キーワードを生成
-			const keywords = [
-				...post.title.split(/\s+/),
-				...(post.excerpt || "").split(/\s+/),
-				post.category || "",
-			].filter((word) => word.length > 1);
-
-			return {
-				id: `blog-${post.id}`,
-				title: post.title,
-				description: post.excerpt || `${post.title}について詳しく解説します`,
-				category: categoryMap[post.category || ""] || "manners",
-				actionType: "external",
-				actionHref: `/blog/${post.slug}`,
-				actionLabel: "記事を読む",
-				keywords,
-				estimatedTime: `${estimatedMinutes}分`,
-				sourceType: "blog",
-				sourceId: post.id,
-				icon: "ExternalLink",
-				priority: 3,
-				lastUpdated: post.updated_at,
-			};
-		});
-	} catch (error) {
-		console.error("Failed to load blog help items:", error);
-		return [];
-	}
-}
-
-/**
  * すべてのヘルプアイテムを取得
  */
 export async function getAllHelpItems(): Promise<QuickHelpItem[]> {
-	const [manualItems, blogItems] = await Promise.all([getManualHelpItems(), getBlogHelpItems()]);
+	const manualItems = await getManualHelpItems();
 
-	return [...staticHelpItems, ...manualItems, ...blogItems];
+	return [...staticHelpItems, ...manualItems];
 }
 
 /**
