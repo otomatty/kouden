@@ -1,18 +1,17 @@
-import type { Metadata } from "next";
-import { Suspense } from "react";
-import { createClient } from "@/lib/supabase/server";
-import { KoudenList } from "./_components/kouden-list";
-import Link from "next/link";
+import { getActiveAnnouncements } from "@/app/_actions/announcements";
+import { getKoudens } from "@/app/_actions/koudens";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { createClient } from "@/lib/supabase/server";
 import { Plus } from "lucide-react";
-import { getKoudens } from "@/app/_actions/koudens";
-import { InvitationSuccessAlert } from "./_components/invitation-success-alert";
-import { HeroAnnouncements } from "./_components/hero-announcements";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { Suspense } from "react";
 import { ContextualInfoSection } from "./_components/contextual-info-section";
+import { HeroAnnouncements } from "./_components/hero-announcements";
+import { InvitationSuccessAlert } from "./_components/invitation-success-alert";
+import { KoudenList } from "./_components/kouden-list";
 import { QuickHelpArea } from "./_components/quick-help-area";
-import { getActiveAnnouncements } from "@/app/_actions/announcements";
-import { getPublishedPosts } from "@/app/_actions/blog/posts";
 
 export const metadata: Metadata = {
 	title: "香典帳一覧 | 香典帳",
@@ -47,9 +46,6 @@ async function KoudensPageContent({
 
 	// お知らせデータを取得
 	const { announcements = [] } = await getActiveAnnouncements();
-
-	// ブログ記事データを取得
-	const { data: blogPosts = [] } = await getPublishedPosts();
 
 	const invitationStatus =
 		typeof searchParams.invitation === "string" ? searchParams.invitation : undefined;
@@ -91,7 +87,7 @@ async function KoudensPageContent({
 			{/* 情報セクション */}
 			<div className="grid gap-6 lg:grid-cols-2">
 				{/* コンテキスト型インフォメーションセクション */}
-				<ContextualInfoSection koudens={koudens || []} blogPosts={blogPosts || []} />
+				<ContextualInfoSection koudens={koudens || []} />
 
 				{/* クイックヘルプエリア */}
 				<QuickHelpArea maxItems={6} />

@@ -1,31 +1,28 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
-	LayoutDashboard,
-	Briefcase,
-	Users,
-	Bell,
-	LifeBuoy,
-	FileText,
-	Settings,
 	ArrowLeft,
+	Bell,
+	FileText,
+	LayoutDashboard,
+	LifeBuoy,
+	Settings,
+	Users,
 } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
 
 const adminApps = [
 	{ name: "ダッシュボード", href: "/admin", icon: LayoutDashboard },
-	{ name: "組織管理", href: "/admin/organizations", icon: Briefcase },
 	{ name: "管理者", href: "/admin/users", icon: Users },
-	{ name: "オウンドメディア", href: "/admin/blog", icon: FileText },
 	{ name: "お知らせ", href: "/admin/announcements", icon: Bell },
 	{ name: "サポート", href: "/admin/support", icon: LifeBuoy },
 	{ name: "監査ログ", href: "/admin/audit-logs", icon: FileText },

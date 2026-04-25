@@ -1,7 +1,6 @@
+import { acceptInvitation } from "@/app/_actions/invitations";
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { acceptInvitation } from "@/app/_actions/invitations";
 
 export async function GET(request: Request) {
 	const requestUrl = new URL(request.url);
@@ -109,22 +108,6 @@ export async function GET(request: Request) {
 		// If a custom redirect was requested, go there first
 		if (redirectToParam) {
 			return Response.redirect(new URL(redirectToParam, requestUrl.origin));
-		}
-
-		// Determine application access based on organization membership
-		try {
-			const { data: memberships } = await supabase
-				.schema("common")
-				.from("organization_members")
-				.select("organization_id")
-				.eq("user_id", user.id);
-
-			if ((memberships?.length ?? 0) > 0) {
-				return Response.redirect(new URL("/application-select", requestUrl.origin));
-			}
-		} catch (error) {
-			console.error("[ERROR] Failed to check organization membership:", error);
-			// Continue to default redirect even if organization check fails
 		}
 
 		// default to main app

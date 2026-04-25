@@ -2,15 +2,15 @@ export interface QuickHelpItem {
 	id: string;
 	title: string;
 	description: string;
-	category: "basic" | "advanced" | "troubleshooting" | "manners";
+	category: "basic" | "advanced" | "troubleshooting";
 	actionType: "guide" | "tool" | "external" | "modal";
 	actionHref: string;
 	actionLabel: string;
 	keywords: string[];
 	isPopular?: boolean;
 	estimatedTime?: string;
-	sourceType: "manual" | "blog" | "static";
-	sourceId?: string; // マニュアルのslugやブログのid
+	sourceType: "manual" | "static";
+	sourceId?: string; // マニュアルのslug
 	icon?: string; // アイコン名を文字列で保存
 	priority?: number; // 表示優先度
 	lastUpdated?: string;

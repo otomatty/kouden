@@ -1,16 +1,17 @@
 "use client";
 
-import { memo, useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { searchHelpItems } from "@/app/_actions/help/help-items";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { HelpCircle, Search, Clock, Mail, Loader2, AlertCircle, ExternalLink } from "lucide-react";
-import Link from "next/link";
+import { HELP_CATEGORIES } from "@/config/help-categories";
 import { cn } from "@/lib/utils";
 import type { QuickHelpItem } from "@/types/help";
-import { searchHelpItems } from "@/app/_actions/help/help-items";
-import { getIcon, getActionIcon } from "@/utils/help-icons";
+import { getActionIcon, getIcon } from "@/utils/help-icons";
+import { AlertCircle, Clock, ExternalLink, HelpCircle, Loader2, Mail, Search } from "lucide-react";
+import Link from "next/link";
+import { memo, useEffect, useMemo, useState } from "react";
 
 interface QuickHelpAreaProps {
 	className?: string;
@@ -33,14 +34,16 @@ export const QuickHelpArea = memo(function QuickHelpArea({
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
-	// カテゴリ定義
-	const categoryOptions = [
-		{ value: "all", label: "すべて", icon: HelpCircle },
-		{ value: "basic", label: "基本操作", icon: getIcon("BookOpen") },
-		{ value: "manners", label: "マナー", icon: getIcon("FileText") },
-		{ value: "advanced", label: "応用機能", icon: getIcon("Settings") },
-		{ value: "troubleshooting", label: "トラブル", icon: HelpCircle },
-	];
+	// カテゴリ定義（共通定義を React コンポーネントに解決、再レンダーごとの再計算を回避）
+	const categoryOptions = useMemo(
+		() =>
+			HELP_CATEGORIES.map((c) => ({
+				value: c.value,
+				label: c.label,
+				icon: getIcon(c.iconName),
+			})),
+		[],
+	);
 
 	// データ取得
 	useEffect(() => {
@@ -92,8 +95,6 @@ export const QuickHelpArea = memo(function QuickHelpArea({
 		switch (category) {
 			case "basic":
 				return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-			case "manners":
-				return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
 			case "advanced":
 				return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
 			case "troubleshooting":

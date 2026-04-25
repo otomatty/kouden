@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { searchHelpItems } from "@/app/_actions/help/help-items";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
 	Select,
@@ -12,27 +12,26 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import {
-	HelpCircle,
-	Search,
-	Clock,
-	ChevronLeft,
-	ChevronRight,
-	Loader2,
-	AlertCircle,
-	BookOpen,
-	FileText,
-	Settings,
-	ExternalLink,
-	Mail,
-	Phone,
-	MessageCircle,
-} from "lucide-react";
-import Link from "next/link";
+import { HELP_CATEGORIES } from "@/config/help-categories";
 import { cn } from "@/lib/utils";
 import type { QuickHelpItem } from "@/types/help";
-import { searchHelpItems } from "@/app/_actions/help/help-items";
-import { getIcon, getActionIcon } from "@/utils/help-icons";
+import { getActionIcon, getIcon } from "@/utils/help-icons";
+import {
+	AlertCircle,
+	BookOpen,
+	ChevronLeft,
+	ChevronRight,
+	Clock,
+	ExternalLink,
+	HelpCircle,
+	Loader2,
+	Mail,
+	MessageCircle,
+	Phone,
+	Search,
+} from "lucide-react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
 const ITEMS_PER_PAGE = 12;
 
@@ -50,14 +49,16 @@ export function HelpPageClient() {
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
-	// カテゴリ定義
-	const categoryOptions = [
-		{ value: "all", label: "すべて", icon: HelpCircle },
-		{ value: "basic", label: "基本操作", icon: BookOpen },
-		{ value: "manners", label: "マナー", icon: FileText },
-		{ value: "advanced", label: "応用機能", icon: Settings },
-		{ value: "troubleshooting", label: "トラブル", icon: HelpCircle },
-	];
+	// カテゴリ定義（共通定義を React コンポーネントに解決、再レンダーごとの再計算を回避）
+	const categoryOptions = useMemo(
+		() =>
+			HELP_CATEGORIES.map((c) => ({
+				value: c.value,
+				label: c.label,
+				icon: getIcon(c.iconName),
+			})),
+		[],
+	);
 
 	// ソート定義
 	const sortOptions = [
@@ -107,8 +108,6 @@ export function HelpPageClient() {
 		switch (category) {
 			case "basic":
 				return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-			case "manners":
-				return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
 			case "advanced":
 				return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
 			case "troubleshooting":
@@ -122,8 +121,6 @@ export function HelpPageClient() {
 		switch (sourceType) {
 			case "manual":
 				return "マニュアル";
-			case "blog":
-				return "ブログ記事";
 			case "static":
 				return "ガイド";
 			default:
@@ -135,8 +132,6 @@ export function HelpPageClient() {
 		switch (sourceType) {
 			case "manual":
 				return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-			case "blog":
-				return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
 			case "static":
 				return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
 			default:

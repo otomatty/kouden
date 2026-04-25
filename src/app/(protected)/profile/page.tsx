@@ -1,13 +1,12 @@
-import type { Metadata } from "next";
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
-import { ProfileForm } from "./_components/profile-form";
-import { AvatarUpload } from "./_components/avatar-upload";
-import { ActivityStats } from "./_components/activity-stats";
-import { RecentBookmarks } from "@/app/(protected)/koudens/_components/recent-bookmarks";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getActivityStats, getProfile } from "@/app/_actions/profiles";
 import { BackLink } from "@/components/custom/back-link";
-import { getProfile, getActivityStats } from "@/app/_actions/profiles";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { ActivityStats } from "./_components/activity-stats";
+import { AvatarUpload } from "./_components/avatar-upload";
+import { ProfileForm } from "./_components/profile-form";
 
 export const metadata: Metadata = {
 	title: "プロフィール | 香典帳",
@@ -74,9 +73,6 @@ export default async function ProfilePage() {
 						totalEntriesCount={stats.totalEntriesCount}
 						lastActivityAt={stats.lastActivityAt}
 					/>
-
-					{/* 最近のブックマーク */}
-					<RecentBookmarks limit={5} className="w-full" />
 				</div>
 			</div>
 		</div>

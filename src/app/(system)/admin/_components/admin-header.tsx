@@ -1,29 +1,21 @@
 "use client";
 
-import type { User } from "@supabase/supabase-js";
-import { useRouter } from "next/navigation";
-import { usePathname } from "next/navigation";
-import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import Container from "@/components/ui/container";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import Container from "@/components/ui/container";
+import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
+import type { User } from "@supabase/supabase-js";
+import { BarChart3, BookOpen, LayoutDashboard, LifeBuoy, Users } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { AdminAppsMenu } from "./admin-apps-menu";
-import {
-	LayoutDashboard,
-	Briefcase,
-	Users,
-	FileText,
-	LifeBuoy,
-	BookOpen,
-	BarChart3,
-} from "lucide-react";
 
 interface AdminHeaderProps {
 	user: User;
@@ -32,11 +24,9 @@ interface AdminHeaderProps {
 // 主要なナビゲーション項目（タブとして表示）
 const mainNavigation = [
 	{ name: "ダッシュボード", href: "/admin", icon: LayoutDashboard },
-	{ name: "組織", href: "/admin/organizations", icon: Briefcase },
 	{ name: "ユーザー", href: "/admin/users", icon: Users },
 	{ name: "香典帳", href: "/admin/koudens", icon: BookOpen },
 	{ name: "アンケート分析", href: "/admin/analytics/surveys", icon: BarChart3 },
-	{ name: "オウンドメディア", href: "/admin/blog", icon: FileText },
 	{ name: "サポート", href: "/admin/support", icon: LifeBuoy },
 ];
 
