@@ -31,7 +31,7 @@ import {
 	Search,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const ITEMS_PER_PAGE = 12;
 
@@ -49,12 +49,16 @@ export function HelpPageClient() {
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
-	// カテゴリ定義（共通定義を React コンポーネントに解決）
-	const categoryOptions = HELP_CATEGORIES.map((c) => ({
-		value: c.value,
-		label: c.label,
-		icon: getIcon(c.iconName),
-	}));
+	// カテゴリ定義（共通定義を React コンポーネントに解決、再レンダーごとの再計算を回避）
+	const categoryOptions = useMemo(
+		() =>
+			HELP_CATEGORIES.map((c) => ({
+				value: c.value,
+				label: c.label,
+				icon: getIcon(c.iconName),
+			})),
+		[],
+	);
 
 	// ソート定義
 	const sortOptions = [

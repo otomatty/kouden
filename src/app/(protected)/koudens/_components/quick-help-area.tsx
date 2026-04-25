@@ -11,7 +11,7 @@ import type { QuickHelpItem } from "@/types/help";
 import { getActionIcon, getIcon } from "@/utils/help-icons";
 import { AlertCircle, Clock, ExternalLink, HelpCircle, Loader2, Mail, Search } from "lucide-react";
 import Link from "next/link";
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 
 interface QuickHelpAreaProps {
 	className?: string;
@@ -34,12 +34,16 @@ export const QuickHelpArea = memo(function QuickHelpArea({
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
-	// カテゴリ定義（共通定義を React コンポーネントに解決）
-	const categoryOptions = HELP_CATEGORIES.map((c) => ({
-		value: c.value,
-		label: c.label,
-		icon: getIcon(c.iconName),
-	}));
+	// カテゴリ定義（共通定義を React コンポーネントに解決、再レンダーごとの再計算を回避）
+	const categoryOptions = useMemo(
+		() =>
+			HELP_CATEGORIES.map((c) => ({
+				value: c.value,
+				label: c.label,
+				icon: getIcon(c.iconName),
+			})),
+		[],
+	);
 
 	// データ取得
 	useEffect(() => {
