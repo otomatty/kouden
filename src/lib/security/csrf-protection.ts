@@ -42,6 +42,31 @@ export function getCSRFSecret(): string {
 const CSRF_SECRET = getCSRFSecret();
 
 /**
+ * CSRFトークンの署名有効期間（ミリ秒）。
+ * Cookie の `Max-Age` を残存TTLに合わせる用途でも使用する。
+ */
+export const CSRF_TOKEN_TTL_MS = 3600 * 1000;
+
+/**
+ * 指定トークンの残存TTL（ミリ秒）を返す。期限切れ・改ざんなど無効なら `null`。
+ *
+ * @param token 検証済みのCSRFトークン
+ * @returns 残存TTL（ms）または `null`
+ */
+export function getCSRFTokenRemainingTTL(token: string): number | null {
+	const parts = token.split(":");
+	if (parts.length !== 3) {
+		return null;
+	}
+	const tokenTime = Number.parseInt(parts[1] ?? "");
+	if (Number.isNaN(tokenTime)) {
+		return null;
+	}
+	const remaining = CSRF_TOKEN_TTL_MS - (Date.now() - tokenTime);
+	return remaining > 0 ? remaining : null;
+}
+
+/**
  * Web Crypto APIでSHA-256ハッシュを生成し、16進文字列で返す。
  *
  * @param data ハッシュ化する文字列
