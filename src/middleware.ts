@@ -1,141 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import {
+	checkCSRFToken,
+	createCSRFErrorResponse,
+	requiresCSRFProtection,
+} from "@/lib/security/csrf-protection";
 import { isAllowedAdminIP, verifyBasicAuth } from "@/lib/security/ip-restrictions";
 import { isAccountLocked } from "@/lib/security/login-attempts";
 import { rateLimit } from "@/lib/security/rate-limiting";
-// Web Crypto APIを使用（node:cryptoをEdge Runtimeで使用すると問題が起こる場合がある）
 import { logRateLimitExceeded, logSuspiciousActivity } from "@/lib/security/security-logger";
 // 2FAチェックはMiddlewareではなくページレベルで実行（Edge Runtime制限のため）
-
-/**
- * Middleware起動時に `CSRF_SECRET` 環境変数を検証して返す。
- *
- * - 必須環境変数。未設定または32文字未満の場合はエラーをスローし、
- *   Edge Runtimeのインスタンス起動を停止する（フェイルクローズド）。
- * - 推奨生成方法: `openssl rand -hex 32`
- *
- * @throws {Error} `CSRF_SECRET` 未設定 / 32文字未満のとき
- * @returns 検証済みのCSRF秘密鍵
- */
-function getCSRFSecret(): string {
-	const secret = process.env.CSRF_SECRET;
-	if (!secret || secret.length < 32) {
-		throw new Error(
-			"CSRF_SECRET environment variable is not set or too short (require >= 32 chars). " +
-				"Generate one with: openssl rand -hex 32",
-		);
-	}
-	return secret;
-}
-
-const CSRF_SECRET = getCSRFSecret();
-
-/**
- * Web Crypto APIを使ってSHA-256ハッシュを生成
- */
-async function createSha256Hash(data: string): Promise<string> {
-	const encoder = new TextEncoder();
-	const dataBuffer = encoder.encode(data);
-	const hashBuffer = await crypto.subtle.digest("SHA-256", dataBuffer);
-	const hashArray = Array.from(new Uint8Array(hashBuffer));
-	return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-/**
- * CSRFトークンを検証（middleware専用）
- */
-async function verifyCSRFToken(token: string): Promise<boolean> {
-	try {
-		const [tokenPart, timestamp, signature] = token.split(":");
-
-		if (!(tokenPart && timestamp && signature)) {
-			return false;
-		}
-
-		// タイムスタンプチェック（1時間以内）
-		const tokenTime = Number.parseInt(timestamp);
-		const now = Date.now();
-		if (now - tokenTime > 3600000) {
-			// 1時間
-			return false;
-		}
-
-		// 署名検証
-		const expectedSignature = await createSha256Hash(`${tokenPart}:${timestamp}:${CSRF_SECRET}`);
-
-		return signature === expectedSignature;
-	} catch {
-		return false;
-	}
-}
-
-/**
- * リクエストのCSRFトークンをチェック（middleware専用）
- */
-async function checkCSRFToken(request: NextRequest): Promise<boolean> {
-	// 安全メソッド（副作用なし）はスキップ。HEAD/OPTIONS（preflight）も含める。
-	if (request.method === "GET" || request.method === "HEAD" || request.method === "OPTIONS") {
-		return true;
-	}
-
-	// 開発環境では緩和（デバッグ用、本番では絶対に有効化しないこと）
-	if (process.env.NODE_ENV === "development" && process.env.CSRF_DEBUG === "true") {
-		console.error(
-			`[CSRF_DEBUG] CSRF protection is DISABLED (NODE_ENV=${process.env.NODE_ENV}, pid=${typeof process !== "undefined" ? process.pid : "n/a"}). NEVER enable this in production.`,
-		);
-		return true;
-	}
-
-	// Double-submit Cookie パターン: ヘッダーとCookieの両方が必須かつ値一致を要求
-	const headerToken = request.headers.get("x-csrf-token");
-	const cookieToken = request.cookies.get("csrf-token")?.value;
-
-	if (!headerToken || !cookieToken) {
-		console.warn("CSRF token is missing (header or cookie)");
-		return false;
-	}
-
-	if (headerToken !== cookieToken) {
-		console.warn("CSRF token mismatch between header and cookie");
-		return false;
-	}
-
-	const isValid = await verifyCSRFToken(headerToken);
-	if (!isValid) {
-		console.warn("CSRF token validation failed");
-	}
-
-	return isValid;
-}
-
-/**
- * CSRF保護が必要なパスかどうかを判定（middleware専用）
- */
-function requiresCSRFProtection(pathname: string): boolean {
-	// API routes
-	if (pathname.startsWith("/api/")) {
-		// CSRF保護が不要なAPI（webhook等）
-		const exemptPaths = ["/api/stripe/webhook", "/api/health", "/api/csrf-token"];
-		return !exemptPaths.some((path) => pathname.startsWith(path));
-	}
-
-	// Server Actions は Next.js が自動でCSRF保護するため除外
-	// (実際のServer ActionsのパスはNext.jsが内部的に処理)
-	return false;
-}
-
-/**
- * CSRFエラーレスポンス（middleware専用）
- */
-function createCSRFErrorResponse(): Response {
-	return new Response("CSRF token validation failed", {
-		status: 403,
-		headers: {
-			"Content-Type": "text/plain",
-		},
-	});
-}
 
 export async function middleware(request: NextRequest) {
 	const supabase = await createClient();
