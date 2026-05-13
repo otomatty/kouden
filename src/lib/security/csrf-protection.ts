@@ -18,6 +18,16 @@ import { createHash, randomBytes } from "node:crypto";
 import type { NextRequest } from "next/server";
 import logger from "@/lib/logger";
 
+/**
+ * 起動時に `CSRF_SECRET` 環境変数を検証して返す。
+ *
+ * - 必須環境変数。未設定または32文字未満の場合はエラーをスローし、
+ *   Node.jsプロセス起動を停止する（フェイルクローズド）。
+ * - 推奨生成方法: `openssl rand -hex 32`
+ *
+ * @throws {Error} `CSRF_SECRET` 未設定 / 32文字未満のとき
+ * @returns 検証済みのCSRF秘密鍵
+ */
 function getCSRFSecret(): string {
 	const secret = process.env.CSRF_SECRET;
 	if (!secret || secret.length < 32) {
@@ -92,8 +102,8 @@ export function verifyCSRFToken(token: string): boolean {
  * @serverOnly このファイルはサーバーサイドでのみ使用可能
  */
 export function checkCSRFToken(request: NextRequest): boolean {
-	// GETリクエストはスキップ
-	if (request.method === "GET") {
+	// 安全メソッド（副作用なし）はスキップ。HEAD/OPTIONS（preflight）も含める。
+	if (request.method === "GET" || request.method === "HEAD" || request.method === "OPTIONS") {
 		return true;
 	}
 

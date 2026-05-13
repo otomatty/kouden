@@ -8,6 +8,16 @@ import { rateLimit } from "@/lib/security/rate-limiting";
 import { logRateLimitExceeded, logSuspiciousActivity } from "@/lib/security/security-logger";
 // 2FAチェックはMiddlewareではなくページレベルで実行（Edge Runtime制限のため）
 
+/**
+ * Middleware起動時に `CSRF_SECRET` 環境変数を検証して返す。
+ *
+ * - 必須環境変数。未設定または32文字未満の場合はエラーをスローし、
+ *   Edge Runtimeのインスタンス起動を停止する（フェイルクローズド）。
+ * - 推奨生成方法: `openssl rand -hex 32`
+ *
+ * @throws {Error} `CSRF_SECRET` 未設定 / 32文字未満のとき
+ * @returns 検証済みのCSRF秘密鍵
+ */
 function getCSRFSecret(): string {
 	const secret = process.env.CSRF_SECRET;
 	if (!secret || secret.length < 32) {
@@ -64,8 +74,8 @@ async function verifyCSRFToken(token: string): Promise<boolean> {
  * リクエストのCSRFトークンをチェック（middleware専用）
  */
 async function checkCSRFToken(request: NextRequest): Promise<boolean> {
-	// GETリクエストはスキップ
-	if (request.method === "GET") {
+	// 安全メソッド（副作用なし）はスキップ。HEAD/OPTIONS（preflight）も含める。
+	if (request.method === "GET" || request.method === "HEAD" || request.method === "OPTIONS") {
 		return true;
 	}
 

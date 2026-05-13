@@ -5,6 +5,16 @@
 
 import logger from "@/lib/logger";
 
+/**
+ * 起動時に `CSRF_SECRET` 環境変数を検証して返す。
+ *
+ * - 必須環境変数。未設定または32文字未満の場合はエラーをスローし、
+ *   サーバー起動を停止する（フェイルクローズド）。
+ * - 推奨生成方法: `openssl rand -hex 32`
+ *
+ * @throws {Error} `CSRF_SECRET` 未設定 / 32文字未満のとき
+ * @returns 検証済みのCSRF秘密鍵
+ */
 function getCSRFSecret(): string {
 	const secret = process.env.CSRF_SECRET;
 	if (!secret || secret.length < 32) {
@@ -63,6 +73,9 @@ export async function GET() {
 				status: 200,
 				headers: {
 					"Content-Type": "application/json",
+					"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+					Pragma: "no-cache",
+					Expires: "0",
 				},
 			},
 		);
