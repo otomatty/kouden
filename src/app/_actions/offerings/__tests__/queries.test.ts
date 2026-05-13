@@ -1,11 +1,12 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
-import {
-	getOfferingAllocations,
-	getEntryOfferingAllocations,
-	checkOfferingAllocationIntegrity,
-	calculateEntryTotalAmount,
-} from "../queries";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { type Mock, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	calculateEntryTotalAmount,
+	calculateEntryTotalAmountBulk,
+	checkOfferingAllocationIntegrity,
+	getEntryOfferingAllocations,
+	getOfferingAllocations,
+} from "../queries";
 
 // モック設定
 vi.mock("@/lib/supabase/admin", () => ({
@@ -332,6 +333,133 @@ describe("お供物配分クエリー機能", () => {
 
 			expect(result.success).toBe(false);
 			expect(result.error).toContain("お供物配分データの取得に失敗");
+		});
+	});
+
+	describe("calculateEntryTotalAmountBulk", () => {
+		it("複数エントリーの合計金額を1組のクエリで一括計算する", async () => {
+			const mockEntries = [
+				{ id: "entry1", amount: 10000 },
+				{ id: "entry2", amount: 20000 },
+				{ id: "entry3", amount: 5000 },
+			];
+			const mockAllocations = [
+				{ kouden_entry_id: "entry1", allocated_amount: 3000 },
+				{ kouden_entry_id: "entry1", allocated_amount: 2000 },
+				{ kouden_entry_id: "entry2", allocated_amount: 1000 },
+				// entry3 は配分なし
+			];
+
+			supabaseMock.from
+				.mockReturnValueOnce({
+					select: () => ({
+						in: () => Promise.resolve({ data: mockEntries, error: null }),
+					}),
+				})
+				.mockReturnValueOnce({
+					select: () => ({
+						in: () => Promise.resolve({ data: mockAllocations, error: null }),
+					}),
+				});
+
+			const result = await calculateEntryTotalAmountBulk(["entry1", "entry2", "entry3"]);
+
+			expect(result.success).toBe(true);
+			expect(result.data?.size).toBe(3);
+			expect(result.data?.get("entry1")).toEqual({
+				kouden_amount: 10000,
+				offering_total: 5000,
+				calculated_total: 15000,
+			});
+			expect(result.data?.get("entry2")).toEqual({
+				kouden_amount: 20000,
+				offering_total: 1000,
+				calculated_total: 21000,
+			});
+			expect(result.data?.get("entry3")).toEqual({
+				kouden_amount: 5000,
+				offering_total: 0,
+				calculated_total: 5000,
+			});
+			// from は2回（kouden_entries + offering_allocations）しか呼ばれない
+			expect(supabaseMock.from).toHaveBeenCalledTimes(2);
+			expect(supabaseMock.from).toHaveBeenNthCalledWith(1, "kouden_entries");
+			expect(supabaseMock.from).toHaveBeenNthCalledWith(2, "offering_allocations");
+		});
+
+		it("空配列入力時はSupabaseを呼ばずに空Mapを返す", async () => {
+			const result = await calculateEntryTotalAmountBulk([]);
+
+			expect(result.success).toBe(true);
+			expect(result.data?.size).toBe(0);
+			expect(supabaseMock.from).not.toHaveBeenCalled();
+		});
+
+		it("kouden_entries取得エラー時はsuccess: falseを返す", async () => {
+			const mockError = { message: "DB接続エラー" };
+
+			supabaseMock.from
+				.mockReturnValueOnce({
+					select: () => ({
+						in: () => Promise.resolve({ data: null, error: mockError }),
+					}),
+				})
+				.mockReturnValueOnce({
+					select: () => ({
+						in: () => Promise.resolve({ data: [], error: null }),
+					}),
+				});
+
+			const result = await calculateEntryTotalAmountBulk(["entry1"]);
+
+			expect(result.success).toBe(false);
+			expect(result.error).toContain("香典エントリーの取得に失敗");
+		});
+
+		it("offering_allocations取得エラー時はsuccess: falseを返す", async () => {
+			const mockError = { message: "配分データ取得失敗" };
+
+			supabaseMock.from
+				.mockReturnValueOnce({
+					select: () => ({
+						in: () => Promise.resolve({ data: [{ id: "entry1", amount: 10000 }], error: null }),
+					}),
+				})
+				.mockReturnValueOnce({
+					select: () => ({
+						in: () => Promise.resolve({ data: null, error: mockError }),
+					}),
+				});
+
+			const result = await calculateEntryTotalAmountBulk(["entry1"]);
+
+			expect(result.success).toBe(false);
+			expect(result.error).toContain("お供物配分データの取得に失敗");
+		});
+
+		it("配分が無いエントリーもMapに含まれ offering_total: 0 になる", async () => {
+			const mockEntries = [{ id: "entry1", amount: 8000 }];
+
+			supabaseMock.from
+				.mockReturnValueOnce({
+					select: () => ({
+						in: () => Promise.resolve({ data: mockEntries, error: null }),
+					}),
+				})
+				.mockReturnValueOnce({
+					select: () => ({
+						in: () => Promise.resolve({ data: [], error: null }),
+					}),
+				});
+
+			const result = await calculateEntryTotalAmountBulk(["entry1"]);
+
+			expect(result.success).toBe(true);
+			expect(result.data?.get("entry1")).toEqual({
+				kouden_amount: 8000,
+				offering_total: 0,
+				calculated_total: 8000,
+			});
 		});
 	});
 });

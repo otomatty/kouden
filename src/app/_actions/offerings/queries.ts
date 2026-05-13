@@ -258,3 +258,72 @@ export async function calculateEntryTotalAmount(koudenEntryId: string): Promise<
 		};
 	}
 }
+
+/**
+ * 複数の香典エントリーの合計金額を一括計算（N+1解消用）
+ * 個別呼び出しの`calculateEntryTotalAmount`は単一エントリー向け（getUserDetail等）に残し、
+ * リスト処理ではこちらを利用する。
+ */
+export async function calculateEntryTotalAmountBulk(koudenEntryIds: string[]): Promise<{
+	success: boolean;
+	data?: Map<
+		string,
+		{
+			kouden_amount: number;
+			offering_total: number;
+			calculated_total: number;
+		}
+	>;
+	error?: string;
+}> {
+	try {
+		if (koudenEntryIds.length === 0) {
+			return { success: true, data: new Map() };
+		}
+
+		const supabase = createAdminClient();
+
+		const [entriesResult, allocationsResult] = await Promise.all([
+			supabase.from("kouden_entries").select("id, amount").in("id", koudenEntryIds),
+			supabase
+				.from("offering_allocations")
+				.select("kouden_entry_id, allocated_amount")
+				.in("kouden_entry_id", koudenEntryIds),
+		]);
+
+		if (entriesResult.error) {
+			return { success: false, error: "香典エントリーの取得に失敗しました" };
+		}
+		if (allocationsResult.error) {
+			return { success: false, error: "お供物配分データの取得に失敗しました" };
+		}
+
+		const totalsByEntry = new Map<string, number>();
+		for (const alloc of allocationsResult.data ?? []) {
+			if (!alloc.kouden_entry_id) continue;
+			const prev = totalsByEntry.get(alloc.kouden_entry_id) ?? 0;
+			totalsByEntry.set(alloc.kouden_entry_id, prev + alloc.allocated_amount);
+		}
+
+		const data = new Map<
+			string,
+			{ kouden_amount: number; offering_total: number; calculated_total: number }
+		>();
+		for (const entry of entriesResult.data ?? []) {
+			const offeringTotal = totalsByEntry.get(entry.id) ?? 0;
+			data.set(entry.id, {
+				kouden_amount: entry.amount,
+				offering_total: offeringTotal,
+				calculated_total: entry.amount + offeringTotal,
+			});
+		}
+
+		return { success: true, data };
+	} catch (error) {
+		console.error("合計金額一括計算エラー:", error);
+		return {
+			success: false,
+			error: "合計金額の一括計算に失敗しました",
+		};
+	}
+}
