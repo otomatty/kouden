@@ -5,7 +5,18 @@
 
 import logger from "@/lib/logger";
 
-const CSRF_SECRET = process.env.CSRF_SECRET || "default-secret-change-in-production";
+function getCSRFSecret(): string {
+	const secret = process.env.CSRF_SECRET;
+	if (!secret || secret.length < 32) {
+		throw new Error(
+			"CSRF_SECRET environment variable is not set or too short (require >= 32 chars). " +
+				"Generate one with: openssl rand -hex 32",
+		);
+	}
+	return secret;
+}
+
+const CSRF_SECRET = getCSRFSecret();
 
 /**
  * Web Crypto APIを使ってSHA-256ハッシュを生成
@@ -42,7 +53,7 @@ export async function GET() {
 	try {
 		const token = await generateCSRFToken();
 
-		// Cookieに設定（HttpOnly falseでJavaScriptからアクセス可能）
+		// Cookieに設定（HttpOnly有効。クライアントはJSONレスポンスから取得し、X-CSRF-Tokenヘッダーで送信する）
 		const response = new Response(
 			JSON.stringify({
 				csrfToken: token,
@@ -56,12 +67,11 @@ export async function GET() {
 			},
 		);
 
-		// CSRFトークンをCookieに設定
+		// CSRFトークンをCookieに設定（Double-submit Cookieパターンで使用）
+		const secureFlag = process.env.NODE_ENV === "production" ? " Secure;" : "";
 		response.headers.set(
 			"Set-Cookie",
-			`csrf-token=${token}; Path=/; HttpOnly=false; SameSite=Strict; Secure=${
-				process.env.NODE_ENV === "production"
-			}; Max-Age=3600`,
+			`csrf-token=${token}; Path=/; HttpOnly; SameSite=Strict;${secureFlag} Max-Age=3600`,
 		);
 
 		return response;

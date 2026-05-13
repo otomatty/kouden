@@ -19,12 +19,18 @@ ADMIN_BASIC_PASSWORD="your-strong-password-here"
 
 ### CSRF保護
 ```bash
-# CSRF攻撃防止用の秘密鍵（必須・本番環境では必ず変更）
-CSRF_SECRET="your-csrf-secret-key-change-in-production"
+# CSRF攻撃防止用の秘密鍵（必須・最低32文字・全環境で必ず設定すること）
+# 未設定 or 32文字未満の場合、アプリケーションは起動時にエラーで停止する。
+# 生成例: openssl rand -hex 32
+CSRF_SECRET="<openssl rand -hex 32 で生成した値>"
 
-# 開発環境でのCSRF保護デバッグ（オプション）
+# 開発環境でのCSRF保護デバッグ（オプション・development限定）
+# ⚠️ 本番環境では絶対に "true" にしないこと。
+#    NODE_ENV !== "development" の場合は無視される。
 CSRF_DEBUG="false"
 ```
+
+CSRF実装はDouble-submit Cookieパターンを採用しており、リクエスト時にCookie (`csrf-token`) とHTTPヘッダー (`X-CSRF-Token`) の両方が必須かつ値一致を要求する。クライアントは `/api/csrf-token` のJSONレスポンスからトークンを取得し、`X-CSRF-Token` ヘッダーで送信する。CookieはHttpOnly属性付きで発行され、JavaScriptから読み取れない。
 
 ### セキュリティアラート通知
 ```bash

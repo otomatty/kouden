@@ -8,7 +8,18 @@ import { rateLimit } from "@/lib/security/rate-limiting";
 import { logRateLimitExceeded, logSuspiciousActivity } from "@/lib/security/security-logger";
 // 2FAチェックはMiddlewareではなくページレベルで実行（Edge Runtime制限のため）
 
-const CSRF_SECRET = process.env.CSRF_SECRET || "default-secret-change-in-production";
+function getCSRFSecret(): string {
+	const secret = process.env.CSRF_SECRET;
+	if (!secret || secret.length < 32) {
+		throw new Error(
+			"CSRF_SECRET environment variable is not set or too short (require >= 32 chars). " +
+				"Generate one with: openssl rand -hex 32",
+		);
+	}
+	return secret;
+}
+
+const CSRF_SECRET = getCSRFSecret();
 
 /**
  * Web Crypto APIを使ってSHA-256ハッシュを生成
@@ -58,21 +69,29 @@ async function checkCSRFToken(request: NextRequest): Promise<boolean> {
 		return true;
 	}
 
-	// 開発環境では緩和（デバッグ用）
+	// 開発環境では緩和（デバッグ用、本番では絶対に有効化しないこと）
 	if (process.env.NODE_ENV === "development" && process.env.CSRF_DEBUG === "true") {
-		console.warn("CSRF protection is disabled in development mode");
+		console.error(
+			`[CSRF_DEBUG] CSRF protection is DISABLED (NODE_ENV=${process.env.NODE_ENV}, pid=${typeof process !== "undefined" ? process.pid : "n/a"}). NEVER enable this in production.`,
+		);
 		return true;
 	}
 
-	// CSRFトークンを取得（ヘッダーまたはCookieから）
-	const csrfToken = request.headers.get("x-csrf-token") || request.cookies.get("csrf-token")?.value;
+	// Double-submit Cookie パターン: ヘッダーとCookieの両方が必須かつ値一致を要求
+	const headerToken = request.headers.get("x-csrf-token");
+	const cookieToken = request.cookies.get("csrf-token")?.value;
 
-	if (!csrfToken) {
-		console.warn("CSRF token is missing");
+	if (!headerToken || !cookieToken) {
+		console.warn("CSRF token is missing (header or cookie)");
 		return false;
 	}
 
-	const isValid = await verifyCSRFToken(csrfToken);
+	if (headerToken !== cookieToken) {
+		console.warn("CSRF token mismatch between header and cookie");
+		return false;
+	}
+
+	const isValid = await verifyCSRFToken(headerToken);
 	if (!isValid) {
 		console.warn("CSRF token validation failed");
 	}
