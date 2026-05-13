@@ -68,6 +68,8 @@ export default function ContactForm() {
 		const handleBeforeUnload = (e: BeforeUnloadEvent) => {
 			if (form.formState.isDirty) {
 				e.preventDefault();
+				// 古い Chrome/Edge は preventDefault のみでは確認ダイアログを出さないため明示
+				e.returnValue = "";
 			}
 		};
 		window.addEventListener("beforeunload", handleBeforeUnload);
