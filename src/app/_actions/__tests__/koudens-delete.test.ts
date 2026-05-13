@@ -1,6 +1,6 @@
+/// <reference types="vitest" />
 import { canDeleteKouden } from "@/app/_actions/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
-/// <reference types="vitest" />
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { deleteKouden } from "../koudens/delete";
 

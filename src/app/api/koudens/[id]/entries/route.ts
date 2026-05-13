@@ -3,6 +3,12 @@ import { parsePagination } from "@/lib/api/pagination";
 import logger from "@/lib/logger";
 import { NextResponse } from "next/server";
 
+/**
+ * 香典エントリ一覧を取得する API ハンドラー。
+ * - `page` / `pageSize` は `parsePagination` でバリデーションする
+ * - 不正なページング値 (NaN / 0以下 / pageSize>100 など) は 400
+ * - 取得失敗時は 500
+ */
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
 	const { id: koudenId } = await params;
 	const url = new URL(req.url);

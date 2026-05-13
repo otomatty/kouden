@@ -11,7 +11,6 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { useRouter } from "next/navigation";
-import Router from "next/router";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -64,31 +63,16 @@ export default function ContactForm() {
 		},
 	];
 
-	// フォームが変更されているとき、ページ遷移やリロードを防ぐための確認
+	// リロード/タブ閉じ時に確認 (next/router の routeChangeStart は App Router 非対応のため削除)
 	useEffect(() => {
 		const handleBeforeUnload = (e: BeforeUnloadEvent) => {
 			if (form.formState.isDirty) {
 				e.preventDefault();
-				// returnValue assignment is deprecated and not required by modern browsers
 			}
 		};
 		window.addEventListener("beforeunload", handleBeforeUnload);
-
-		const handleRouteChange = () => {
-			if (form.formState.isDirty) {
-				// ユーザーに確認
-				if (!confirm("入力内容が消えてしまいますが、よろしいですか？")) {
-					Router.events.emit("routeChangeError");
-					// ルート変更を中止
-					throw "Abort route change by user";
-				}
-			}
-		};
-		Router.events.on("routeChangeStart", handleRouteChange);
-
 		return () => {
 			window.removeEventListener("beforeunload", handleBeforeUnload);
-			Router.events.off("routeChangeStart", handleRouteChange);
 		};
 	}, [form.formState.isDirty]);
 

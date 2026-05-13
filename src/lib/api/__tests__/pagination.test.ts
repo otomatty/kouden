@@ -18,11 +18,13 @@ describe("paginationQuerySchema", () => {
 		expect(result.success).toBe(false);
 	});
 
-	it("0 や負数を拒否する", () => {
-		expect(paginationQuerySchema.safeParse({ page: 0, pageSize: 50 }).success).toBe(false);
-		expect(paginationQuerySchema.safeParse({ page: -1, pageSize: 50 }).success).toBe(false);
-		expect(paginationQuerySchema.safeParse({ page: 1, pageSize: 0 }).success).toBe(false);
-		expect(paginationQuerySchema.safeParse({ page: 1, pageSize: -10 }).success).toBe(false);
+	it.each([
+		{ label: "page=0", input: { page: 0, pageSize: 50 } },
+		{ label: "page=-1", input: { page: -1, pageSize: 50 } },
+		{ label: "pageSize=0", input: { page: 1, pageSize: 0 } },
+		{ label: "pageSize=-10", input: { page: 1, pageSize: -10 } },
+	])("0 や負数を拒否する ($label)", ({ input }) => {
+		expect(paginationQuerySchema.safeParse(input).success).toBe(false);
 	});
 
 	it("NaN になる文字列を拒否する", () => {

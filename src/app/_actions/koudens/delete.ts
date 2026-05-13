@@ -9,6 +9,7 @@ export type DeleteKoudenResult = { success: true } | { success: false; error: st
 
 /**
  * 香典帳の削除
+ * @param id - 削除対象の香典帳のID
  * @returns `{ success: true }` または `{ success: false, error }`
  */
 export async function deleteKouden(id: string): Promise<DeleteKoudenResult> {

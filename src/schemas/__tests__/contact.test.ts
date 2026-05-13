@@ -50,19 +50,19 @@ describe("contactRequestSchema", () => {
 		expect(result.success).toBe(false);
 	});
 
-	it("name や company_name が空文字でも許容される (null 化)", () => {
-		const result = contactRequestSchema.safeParse({
-			...validInput,
-			name: "",
-			subject: "",
-			company_name: "",
-		});
-		expect(result.success).toBe(true);
-		if (result.success) {
-			expect(result.data.name).toBeNull();
-			expect(result.data.subject).toBeNull();
-			expect(result.data.company_name).toBeNull();
-		}
+	it("name が空文字なら null になる", () => {
+		const result = contactRequestSchema.safeParse({ ...validInput, name: "" });
+		expect(result.success && result.data.name === null).toBe(true);
+	});
+
+	it("subject が空文字なら null になる", () => {
+		const result = contactRequestSchema.safeParse({ ...validInput, subject: "" });
+		expect(result.success && result.data.subject === null).toBe(true);
+	});
+
+	it("company_name が空文字なら null になる", () => {
+		const result = contactRequestSchema.safeParse({ ...validInput, company_name: "" });
+		expect(result.success && result.data.company_name === null).toBe(true);
 	});
 
 	it("name が 100 文字を超えたら失敗する", () => {
