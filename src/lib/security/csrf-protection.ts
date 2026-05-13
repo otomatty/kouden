@@ -1,51 +1,137 @@
 /**
- * CSRF保護機能（サーバーサイド専用）
+ * CSRF保護機能（Edge Runtime / Node.js 両対応）
  * Cross-Site Request Forgery攻撃を防止するためのトークン管理
  *
- * ⚠️ 【重要警告】: このファイルは絶対にクライアントサイドからインポートしないこと！
- * - API routes、Server Actions、Middlewareでのみ使用可能
- * - node:cryptoがブラウザで動作しないため、クライアントサイドでバンドルするとエラーになる
- * - クライアントサイドではCSRF Providerとuse-csrf-tokenフックを使用すること
- *
- * 使用可能場所：
- * ✅ src/app/api/*.ts (API routes)
- * ✅ src/middleware.ts
+ * Web Crypto API（`globalThis.crypto`）を使用しているため、以下すべてで利用可能：
+ * ✅ API routes (src/app/api/*)
+ * ✅ Middleware (src/middleware.ts, Edge Runtime)
  * ✅ Server Actions (_actions/admin/*.ts)
- * ❌ コンポーネント、フック、クライアント側プロバイダー
+ *
+ * クライアントサイドからは絶対にインポートしないこと（CSRF_SECRETがバンドルに含まれてしまうため）。
+ * クライアントではCSRF Providerとuse-csrf-tokenフックを使用すること。
+ *
+ * Double-submit Cookie パターン:
+ *   - `csrf-token` Cookie と `X-CSRF-Token` ヘッダーの両方が必須かつ値一致を要求
+ *   - クライアントは `/api/csrf-token` のJSONレスポンスからトークンを取得し、ヘッダーで送信
+ *   - CookieはHttpOnlyで発行され、JavaScriptから読めない
  */
 
-import { createHash, randomBytes } from "node:crypto";
 import type { NextRequest } from "next/server";
-import logger from "@/lib/logger";
-
-const CSRF_SECRET = process.env.CSRF_SECRET || "default-secret-change-in-production";
 
 /**
- * CSRFトークンを生成（サーバーサイド専用）
- * タイムスタンプと署名を含む安全なトークンを作成
+ * 起動時に `CSRF_SECRET` 環境変数を検証して返す。
+ *
+ * - 必須環境変数。未設定または32文字未満の場合はエラーをスローし、
+ *   プロセス起動を停止する（フェイルクローズド）。
+ * - 推奨生成方法: `openssl rand -hex 32`
+ *
+ * @throws {Error} `CSRF_SECRET` 未設定 / 32文字未満のとき
+ * @returns 検証済みのCSRF秘密鍵
+ */
+export function getCSRFSecret(): string {
+	const secret = process.env.CSRF_SECRET;
+	if (!secret || secret.length < 32) {
+		throw new Error(
+			"CSRF_SECRET environment variable is not set or too short (require >= 32 chars). " +
+				"Generate one with: openssl rand -hex 32",
+		);
+	}
+	return secret;
+}
+
+const CSRF_SECRET = getCSRFSecret();
+
+/**
+ * CSRFトークンの署名有効期間（ミリ秒）。
+ * Cookie の `Max-Age` を残存TTLに合わせる用途でも使用する。
+ */
+export const CSRF_TOKEN_TTL_MS = 3600 * 1000;
+
+/**
+ * 指定トークンの残存TTL（ミリ秒）を返す。期限切れ・改ざんなど無効なら `null`。
+ *
+ * @param token 検証済みのCSRFトークン
+ * @returns 残存TTL（ms）または `null`
+ */
+export function getCSRFTokenRemainingTTL(token: string): number | null {
+	const parts = token.split(":");
+	if (parts.length !== 3) {
+		return null;
+	}
+	const tokenTime = Number.parseInt(parts[1] ?? "");
+	if (Number.isNaN(tokenTime)) {
+		return null;
+	}
+	const remaining = CSRF_TOKEN_TTL_MS - (Date.now() - tokenTime);
+	return remaining > 0 ? remaining : null;
+}
+
+/**
+ * Web Crypto APIでSHA-256ハッシュを生成し、16進文字列で返す。
+ *
+ * @param data ハッシュ化する文字列
+ * @returns SHA-256ハッシュの16進表現（64文字）
+ */
+async function createSha256Hash(data: string): Promise<string> {
+	const encoder = new TextEncoder();
+	const dataBuffer = encoder.encode(data);
+	const hashBuffer = await crypto.subtle.digest("SHA-256", dataBuffer);
+	const hashArray = Array.from(new Uint8Array(hashBuffer));
+	return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * ランダムな32バイトトークンを16進で生成する（Web Crypto API使用）。
+ *
+ * @returns 64文字の16進ランダム文字列
+ */
+function generateRandomToken(): string {
+	const array = new Uint8Array(32);
+	crypto.getRandomValues(array);
+	return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * CSRFトークンを生成する。
+ * フォーマット: `<random>:<timestamp>:<sha256-signature>`
  *
  * @returns 署名付きCSRFトークン
- * @serverOnly このファイルはサーバーサイドでのみ使用可能
  */
-export function generateCSRFToken(): string {
-	const token = randomBytes(32).toString("hex");
+export async function generateCSRFToken(): Promise<string> {
+	const token = generateRandomToken();
 	const timestamp = Date.now().toString();
-	const signature = createHash("sha256")
-		.update(`${token}:${timestamp}:${CSRF_SECRET}`)
-		.digest("hex");
+	const signature = await createSha256Hash(`${token}:${timestamp}:${CSRF_SECRET}`);
 
 	return `${token}:${timestamp}:${signature}`;
 }
 
 /**
- * CSRFトークンを検証（サーバーサイド専用）
- * タイムスタンプと署名の整合性をチェック
+ * 2つの文字列を定数時間で比較する（タイミング攻撃対策）。
+ * 短絡評価せず全文字をXORして集約することで、最初の不一致位置を漏らさない。
+ *
+ * @param a 比較対象A
+ * @param b 比較対象B
+ * @returns 完全一致なら true
+ */
+function timingSafeEqual(a: string, b: string): boolean {
+	if (a.length !== b.length) {
+		return false;
+	}
+	let diff = 0;
+	for (let i = 0; i < a.length; i++) {
+		diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+	}
+	return diff === 0;
+}
+
+/**
+ * CSRFトークンを検証する。
+ * タイムスタンプ（1時間以内）と署名の整合性をチェック。
  *
  * @param token 検証するCSRFトークン
  * @returns トークンが有効かどうか
- * @serverOnly このファイルはサーバーサイドでのみ使用可能
  */
-export function verifyCSRFToken(token: string): boolean {
+export async function verifyCSRFToken(token: string): Promise<boolean> {
 	try {
 		const [tokenPart, timestamp, signature] = token.split(":");
 
@@ -53,67 +139,68 @@ export function verifyCSRFToken(token: string): boolean {
 			return false;
 		}
 
-		// タイムスタンプチェック（1時間以内）
+		// タイムスタンプチェック（CSRF_TOKEN_TTL_MS 以内）
 		const tokenTime = Number.parseInt(timestamp);
 		const now = Date.now();
-		if (now - tokenTime > 3600000) {
-			// 1時間
+		if (now - tokenTime > CSRF_TOKEN_TTL_MS) {
 			return false;
 		}
 
-		// 署名検証
-		const expectedSignature = createHash("sha256")
-			.update(`${tokenPart}:${timestamp}:${CSRF_SECRET}`)
-			.digest("hex");
+		// 署名検証（タイミング攻撃を防ぐため定数時間比較）
+		const expectedSignature = await createSha256Hash(`${tokenPart}:${timestamp}:${CSRF_SECRET}`);
 
-		return signature === expectedSignature;
+		return timingSafeEqual(signature, expectedSignature);
 	} catch {
 		return false;
 	}
 }
 
 /**
- * リクエストのCSRFトークンをチェック
- * GETリクエストはスキップし、POST等でトークンを検証
+ * リクエストのCSRFトークンをチェックする（Double-submit Cookieパターン）。
+ *
+ * - 安全メソッド（GET / HEAD / OPTIONS）はスキップ
+ * - 開発環境で `CSRF_DEBUG=true` のときはバイパス（本番禁止）
+ * - ヘッダー `x-csrf-token` と Cookie `csrf-token` の両方が必須かつ値一致を要求
  *
  * @param request NextRequest オブジェクト
  * @returns CSRF検証結果
- * @serverOnly このファイルはサーバーサイドでのみ使用可能
  */
-export function checkCSRFToken(request: NextRequest): boolean {
-	// GETリクエストはスキップ
-	if (request.method === "GET") {
+export async function checkCSRFToken(request: NextRequest): Promise<boolean> {
+	// 安全メソッド（副作用なし）はスキップ。HEAD/OPTIONS（preflight）も含める。
+	if (request.method === "GET" || request.method === "HEAD" || request.method === "OPTIONS") {
 		return true;
 	}
 
-	// 開発環境では緩和（デバッグ用）
+	// 開発環境では緩和（デバッグ用、本番では絶対に有効化しないこと）
 	if (process.env.NODE_ENV === "development" && process.env.CSRF_DEBUG === "true") {
-		logger.warn({}, "CSRF protection is disabled in development mode");
+		console.error(
+			`[CSRF_DEBUG] CSRF protection is DISABLED (NODE_ENV=${process.env.NODE_ENV}). NEVER enable this in production.`,
+		);
 		return true;
 	}
 
-	// CSRFトークンを取得（ヘッダーまたはCookieから）
-	const csrfToken = request.headers.get("x-csrf-token") || request.cookies.get("csrf-token")?.value;
+	// Double-submit Cookie パターン: ヘッダーとCookieの両方が必須かつ値一致を要求
+	const headerToken = request.headers.get("x-csrf-token");
+	const cookieToken = request.cookies.get("csrf-token")?.value;
 
-	if (!csrfToken) {
-		logger.warn(
-			{
-				pathname: request.nextUrl.pathname,
-				method: request.method,
-			},
-			"CSRF token is missing",
+	if (!headerToken || !cookieToken) {
+		console.warn(
+			`CSRF token is missing (header or cookie). pathname=${request.nextUrl.pathname} method=${request.method}`,
 		);
 		return false;
 	}
 
-	const isValid = verifyCSRFToken(csrfToken);
+	if (headerToken !== cookieToken) {
+		console.warn(
+			`CSRF token mismatch between header and cookie. pathname=${request.nextUrl.pathname} method=${request.method}`,
+		);
+		return false;
+	}
+
+	const isValid = await verifyCSRFToken(headerToken);
 	if (!isValid) {
-		logger.warn(
-			{
-				pathname: request.nextUrl.pathname,
-				method: request.method,
-			},
-			"CSRF token validation failed",
+		console.warn(
+			`CSRF token validation failed. pathname=${request.nextUrl.pathname} method=${request.method}`,
 		);
 	}
 
@@ -121,29 +208,32 @@ export function checkCSRFToken(request: NextRequest): boolean {
 }
 
 /**
- * CSRF保護が必要なパスかどうかを判定
+ * CSRF保護が必要なパスかどうかを判定する。
+ *
+ * - `/api/*` はデフォルトで保護対象（一部例外あり）
+ * - 例外: `/api/stripe/webhook`, `/api/health`, `/api/csrf-token`
+ * - Server Actions は Next.js のビルトインCSRF保護に委ねるため対象外
  *
  * @param pathname リクエストパス
  * @returns CSRF保護が必要かどうか
- * @serverOnly このファイルはサーバーサイドでのみ使用可能
  */
 export function requiresCSRFProtection(pathname: string): boolean {
-	// API routes
 	if (pathname.startsWith("/api/")) {
-		// CSRF保護が不要なAPI（webhook等）
 		const exemptPaths = ["/api/stripe/webhook", "/api/health", "/api/csrf-token"];
-		return !exemptPaths.some((path) => pathname.startsWith(path));
+		// 完全一致または明示的なサブルート（`path + "/"`）のみを除外対象とする。
+		// 単純な startsWith だと "/api/csrf-tokenize" のような prefix 一致パスまで
+		// 誤って除外されてしまうため。
+		return !exemptPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 	}
 
-	// Server Actions（POST/PUT/DELETE等）
-	return true;
+	// Server Actions は Next.js が自動でCSRF保護するため対象外
+	return false;
 }
 
 /**
- * CSRFエラーレスポンス用のヘルパー
+ * CSRF検証失敗時の 403 レスポンス。
  *
  * @returns 403 Forbiddenレスポンス
- * @serverOnly このファイルはサーバーサイドでのみ使用可能
  */
 export function createCSRFErrorResponse(): Response {
 	return new Response("CSRF token validation failed", {
