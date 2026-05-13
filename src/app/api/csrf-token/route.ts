@@ -3,12 +3,20 @@
  * フロントエンドからCSRFトークンを取得するためのエンドポイント
  */
 
-import { generateCSRFToken } from "@/lib/security/csrf-protection";
+import { generateCSRFToken, verifyCSRFToken } from "@/lib/security/csrf-protection";
+import type { NextRequest } from "next/server";
 import logger from "@/lib/logger";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
 	try {
-		const token = await generateCSRFToken();
+		// 既存の csrf-token Cookie が有効ならそれを再利用する。
+		// これにより複数タブで同時に /api/csrf-token を呼んだ際に
+		// Cookieが上書きされて他タブのトークンが失効する競合を防止する。
+		const existingToken = request.cookies.get("csrf-token")?.value;
+		const token =
+			existingToken && (await verifyCSRFToken(existingToken))
+				? existingToken
+				: await generateCSRFToken();
 
 		// JSONレスポンス: クライアントはここからトークンを取得し、X-CSRF-Token ヘッダーで送信する。
 		// Cache-Control: no-store でブラウザ・中間キャッシュからのトークン再利用を防止。
