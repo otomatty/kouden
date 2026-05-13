@@ -220,7 +220,10 @@ export async function checkCSRFToken(request: NextRequest): Promise<boolean> {
 export function requiresCSRFProtection(pathname: string): boolean {
 	if (pathname.startsWith("/api/")) {
 		const exemptPaths = ["/api/stripe/webhook", "/api/health", "/api/csrf-token"];
-		return !exemptPaths.some((path) => pathname.startsWith(path));
+		// 完全一致または明示的なサブルート（`path + "/"`）のみを除外対象とする。
+		// 単純な startsWith だと "/api/csrf-tokenize" のような prefix 一致パスまで
+		// 誤って除外されてしまうため。
+		return !exemptPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 	}
 
 	// Server Actions は Next.js が自動でCSRF保護するため対象外
