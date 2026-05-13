@@ -1,12 +1,21 @@
-import { NextResponse } from "next/server";
 import { getEntries } from "@/app/_actions/entries";
+import { parsePagination } from "@/lib/api/pagination";
 import logger from "@/lib/logger";
+import { NextResponse } from "next/server";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
 	const { id: koudenId } = await params;
 	const url = new URL(req.url);
-	const page = Number(url.searchParams.get("page") ?? "1");
-	const pageSize = Number(url.searchParams.get("pageSize") ?? "50");
+
+	const pagination = parsePagination(url.searchParams);
+	if (!pagination.success) {
+		return NextResponse.json(
+			{ error: "Invalid pagination parameters", details: pagination.error.flatten().fieldErrors },
+			{ status: 400 },
+		);
+	}
+	const { page, pageSize } = pagination.data;
+
 	const memberIdsParam = url.searchParams.get("memberIds");
 	const memberIds = memberIdsParam
 		? memberIdsParam

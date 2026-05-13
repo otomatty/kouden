@@ -1,14 +1,14 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
+import { deleteKouden } from "@/app/_actions/koudens";
+import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
-import { deleteKouden } from "@/app/_actions/koudens";
+import { Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { toast } from "sonner";
 
 interface DeleteKoudenDialogProps {
@@ -48,14 +48,19 @@ export function DeleteKoudenDialog({
 
 		try {
 			setIsDeleting(true);
-			await deleteKouden(koudenId);
+			const result = await deleteKouden(koudenId);
+			if (!result.success) {
+				toast.error("香典帳の削除に失敗しました", {
+					description: result.error,
+				});
+				return;
+			}
 			toast.success("香典帳を削除しました", {
 				description: "香典帳が正常に削除されました",
 			});
 			router.replace("/koudens");
 		} catch (error) {
 			console.error("[DeleteKoudenDialog] deleteKouden threw error:", error);
-			console.error("Failed to delete kouden:", error);
 			toast.error("香典帳の削除に失敗しました", {
 				description: "しばらく時間をおいてから再度お試しください",
 			});
