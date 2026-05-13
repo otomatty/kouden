@@ -1,49 +1,80 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import logger from "@/lib/logger";
+import { createClient } from "@/lib/supabase/server";
+import { contactRequestSchema } from "@/schemas/contact";
+
+export type CreateContactRequestResult = { success: true } | { success: false; error: string };
 
 /**
  * Create a new contact request (support unauthenticated and authenticated users).
  * @param formData フォームの入力データ
- * @returns 挿入された問い合わせレコード
+ * @returns `{ success: true }` または `{ success: false, error }`
  */
-export async function createContactRequest(formData: FormData) {
-	const supabase = await createClient();
-	// 認証ユーザー情報を取得
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+export async function createContactRequest(
+	formData: FormData,
+): Promise<CreateContactRequestResult> {
+	try {
+		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 
-	// フォームデータを構築
-	const insertData = {
-		category: formData.get("category") as string,
-		name: formData.get("name") as string | null,
-		email: formData.get("email") as string,
-		subject: formData.get("subject") as string | null,
-		message: formData.get("message") as string,
-		company_name: formData.get("company_name") as string | null,
-		user_id: user?.id ?? null,
-	};
+		const parsed = contactRequestSchema.safeParse({
+			category: formData.get("category"),
+			name: formData.get("name"),
+			email: formData.get("email"),
+			subject: formData.get("subject"),
+			message: formData.get("message"),
+			company_name: formData.get("company_name"),
+		});
 
-	// データベースに挿入
-	const { data, error } = await supabase.from("contact_requests").insert(insertData);
+		if (!parsed.success) {
+			const firstIssue = parsed.error.issues[0];
+			const errorMessage = firstIssue?.message ?? "入力内容に誤りがあります";
+			logger.warn(
+				{
+					userId: user?.id,
+					issues: parsed.error.flatten().fieldErrors,
+				},
+				"Contact request validation failed",
+			);
+			return { success: false, error: errorMessage };
+		}
 
-	if (error) {
+		const insertData = {
+			category: parsed.data.category,
+			name: parsed.data.name ?? null,
+			email: parsed.data.email,
+			subject: parsed.data.subject ?? null,
+			message: parsed.data.message,
+			company_name: parsed.data.company_name ?? null,
+			user_id: user?.id ?? null,
+		};
+
+		const { error } = await supabase.from("contact_requests").insert(insertData);
+
+		if (error) {
+			logger.error(
+				{
+					error: error.message,
+					code: error.code,
+					userId: user?.id,
+					category: insertData.category,
+				},
+				"Failed to create contact request",
+			);
+			return { success: false, error: "お問い合わせの送信に失敗しました" };
+		}
+
+		return { success: true };
+	} catch (err) {
 		logger.error(
-			{
-				error: error.message,
-				code: error.code,
-				userId: user?.id,
-				category: insertData.category,
-			},
-			"Failed to create contact request",
+			{ error: err instanceof Error ? err.message : String(err) },
+			"Unexpected error while creating contact request",
 		);
-		throw new Error(error.message);
+		return { success: false, error: "お問い合わせの送信に失敗しました" };
 	}
-
-	// 挿入されたレコードを返却
-	return data;
 }
 
 /**

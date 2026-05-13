@@ -1,27 +1,27 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { createContactRequest } from "@/app/_actions/contact";
+import { Button } from "@/components/ui/button";
 import {
 	Form,
+	FormControl,
 	FormField,
 	FormItem,
 	FormLabel,
-	FormControl,
 	FormMessage,
 } from "@/components/ui/form";
-import { createContactRequest } from "@/app/_actions/contact";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { getPlaceholderByCategory } from "./category-placeholders";
 import CategorySelect from "./category-select";
-import TextField from "./text-field";
-import TextArea from "./text-area";
 import FileUpload from "./file-upload";
-import SubmitButton from "./submit-button";
 import StepIndicator from "./step-indicator";
 import StepSummary from "./step-summary";
-import { getPlaceholderByCategory } from "./category-placeholders";
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import Router from "next/router";
+import SubmitButton from "./submit-button";
+import TextArea from "./text-area";
+import TextField from "./text-field";
 
 interface ContactFormValues {
 	category: string;
@@ -63,31 +63,18 @@ export default function ContactForm() {
 		},
 	];
 
-	// フォームが変更されているとき、ページ遷移やリロードを防ぐための確認
+	// リロード/タブ閉じ時に確認 (next/router の routeChangeStart は App Router 非対応のため削除)
 	useEffect(() => {
 		const handleBeforeUnload = (e: BeforeUnloadEvent) => {
 			if (form.formState.isDirty) {
 				e.preventDefault();
-				// returnValue assignment is deprecated and not required by modern browsers
+				// 古い Chrome/Edge は preventDefault のみでは確認ダイアログを出さないため明示
+				e.returnValue = "";
 			}
 		};
 		window.addEventListener("beforeunload", handleBeforeUnload);
-
-		const handleRouteChange = () => {
-			if (form.formState.isDirty) {
-				// ユーザーに確認
-				if (!confirm("入力内容が消えてしまいますが、よろしいですか？")) {
-					Router.events.emit("routeChangeError");
-					// ルート変更を中止
-					throw "Abort route change by user";
-				}
-			}
-		};
-		Router.events.on("routeChangeStart", handleRouteChange);
-
 		return () => {
 			window.removeEventListener("beforeunload", handleBeforeUnload);
-			Router.events.off("routeChangeStart", handleRouteChange);
 		};
 	}, [form.formState.isDirty]);
 
@@ -123,8 +110,19 @@ export default function ContactForm() {
 				formData.append(key, String(value));
 			}
 		}
-		await createContactRequest(formData);
-		router.push("/contact/success");
+		try {
+			const result = await createContactRequest(formData);
+			if (!result.success) {
+				toast.error("お問い合わせの送信に失敗しました", { description: result.error });
+				return;
+			}
+			router.push("/contact/success");
+		} catch (error) {
+			console.error("Failed to send contact:", error);
+			toast.error("お問い合わせの送信に失敗しました", {
+				description: "しばらく時間をおいて再度お試しください。",
+			});
+		}
 	};
 
 	// 選択されたカテゴリに応じたプレースホルダーを取得
