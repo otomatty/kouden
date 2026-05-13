@@ -106,6 +106,25 @@ export async function generateCSRFToken(): Promise<string> {
 }
 
 /**
+ * 2つの文字列を定数時間で比較する（タイミング攻撃対策）。
+ * 短絡評価せず全文字をXORして集約することで、最初の不一致位置を漏らさない。
+ *
+ * @param a 比較対象A
+ * @param b 比較対象B
+ * @returns 完全一致なら true
+ */
+function timingSafeEqual(a: string, b: string): boolean {
+	if (a.length !== b.length) {
+		return false;
+	}
+	let diff = 0;
+	for (let i = 0; i < a.length; i++) {
+		diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+	}
+	return diff === 0;
+}
+
+/**
  * CSRFトークンを検証する。
  * タイムスタンプ（1時間以内）と署名の整合性をチェック。
  *
@@ -120,17 +139,17 @@ export async function verifyCSRFToken(token: string): Promise<boolean> {
 			return false;
 		}
 
-		// タイムスタンプチェック（1時間以内）
+		// タイムスタンプチェック（CSRF_TOKEN_TTL_MS 以内）
 		const tokenTime = Number.parseInt(timestamp);
 		const now = Date.now();
-		if (now - tokenTime > 3600000) {
+		if (now - tokenTime > CSRF_TOKEN_TTL_MS) {
 			return false;
 		}
 
-		// 署名検証
+		// 署名検証（タイミング攻撃を防ぐため定数時間比較）
 		const expectedSignature = await createSha256Hash(`${tokenPart}:${timestamp}:${CSRF_SECRET}`);
 
-		return signature === expectedSignature;
+		return timingSafeEqual(signature, expectedSignature);
 	} catch {
 		return false;
 	}
