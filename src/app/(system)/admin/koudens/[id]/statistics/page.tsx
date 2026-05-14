@@ -17,10 +17,10 @@ async function calculateStatistics(entries: Entry[]) {
 	// 配分込み金額をbulkで取得（N+1解消）
 	const bulkResult = await calculateEntryTotalAmountBulk(entries.map((entry) => entry.id));
 	if (!(bulkResult.success && bulkResult.data)) {
-		// 失敗時は0埋めではなく明示的に例外を投げ、誤った統計表示を防ぐ
-		throw new Error(
-			`Failed to calculate entry totals in bulk: ${bulkResult.error ?? "unknown error"}`,
-		);
+		// 失敗時は0埋めではなく明示的に例外を投げ、誤った統計表示を防ぐ。
+		// 技術詳細はサーバーログにのみ残し、UI には汎用メッセージを返す。
+		console.error("[admin/statistics] bulk fetch failed:", bulkResult.error);
+		throw new Error("統計情報の取得に失敗しました");
 	}
 	const amountsMap = bulkResult.data;
 

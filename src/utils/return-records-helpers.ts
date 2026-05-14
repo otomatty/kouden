@@ -116,8 +116,10 @@ export async function convertToReturnManagementSummaries(
 
 	const bulk = await calculateEntryTotalAmountBulk(entryIds);
 	if (!(bulk.success && bulk.data)) {
-		// 失敗時は0埋めではなく明示的に例外を投げる（誤った返礼サマリー表示を防ぐ）
-		throw new Error(`Failed to calculate entry totals in bulk: ${bulk.error ?? "unknown error"}`);
+		// 失敗時は0埋めではなく明示的に例外を投げる（誤った返礼サマリー表示を防ぐ）。
+		// 技術詳細はサーバーログにのみ残し、UI には汎用メッセージを返す。
+		console.error("[convertToReturnManagementSummaries] bulk fetch failed:", bulk.error);
+		throw new Error("返礼情報の取得に失敗しました");
 	}
 	const amountsMap: Map<string, EntryAmountStats> = bulk.data;
 
