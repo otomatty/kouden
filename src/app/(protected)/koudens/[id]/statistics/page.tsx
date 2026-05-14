@@ -1,5 +1,5 @@
 import { getEntries } from "@/app/_actions/entries";
-import { calculateEntryTotalAmount } from "@/app/_actions/offerings/queries";
+import { calculateEntryTotalAmountBulk } from "@/app/_actions/offerings/queries";
 import { KoudenStatistics } from "./_components";
 
 interface StatisticsPageProps {
@@ -16,21 +16,25 @@ export default async function StatisticsPage({ params }: StatisticsPageProps) {
 	const { id: koudenId } = await params;
 	const { entries } = await getEntries(koudenId, 1, Number.MAX_SAFE_INTEGER);
 
-	// 🎯 フェーズ7実装: 配分込み金額計算
-	// 各エントリーの配分込み総額を並列で取得
-	const entryTotalAmounts = await Promise.all(
-		entries.map(async (entry) => {
-			const result = await calculateEntryTotalAmount(entry.id);
-			return {
-				entryId: entry.id,
-				koudenAmount: entry.amount,
-				offeringTotal: result.success ? result.data?.offering_total || 0 : 0,
-				calculatedTotal: result.success
-					? result.data?.calculated_total || entry.amount
-					: entry.amount,
-			};
-		}),
-	);
+	// 配分込み金額をbulkで取得（N+1解消）
+	const bulkResult = await calculateEntryTotalAmountBulk(entries.map((e) => e.id));
+	if (!(bulkResult.success && bulkResult.data)) {
+		// 失敗時は0埋めではなく明示的に例外を投げ、誤った統計表示を防ぐ。
+		// 技術詳細はサーバーログにのみ残し、UI には汎用メッセージを返す。
+		console.error("[statistics] bulk fetch failed:", bulkResult.error);
+		throw new Error("統計情報の取得に失敗しました");
+	}
+	const amountsMap = bulkResult.data;
+
+	const entryTotalAmounts = entries.map((entry) => {
+		const stats = amountsMap.get(entry.id);
+		return {
+			entryId: entry.id,
+			koudenAmount: entry.amount,
+			offeringTotal: stats?.offering_total ?? 0,
+			calculatedTotal: stats?.calculated_total ?? entry.amount,
+		};
+	});
 
 	// 配分込み合計金額の計算
 	const totalAmountWithAllocations = entryTotalAmounts.reduce(

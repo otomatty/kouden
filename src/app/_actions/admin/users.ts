@@ -1,8 +1,8 @@
 "use server";
 
+import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import logger from "@/lib/logger";
 
 /**
  * 全ユーザー管理用の型定義
@@ -133,47 +133,57 @@ export async function getAllUsers(params: GetUsersParams = {}): Promise<{
 			return { users: [], total: count || 0, hasMore: false };
 		}
 
-		// 2. 各ユーザーの詳細情報を並列取得（認証情報は一括取得）
+		// 2. 認証情報と集計統計をそれぞれ1クエリで一括取得（N+1解消）
 		const userIds = profiles.map((p) => p.id);
-		const [authInfoMap, usersWithDetails] = await Promise.all([
+		// 注: get_users_aggregate_stats は 20260513000000_add_get_users_aggregate_stats_rpc.sql で追加。
+		// マイグレーション適用後に `bun run db:types` を実行すれば、ここのキャストは不要になる。
+		const [authInfoMap, aggregateResult] = await Promise.all([
 			getAllUsersAuthInfo(userIds),
-			Promise.all(
-				profiles.map(async (profile) => {
-					try {
-						// 統計情報、管理者情報を並列取得
-						const [stats, adminInfo] = await Promise.all([
-							getUserStats(profile.id),
-							getUserAdminInfo(profile.id),
-						]);
-
-						return {
-							...profile,
-							stats,
-							admin_info: adminInfo,
-						};
-					} catch (error) {
-						logger.error(
-							{
-								userId: profile.id,
-								error: error instanceof Error ? error.message : String(error),
-							},
-							"Failed to get details for user",
-						);
-						// エラーが発生した場合は基本情報のみ返す
-						const stats = await getUserStats(profile.id).catch(() => ({
-							owned_koudens_count: 0,
-							participated_koudens_count: 0,
-							total_entries_count: 0,
-						}));
-
-						return {
-							...profile,
-							stats,
-						};
-					}
-				}),
-			),
+			(
+				supabase.rpc as unknown as (
+					fn: string,
+					args: unknown,
+				) => PromiseLike<{ data: unknown; error: { message: string } | null }>
+			)("get_users_aggregate_stats", { p_user_ids: userIds }),
 		]);
+
+		if (aggregateResult.error) {
+			// 失敗時は0埋めで継続せず、明示的に例外を投げる（admin UIで誤った0統計を出さないため）
+			logger.error(
+				{ error: aggregateResult.error.message, userIdsCount: userIds.length },
+				"Failed to fetch user aggregate stats",
+			);
+			throw new Error(`Failed to fetch user aggregate stats: ${aggregateResult.error.message}`);
+		}
+
+		type AggregateRow = {
+			user_id: string;
+			owned_koudens_count: number | string;
+			participated_koudens_count: number | string;
+			total_entries_count: number | string;
+			admin_role: string | null;
+			admin_created_at: string | null;
+		};
+		const aggregateRows = (aggregateResult.data ?? []) as AggregateRow[];
+		const aggregateMap = new Map(aggregateRows.map((row) => [row.user_id, row]));
+
+		const usersWithDetails = profiles.map((profile) => {
+			const agg = aggregateMap.get(profile.id);
+			return {
+				...profile,
+				stats: {
+					owned_koudens_count: Number(agg?.owned_koudens_count ?? 0),
+					participated_koudens_count: Number(agg?.participated_koudens_count ?? 0),
+					total_entries_count: Number(agg?.total_entries_count ?? 0),
+				},
+				admin_info: agg?.admin_role
+					? {
+							role: agg.admin_role as "admin" | "super_admin",
+							granted_at: agg.admin_created_at ?? "",
+						}
+					: undefined,
+			};
+		});
 
 		// 認証情報をマージ
 		const finalUsersWithDetails = usersWithDetails.map((user) => ({

@@ -5,6 +5,7 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import type { OfferingAllocation } from "@/types/entries";
 
 /**
@@ -255,6 +256,139 @@ export async function calculateEntryTotalAmount(koudenEntryId: string): Promise<
 		return {
 			success: false,
 			error: "合計金額の計算に失敗しました",
+		};
+	}
+}
+
+/**
+ * 香典エントリーごとの合計金額情報（香典金額 + 配分されたお供物の合計）
+ */
+export type EntryAmountStats = {
+	kouden_amount: number;
+	offering_total: number;
+	calculated_total: number;
+};
+
+/**
+ * 複数の香典エントリーの合計金額を一括計算（N+1解消用）
+ * 個別呼び出しの`calculateEntryTotalAmount`は単一エントリー向け（getUserDetail等）に残し、
+ * リスト処理ではこちらを利用する。
+ */
+export async function calculateEntryTotalAmountBulk(koudenEntryIds: string[]): Promise<{
+	success: boolean;
+	data?: Map<string, EntryAmountStats>;
+	error?: string;
+}> {
+	try {
+		if (koudenEntryIds.length === 0) {
+			return { success: true, data: new Map() };
+		}
+
+		// 認証ユーザーを取得（Server Action は Client から任意の入力で呼べるため認可必須）
+		const userClient = await createClient();
+		const {
+			data: { user },
+			error: authError,
+		} = await userClient.auth.getUser();
+		if (authError || !user) {
+			return { success: false, error: "認証が必要です" };
+		}
+
+		// 管理者なら全エントリーへアクセス可能。それ以外は kouden 単位でアクセス権を確認する。
+		// RPCエラーを silent に false 扱いすると、管理者が一般ユーザー扱いとなり認可フィルタで
+		// すべての entry が落ち、空の Map が success: true で返るため、明示的にエラーを返す。
+		const { data: isAdminFlag, error: rpcError } = await userClient.rpc("is_admin", {
+			user_uid: user.id,
+		});
+		if (rpcError) {
+			console.error("[calculateEntryTotalAmountBulk] is_admin RPC failed:", rpcError);
+			return { success: false, error: "管理者権限の確認に失敗しました" };
+		}
+		const isAdmin = isAdminFlag === true;
+
+		const supabase = createAdminClient();
+
+		// kouden_id も含めて取得し、認可フィルタに使う
+		const { data: rawEntries, error: entriesError } = await supabase
+			.from("kouden_entries")
+			.select("id, amount, kouden_id")
+			.in("id", koudenEntryIds);
+
+		if (entriesError) {
+			return { success: false, error: "香典エントリーの取得に失敗しました" };
+		}
+
+		let allowedEntries = rawEntries ?? [];
+		if (!isAdmin) {
+			// 所有 kouden + メンバー kouden の id 集合を取得。
+			// どちらかが失敗した状態で進むと allowedKoudenIds が不正に空集合となり、
+			// 全 entry を非認可として落として success:true で空 Map を返してしまうため、
+			// 明示的にエラーを返す（is_admin RPC と同じ理由）。
+			const [{ data: owned, error: ownedError }, { data: members, error: membersError }] =
+				await Promise.all([
+					supabase.from("koudens").select("id").eq("owner_id", user.id),
+					supabase.from("kouden_members").select("kouden_id").eq("user_id", user.id),
+				]);
+			if (ownedError || membersError) {
+				console.error("[calculateEntryTotalAmountBulk] auth-scope lookup failed:", {
+					ownedError,
+					membersError,
+				});
+				return { success: false, error: "アクセス権限の確認に失敗しました" };
+			}
+			const allowedKoudenIds = new Set<string>();
+			for (const k of owned ?? []) allowedKoudenIds.add(k.id);
+			for (const m of members ?? []) {
+				if (m.kouden_id) allowedKoudenIds.add(m.kouden_id);
+			}
+			allowedEntries = allowedEntries.filter(
+				(e) => e.kouden_id != null && allowedKoudenIds.has(e.kouden_id),
+			);
+			if (allowedEntries.length !== (rawEntries ?? []).length) {
+				console.warn(
+					`[calculateEntryTotalAmountBulk] filtered ${(rawEntries ?? []).length - allowedEntries.length} unauthorized entries for user ${user.id}`,
+				);
+			}
+		}
+
+		const allowedEntryIds = allowedEntries.map((e) => e.id);
+		if (allowedEntryIds.length === 0) {
+			return { success: true, data: new Map() };
+		}
+
+		const { data: allocations, error: allocationError } = await supabase
+			.from("offering_allocations")
+			.select("kouden_entry_id, allocated_amount")
+			.in("kouden_entry_id", allowedEntryIds);
+
+		if (allocationError) {
+			return { success: false, error: "お供物配分データの取得に失敗しました" };
+		}
+
+		const totalsByEntry = new Map<string, number>();
+		for (const alloc of allocations ?? []) {
+			if (!alloc.kouden_entry_id) continue;
+			const prev = totalsByEntry.get(alloc.kouden_entry_id) ?? 0;
+			totalsByEntry.set(alloc.kouden_entry_id, prev + alloc.allocated_amount);
+		}
+
+		const data = new Map<string, EntryAmountStats>();
+		for (const entry of allowedEntries) {
+			const offeringTotal = totalsByEntry.get(entry.id) ?? 0;
+			const koudenAmount = entry.amount ?? 0;
+			data.set(entry.id, {
+				kouden_amount: koudenAmount,
+				offering_total: offeringTotal,
+				calculated_total: koudenAmount + offeringTotal,
+			});
+		}
+
+		return { success: true, data };
+	} catch (error) {
+		console.error("合計金額一括計算エラー:", error);
+		return {
+			success: false,
+			error: "合計金額の一括計算に失敗しました",
 		};
 	}
 }

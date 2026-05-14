@@ -1,17 +1,21 @@
 /**
- * 返礼情報データ変換のヘルパー関数
+ * 返礼情報データ変換のヘルパー関数（純粋関数）
  * @module return-records-helpers
+ *
+ * このファイルは Server Action を呼び出さない、純粋なデータ変換ロジックに
+ * 限定しています。bulk取得を伴うリスト変換は
+ * `@/app/_actions/return-records/summaries` 側で行います。
  */
 
+import type { EntryAmountStats } from "@/app/_actions/offerings/queries";
 import type { Entry } from "@/types/entries";
 import type { Relationship } from "@/types/relationships";
 import type {
 	ReturnEntryRecord,
+	ReturnItem,
 	ReturnManagementSummary,
 	ReturnStatus,
-	ReturnItem,
 } from "@/types/return-records/return-records";
-import { calculateEntryTotalAmount } from "@/app/_actions/offerings/queries";
 
 /**
  * 返礼状況の表示用テキストを取得
@@ -32,19 +36,21 @@ function getStatusDisplay(status: ReturnStatus): string {
 }
 
 /**
- * ReturnEntryRecordをReturnManagementSummary形式に変換する
+ * ReturnEntryRecordをReturnManagementSummary形式に変換する（純粋関数）
  * @param returnRecord - 返礼エントリーレコード
  * @param entries - 香典エントリー一覧
  * @param relationships - 関係性一覧
  * @param koudenId - 香典帳ID
+ * @param entryAmountsMap - 事前に一括計算した香典金額/お供物配分のMap
  * @returns ReturnManagementSummary
  */
-export async function convertToReturnManagementSummary(
+export function convertToReturnManagementSummary(
 	returnRecord: ReturnEntryRecord,
 	entries: Entry[],
 	relationships: Relationship[],
 	koudenId: string,
-): Promise<ReturnManagementSummary | null> {
+	entryAmountsMap: Map<string, EntryAmountStats>,
+): ReturnManagementSummary | null {
 	const entry = entries.find((e) => e.id === returnRecord.kouden_entry_id);
 	if (!entry) return null;
 
@@ -56,15 +62,10 @@ export async function convertToReturnManagementSummary(
 	// 関係性名を取得
 	const relationship = relationships.find((r) => r.id === entry.relationship_id);
 
-	// 実際のお供物配分金額を取得
-	const entryTotalAmountResult = await calculateEntryTotalAmount(entry.id);
-	let offeringTotal = 0;
-	let totalAmount = entry.amount || 0;
-
-	if (entryTotalAmountResult.success && entryTotalAmountResult.data) {
-		offeringTotal = entryTotalAmountResult.data.offering_total;
-		totalAmount = entryTotalAmountResult.data.calculated_total;
-	}
+	// 事前計算済みのお供物配分金額を参照（N+1回避）
+	const stats = entryAmountsMap.get(entry.id);
+	const offeringTotal = stats?.offering_total ?? 0;
+	const totalAmount = stats?.calculated_total ?? entry.amount ?? 0;
 
 	return {
 		koudenId: koudenId,
@@ -75,8 +76,8 @@ export async function convertToReturnManagementSummary(
 		relationshipName: relationship?.name || "",
 		koudenAmount: entry.amount || 0,
 		offeringCount: entry.has_offering ? 1 : 0,
-		offeringTotal: offeringTotal, // 実際の配分金額を使用
-		totalAmount: totalAmount, // 実際の合計金額を使用
+		offeringTotal: offeringTotal,
+		totalAmount: totalAmount,
 		returnStatus: returnRecord.return_status as ReturnStatus,
 		funeralGiftAmount: returnRecord.funeral_gift_amount || 0,
 		additionalReturnAmount: returnRecord.additional_return_amount || 0,
@@ -94,27 +95,4 @@ export async function convertToReturnManagementSummary(
 		statusDisplay: getStatusDisplay(returnRecord.return_status as ReturnStatus),
 		needsAdditionalReturn: (returnRecord.additional_return_amount || 0) > 0,
 	};
-}
-
-/**
- * 複数のReturnEntryRecordを一括でReturnManagementSummary形式に変換する
- * @param returnRecords - 返礼エントリーレコード配列
- * @param entries - 香典エントリー一覧
- * @param relationships - 関係性一覧
- * @param koudenId - 香典帳ID
- * @returns ReturnManagementSummary配列
- */
-export async function convertToReturnManagementSummaries(
-	returnRecords: ReturnEntryRecord[],
-	entries: Entry[],
-	relationships: Relationship[],
-	koudenId: string,
-): Promise<ReturnManagementSummary[]> {
-	const results = await Promise.all(
-		returnRecords.map(async (record) => {
-			return await convertToReturnManagementSummary(record, entries, relationships, koudenId);
-		}),
-	);
-
-	return results.filter((summary): summary is ReturnManagementSummary => summary !== null);
 }

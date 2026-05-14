@@ -1,8 +1,8 @@
 import { checkAdminPermission } from "@/app/_actions/admin/permissions";
 
-import { getEntriesForAdmin } from "@/app/_actions/entries";
-import { calculateEntryTotalAmount } from "@/app/_actions/offerings/queries";
 import { KoudenStatistics } from "@/app/(protected)/koudens/[id]/statistics/_components";
+import { getEntriesForAdmin } from "@/app/_actions/entries";
+import { calculateEntryTotalAmountBulk } from "@/app/_actions/offerings/queries";
 import type { Entry } from "@/types/entries";
 
 interface AdminStatisticsPageProps {
@@ -14,20 +14,25 @@ interface AdminStatisticsPageProps {
  * フェーズ7: 配分込み金額計算を含む
  */
 async function calculateStatistics(entries: Entry[]) {
-	// 🎯 フェーズ7実装: 配分込み金額計算
-	const entryTotalAmounts = await Promise.all(
-		entries.map(async (entry) => {
-			const result = await calculateEntryTotalAmount(entry.id);
-			return {
-				entryId: entry.id,
-				koudenAmount: entry.amount || 0,
-				offeringTotal: result.success ? result.data?.offering_total || 0 : 0,
-				calculatedTotal: result.success
-					? result.data?.calculated_total || entry.amount || 0
-					: entry.amount || 0,
-			};
-		}),
-	);
+	// 配分込み金額をbulkで取得（N+1解消）
+	const bulkResult = await calculateEntryTotalAmountBulk(entries.map((entry) => entry.id));
+	if (!(bulkResult.success && bulkResult.data)) {
+		// 失敗時は0埋めではなく明示的に例外を投げ、誤った統計表示を防ぐ。
+		// 技術詳細はサーバーログにのみ残し、UI には汎用メッセージを返す。
+		console.error("[admin/statistics] bulk fetch failed:", bulkResult.error);
+		throw new Error("統計情報の取得に失敗しました");
+	}
+	const amountsMap = bulkResult.data;
+
+	const entryTotalAmounts = entries.map((entry) => {
+		const stats = amountsMap.get(entry.id);
+		return {
+			entryId: entry.id,
+			koudenAmount: entry.amount ?? 0,
+			offeringTotal: stats?.offering_total ?? 0,
+			calculatedTotal: stats?.calculated_total ?? entry.amount ?? 0,
+		};
+	});
 
 	// 配分込み総額計算
 	const totalAmountWithAllocations = entryTotalAmounts.reduce(

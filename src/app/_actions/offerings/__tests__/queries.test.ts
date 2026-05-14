@@ -1,20 +1,27 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
-import {
-	getOfferingAllocations,
-	getEntryOfferingAllocations,
-	checkOfferingAllocationIntegrity,
-	calculateEntryTotalAmount,
-} from "../queries";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { type Mock, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	calculateEntryTotalAmount,
+	calculateEntryTotalAmountBulk,
+	checkOfferingAllocationIntegrity,
+	getEntryOfferingAllocations,
+	getOfferingAllocations,
+} from "../queries";
 
 // モック設定
 vi.mock("@/lib/supabase/admin", () => ({
 	createAdminClient: vi.fn(),
 }));
+vi.mock("@/lib/supabase/server", () => ({
+	createClient: vi.fn(),
+}));
 
 describe("お供物配分クエリー機能", () => {
 	// biome-ignore lint/suspicious/noExplicitAny: テスト用モック
 	let supabaseMock: any;
+	// biome-ignore lint/suspicious/noExplicitAny: テスト用モック
+	let serverClientMock: any;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -23,6 +30,18 @@ describe("お供物配分クエリー機能", () => {
 			from: vi.fn(),
 		};
 		(createAdminClient as unknown as Mock).mockReturnValue(supabaseMock);
+
+		// 認証ユーザー(管理者)としてデフォルトモック。bulkテストでは認可フィルタを通り抜ける。
+		serverClientMock = {
+			auth: {
+				getUser: vi.fn().mockResolvedValue({
+					data: { user: { id: "test-admin-user-id" } },
+					error: null,
+				}),
+			},
+			rpc: vi.fn().mockResolvedValue({ data: true, error: null }),
+		};
+		(createClient as unknown as Mock).mockResolvedValue(serverClientMock);
 	});
 
 	describe("getOfferingAllocations", () => {
@@ -332,6 +351,286 @@ describe("お供物配分クエリー機能", () => {
 
 			expect(result.success).toBe(false);
 			expect(result.error).toContain("お供物配分データの取得に失敗");
+		});
+	});
+
+	describe("calculateEntryTotalAmountBulk", () => {
+		it("複数エントリーの合計金額を1組のクエリで一括計算する", async () => {
+			const mockEntries = [
+				{ id: "entry1", amount: 10000, kouden_id: "k1" },
+				{ id: "entry2", amount: 20000, kouden_id: "k1" },
+				{ id: "entry3", amount: 5000, kouden_id: "k1" },
+			];
+			const mockAllocations = [
+				{ kouden_entry_id: "entry1", allocated_amount: 3000 },
+				{ kouden_entry_id: "entry1", allocated_amount: 2000 },
+				{ kouden_entry_id: "entry2", allocated_amount: 1000 },
+				// entry3 は配分なし
+			];
+
+			supabaseMock.from
+				.mockReturnValueOnce({
+					select: () => ({
+						in: () => Promise.resolve({ data: mockEntries, error: null }),
+					}),
+				})
+				.mockReturnValueOnce({
+					select: () => ({
+						in: () => Promise.resolve({ data: mockAllocations, error: null }),
+					}),
+				});
+
+			const result = await calculateEntryTotalAmountBulk(["entry1", "entry2", "entry3"]);
+
+			expect(result.success).toBe(true);
+			expect(result.data?.size).toBe(3);
+			expect(result.data?.get("entry1")).toEqual({
+				kouden_amount: 10000,
+				offering_total: 5000,
+				calculated_total: 15000,
+			});
+			expect(result.data?.get("entry2")).toEqual({
+				kouden_amount: 20000,
+				offering_total: 1000,
+				calculated_total: 21000,
+			});
+			expect(result.data?.get("entry3")).toEqual({
+				kouden_amount: 5000,
+				offering_total: 0,
+				calculated_total: 5000,
+			});
+			// from は2回（kouden_entries + offering_allocations）しか呼ばれない
+			expect(supabaseMock.from).toHaveBeenCalledTimes(2);
+			expect(supabaseMock.from).toHaveBeenNthCalledWith(1, "kouden_entries");
+			expect(supabaseMock.from).toHaveBeenNthCalledWith(2, "offering_allocations");
+		});
+
+		it("空配列入力時はSupabaseを呼ばずに空Mapを返す", async () => {
+			const result = await calculateEntryTotalAmountBulk([]);
+
+			expect(result.success).toBe(true);
+			expect(result.data?.size).toBe(0);
+			expect(supabaseMock.from).not.toHaveBeenCalled();
+		});
+
+		it("kouden_entries取得エラー時はsuccess: falseを返す", async () => {
+			const mockError = { message: "DB接続エラー" };
+
+			supabaseMock.from
+				.mockReturnValueOnce({
+					select: () => ({
+						in: () => Promise.resolve({ data: null, error: mockError }),
+					}),
+				})
+				.mockReturnValueOnce({
+					select: () => ({
+						in: () => Promise.resolve({ data: [], error: null }),
+					}),
+				});
+
+			const result = await calculateEntryTotalAmountBulk(["entry1"]);
+
+			expect(result.success).toBe(false);
+			expect(result.error).toContain("香典エントリーの取得に失敗");
+		});
+
+		it("offering_allocations取得エラー時はsuccess: falseを返す", async () => {
+			const mockError = { message: "配分データ取得失敗" };
+
+			supabaseMock.from
+				.mockReturnValueOnce({
+					select: () => ({
+						in: () =>
+							Promise.resolve({
+								data: [{ id: "entry1", amount: 10000, kouden_id: "k1" }],
+								error: null,
+							}),
+					}),
+				})
+				.mockReturnValueOnce({
+					select: () => ({
+						in: () => Promise.resolve({ data: null, error: mockError }),
+					}),
+				});
+
+			const result = await calculateEntryTotalAmountBulk(["entry1"]);
+
+			expect(result.success).toBe(false);
+			expect(result.error).toContain("お供物配分データの取得に失敗");
+		});
+
+		it("配分が無いエントリーもMapに含まれ offering_total: 0 になる", async () => {
+			const mockEntries = [{ id: "entry1", amount: 8000, kouden_id: "k1" }];
+
+			supabaseMock.from
+				.mockReturnValueOnce({
+					select: () => ({
+						in: () => Promise.resolve({ data: mockEntries, error: null }),
+					}),
+				})
+				.mockReturnValueOnce({
+					select: () => ({
+						in: () => Promise.resolve({ data: [], error: null }),
+					}),
+				});
+
+			const result = await calculateEntryTotalAmountBulk(["entry1"]);
+
+			expect(result.success).toBe(true);
+			expect(result.data?.get("entry1")).toEqual({
+				kouden_amount: 8000,
+				offering_total: 0,
+				calculated_total: 8000,
+			});
+		});
+
+		it("未認証時はsuccess: falseを返す", async () => {
+			serverClientMock.auth.getUser.mockResolvedValueOnce({
+				data: { user: null },
+				error: null,
+			});
+
+			const result = await calculateEntryTotalAmountBulk(["entry1"]);
+
+			expect(result.success).toBe(false);
+			expect(result.error).toContain("認証が必要です");
+			// 認証失敗時はSupabaseアクセスを行わない
+			expect(supabaseMock.from).not.toHaveBeenCalled();
+		});
+
+		it("is_admin RPC エラー時はsuccess: falseを返す", async () => {
+			serverClientMock.rpc.mockResolvedValueOnce({
+				data: null,
+				error: { message: "RPC実行エラー" },
+			});
+
+			const result = await calculateEntryTotalAmountBulk(["entry1"]);
+
+			expect(result.success).toBe(false);
+			expect(result.error).toContain("管理者権限の確認に失敗");
+			// RPC失敗時はSupabaseアクセスを行わない
+			expect(supabaseMock.from).not.toHaveBeenCalled();
+		});
+
+		it("一般ユーザーは自分がアクセス権を持たないエントリーを取得できない", async () => {
+			// 非管理者
+			serverClientMock.rpc.mockResolvedValueOnce({ data: false, error: null });
+
+			const mockEntries = [
+				{ id: "entry1", amount: 10000, kouden_id: "k-owned" },
+				{ id: "entry2", amount: 20000, kouden_id: "k-other" }, // 権限なし
+			];
+
+			supabaseMock.from
+				// 1) kouden_entries 取得
+				.mockReturnValueOnce({
+					select: () => ({
+						in: () => Promise.resolve({ data: mockEntries, error: null }),
+					}),
+				})
+				// 2) 所有 koudens 取得
+				.mockReturnValueOnce({
+					select: () => ({
+						eq: () => Promise.resolve({ data: [{ id: "k-owned" }], error: null }),
+					}),
+				})
+				// 3) メンバー koudens 取得
+				.mockReturnValueOnce({
+					select: () => ({
+						eq: () => Promise.resolve({ data: [], error: null }),
+					}),
+				})
+				// 4) 認可されたエントリーの allocations のみ取得
+				.mockReturnValueOnce({
+					select: () => ({
+						in: () =>
+							Promise.resolve({
+								data: [{ kouden_entry_id: "entry1", allocated_amount: 1500 }],
+								error: null,
+							}),
+					}),
+				});
+
+			const result = await calculateEntryTotalAmountBulk(["entry1", "entry2"]);
+
+			expect(result.success).toBe(true);
+			expect(result.data?.size).toBe(1);
+			expect(result.data?.get("entry1")).toEqual({
+				kouden_amount: 10000,
+				offering_total: 1500,
+				calculated_total: 11500,
+			});
+			// entry2 は除外される
+			expect(result.data?.has("entry2")).toBe(false);
+		});
+
+		it("非管理者の所有koudens取得エラー時はsuccess: falseを返す", async () => {
+			serverClientMock.rpc.mockResolvedValueOnce({ data: false, error: null });
+
+			supabaseMock.from
+				.mockReturnValueOnce({
+					select: () => ({
+						in: () =>
+							Promise.resolve({
+								data: [{ id: "entry1", amount: 10000, kouden_id: "k1" }],
+								error: null,
+							}),
+					}),
+				})
+				// 所有 koudens でエラー
+				.mockReturnValueOnce({
+					select: () => ({
+						eq: () => Promise.resolve({ data: null, error: { message: "koudens lookup failed" } }),
+					}),
+				})
+				// メンバー koudens は成功
+				.mockReturnValueOnce({
+					select: () => ({
+						eq: () => Promise.resolve({ data: [], error: null }),
+					}),
+				});
+
+			const result = await calculateEntryTotalAmountBulk(["entry1"]);
+
+			expect(result.success).toBe(false);
+			expect(result.error).toContain("アクセス権限の確認に失敗");
+			// 認可スコープ取得失敗後に allocations を取得しないことを確認
+			expect(supabaseMock.from).toHaveBeenCalledTimes(3);
+			expect(supabaseMock.from).not.toHaveBeenCalledWith("offering_allocations");
+		});
+
+		it("非管理者のメンバーkoudens取得エラー時はsuccess: falseを返す", async () => {
+			serverClientMock.rpc.mockResolvedValueOnce({ data: false, error: null });
+
+			supabaseMock.from
+				.mockReturnValueOnce({
+					select: () => ({
+						in: () =>
+							Promise.resolve({
+								data: [{ id: "entry1", amount: 10000, kouden_id: "k1" }],
+								error: null,
+							}),
+					}),
+				})
+				// 所有 koudens は成功
+				.mockReturnValueOnce({
+					select: () => ({
+						eq: () => Promise.resolve({ data: [], error: null }),
+					}),
+				})
+				// メンバー koudens でエラー
+				.mockReturnValueOnce({
+					select: () => ({
+						eq: () => Promise.resolve({ data: null, error: { message: "members lookup failed" } }),
+					}),
+				});
+
+			const result = await calculateEntryTotalAmountBulk(["entry1"]);
+
+			expect(result.success).toBe(false);
+			expect(result.error).toContain("アクセス権限の確認に失敗");
+			expect(supabaseMock.from).toHaveBeenCalledTimes(3);
+			expect(supabaseMock.from).not.toHaveBeenCalledWith("offering_allocations");
 		});
 	});
 });
