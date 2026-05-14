@@ -16,7 +16,8 @@ export default function AdminStatisticsError({
 	reset: () => void;
 }) {
 	useEffect(() => {
-		console.error(error);
+		// 詳細は診断用にログのみへ送る（UI へは内部情報を露出しない）
+		console.error("[AdminStatisticsError]", error);
 	}, [error]);
 
 	return (
@@ -24,7 +25,7 @@ export default function AdminStatisticsError({
 			<AlertCircle className="h-4 w-4" />
 			<AlertTitle>統計情報の取得に失敗しました</AlertTitle>
 			<AlertDescription className="mt-2 flex flex-col gap-2">
-				<p>{error.message}</p>
+				<p>統計情報の取得中に問題が発生しました。時間をおいて再試行してください。</p>
 				<button
 					type="button"
 					onClick={reset}

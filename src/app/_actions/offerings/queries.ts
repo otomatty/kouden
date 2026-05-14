@@ -295,7 +295,15 @@ export async function calculateEntryTotalAmountBulk(koudenEntryIds: string[]): P
 		}
 
 		// 管理者なら全エントリーへアクセス可能。それ以外は kouden 単位でアクセス権を確認する。
-		const { data: isAdminFlag } = await userClient.rpc("is_admin", { user_uid: user.id });
+		// RPCエラーを silent に false 扱いすると、管理者が一般ユーザー扱いとなり認可フィルタで
+		// すべての entry が落ち、空の Map が success: true で返るため、明示的にエラーを返す。
+		const { data: isAdminFlag, error: rpcError } = await userClient.rpc("is_admin", {
+			user_uid: user.id,
+		});
+		if (rpcError) {
+			console.error("[calculateEntryTotalAmountBulk] is_admin RPC failed:", rpcError);
+			return { success: false, error: "管理者権限の確認に失敗しました" };
+		}
 		const isAdmin = isAdminFlag === true;
 
 		const supabase = createAdminClient();

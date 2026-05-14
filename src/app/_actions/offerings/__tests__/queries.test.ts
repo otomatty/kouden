@@ -498,6 +498,20 @@ describe("お供物配分クエリー機能", () => {
 			expect(supabaseMock.from).not.toHaveBeenCalled();
 		});
 
+		it("is_admin RPC エラー時はsuccess: falseを返す", async () => {
+			serverClientMock.rpc.mockResolvedValueOnce({
+				data: null,
+				error: { message: "RPC実行エラー" },
+			});
+
+			const result = await calculateEntryTotalAmountBulk(["entry1"]);
+
+			expect(result.success).toBe(false);
+			expect(result.error).toContain("管理者権限の確認に失敗");
+			// RPC失敗時はSupabaseアクセスを行わない
+			expect(supabaseMock.from).not.toHaveBeenCalled();
+		});
+
 		it("一般ユーザーは自分がアクセス権を持たないエントリーを取得できない", async () => {
 			// 非管理者
 			serverClientMock.rpc.mockResolvedValueOnce({ data: false, error: null });
