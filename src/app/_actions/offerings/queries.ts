@@ -5,6 +5,7 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import type { OfferingAllocation } from "@/types/entries";
 
 /**
@@ -283,32 +284,77 @@ export async function calculateEntryTotalAmountBulk(koudenEntryIds: string[]): P
 			return { success: true, data: new Map() };
 		}
 
+		// 認証ユーザーを取得（Server Action は Client から任意の入力で呼べるため認可必須）
+		const userClient = await createClient();
+		const {
+			data: { user },
+			error: authError,
+		} = await userClient.auth.getUser();
+		if (authError || !user) {
+			return { success: false, error: "認証が必要です" };
+		}
+
+		// 管理者なら全エントリーへアクセス可能。それ以外は kouden 単位でアクセス権を確認する。
+		const { data: isAdminFlag } = await userClient.rpc("is_admin", { user_uid: user.id });
+		const isAdmin = isAdminFlag === true;
+
 		const supabase = createAdminClient();
 
-		const [entriesResult, allocationsResult] = await Promise.all([
-			supabase.from("kouden_entries").select("id, amount").in("id", koudenEntryIds),
-			supabase
-				.from("offering_allocations")
-				.select("kouden_entry_id, allocated_amount")
-				.in("kouden_entry_id", koudenEntryIds),
-		]);
+		// kouden_id も含めて取得し、認可フィルタに使う
+		const { data: rawEntries, error: entriesError } = await supabase
+			.from("kouden_entries")
+			.select("id, amount, kouden_id")
+			.in("id", koudenEntryIds);
 
-		if (entriesResult.error) {
+		if (entriesError) {
 			return { success: false, error: "香典エントリーの取得に失敗しました" };
 		}
-		if (allocationsResult.error) {
+
+		let allowedEntries = rawEntries ?? [];
+		if (!isAdmin) {
+			// 所有 kouden + メンバー kouden の id 集合を取得
+			const [{ data: owned }, { data: members }] = await Promise.all([
+				supabase.from("koudens").select("id").eq("owner_id", user.id),
+				supabase.from("kouden_members").select("kouden_id").eq("user_id", user.id),
+			]);
+			const allowedKoudenIds = new Set<string>();
+			for (const k of owned ?? []) allowedKoudenIds.add(k.id);
+			for (const m of members ?? []) {
+				if (m.kouden_id) allowedKoudenIds.add(m.kouden_id);
+			}
+			allowedEntries = allowedEntries.filter(
+				(e) => e.kouden_id != null && allowedKoudenIds.has(e.kouden_id),
+			);
+			if (allowedEntries.length !== (rawEntries ?? []).length) {
+				console.warn(
+					`[calculateEntryTotalAmountBulk] filtered ${(rawEntries ?? []).length - allowedEntries.length} unauthorized entries for user ${user.id}`,
+				);
+			}
+		}
+
+		const allowedEntryIds = allowedEntries.map((e) => e.id);
+		if (allowedEntryIds.length === 0) {
+			return { success: true, data: new Map() };
+		}
+
+		const { data: allocations, error: allocationError } = await supabase
+			.from("offering_allocations")
+			.select("kouden_entry_id, allocated_amount")
+			.in("kouden_entry_id", allowedEntryIds);
+
+		if (allocationError) {
 			return { success: false, error: "お供物配分データの取得に失敗しました" };
 		}
 
 		const totalsByEntry = new Map<string, number>();
-		for (const alloc of allocationsResult.data ?? []) {
+		for (const alloc of allocations ?? []) {
 			if (!alloc.kouden_entry_id) continue;
 			const prev = totalsByEntry.get(alloc.kouden_entry_id) ?? 0;
 			totalsByEntry.set(alloc.kouden_entry_id, prev + alloc.allocated_amount);
 		}
 
 		const data = new Map<string, EntryAmountStats>();
-		for (const entry of entriesResult.data ?? []) {
+		for (const entry of allowedEntries) {
 			const offeringTotal = totalsByEntry.get(entry.id) ?? 0;
 			const koudenAmount = entry.amount ?? 0;
 			data.set(entry.id, {

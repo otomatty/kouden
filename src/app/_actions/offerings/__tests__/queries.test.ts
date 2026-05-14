@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { type Mock, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	calculateEntryTotalAmount,
@@ -12,10 +13,15 @@ import {
 vi.mock("@/lib/supabase/admin", () => ({
 	createAdminClient: vi.fn(),
 }));
+vi.mock("@/lib/supabase/server", () => ({
+	createClient: vi.fn(),
+}));
 
 describe("お供物配分クエリー機能", () => {
 	// biome-ignore lint/suspicious/noExplicitAny: テスト用モック
 	let supabaseMock: any;
+	// biome-ignore lint/suspicious/noExplicitAny: テスト用モック
+	let serverClientMock: any;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -24,6 +30,18 @@ describe("お供物配分クエリー機能", () => {
 			from: vi.fn(),
 		};
 		(createAdminClient as unknown as Mock).mockReturnValue(supabaseMock);
+
+		// 認証ユーザー(管理者)としてデフォルトモック。bulkテストでは認可フィルタを通り抜ける。
+		serverClientMock = {
+			auth: {
+				getUser: vi.fn().mockResolvedValue({
+					data: { user: { id: "test-admin-user-id" } },
+					error: null,
+				}),
+			},
+			rpc: vi.fn().mockResolvedValue({ data: true, error: null }),
+		};
+		(createClient as unknown as Mock).mockResolvedValue(serverClientMock);
 	});
 
 	describe("getOfferingAllocations", () => {
@@ -339,9 +357,9 @@ describe("お供物配分クエリー機能", () => {
 	describe("calculateEntryTotalAmountBulk", () => {
 		it("複数エントリーの合計金額を1組のクエリで一括計算する", async () => {
 			const mockEntries = [
-				{ id: "entry1", amount: 10000 },
-				{ id: "entry2", amount: 20000 },
-				{ id: "entry3", amount: 5000 },
+				{ id: "entry1", amount: 10000, kouden_id: "k1" },
+				{ id: "entry2", amount: 20000, kouden_id: "k1" },
+				{ id: "entry3", amount: 5000, kouden_id: "k1" },
 			];
 			const mockAllocations = [
 				{ kouden_entry_id: "entry1", allocated_amount: 3000 },
@@ -422,7 +440,11 @@ describe("お供物配分クエリー機能", () => {
 			supabaseMock.from
 				.mockReturnValueOnce({
 					select: () => ({
-						in: () => Promise.resolve({ data: [{ id: "entry1", amount: 10000 }], error: null }),
+						in: () =>
+							Promise.resolve({
+								data: [{ id: "entry1", amount: 10000, kouden_id: "k1" }],
+								error: null,
+							}),
 					}),
 				})
 				.mockReturnValueOnce({
@@ -438,7 +460,7 @@ describe("お供物配分クエリー機能", () => {
 		});
 
 		it("配分が無いエントリーもMapに含まれ offering_total: 0 になる", async () => {
-			const mockEntries = [{ id: "entry1", amount: 8000 }];
+			const mockEntries = [{ id: "entry1", amount: 8000, kouden_id: "k1" }];
 
 			supabaseMock.from
 				.mockReturnValueOnce({
@@ -460,6 +482,72 @@ describe("お供物配分クエリー機能", () => {
 				offering_total: 0,
 				calculated_total: 8000,
 			});
+		});
+
+		it("未認証時はsuccess: falseを返す", async () => {
+			serverClientMock.auth.getUser.mockResolvedValueOnce({
+				data: { user: null },
+				error: null,
+			});
+
+			const result = await calculateEntryTotalAmountBulk(["entry1"]);
+
+			expect(result.success).toBe(false);
+			expect(result.error).toContain("認証が必要です");
+			// 認証失敗時はSupabaseアクセスを行わない
+			expect(supabaseMock.from).not.toHaveBeenCalled();
+		});
+
+		it("一般ユーザーは自分がアクセス権を持たないエントリーを取得できない", async () => {
+			// 非管理者
+			serverClientMock.rpc.mockResolvedValueOnce({ data: false, error: null });
+
+			const mockEntries = [
+				{ id: "entry1", amount: 10000, kouden_id: "k-owned" },
+				{ id: "entry2", amount: 20000, kouden_id: "k-other" }, // 権限なし
+			];
+
+			supabaseMock.from
+				// 1) kouden_entries 取得
+				.mockReturnValueOnce({
+					select: () => ({
+						in: () => Promise.resolve({ data: mockEntries, error: null }),
+					}),
+				})
+				// 2) 所有 koudens 取得
+				.mockReturnValueOnce({
+					select: () => ({
+						eq: () => Promise.resolve({ data: [{ id: "k-owned" }], error: null }),
+					}),
+				})
+				// 3) メンバー koudens 取得
+				.mockReturnValueOnce({
+					select: () => ({
+						eq: () => Promise.resolve({ data: [], error: null }),
+					}),
+				})
+				// 4) 認可されたエントリーの allocations のみ取得
+				.mockReturnValueOnce({
+					select: () => ({
+						in: () =>
+							Promise.resolve({
+								data: [{ kouden_entry_id: "entry1", allocated_amount: 1500 }],
+								error: null,
+							}),
+					}),
+				});
+
+			const result = await calculateEntryTotalAmountBulk(["entry1", "entry2"]);
+
+			expect(result.success).toBe(true);
+			expect(result.data?.size).toBe(1);
+			expect(result.data?.get("entry1")).toEqual({
+				kouden_amount: 10000,
+				offering_total: 1500,
+				calculated_total: 11500,
+			});
+			// entry2 は除外される
+			expect(result.data?.has("entry2")).toBe(false);
 		});
 	});
 });

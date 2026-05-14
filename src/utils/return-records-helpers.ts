@@ -1,12 +1,13 @@
 /**
- * 返礼情報データ変換のヘルパー関数
+ * 返礼情報データ変換のヘルパー関数（純粋関数）
  * @module return-records-helpers
+ *
+ * このファイルは Server Action を呼び出さない、純粋なデータ変換ロジックに
+ * 限定しています。bulk取得を伴うリスト変換は
+ * `@/app/_actions/return-records/summaries` 側で行います。
  */
 
-import {
-	type EntryAmountStats,
-	calculateEntryTotalAmountBulk,
-} from "@/app/_actions/offerings/queries";
+import type { EntryAmountStats } from "@/app/_actions/offerings/queries";
 import type { Entry } from "@/types/entries";
 import type { Relationship } from "@/types/relationships";
 import type {
@@ -35,7 +36,7 @@ function getStatusDisplay(status: ReturnStatus): string {
 }
 
 /**
- * ReturnEntryRecordをReturnManagementSummary形式に変換する
+ * ReturnEntryRecordをReturnManagementSummary形式に変換する（純粋関数）
  * @param returnRecord - 返礼エントリーレコード
  * @param entries - 香典エントリー一覧
  * @param relationships - 関係性一覧
@@ -94,38 +95,4 @@ export function convertToReturnManagementSummary(
 		statusDisplay: getStatusDisplay(returnRecord.return_status as ReturnStatus),
 		needsAdditionalReturn: (returnRecord.additional_return_amount || 0) > 0,
 	};
-}
-
-/**
- * 複数のReturnEntryRecordを一括でReturnManagementSummary形式に変換する
- * お供物配分金額は1回のbulkクエリで取得しN+1を回避する。
- */
-export async function convertToReturnManagementSummaries(
-	returnRecords: ReturnEntryRecord[],
-	entries: Entry[],
-	relationships: Relationship[],
-	koudenId: string,
-): Promise<ReturnManagementSummary[]> {
-	const entryIds = Array.from(
-		new Set(
-			returnRecords
-				.map((r) => r.kouden_entry_id)
-				.filter((id): id is string => typeof id === "string" && id.length > 0),
-		),
-	);
-
-	const bulk = await calculateEntryTotalAmountBulk(entryIds);
-	if (!(bulk.success && bulk.data)) {
-		// 失敗時は0埋めではなく明示的に例外を投げる（誤った返礼サマリー表示を防ぐ）。
-		// 技術詳細はサーバーログにのみ残し、UI には汎用メッセージを返す。
-		console.error("[convertToReturnManagementSummaries] bulk fetch failed:", bulk.error);
-		throw new Error("返礼情報の取得に失敗しました");
-	}
-	const amountsMap: Map<string, EntryAmountStats> = bulk.data;
-
-	return returnRecords
-		.map((record) =>
-			convertToReturnManagementSummary(record, entries, relationships, koudenId, amountsMap),
-		)
-		.filter((summary): summary is ReturnManagementSummary => summary !== null);
 }
