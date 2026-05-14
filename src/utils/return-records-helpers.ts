@@ -118,8 +118,11 @@ export async function convertToReturnManagementSummaries(
 	);
 
 	const bulk = await calculateEntryTotalAmountBulk(entryIds);
-	const amountsMap: Map<string, EntryAmountStats> =
-		bulk.success && bulk.data ? bulk.data : new Map();
+	if (!(bulk.success && bulk.data)) {
+		// 失敗時は0埋めではなく明示的に例外を投げる（誤った返礼サマリー表示を防ぐ）
+		throw new Error(`Failed to calculate entry totals in bulk: ${bulk.error ?? "unknown error"}`);
+	}
+	const amountsMap: Map<string, EntryAmountStats> = bulk.data;
 
 	return returnRecords
 		.map((record) =>

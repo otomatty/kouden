@@ -311,10 +311,11 @@ export async function calculateEntryTotalAmountBulk(koudenEntryIds: string[]): P
 		>();
 		for (const entry of entriesResult.data ?? []) {
 			const offeringTotal = totalsByEntry.get(entry.id) ?? 0;
+			const koudenAmount = entry.amount ?? 0;
 			data.set(entry.id, {
-				kouden_amount: entry.amount,
+				kouden_amount: koudenAmount,
 				offering_total: offeringTotal,
-				calculated_total: entry.amount + offeringTotal,
+				calculated_total: koudenAmount + offeringTotal,
 			});
 		}
 

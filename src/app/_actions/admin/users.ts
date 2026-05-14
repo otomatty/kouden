@@ -148,10 +148,12 @@ export async function getAllUsers(params: GetUsersParams = {}): Promise<{
 		]);
 
 		if (aggregateResult.error) {
+			// 失敗時は0埋めで継続せず、明示的に例外を投げる（admin UIで誤った0統計を出さないため）
 			logger.error(
 				{ error: aggregateResult.error.message, userIdsCount: userIds.length },
 				"Failed to fetch user aggregate stats",
 			);
+			throw new Error(`Failed to fetch user aggregate stats: ${aggregateResult.error.message}`);
 		}
 
 		type AggregateRow = {
