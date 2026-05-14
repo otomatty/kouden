@@ -28,7 +28,7 @@ async function calculateStatistics(entries: Entry[]) {
 		const stats = amountsMap.get(entry.id);
 		return {
 			entryId: entry.id,
-			koudenAmount: entry.amount || 0,
+			koudenAmount: entry.amount ?? 0,
 			offeringTotal: stats?.offering_total ?? 0,
 			calculatedTotal: stats?.calculated_total ?? entry.amount ?? 0,
 		};

@@ -3,7 +3,10 @@
  * @module return-records-helpers
  */
 
-import { calculateEntryTotalAmountBulk } from "@/app/_actions/offerings/queries";
+import {
+	type EntryAmountStats,
+	calculateEntryTotalAmountBulk,
+} from "@/app/_actions/offerings/queries";
 import type { Entry } from "@/types/entries";
 import type { Relationship } from "@/types/relationships";
 import type {
@@ -12,12 +15,6 @@ import type {
 	ReturnManagementSummary,
 	ReturnStatus,
 } from "@/types/return-records/return-records";
-
-type EntryAmountStats = {
-	kouden_amount: number;
-	offering_total: number;
-	calculated_total: number;
-};
 
 /**
  * 返礼状況の表示用テキストを取得

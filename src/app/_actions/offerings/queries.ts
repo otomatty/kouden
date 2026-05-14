@@ -260,20 +260,22 @@ export async function calculateEntryTotalAmount(koudenEntryId: string): Promise<
 }
 
 /**
+ * 香典エントリーごとの合計金額情報（香典金額 + 配分されたお供物の合計）
+ */
+export type EntryAmountStats = {
+	kouden_amount: number;
+	offering_total: number;
+	calculated_total: number;
+};
+
+/**
  * 複数の香典エントリーの合計金額を一括計算（N+1解消用）
  * 個別呼び出しの`calculateEntryTotalAmount`は単一エントリー向け（getUserDetail等）に残し、
  * リスト処理ではこちらを利用する。
  */
 export async function calculateEntryTotalAmountBulk(koudenEntryIds: string[]): Promise<{
 	success: boolean;
-	data?: Map<
-		string,
-		{
-			kouden_amount: number;
-			offering_total: number;
-			calculated_total: number;
-		}
-	>;
+	data?: Map<string, EntryAmountStats>;
 	error?: string;
 }> {
 	try {
@@ -305,10 +307,7 @@ export async function calculateEntryTotalAmountBulk(koudenEntryIds: string[]): P
 			totalsByEntry.set(alloc.kouden_entry_id, prev + alloc.allocated_amount);
 		}
 
-		const data = new Map<
-			string,
-			{ kouden_amount: number; offering_total: number; calculated_total: number }
-		>();
+		const data = new Map<string, EntryAmountStats>();
 		for (const entry of entriesResult.data ?? []) {
 			const offeringTotal = totalsByEntry.get(entry.id) ?? 0;
 			const koudenAmount = entry.amount ?? 0;
