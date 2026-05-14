@@ -563,5 +563,74 @@ describe("お供物配分クエリー機能", () => {
 			// entry2 は除外される
 			expect(result.data?.has("entry2")).toBe(false);
 		});
+
+		it("非管理者の所有koudens取得エラー時はsuccess: falseを返す", async () => {
+			serverClientMock.rpc.mockResolvedValueOnce({ data: false, error: null });
+
+			supabaseMock.from
+				.mockReturnValueOnce({
+					select: () => ({
+						in: () =>
+							Promise.resolve({
+								data: [{ id: "entry1", amount: 10000, kouden_id: "k1" }],
+								error: null,
+							}),
+					}),
+				})
+				// 所有 koudens でエラー
+				.mockReturnValueOnce({
+					select: () => ({
+						eq: () => Promise.resolve({ data: null, error: { message: "koudens lookup failed" } }),
+					}),
+				})
+				// メンバー koudens は成功
+				.mockReturnValueOnce({
+					select: () => ({
+						eq: () => Promise.resolve({ data: [], error: null }),
+					}),
+				});
+
+			const result = await calculateEntryTotalAmountBulk(["entry1"]);
+
+			expect(result.success).toBe(false);
+			expect(result.error).toContain("アクセス権限の確認に失敗");
+			// 認可スコープ取得失敗後に allocations を取得しないことを確認
+			expect(supabaseMock.from).toHaveBeenCalledTimes(3);
+			expect(supabaseMock.from).not.toHaveBeenCalledWith("offering_allocations");
+		});
+
+		it("非管理者のメンバーkoudens取得エラー時はsuccess: falseを返す", async () => {
+			serverClientMock.rpc.mockResolvedValueOnce({ data: false, error: null });
+
+			supabaseMock.from
+				.mockReturnValueOnce({
+					select: () => ({
+						in: () =>
+							Promise.resolve({
+								data: [{ id: "entry1", amount: 10000, kouden_id: "k1" }],
+								error: null,
+							}),
+					}),
+				})
+				// 所有 koudens は成功
+				.mockReturnValueOnce({
+					select: () => ({
+						eq: () => Promise.resolve({ data: [], error: null }),
+					}),
+				})
+				// メンバー koudens でエラー
+				.mockReturnValueOnce({
+					select: () => ({
+						eq: () => Promise.resolve({ data: null, error: { message: "members lookup failed" } }),
+					}),
+				});
+
+			const result = await calculateEntryTotalAmountBulk(["entry1"]);
+
+			expect(result.success).toBe(false);
+			expect(result.error).toContain("アクセス権限の確認に失敗");
+			expect(supabaseMock.from).toHaveBeenCalledTimes(3);
+			expect(supabaseMock.from).not.toHaveBeenCalledWith("offering_allocations");
+		});
 	});
 });

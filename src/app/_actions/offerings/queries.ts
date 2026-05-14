@@ -320,11 +320,22 @@ export async function calculateEntryTotalAmountBulk(koudenEntryIds: string[]): P
 
 		let allowedEntries = rawEntries ?? [];
 		if (!isAdmin) {
-			// 所有 kouden + メンバー kouden の id 集合を取得
-			const [{ data: owned }, { data: members }] = await Promise.all([
-				supabase.from("koudens").select("id").eq("owner_id", user.id),
-				supabase.from("kouden_members").select("kouden_id").eq("user_id", user.id),
-			]);
+			// 所有 kouden + メンバー kouden の id 集合を取得。
+			// どちらかが失敗した状態で進むと allowedKoudenIds が不正に空集合となり、
+			// 全 entry を非認可として落として success:true で空 Map を返してしまうため、
+			// 明示的にエラーを返す（is_admin RPC と同じ理由）。
+			const [{ data: owned, error: ownedError }, { data: members, error: membersError }] =
+				await Promise.all([
+					supabase.from("koudens").select("id").eq("owner_id", user.id),
+					supabase.from("kouden_members").select("kouden_id").eq("user_id", user.id),
+				]);
+			if (ownedError || membersError) {
+				console.error("[calculateEntryTotalAmountBulk] auth-scope lookup failed:", {
+					ownedError,
+					membersError,
+				});
+				return { success: false, error: "アクセス権限の確認に失敗しました" };
+			}
 			const allowedKoudenIds = new Set<string>();
 			for (const k of owned ?? []) allowedKoudenIds.add(k.id);
 			for (const m of members ?? []) {
