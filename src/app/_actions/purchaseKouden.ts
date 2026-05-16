@@ -103,8 +103,8 @@ export async function purchaseKouden({
 		if (currentPrice && plan.price > currentPrice) {
 			amount = amount - currentPrice;
 		}
-		// 金額が 0 以下の場合は不正リクエスト（差額計算で負になる等）
-		if (amount <= 0) {
+		// 金額の妥当性チェック（差額計算で負になる/NaN/Stripe JPY 最小額 50 円未満を弾く）
+		if (!(amount >= 50)) {
 			logger.warn(
 				{
 					userId,
@@ -114,7 +114,7 @@ export async function purchaseKouden({
 					currentPrice,
 					planPrice: plan.price,
 				},
-				"[WARN] purchaseKouden: 決済金額が0以下です",
+				"[WARN] purchaseKouden: 決済金額が不正です",
 			);
 			return { error: "決済金額が不正です" };
 		}
