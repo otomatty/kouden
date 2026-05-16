@@ -3445,6 +3445,22 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      process_stripe_checkout_completed: {
+        Args: {
+          p_kouden_id: string
+          p_user_id: string
+          p_plan_code: string
+          p_title: string
+          p_description: string
+          p_expected_count: number | null
+          p_amount_paid: number
+          p_stripe_session_id: string
+        }
+        Returns: {
+          purchase_id: string
+          is_new_purchase: boolean
+        }[]
+      }
       remove_member: {
         Args: { p_kouden_id: string; p_user_id: string }
         Returns: undefined
