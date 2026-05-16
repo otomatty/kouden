@@ -9,14 +9,14 @@ const validBase = {
 	koudenId: VALID_UUID_1,
 	planCode: "basic",
 	userId: VALID_UUID_2,
-	title: "テストタイトル",
 };
 
 describe("koudenMetadataSchema", () => {
-	it("必須項目のみで成功し description はデフォルト値の空文字になる", () => {
+	it("必須項目のみで成功し title / description はデフォルト値の空文字になる", () => {
 		const result = koudenMetadataSchema.safeParse(validBase);
 		expect(result.success).toBe(true);
 		if (result.success) {
+			expect(result.data.title).toBe("");
 			expect(result.data.description).toBe("");
 			expect(result.data.expectedCount).toBeUndefined();
 		}
@@ -25,6 +25,7 @@ describe("koudenMetadataSchema", () => {
 	it("全項目を指定して成功する", () => {
 		const result = koudenMetadataSchema.safeParse({
 			...validBase,
+			title: "タイトル",
 			description: "詳細",
 			expectedCount: "20",
 		});
@@ -56,9 +57,9 @@ describe("koudenMetadataSchema", () => {
 		expect(result.success).toBe(true);
 	});
 
-	it("title が空の場合は失敗する", () => {
+	it("title が空文字でも成功する (upgrade フローでは title 未送出)", () => {
 		const result = koudenMetadataSchema.safeParse({ ...validBase, title: "" });
-		expect(result.success).toBe(false);
+		expect(result.success).toBe(true);
 	});
 
 	it("title が 100 文字を超える場合は失敗する", () => {
@@ -87,6 +88,26 @@ describe("koudenMetadataSchema", () => {
 		expect(result.success).toBe(true);
 	});
 
+	it("expectedCount が空文字でも成功する (未指定相当)", () => {
+		const result = koudenMetadataSchema.safeParse({ ...validBase, expectedCount: "" });
+		expect(result.success).toBe(true);
+	});
+
+	it("expectedCount が数字以外を含む場合は失敗する (NaN 防止)", () => {
+		expect(koudenMetadataSchema.safeParse({ ...validBase, expectedCount: "abc" }).success).toBe(
+			false,
+		);
+		expect(koudenMetadataSchema.safeParse({ ...validBase, expectedCount: "12a" }).success).toBe(
+			false,
+		);
+		expect(koudenMetadataSchema.safeParse({ ...validBase, expectedCount: "-1" }).success).toBe(
+			false,
+		);
+		expect(koudenMetadataSchema.safeParse({ ...validBase, expectedCount: "1.5" }).success).toBe(
+			false,
+		);
+	});
+
 	it("必須項目が欠けると失敗する", () => {
 		const { koudenId: _koudenId, ...withoutKoudenId } = validBase;
 		expect(koudenMetadataSchema.safeParse(withoutKoudenId).success).toBe(false);
@@ -96,9 +117,6 @@ describe("koudenMetadataSchema", () => {
 
 		const { userId: _userId, ...withoutUserId } = validBase;
 		expect(koudenMetadataSchema.safeParse(withoutUserId).success).toBe(false);
-
-		const { title: _title, ...withoutTitle } = validBase;
-		expect(koudenMetadataSchema.safeParse(withoutTitle).success).toBe(false);
 	});
 
 	it("非オブジェクトを与えると失敗する", () => {

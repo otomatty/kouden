@@ -1,5 +1,5 @@
 /// <reference types="vitest" />
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { escapeHtml, sanitizeHttpsUrl } from "../html-escape";
 
 describe("escapeHtml", () => {
@@ -33,6 +33,12 @@ describe("escapeHtml", () => {
 });
 
 describe("sanitizeHttpsUrl", () => {
+	const originalNodeEnv = process.env.NODE_ENV;
+
+	afterEach(() => {
+		process.env.NODE_ENV = originalNodeEnv;
+	});
+
 	it("https:// で始まる URL はそのまま返す (HTML エスケープ済み)", () => {
 		expect(sanitizeHttpsUrl("https://example.com/path")).toBe("https://example.com/path");
 	});
@@ -43,7 +49,25 @@ describe("sanitizeHttpsUrl", () => {
 		);
 	});
 
-	it("http:// 始まりの URL は # にフォールバックする", () => {
+	it("本番環境では http://example.com を # にフォールバックする", () => {
+		process.env.NODE_ENV = "production";
+		expect(sanitizeHttpsUrl("http://example.com")).toBe("#");
+	});
+
+	it("本番環境では http://localhost も # にフォールバックする", () => {
+		process.env.NODE_ENV = "production";
+		expect(sanitizeHttpsUrl("http://localhost:3000/path")).toBe("#");
+	});
+
+	it("開発環境では http://localhost を許可する", () => {
+		process.env.NODE_ENV = "development";
+		expect(sanitizeHttpsUrl("http://localhost:3000/invitations/abc")).toBe(
+			"http://localhost:3000/invitations/abc",
+		);
+	});
+
+	it("開発環境でも http://localhost 以外の http は # にフォールバックする", () => {
+		process.env.NODE_ENV = "development";
 		expect(sanitizeHttpsUrl("http://example.com")).toBe("#");
 	});
 
