@@ -81,6 +81,7 @@ describe("rateLimit (in-memory fallback)", () => {
 describe("rateLimit (Upstash failure fallback)", () => {
 	afterEach(() => {
 		vi.unstubAllEnvs();
+		vi.unstubAllGlobals();
 		vi.restoreAllMocks();
 	});
 
@@ -109,6 +110,25 @@ describe("rateLimit (Upstash failure fallback)", () => {
 			vi.fn(
 				async () =>
 					new Response(JSON.stringify([{ error: "ERR boom" }, { result: 1 }, { result: 100 }]), {
+						status: 200,
+						headers: { "content-type": "application/json" },
+					}),
+			),
+		);
+		const rateLimit = await freshRateLimit();
+		const req = buildRequest("/api/foo", { "x-forwarded-for": "1.2.3.4" });
+		const result = await rateLimit(req, { windowMs: 60_000, maxRequests: 2 });
+		expect(result.success).toBe(true);
+		expect(result.remainingRequests).toBe(1);
+	});
+
+	it("Upstash レスポンス形状が想定外な場合もフォールバックする (fail-open 防止)", async () => {
+		stubUpstashEnv();
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(
+				async () =>
+					new Response(JSON.stringify([{ unexpected: true }, { result: 1 }, { result: 100 }]), {
 						status: 200,
 						headers: { "content-type": "application/json" },
 					}),

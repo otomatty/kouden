@@ -150,8 +150,14 @@ async function upstashIncrement(
 		["PTTL", key],
 	]);
 
-	const count = readUpstashNumber(results[0], "INCR") ?? 0;
-	const ttlMs = readUpstashNumber(results[2], "PTTL") ?? -1;
+	const count = readUpstashNumber(results[0], "INCR");
+	const ttlMs = readUpstashNumber(results[2], "PTTL");
+	if (count === null || ttlMs === null) {
+		// レスポンス形状が想定外の場合、count=0 等にフォールバックすると
+		// レート制限が事実上バイパスされる (fail-open) ため、例外を投げて
+		// 呼び出し側のインメモリフォールバックに倒す。
+		throw new Error("Upstash pipeline returned unexpected payload shape");
+	}
 	const resetAt = ttlMs > 0 ? now + ttlMs : now + windowMs;
 	return { count, resetAt };
 }
