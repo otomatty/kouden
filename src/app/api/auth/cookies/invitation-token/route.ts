@@ -70,3 +70,35 @@ export async function POST(request: Request) {
 	});
 	return response;
 }
+
+/**
+ * 招待トークン Cookie を明示的に破棄する。
+ *
+ * 認証フロー中断時のロールバック用。`setupAuthCookies` で Cookie を確定したあと
+ * 後続の `signInWith*` が失敗した／プロバイダ画面でユーザーが中止した場合に
+ * 呼び出されることを想定する。これがないと Cookie は Max-Age=3600 が切れる
+ * までブラウザに残存し、次回ログインで `/auth/callback` が古い招待トークンを
+ * 自動適用してしまう。
+ *
+ * Cookie 削除は `maxAge: 0` で実現する。Path / SameSite / Secure などの属性は
+ * 設定時と揃えておく必要がある (ブラウザは name+domain+path で同一性を判定する)。
+ */
+export function DELETE() {
+	const response = NextResponse.json(
+		{ ok: true },
+		{
+			status: 200,
+			headers: {
+				"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+			},
+		},
+	);
+	response.cookies.set("invitation_token", "", {
+		path: "/",
+		httpOnly: true,
+		sameSite: "lax",
+		secure: process.env.NODE_ENV === "production",
+		maxAge: 0,
+	});
+	return response;
+}

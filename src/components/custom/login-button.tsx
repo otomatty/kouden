@@ -16,6 +16,20 @@ export function LoginButton({ invitationToken }: LoginButtonProps) {
 	const supabase = createClient();
 	const { fetchWithCSRF } = useCSRFToken();
 
+	/**
+	 * `signInWithOAuth` 失敗時に保存済みの invitation_token を破棄する。
+	 * Cookie が Max-Age=3600 残存すると、次回ログインで /auth/callback が
+	 * 古い招待を auto-apply してしまうため。ロールバック自体の失敗は飲み込む。
+	 */
+	const clearInvitationCookie = async () => {
+		if (!invitationToken) return;
+		try {
+			await fetchWithCSRF("/api/auth/cookies/invitation-token", { method: "DELETE" });
+		} catch (err) {
+			console.error("[DEBUG] Failed to clear invitation token cookie:", err);
+		}
+	};
+
 	const handleLogin = async () => {
 		try {
 			setLoading(true);
@@ -51,6 +65,7 @@ export function LoginButton({ invitationToken }: LoginButtonProps) {
 		} catch (err) {
 			console.error("[DEBUG] Login error:", err);
 			setError("ログインに失敗しました。再度お試しください。");
+			await clearInvitationCookie();
 		} finally {
 			setLoading(false);
 		}

@@ -158,6 +158,17 @@ describe("verifyBasicAuth", () => {
 		).toBe(false);
 	});
 
+	it("Basic の後に base64 部分が無い場合は false", async () => {
+		vi.stubEnv("ADMIN_BASIC_USERNAME", "admin");
+		vi.stubEnv("ADMIN_BASIC_PASSWORD", "secret");
+
+		const verifyBasicAuth = await freshVerifyBasicAuth();
+		// 空 base64: コロンが見つからず indexOf === -1 で弾かれる
+		expect(verifyBasicAuth(buildRequest({ authorization: "Basic " }))).toBe(false);
+		// "Basic" のみ (末尾スペース無し): "Basic " で始まらないので即 false
+		expect(verifyBasicAuth(buildRequest({ authorization: "Basic" }))).toBe(false);
+	});
+
 	it("パスワードにコロンが含まれていても正しく検証できる", async () => {
 		vi.stubEnv("ADMIN_BASIC_USERNAME", "admin");
 		vi.stubEnv("ADMIN_BASIC_PASSWORD", "pa:ss:wo:rd");

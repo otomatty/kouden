@@ -84,6 +84,23 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 		}
 	};
 
+	/**
+	 * `signInWith*` 失敗時に、setupAuthCookies で書いた invitation_token Cookie を
+	 * 破棄する。失敗放置だと Cookie が Max-Age=3600 残存し、次回ログイン時に古い
+	 * 招待が auto-apply されてしまう。
+	 *
+	 * 失敗はベストエフォートで握りつぶす（ロールバックの失敗を更にユーザーに
+	 * 出してもどうしようもない）。
+	 */
+	const clearInvitationCookie = async () => {
+		if (!invitationToken) return;
+		try {
+			await fetchWithCSRF("/api/auth/cookies/invitation-token", { method: "DELETE" });
+		} catch (error) {
+			console.error("[ERROR] Failed to clear invitation token cookie:", error);
+		}
+	};
+
 	const handleSendOtp = async () => {
 		if (!email) {
 			setMessage("メールアドレスを入力してください");
@@ -118,6 +135,7 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 			} else {
 				setMessage("認証コードの送信に失敗しました。再度お試しください。");
 			}
+			await clearInvitationCookie();
 		} finally {
 			setIsLoading(false);
 		}
@@ -200,6 +218,7 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 			} else {
 				setMessage("Googleログインに失敗しました。再度お試しください。");
 			}
+			await clearInvitationCookie();
 			setIsLoading(false);
 		}
 	};

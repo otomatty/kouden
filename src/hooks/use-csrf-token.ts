@@ -70,11 +70,15 @@ export function useCSRFToken() {
 			if (!currentToken) {
 				currentToken = await fetchToken();
 			}
+			if (!currentToken) {
+				// トークン取得自体が失敗している場合、本リクエストを送ると CSRF ヘッダー
+				// 抜きで 403 を食らうだけで、呼び出し側には原因が「トークン取得失敗」だと
+				// 伝わらない。明示的に throw して上位で扱えるようにする。
+				throw new Error("Failed to obtain CSRF token");
+			}
 
 			const headers = new Headers(options.headers);
-			if (currentToken) {
-				headers.set("X-CSRF-Token", currentToken);
-			}
+			headers.set("X-CSRF-Token", currentToken);
 
 			return fetch(url, {
 				...options,
