@@ -51,13 +51,14 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 	 *   後に書き、前段が失敗した時点で abort することで orphan を回避する。
 	 */
 	const setupAuthCookies = async (): Promise<boolean> => {
-		// 4xx は「入力(redirectTo / invitation_token) がサーバ検証で弾かれた」状態であり、
-		// 認証フロー自体は破綻していない。ログインを止めると、URL に古い / 不正な
-		// クエリパラメータが残っているだけでユーザーがログインできなくなるので、
-		// 該当 Cookie を諦めて先へ進める（callback 側にはデフォルト /koudens と
-		// URL ?token= フォールバックがある）。
-		// 5xx / ネットワーク失敗はサーバ／回線側の故障なので、UI にエラーを出して
-		// abort する。
+		// 400 のみ「入力(redirectTo / invitation_token) がサーバ検証で弾かれた」状態として
+		// 扱い、該当 Cookie を諦めて先へ進める。URL に古い / 不正なクエリパラメータが残って
+		// いるだけでログインを止めると、ユーザーが詰まるため。callback 側にはデフォルト
+		// /koudens と URL ?token= フォールバックがある。
+		// 403 (CSRF トークン失効) / 429 (rate limit) / その他の 4xx は認証フロー自体の
+		// 問題であり、サイレントに進めると本来書くべき Cookie が落ちて UX が壊れる
+		// （意図したリダイレクト先を失う、招待が適用されない、など）。明示的に失敗
+		// させて、ユーザーがリトライ（= 新鮮な CSRF トークン）できる状態に戻す。
 		const writeCookie = async (
 			url: string,
 			body: object,
@@ -70,8 +71,8 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 			});
 			if (res.ok) return "ok";
 			const detail = await res.text().catch(() => "");
-			if (res.status >= 400 && res.status < 500) {
-				console.warn(`[WARN] ${label} skipped (${res.status}):`, detail);
+			if (res.status === 400) {
+				console.warn(`[WARN] ${label} skipped (400):`, detail);
 				return "skipped";
 			}
 			console.error(`[ERROR] Failed to store ${label} cookie (${res.status}):`, detail);
