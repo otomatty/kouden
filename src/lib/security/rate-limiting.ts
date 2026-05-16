@@ -165,23 +165,29 @@ async function upstashIncrement(
 // --- 公開API ---
 
 /**
- * レート制限チェック
+ * レート制限チェック。
+ *
+ * IP が解決できない場合 (XFF 不正・全ヘッダ欠落・プロキシ未通過の直撃など) は
+ * 共有 "unknown" バケットに集約してカウントする。素通ししてしまうと、攻撃者は
+ * `X-Forwarded-For: garbage` のような詐称ヘッダで個別カウントを免除されてしまい、
+ * レート制限を完全にバイパスできる。fail-closed 寄りに倒し、共有バケットで
+ * 全体の流量だけ抑えることで、正常な多数の匿名トラフィックを過剰に弾かずに
+ * 攻撃者の連射だけを抑止する。
  */
 export async function rateLimit(
 	request: NextRequest,
 	config?: RateLimitConfig,
 ): Promise<RateLimitResult> {
-	const clientIP = getClientIP(request);
-	if (!clientIP) {
-		// IPが取得できない場合は通す（ログに記録）
+	const resolvedIP = getClientIP(request);
+	if (!resolvedIP) {
 		logger.warn(
 			{
 				pathname: request.nextUrl.pathname,
 			},
-			"Could not determine client IP for rate limiting",
+			"Could not determine client IP for rate limiting; falling back to shared 'unknown' bucket",
 		);
-		return { success: true };
 	}
+	const clientIP = resolvedIP ?? "unknown";
 
 	// 管理者画面かどうかで設定を変更
 	const isAdminPath =

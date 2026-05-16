@@ -59,12 +59,21 @@ describe("rateLimit (in-memory fallback)", () => {
 		expect(fourth.remainingRequests).toBe(0);
 	});
 
-	it("クライアントIPが不明な場合は素通しする", async () => {
+	it("IP 不明な複数リクエストは共有バケットで集計され、超過時に拒否される", async () => {
+		// 詐称 XFF や全ヘッダ欠落で IP が取れないリクエストを素通しすると、
+		// 攻撃者は X-Forwarded-For: garbage を投げてレート制限を回避できてしまう。
+		// 共有 "unknown" バケットに集約して fail-closed 寄りに動くことを確認する。
 		clearUpstashEnv();
 		const rateLimit = await freshRateLimit();
-		const req = buildRequest("/api/foo", {});
-		const result = await rateLimit(req, { windowMs: 60_000, maxRequests: 1 });
-		expect(result.success).toBe(true);
+		const config = { windowMs: 60_000, maxRequests: 2 };
+		const a = await rateLimit(buildRequest("/api/foo", {}), config);
+		// 不正 XFF (パース失敗 → IP 取れない) も同じ共有バケットに入る
+		const b = await rateLimit(buildRequest("/api/foo", { "x-forwarded-for": "garbage" }), config);
+		const c = await rateLimit(buildRequest("/api/foo", { "x-forwarded-for": "also-bad" }), config);
+		expect(a.success).toBe(true);
+		expect(b.success).toBe(true);
+		expect(c.success).toBe(false);
+		expect(c.remainingRequests).toBe(0);
 	});
 
 	it("異なるIPはカウンタを共有しない", async () => {
