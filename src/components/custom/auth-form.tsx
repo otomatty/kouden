@@ -190,6 +190,13 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 		setCurrentStep("email");
 		setOtpCode("");
 		setMessage(null);
+		// ユーザーが OTP フローを明示的に放棄した時点で Cookie をクリアする。
+		// 同じメールで再送信した場合 setupAuthCookies が再書き込みするので、
+		// 別メールに切り替える正規ケースで stale Cookie を残さないようにする。
+		// 注: handleVerifyOtp の失敗 catch では消さない。OTP 一回ミスごとに Cookie を
+		// 飛ばすと、正しいコードでのリトライが invitation_token 無しで callback に
+		// 到達して招待フローが壊れるため。
+		clearInvitationCookie();
 	};
 
 	const handleGoogleLogin = async () => {
