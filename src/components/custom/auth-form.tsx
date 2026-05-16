@@ -51,27 +51,52 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 	 *   後に書き、前段が失敗した時点で abort することで orphan を回避する。
 	 */
 	const setupAuthCookies = async (): Promise<boolean> => {
+		// 4xx は「入力(redirectTo / invitation_token) がサーバ検証で弾かれた」状態であり、
+		// 認証フロー自体は破綻していない。ログインを止めると、URL に古い / 不正な
+		// クエリパラメータが残っているだけでユーザーがログインできなくなるので、
+		// 該当 Cookie を諦めて先へ進める（callback 側にはデフォルト /koudens と
+		// URL ?token= フォールバックがある）。
+		// 5xx / ネットワーク失敗はサーバ／回線側の故障なので、UI にエラーを出して
+		// abort する。
+		const writeCookie = async (
+			url: string,
+			body: object,
+			label: string,
+		): Promise<"ok" | "skipped" | "fail"> => {
+			const res = await fetchWithCSRF(url, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(body),
+			});
+			if (res.ok) return "ok";
+			const detail = await res.text().catch(() => "");
+			if (res.status >= 400 && res.status < 500) {
+				console.warn(`[WARN] ${label} skipped (${res.status}):`, detail);
+				return "skipped";
+			}
+			console.error(`[ERROR] Failed to store ${label} cookie (${res.status}):`, detail);
+			return "fail";
+		};
+
 		try {
 			if (propRedirectTo) {
-				const res = await fetchWithCSRF("/api/auth/cookies/post-auth-redirect", {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ redirectTo: propRedirectTo }),
-				});
-				if (!res.ok) {
-					console.error("[ERROR] Failed to store post-auth redirect cookie:", await res.text());
+				const r = await writeCookie(
+					"/api/auth/cookies/post-auth-redirect",
+					{ redirectTo: propRedirectTo },
+					"post_auth_redirect",
+				);
+				if (r === "fail") {
 					setMessage("認証情報の保存に失敗しました。再度お試しください。");
 					return false;
 				}
 			}
 			if (invitationToken) {
-				const res = await fetchWithCSRF("/api/auth/cookies/invitation-token", {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ token: invitationToken }),
-				});
-				if (!res.ok) {
-					console.error("[ERROR] Failed to store invitation token cookie:", await res.text());
+				const r = await writeCookie(
+					"/api/auth/cookies/invitation-token",
+					{ token: invitationToken },
+					"invitation_token",
+				);
+				if (r === "fail") {
 					setMessage("認証情報の保存に失敗しました。再度お試しください。");
 					return false;
 				}
