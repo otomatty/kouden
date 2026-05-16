@@ -25,6 +25,16 @@ async function freshIsAllowedAdminIP() {
 	return mod.isAllowedAdminIP;
 }
 
+async function freshVerifyBasicAuth() {
+	vi.resetModules();
+	const mod = await import("../ip-restrictions");
+	return mod.verifyBasicAuth;
+}
+
+function basicAuthHeader(user: string, pass: string): string {
+	return `Basic ${Buffer.from(`${user}:${pass}`, "utf-8").toString("base64")}`;
+}
+
 describe("isAllowedAdminIP", () => {
 	afterEach(() => {
 		vi.unstubAllEnvs();
@@ -65,5 +75,89 @@ describe("isAllowedAdminIP", () => {
 
 		const isAllowedAdminIP = await freshIsAllowedAdminIP();
 		expect(isAllowedAdminIP(buildRequest({}))).toBe(false);
+	});
+});
+
+describe("verifyBasicAuth", () => {
+	afterEach(() => {
+		vi.unstubAllEnvs();
+	});
+
+	it("Authorization ヘッダーが無い場合は false", async () => {
+		vi.stubEnv("ADMIN_BASIC_USERNAME", "admin");
+		vi.stubEnv("ADMIN_BASIC_PASSWORD", "secret");
+
+		const verifyBasicAuth = await freshVerifyBasicAuth();
+		expect(verifyBasicAuth(buildRequest({}))).toBe(false);
+	});
+
+	it("Basic 以外のスキームは false", async () => {
+		vi.stubEnv("ADMIN_BASIC_USERNAME", "admin");
+		vi.stubEnv("ADMIN_BASIC_PASSWORD", "secret");
+
+		const verifyBasicAuth = await freshVerifyBasicAuth();
+		expect(verifyBasicAuth(buildRequest({ authorization: "Bearer abc" }))).toBe(false);
+	});
+
+	it("デコード後にコロンが無い場合は false", async () => {
+		vi.stubEnv("ADMIN_BASIC_USERNAME", "admin");
+		vi.stubEnv("ADMIN_BASIC_PASSWORD", "secret");
+
+		const noColon = `Basic ${Buffer.from("adminonly", "utf-8").toString("base64")}`;
+		const verifyBasicAuth = await freshVerifyBasicAuth();
+		expect(verifyBasicAuth(buildRequest({ authorization: noColon }))).toBe(false);
+	});
+
+	it("環境変数が未設定なら false", async () => {
+		vi.stubEnv("ADMIN_BASIC_USERNAME", "");
+		vi.stubEnv("ADMIN_BASIC_PASSWORD", "");
+
+		const verifyBasicAuth = await freshVerifyBasicAuth();
+		expect(
+			verifyBasicAuth(buildRequest({ authorization: basicAuthHeader("admin", "secret") })),
+		).toBe(false);
+	});
+
+	it("正しい資格情報なら true", async () => {
+		vi.stubEnv("ADMIN_BASIC_USERNAME", "admin");
+		vi.stubEnv("ADMIN_BASIC_PASSWORD", "secret");
+
+		const verifyBasicAuth = await freshVerifyBasicAuth();
+		expect(
+			verifyBasicAuth(buildRequest({ authorization: basicAuthHeader("admin", "secret") })),
+		).toBe(true);
+	});
+
+	it("ユーザー名が違うと false", async () => {
+		vi.stubEnv("ADMIN_BASIC_USERNAME", "admin");
+		vi.stubEnv("ADMIN_BASIC_PASSWORD", "secret");
+
+		const verifyBasicAuth = await freshVerifyBasicAuth();
+		expect(
+			verifyBasicAuth(buildRequest({ authorization: basicAuthHeader("guest", "secret") })),
+		).toBe(false);
+	});
+
+	it("パスワードが違うと false", async () => {
+		vi.stubEnv("ADMIN_BASIC_USERNAME", "admin");
+		vi.stubEnv("ADMIN_BASIC_PASSWORD", "secret");
+
+		const verifyBasicAuth = await freshVerifyBasicAuth();
+		expect(
+			verifyBasicAuth(buildRequest({ authorization: basicAuthHeader("admin", "wrong") })),
+		).toBe(false);
+	});
+
+	it("パスワードにコロンが含まれていても正しく検証できる", async () => {
+		vi.stubEnv("ADMIN_BASIC_USERNAME", "admin");
+		vi.stubEnv("ADMIN_BASIC_PASSWORD", "pa:ss:wo:rd");
+
+		const verifyBasicAuth = await freshVerifyBasicAuth();
+		expect(
+			verifyBasicAuth(buildRequest({ authorization: basicAuthHeader("admin", "pa:ss:wo:rd") })),
+		).toBe(true);
+		expect(verifyBasicAuth(buildRequest({ authorization: basicAuthHeader("admin", "pa") }))).toBe(
+			false,
+		);
 	});
 });
