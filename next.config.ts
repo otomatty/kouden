@@ -4,8 +4,17 @@ import withPWA from "next-pwa";
 // CSP の対象となる Supabase オリジン。
 // `NEXT_PUBLIC_SUPABASE_URL` が未設定のビルド時 (例: Storybook の型生成) でも
 // 値が消えないよう、本番で利用しているプロジェクトURLをフォールバックに置く。
-const supabaseOrigin =
-	process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://tcqnsslsaizqwjuyvoyu.supabase.co";
+// 末尾スラッシュやパスを含む env 値で CSP が壊れないよう `URL.origin` に正規化する。
+const SUPABASE_ORIGIN_FALLBACK = "https://tcqnsslsaizqwjuyvoyu.supabase.co";
+function toOrigin(value: string | undefined, fallback: string): string {
+	if (!value) return fallback;
+	try {
+		return new URL(value).origin;
+	} catch {
+		return fallback;
+	}
+}
+const supabaseOrigin = toOrigin(process.env.NEXT_PUBLIC_SUPABASE_URL, SUPABASE_ORIGIN_FALLBACK);
 
 // Vercel preview deploy も `NODE_ENV=production` でビルドされるため、
 // HSTS のような「長期にブラウザへ焼き込まれる」ヘッダーは
