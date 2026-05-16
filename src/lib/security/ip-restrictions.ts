@@ -3,21 +3,30 @@
  * 管理者画面へのアクセスを許可されたIPアドレスのみに制限
  */
 
-import type { NextRequest } from "next/server";
 import logger from "@/lib/logger";
+import { getClientIP } from "@/lib/security/client-ip";
+import type { NextRequest } from "next/server";
 
 // 許可されたIPアドレスのリスト（環境変数から取得）
 const ALLOWED_ADMIN_IPS = process.env.ALLOWED_ADMIN_IPS?.split(",").map((ip) => ip.trim()) || [];
 
-// 開発環境でのローカルIPアドレス（将来使用予定）
-const _DEV_ALLOWED_IPS = ["127.0.0.1", "::1", "localhost"];
+// 明示的な無効化フラグ。`NODE_ENV` 依存を排除するため独立した env で制御する。
+// 本番でこれを有効化すると管理画面が無制限公開になるため、警告ログを出す。
+function isAdminIPRestrictionDisabled(): boolean {
+	return process.env.ADMIN_IP_RESTRICTION === "off";
+}
 
 /**
  * IPアドレスが管理者アクセス許可リストに含まれているかチェック
  */
 export function isAllowedAdminIP(request: NextRequest): boolean {
-	// 開発環境では制限を緩和
-	if (process.env.NODE_ENV === "development") {
+	if (isAdminIPRestrictionDisabled()) {
+		if (process.env.NODE_ENV === "production") {
+			logger.warn(
+				{},
+				"ADMIN_IP_RESTRICTION=off in production — admin IP restriction is fully disabled",
+			);
+		}
 		return true;
 	}
 
@@ -41,31 +50,6 @@ export function isAllowedAdminIP(request: NextRequest): boolean {
 	}
 
 	return isAllowed;
-}
-
-/**
- * リクエストからクライアントIPアドレスを取得
- */
-function getClientIP(request: NextRequest): string | null {
-	// Vercelのヘッダーから取得
-	const forwardedFor = request.headers.get("x-forwarded-for");
-	if (forwardedFor) {
-		return forwardedFor.split(",")[0]?.trim() || null;
-	}
-
-	// Cloudflareのヘッダーから取得
-	const cfConnectingIP = request.headers.get("cf-connecting-ip");
-	if (cfConnectingIP) {
-		return cfConnectingIP;
-	}
-
-	// 通常のヘッダーから取得
-	const xRealIP = request.headers.get("x-real-ip");
-	if (xRealIP) {
-		return xRealIP;
-	}
-
-	return null;
 }
 
 /**

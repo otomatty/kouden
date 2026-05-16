@@ -1,6 +1,7 @@
+import { getClientIPFromHeaders } from "@/lib/security/client-ip";
 import { createClient } from "@/lib/supabase/server";
-import { headers } from "next/headers";
 import type { Json } from "@/types/supabase";
+import { headers } from "next/headers";
 
 interface AuditLogData {
 	action: string;
@@ -30,7 +31,7 @@ export async function getAuditLogs(limit = 100, offset = 0) {
 export async function createAuditLog(data: AuditLogData) {
 	const supabase = await createClient();
 	const headersList = await headers();
-	const ip = headersList.get("x-forwarded-for") || "unknown";
+	const ip = getClientIPFromHeaders(headersList) ?? "unknown";
 
 	const { error } = await supabase.rpc("create_admin_audit_log", {
 		p_action: data.action,
