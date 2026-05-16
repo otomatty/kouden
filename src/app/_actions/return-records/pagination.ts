@@ -43,7 +43,8 @@ export async function getReturnEntriesByKoudenPaginated(
 					kouden_id,
 					name,
 					organization,
-					position
+					position,
+					amount
 				)
 			`)
 			.eq("kouden_entries.kouden_id", koudenId)

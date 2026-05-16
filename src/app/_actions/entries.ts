@@ -95,9 +95,9 @@ export async function createEntry(input: CreateEntryInput): Promise<EntryRespons
 }
 
 /**
- * セレクター/ルックアップ用に香典エントリーの軽量版を取得する
+ * セレクター/ルックアップ用に香典エントリーを取得する
  * - お供物・返礼ダイアログのエントリー選択や、ID→エントリーの参照を想定
- * - 必要最小限のカラムのみを SELECT し、関係性・返礼ステータスの JOIN を行わない
+ * - 関係性テーブル・return_entry_records の JOIN を行わず、追加クエリも不要
  * - ページネーションは行わないが、暴走防止のため上限件数を設ける
  */
 const ENTRIES_SELECTOR_MAX = 5000;
@@ -115,9 +115,7 @@ export async function getEntriesForSelector(koudenId: string): Promise<Entry[]> 
 	try {
 		const { data, error } = await supabase
 			.from("kouden_entries")
-			.select(
-				"id, kouden_id, name, organization, position, amount, has_offering, relationship_id, attendance_type",
-			)
+			.select("*")
 			.eq("kouden_id", koudenId)
 			.order("created_at", { ascending: false })
 			.limit(ENTRIES_SELECTOR_MAX);
@@ -141,7 +139,7 @@ export async function getEntriesForSelector(koudenId: string): Promise<Entry[]> 
 			...entry,
 			attendanceType: entry.attendance_type as AttendanceType,
 			relationshipId: entry.relationship_id,
-		})) as Entry[];
+		}));
 	} catch (error) {
 		logger.error(
 			{
