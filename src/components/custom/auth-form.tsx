@@ -42,36 +42,36 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 	 * 認証フローに必要な Cookie をサーバー側で HttpOnly 付きで設定する。
 	 * 失敗時は false を返し、呼び出し側で OAuth/OTP 起動を中止する。
 	 *
-	 * 2 つの Cookie 書き込みは独立しているので並列で投げ、ログインボタン押下から
-	 * OAuth 起動までの待ち時間を短縮する。
+	 * 順序が重要: 必ず post_auth_redirect → invitation_token の順で書く。
+	 *   invitation_token は次回認証時に /auth/callback で `acceptInvitation`
+	 *   を自動発火させる semantics を持つため、部分失敗で取り残されると
+	 *   ユーザーが意図しない香典帳に参加させられる可能性がある。
+	 *   post_auth_redirect は読み出し時に毎回上書き / 削除される素朴な
+	 *   リダイレクト先なので、取り残されても害は無い。よって「悪い側」を
+	 *   後に書き、前段が失敗した時点で abort することで orphan を回避する。
 	 */
 	const setupAuthCookies = async (): Promise<boolean> => {
-		const tasks: Promise<Response>[] = [];
-		if (invitationToken) {
-			tasks.push(
-				fetchWithCSRF("/api/auth/cookies/invitation-token", {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ token: invitationToken }),
-				}),
-			);
-		}
-		if (propRedirectTo) {
-			tasks.push(
-				fetchWithCSRF("/api/auth/cookies/post-auth-redirect", {
+		try {
+			if (propRedirectTo) {
+				const res = await fetchWithCSRF("/api/auth/cookies/post-auth-redirect", {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({ redirectTo: propRedirectTo }),
-				}),
-			);
-		}
-		if (tasks.length === 0) return true;
-
-		try {
-			const responses = await Promise.all(tasks);
-			for (const res of responses) {
+				});
 				if (!res.ok) {
-					console.error("[ERROR] Failed to store auth cookie:", await res.text());
+					console.error("[ERROR] Failed to store post-auth redirect cookie:", await res.text());
+					setMessage("認証情報の保存に失敗しました。再度お試しください。");
+					return false;
+				}
+			}
+			if (invitationToken) {
+				const res = await fetchWithCSRF("/api/auth/cookies/invitation-token", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ token: invitationToken }),
+				});
+				if (!res.ok) {
+					console.error("[ERROR] Failed to store invitation token cookie:", await res.text());
 					setMessage("認証情報の保存に失敗しました。再度お試しください。");
 					return false;
 				}

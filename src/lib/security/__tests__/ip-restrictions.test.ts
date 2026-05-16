@@ -25,12 +25,22 @@ async function freshIsAllowedAdminIP() {
 	return mod.isAllowedAdminIP;
 }
 
+/**
+ * `vi.stubEnv` で更新した環境変数を反映した状態で `verifyBasicAuth` を
+ * 再評価するため、モジュールキャッシュを破棄して再 import する。
+ * 各テストはこのヘルパー経由で取得した関数を使うことで、前のテストの
+ * env が漏れないクリーンなモジュールインスタンスで検証できる。
+ */
 async function freshVerifyBasicAuth() {
 	vi.resetModules();
 	const mod = await import("../ip-restrictions");
 	return mod.verifyBasicAuth;
 }
 
+/**
+ * 指定した資格情報から Basic 認証の `Authorization` ヘッダー値を生成する。
+ * `user:pass` を UTF-8 で base64 エンコードし、"Basic <base64>" 形式で返す。
+ */
 function basicAuthHeader(user: string, pass: string): string {
 	return `Basic ${Buffer.from(`${user}:${pass}`, "utf-8").toString("base64")}`;
 }

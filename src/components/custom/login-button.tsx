@@ -12,12 +12,14 @@ interface LoginButtonProps {
 
 export function LoginButton({ invitationToken }: LoginButtonProps) {
 	const [loading, setLoading] = useState(false);
+	const [error, setError] = useState<string | null>(null);
 	const supabase = createClient();
 	const { fetchWithCSRF } = useCSRFToken();
 
 	const handleLogin = async () => {
 		try {
 			setLoading(true);
+			setError(null);
 
 			// 認証前に invitation_token を HttpOnly Cookie として保存する。
 			// 書き込みは /api/auth/cookies/invitation-token 経由で行い、document.cookie
@@ -30,32 +32,37 @@ export function LoginButton({ invitationToken }: LoginButtonProps) {
 				});
 				if (!res.ok) {
 					console.error("[DEBUG] Failed to store invitation token cookie:", await res.text());
+					setError("ログインの準備に失敗しました。再度お試しください。");
 					return;
 				}
 			}
 
-			const { error } = await supabase.auth.signInWithOAuth({
+			const { error: oauthError } = await supabase.auth.signInWithOAuth({
 				provider: "google",
 				options: {
 					redirectTo: `${window.location.origin}/auth/callback`,
 				},
 			});
 
-			if (error) {
-				console.error("[DEBUG] OAuth error:", error);
-				throw error;
+			if (oauthError) {
+				console.error("[DEBUG] OAuth error:", oauthError);
+				throw oauthError;
 			}
-		} catch (error) {
-			console.error("[DEBUG] Login error:", error);
+		} catch (err) {
+			console.error("[DEBUG] Login error:", err);
+			setError("ログインに失敗しました。再度お試しください。");
 		} finally {
 			setLoading(false);
 		}
 	};
 
 	return (
-		<Button onClick={handleLogin} disabled={loading} className="w-full" variant="outline">
-			<GoogleIcon />
-			{loading ? "ログイン中..." : "Googleでログイン"}
-		</Button>
+		<div className="w-full space-y-2">
+			{error && <p className="text-sm text-destructive text-center">{error}</p>}
+			<Button onClick={handleLogin} disabled={loading} className="w-full" variant="outline">
+				<GoogleIcon />
+				{loading ? "ログイン中..." : "Googleでログイン"}
+			</Button>
+		</div>
 	);
 }

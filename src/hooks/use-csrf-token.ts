@@ -3,7 +3,7 @@
  * トークンの取得・更新・送信を自動化
  */
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface CSRFTokenResponse {
 	csrfToken: string;
@@ -16,9 +16,16 @@ export function useCSRFToken() {
 	const [error, setError] = useState<string | null>(null);
 
 	/**
-	 * CSRFトークンを取得
+	 * CSRFトークンを取得して state を更新し、取得したトークン値そのものも返す。
+	 *
+	 * 返り値を返しているのは、`fetchWithCSRF` 等の同一クロージャ内で
+	 * `await fetchToken()` 直後に最新トークンを使いたいケースのため。
+	 * React の state 更新はバッチされて非同期に反映されるので、
+	 * `await fetchToken()` 直後の `token` クロージャ変数は依然として古い値
+	 * （初回 fetchWithCSRF 呼び出し時は `null`）を指している。そのまま読むと
+	 * `X-CSRF-Token` 未付与で 403 になるため、戻り値経由で受け渡す。
 	 */
-	const fetchToken = useCallback(async () => {
+	const fetchToken = useCallback(async (): Promise<string | null> => {
 		setIsLoading(true);
 		setError(null);
 
@@ -34,10 +41,12 @@ export function useCSRFToken() {
 
 			const data: CSRFTokenResponse = await response.json();
 			setToken(data.csrfToken);
+			return data.csrfToken;
 		} catch (err) {
 			const errorMessage = err instanceof Error ? err.message : "Failed to fetch CSRF token";
 			setError(errorMessage);
 			console.error("CSRF token fetch error:", err);
+			return null;
 		} finally {
 			setIsLoading(false);
 		}
@@ -55,14 +64,16 @@ export function useCSRFToken() {
 	 */
 	const fetchWithCSRF = useCallback(
 		async (url: string, options: RequestInit = {}) => {
-			// トークンがない場合は取得
-			if (!token) {
-				await fetchToken();
+			// 初回呼び出し時は token state がまだ null なので fetchToken の戻り値を
+			// 使う（state 経由だと同一同期パス内では古い値しか読めない）。
+			let currentToken = token;
+			if (!currentToken) {
+				currentToken = await fetchToken();
 			}
 
 			const headers = new Headers(options.headers);
-			if (token) {
-				headers.set("X-CSRF-Token", token);
+			if (currentToken) {
+				headers.set("X-CSRF-Token", currentToken);
 			}
 
 			return fetch(url, {
