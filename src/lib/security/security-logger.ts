@@ -3,9 +3,10 @@
  * 全てのセキュリティ関連イベントをログに記録
  */
 
+import logger from "@/lib/logger";
+import { getClientIP } from "@/lib/security/client-ip";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { NextRequest } from "next/server";
-import logger from "@/lib/logger";
 
 export type SecurityEventType =
 	| "admin_login_success"
@@ -341,26 +342,4 @@ async function notifyAdmins(entry: SecurityLogEntry, ipAddress: string | null): 
 			);
 		}
 	}
-}
-
-/**
- * リクエストからクライアントIPアドレスを取得
- */
-function getClientIP(request: NextRequest): string | null {
-	const forwardedFor = request.headers.get("x-forwarded-for");
-	if (forwardedFor) {
-		return forwardedFor.split(",")[0]?.trim() || null;
-	}
-
-	const cfConnectingIP = request.headers.get("cf-connecting-ip");
-	if (cfConnectingIP) {
-		return cfConnectingIP;
-	}
-
-	const xRealIP = request.headers.get("x-real-ip");
-	if (xRealIP) {
-		return xRealIP;
-	}
-
-	return null;
 }

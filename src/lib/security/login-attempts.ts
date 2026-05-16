@@ -3,9 +3,10 @@
  * アカウントロック機能付き
  */
 
+import logger from "@/lib/logger";
+import { getClientIP } from "@/lib/security/client-ip";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { NextRequest } from "next/server";
-import logger from "@/lib/logger";
 
 export interface LoginAttempt {
 	id: string;
@@ -140,26 +141,4 @@ export async function unlockAccount(userId: string): Promise<void> {
 	const supabase = createAdminClient();
 
 	await supabase.from("login_attempts").delete().eq("user_id", userId);
-}
-
-/**
- * リクエストからクライアントIPアドレスを取得
- */
-function getClientIP(request: NextRequest): string | null {
-	const forwardedFor = request.headers.get("x-forwarded-for");
-	if (forwardedFor) {
-		return forwardedFor.split(",")[0]?.trim() || null;
-	}
-
-	const cfConnectingIP = request.headers.get("cf-connecting-ip");
-	if (cfConnectingIP) {
-		return cfConnectingIP;
-	}
-
-	const xRealIP = request.headers.get("x-real-ip");
-	if (xRealIP) {
-		return xRealIP;
-	}
-
-	return null;
 }
