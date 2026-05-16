@@ -1,10 +1,10 @@
 "use server";
 
-import Stripe from "stripe";
+import logger from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { calcSupportFee } from "@/utils/calcSupportFee";
-import logger from "@/lib/logger";
+import Stripe from "stripe";
 
 /**
  * Stripe Checkout セッション生成
@@ -26,6 +26,23 @@ export async function purchaseKouden({
 }): Promise<{ url?: string; sessionId?: string; error?: string }> {
 	try {
 		const supabase = createAdminClient();
+		// ユーザー取得（認証チェック・所有者チェック・metadata用）
+		const supabaseClient = await createClient();
+		const {
+			data: { user },
+			error: userError,
+		} = await supabaseClient.auth.getUser();
+		if (userError || !user) {
+			logger.error(
+				{
+					error: userError?.message,
+				},
+				"[ERROR] ユーザー取得失敗",
+			);
+			return { error: "認証が必要です" };
+		}
+		const userId = user.id;
+		const userEmail = user.email;
 		// プラン取得（IDと価格）
 		const { data: plan, error: planError } = await supabase
 			.from("plans")
@@ -35,12 +52,40 @@ export async function purchaseKouden({
 		if (planError || !plan) {
 			return { error: "プランが見つかりません" };
 		}
-		// 既存のプラン価格取得（アップグレード時の差額計算用）
-		const { data: existingKouden } = await supabase
+		// 既存のプラン価格取得（アップグレード時の差額計算用）兼 所有者チェック
+		const { data: existingKouden, error: existingKoudenError } = await supabase
 			.from("koudens")
-			.select("plan_id")
+			.select("plan_id, owner_id, created_by")
 			.eq("id", koudenId)
-			.single();
+			.maybeSingle();
+		// 不正な UUID や DB エラーで所有者チェックを fail-open させない
+		if (existingKoudenError) {
+			logger.error(
+				{
+					userId,
+					koudenId,
+					error: existingKoudenError.message,
+					code: existingKoudenError.code,
+				},
+				"[ERROR] purchaseKouden: 香典帳取得失敗",
+			);
+			return { error: "香典帳の取得に失敗しました" };
+		}
+		// 既存の香典帳の場合は所有者チェックを実施（新規作成フローでは存在しない）
+		if (existingKouden) {
+			const isOwner = existingKouden.owner_id === userId || existingKouden.created_by === userId;
+			if (!isOwner) {
+				logger.warn(
+					{
+						userId,
+						koudenId,
+						planCode,
+					},
+					"[WARN] purchaseKouden: 所有者でないユーザーがアクセスを試みました",
+				);
+				return { error: "この香典帳を操作する権限がありません" };
+			}
+		}
 		let currentPrice = 0;
 		if (existingKouden?.plan_id) {
 			const { data: cp } = await supabase
@@ -63,30 +108,46 @@ export async function purchaseKouden({
 				: "2025-05-28.basil"
 		) as Stripe.StripeConfig["apiVersion"];
 		const stripe = new Stripe(stripeSecret, { apiVersion: stripeApiVersion });
-		// ユーザー取得（metadata用）
-		const supabaseClient = await createClient();
-		const {
-			data: { user },
-			error: userError,
-		} = await supabaseClient.auth.getUser();
-		if (userError || !user) {
-			logger.error(
-				{
-					error: userError?.message,
-				},
-				"[ERROR] ユーザー取得失敗",
-			);
-			return { error: "認証が必要です" };
-		}
-		const userId = user.id;
-		const userEmail = user.email;
 		// 決済金額の算出
-		let amount = plan.price;
+		// 実効新プラン価格を先に確定（premium_full_support は expectedCount で動的に変動するため
+		// plan.price のみで比較すると正当なアップグレードを誤ブロックする可能性がある）
+		let effectiveNewPrice = plan.price;
 		if (planCode === "premium_full_support" && typeof expectedCount === "number") {
-			amount = calcSupportFee(expectedCount, plan.price);
+			effectiveNewPrice = calcSupportFee(expectedCount, plan.price);
 		}
-		if (currentPrice && plan.price > currentPrice) {
+		// ダウングレード・同額プランへの変更は二重支払いになるためブロック（実効価格で比較）
+		if (existingKouden && currentPrice > 0 && effectiveNewPrice <= currentPrice) {
+			logger.warn(
+				{
+					userId,
+					koudenId,
+					planCode,
+					effectiveNewPrice,
+					currentPrice,
+				},
+				"[WARN] purchaseKouden: ダウングレード/同額プランへの変更は許可されていません",
+			);
+			return { error: "現在のプランと同額または下位のプランには変更できません" };
+		}
+		// 既存有料プランからのアップグレード時は差額のみ請求
+		let amount = effectiveNewPrice;
+		if (currentPrice > 0) {
 			amount = amount - currentPrice;
+		}
+		// 金額の妥当性チェック（差額計算で負になる/NaN/Stripe JPY 最小額 50 円未満を弾く）
+		if (!(amount >= 50)) {
+			logger.warn(
+				{
+					userId,
+					koudenId,
+					planCode,
+					amount,
+					currentPrice,
+					planPrice: plan.price,
+				},
+				"[WARN] purchaseKouden: 決済金額が不正です",
+			);
+			return { error: "決済金額が不正です" };
 		}
 		// 開発環境ではリダイレクト先をローカルホストに設定
 		const baseUrl =

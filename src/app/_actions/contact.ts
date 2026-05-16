@@ -1,6 +1,7 @@
 "use server";
 
 import logger from "@/lib/logger";
+import { validateFileUpload } from "@/lib/security/file-upload-validation";
 import { createClient } from "@/lib/supabase/server";
 import { contactRequestSchema } from "@/schemas/contact";
 
@@ -165,9 +166,68 @@ export async function getContactRequestDetail(requestId: string) {
  */
 export async function uploadContactAttachment(requestId: string, file: File) {
 	const supabase = await createClient();
-	// ファイルパスを生成
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+	if (!user) {
+		throw new Error("Unauthorized");
+	}
+
+	// requestId の所有者チェック
+	const { data: requestOwner, error: ownerError } = await supabase
+		.from("contact_requests")
+		.select("user_id")
+		.eq("id", requestId)
+		.single();
+	if (ownerError || !requestOwner) {
+		logger.warn(
+			{
+				userId: user.id,
+				requestId,
+				error: ownerError?.message,
+			},
+			"Contact request not found for attachment upload",
+		);
+		throw new Error("Forbidden");
+	}
+	if (requestOwner.user_id !== user.id) {
+		logger.warn(
+			{
+				userId: user.id,
+				requestId,
+				ownerUserId: requestOwner.user_id,
+			},
+			"Unauthorized attachment upload attempt",
+		);
+		throw new Error("Forbidden");
+	}
+
+	// ファイルの検証（拡張子・サイズ・MIME・マジックバイト・悪意のあるコンテンツ）
+	const validation = await validateFileUpload(file, user.id);
+	if (!validation.isValid) {
+		logger.warn(
+			{
+				userId: user.id,
+				requestId,
+				fileName: file.name,
+				reason: validation.details?.reason,
+			},
+			"Contact attachment validation failed",
+		);
+		throw new Error(validation.error ?? "ファイルの検証に失敗しました");
+	}
+
+	// ファイル名をサニタイズ（path traversal 対策）
+	// 拡張子は維持しつつベース名から不正文字を除去し、結果が空/記号だけなら "file" にフォールバック
 	const timestamp = Date.now();
-	const filePath = `requests/${requestId}/${timestamp}_${file.name}`;
+	const lastDot = file.name.lastIndexOf(".");
+	const rawBase = lastDot > 0 ? file.name.slice(0, lastDot) : file.name;
+	const rawExt = lastDot > 0 ? file.name.slice(lastDot) : "";
+	const sanitizedBase = rawBase.replace(/[^a-zA-Z0-9._-]/g, "_");
+	const safeBase = /[a-zA-Z0-9]/.test(sanitizedBase) ? sanitizedBase : "file";
+	const safeExt = rawExt.replace(/[^a-zA-Z0-9.]/g, "");
+	const safeFileName = `${safeBase}${safeExt}`;
+	const filePath = `requests/${requestId}/${timestamp}_${safeFileName}`;
 	// ストレージにアップロード
 	const { error: uploadError } = await supabase.storage
 		.from("contact-attachments")
