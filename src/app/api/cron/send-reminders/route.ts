@@ -4,20 +4,6 @@ import { buildReminderEmail } from "@/utils/emailTemplates/reminder";
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 
-const apiKey = process.env.RESEND_API_KEY;
-if (!apiKey) {
-	throw new Error("Missing RESEND_API_KEY");
-}
-const resend = new Resend(apiKey);
-
-const cronSecret = process.env.CRON_SECRET;
-if (!cronSecret || cronSecret.length < 32) {
-	throw new Error(
-		"CRON_SECRET environment variable is not set or too short (require >= 32 chars). " +
-			"Generate one with: openssl rand -hex 32",
-	);
-}
-
 /**
  * 2つの文字列を定数時間で比較する（タイミング攻撃対策）。
  */
@@ -36,18 +22,43 @@ function timingSafeEqual(a: string, b: string): boolean {
  * Cron リクエストの認証。`Authorization: Bearer <CRON_SECRET>` を必須にする。
  * Vercel Cron は環境変数 `CRON_SECRET` を自動的に Authorization ヘッダーに載せて
  * 呼び出すので、単一の Bearer チェックでカバーできる。
+ *
+ * 環境変数は build 時ではなく **リクエスト時** に検証する。Next.js は build フェーズ
+ * で route モジュールを評価するため、トップレベルの throw は環境変数未設定時に
+ * ビルドを落としてしまう（Vercel Preview 等で問題になる）。フェイルクローズドの
+ * 性質はリクエスト時の戻り値 500/401 で維持できる。
  */
-function isAuthorizedCronRequest(request: Request): boolean {
+function isAuthorizedCronRequest(request: Request, cronSecret: string): boolean {
 	const authHeader = request.headers.get("authorization");
 	if (!authHeader?.startsWith("Bearer ")) {
 		return false;
 	}
 	const provided = authHeader.slice("Bearer ".length).trim();
-	return timingSafeEqual(provided, cronSecret as string);
+	return timingSafeEqual(provided, cronSecret);
 }
 
 export async function GET(request: Request) {
-	if (!isAuthorizedCronRequest(request)) {
+	// 環境変数チェック（リクエスト時に評価して build を落とさない）
+	const cronSecret = process.env.CRON_SECRET;
+	if (!cronSecret || cronSecret.length < 32) {
+		logger.error(
+			{ path: "/api/cron/send-reminders" },
+			"CRON_SECRET is not set or too short (require >= 32 chars). Generate one with: openssl rand -hex 32",
+		);
+		return new NextResponse("Server misconfiguration", { status: 500 });
+	}
+
+	const apiKey = process.env.RESEND_API_KEY;
+	if (!apiKey) {
+		logger.error(
+			{ path: "/api/cron/send-reminders" },
+			"RESEND_API_KEY is not set",
+		);
+		return new NextResponse("Server misconfiguration", { status: 500 });
+	}
+	const resend = new Resend(apiKey);
+
+	if (!isAuthorizedCronRequest(request, cronSecret)) {
 		logger.warn(
 			{
 				path: "/api/cron/send-reminders",
