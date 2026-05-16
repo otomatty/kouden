@@ -41,33 +41,47 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 	/**
 	 * 認証フローに必要な Cookie をサーバー側で HttpOnly 付きで設定する。
 	 * 失敗時は false を返し、呼び出し側で OAuth/OTP 起動を中止する。
+	 *
+	 * 2 つの Cookie 書き込みは独立しているので並列で投げ、ログインボタン押下から
+	 * OAuth 起動までの待ち時間を短縮する。
 	 */
 	const setupAuthCookies = async (): Promise<boolean> => {
+		const tasks: Promise<Response>[] = [];
 		if (invitationToken) {
-			const res = await fetchWithCSRF("/api/auth/cookies/invitation-token", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ token: invitationToken }),
-			});
-			if (!res.ok) {
-				console.error("[ERROR] Failed to store invitation token cookie:", await res.text());
-				setMessage("招待情報の保存に失敗しました。再度お試しください。");
-				return false;
-			}
+			tasks.push(
+				fetchWithCSRF("/api/auth/cookies/invitation-token", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ token: invitationToken }),
+				}),
+			);
 		}
 		if (propRedirectTo) {
-			const res = await fetchWithCSRF("/api/auth/cookies/post-auth-redirect", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ redirectTo: propRedirectTo }),
-			});
-			if (!res.ok) {
-				console.error("[ERROR] Failed to store post-auth redirect cookie:", await res.text());
-				setMessage("リダイレクト情報の保存に失敗しました。再度お試しください。");
-				return false;
-			}
+			tasks.push(
+				fetchWithCSRF("/api/auth/cookies/post-auth-redirect", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ redirectTo: propRedirectTo }),
+				}),
+			);
 		}
-		return true;
+		if (tasks.length === 0) return true;
+
+		try {
+			const responses = await Promise.all(tasks);
+			for (const res of responses) {
+				if (!res.ok) {
+					console.error("[ERROR] Failed to store auth cookie:", await res.text());
+					setMessage("認証情報の保存に失敗しました。再度お試しください。");
+					return false;
+				}
+			}
+			return true;
+		} catch (error) {
+			console.error("[ERROR] Network error during cookie setup:", error);
+			setMessage("通信エラーが発生しました。再度お試しください。");
+			return false;
+		}
 	};
 
 	const handleSendOtp = async () => {

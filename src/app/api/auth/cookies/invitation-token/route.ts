@@ -52,7 +52,6 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: "token contains invalid characters" }, { status: 400 });
 	}
 
-	const secureFlag = process.env.NODE_ENV === "production" ? " Secure;" : "";
 	const response = NextResponse.json(
 		{ ok: true },
 		{
@@ -62,9 +61,12 @@ export async function POST(request: Request) {
 			},
 		},
 	);
-	response.headers.set(
-		"Set-Cookie",
-		`invitation_token=${token}; Path=/; HttpOnly; SameSite=Lax;${secureFlag} Max-Age=3600`,
-	);
+	response.cookies.set("invitation_token", token, {
+		path: "/",
+		httpOnly: true,
+		sameSite: "lax",
+		secure: process.env.NODE_ENV === "production",
+		maxAge: 3600,
+	});
 	return response;
 }

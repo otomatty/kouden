@@ -41,7 +41,6 @@ export async function POST(request: Request) {
 	// 文字列利用なので、ここでも生のパスをそのまま入れる。Cookie 値として禁止
 	// される文字 (`;`, 空白, 制御文字) は sanitizeRedirectPath 通過後の相対パス
 	// では現実的に出現しない（URL().pathname/search/hash は適切にエンコード済み）。
-	const secureFlag = process.env.NODE_ENV === "production" ? " Secure;" : "";
 	const response = NextResponse.json(
 		{ ok: true },
 		{
@@ -51,9 +50,14 @@ export async function POST(request: Request) {
 			},
 		},
 	);
-	response.headers.set(
-		"Set-Cookie",
-		`post_auth_redirect=${safePath}; Path=/; HttpOnly; SameSite=Lax;${secureFlag}`,
-	);
+	// Max-Age は invitation_token と揃えて 1 時間。明示的な有効期限を付けることで
+	// ブラウザを閉じずに放置されたタブから古い redirect 先が再使用されるのを防ぐ。
+	response.cookies.set("post_auth_redirect", safePath, {
+		path: "/",
+		httpOnly: true,
+		sameSite: "lax",
+		secure: process.env.NODE_ENV === "production",
+		maxAge: 3600,
+	});
 	return response;
 }
