@@ -14,6 +14,14 @@ import type {
 } from "@/types/telegrams";
 import { revalidatePath, revalidateTag } from "next/cache";
 
+/**
+ * Invalidate caches affected by a telegram mutation.
+ *
+ * Revalidates the kouden subtree via `layout` mode and emits the `telegrams`
+ * cache tag for any future `unstable_cache` consumers.
+ *
+ * @param koudenId - Target kouden ID whose caches should be invalidated.
+ */
 function revalidateTelegramsCaches(koudenId: string) {
 	revalidatePath(`/koudens/${koudenId}`, "layout");
 	revalidateTag(cacheTags.telegrams(koudenId));

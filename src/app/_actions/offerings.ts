@@ -15,6 +15,16 @@ import type { Database } from "@/types/supabase";
 import { snakeToCamel } from "@/utils/case-converter";
 import { revalidatePath, revalidateTag } from "next/cache";
 
+/**
+ * Invalidate caches affected by an offering mutation.
+ *
+ * Offerings are surfaced on the offerings page and reference kouden entries
+ * (for allocation/attribution), so this revalidates the whole kouden subtree
+ * via `layout` mode and emits the `offerings` and `entries` cache tags for
+ * any future `unstable_cache` consumers.
+ *
+ * @param koudenId - Target kouden ID whose caches should be invalidated.
+ */
 function revalidateOfferingsCaches(koudenId: string) {
 	revalidatePath(`/koudens/${koudenId}`, "layout");
 	revalidateTag(cacheTags.offerings(koudenId));
