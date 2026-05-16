@@ -1,6 +1,7 @@
 "use server";
 
 import logger from "@/lib/logger";
+import { escapeIlikePattern } from "@/lib/security/search-sanitize";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
@@ -89,9 +90,9 @@ export async function getAllUsers(params: GetUsersParams = {}): Promise<{
 			{ count: "exact" },
 		);
 
-		// 検索条件
+		// 検索条件 (ILIKE のワイルドカード % _ は意図しない一致を生むためエスケープ)
 		if (search) {
-			query = query.ilike("display_name", `%${search}%`);
+			query = query.ilike("display_name", `%${escapeIlikePattern(search)}%`);
 		}
 
 		// フィルタリング
@@ -728,9 +729,9 @@ export async function getAllKoudens(params: GetAdminKoudensParams = {}): Promise
 			{ count: "exact" },
 		);
 
-		// 検索条件
+		// 検索条件 (ILIKE のワイルドカード % _ は意図しない一致を生むためエスケープ)
 		if (search) {
-			query = query.ilike("title", `%${search}%`);
+			query = query.ilike("title", `%${escapeIlikePattern(search)}%`);
 		}
 
 		// ステータスフィルタリング
