@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { GoogleIcon } from "@/components/custom/icons/google";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { useCSRFToken } from "@/hooks/use-csrf-token";
 import { createClient } from "@/lib/supabase/client";
-import { GoogleIcon } from "@/components/custom/icons/google";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 interface AuthFormProps {
 	invitationToken?: string;
@@ -24,18 +25,9 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 	const [isLoading, setIsLoading] = useState(false);
 	const [currentStep, setCurrentStep] = useState<AuthStep>("email");
 	const supabase = createClient();
+	const { fetchWithCSRF } = useCSRFToken();
 
 	useEffect(() => {
-		// Store invitation token in cookie before authentication
-		if (invitationToken) {
-			try {
-				document.cookie = `invitation_token=${invitationToken}; path=/; max-age=3600; SameSite=Lax; Secure`;
-			} catch (error) {
-				console.error("[ERROR] Failed to store invitation token in cookie:", error);
-				setMessage("招待情報の保存に失敗しました。再度お試しください。");
-			}
-		}
-
 		// Build callback URL for Supabase OAuth (include invitation token if present)
 		const base = `${window.location.origin}/auth/callback`;
 		const params = new URLSearchParams();
@@ -45,6 +37,95 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 		const callbackUrl = params.toString() ? `${base}?${params.toString()}` : base;
 		setRedirectUrl(callbackUrl);
 	}, [invitationToken]);
+
+	/**
+	 * 認証フローに必要な Cookie をサーバー側で HttpOnly 付きで設定する。
+	 * 失敗時は false を返し、呼び出し側で OAuth/OTP 起動を中止する。
+	 *
+	 * 順序が重要: 必ず post_auth_redirect → invitation_token の順で書く。
+	 *   invitation_token は次回認証時に /auth/callback で `acceptInvitation`
+	 *   を自動発火させる semantics を持つため、部分失敗で取り残されると
+	 *   ユーザーが意図しない香典帳に参加させられる可能性がある。
+	 *   post_auth_redirect は読み出し時に毎回上書き / 削除される素朴な
+	 *   リダイレクト先なので、取り残されても害は無い。よって「悪い側」を
+	 *   後に書き、前段が失敗した時点で abort することで orphan を回避する。
+	 */
+	const setupAuthCookies = async (): Promise<boolean> => {
+		// 400 のみ「入力(redirectTo / invitation_token) がサーバ検証で弾かれた」状態として
+		// 扱い、該当 Cookie を諦めて先へ進める。URL に古い / 不正なクエリパラメータが残って
+		// いるだけでログインを止めると、ユーザーが詰まるため。callback 側にはデフォルト
+		// /koudens と URL ?token= フォールバックがある。
+		// 403 (CSRF トークン失効) / 429 (rate limit) / その他の 4xx は認証フロー自体の
+		// 問題であり、サイレントに進めると本来書くべき Cookie が落ちて UX が壊れる
+		// （意図したリダイレクト先を失う、招待が適用されない、など）。明示的に失敗
+		// させて、ユーザーがリトライ（= 新鮮な CSRF トークン）できる状態に戻す。
+		const writeCookie = async (
+			url: string,
+			body: object,
+			label: string,
+		): Promise<"ok" | "skipped" | "fail"> => {
+			const res = await fetchWithCSRF(url, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(body),
+			});
+			if (res.ok) return "ok";
+			const detail = await res.text().catch(() => "");
+			if (res.status === 400) {
+				console.warn(`[WARN] ${label} skipped (400):`, detail);
+				return "skipped";
+			}
+			console.error(`[ERROR] Failed to store ${label} cookie (${res.status}):`, detail);
+			return "fail";
+		};
+
+		try {
+			if (propRedirectTo) {
+				const r = await writeCookie(
+					"/api/auth/cookies/post-auth-redirect",
+					{ redirectTo: propRedirectTo },
+					"post_auth_redirect",
+				);
+				if (r === "fail") {
+					setMessage("認証情報の保存に失敗しました。再度お試しください。");
+					return false;
+				}
+			}
+			if (invitationToken) {
+				const r = await writeCookie(
+					"/api/auth/cookies/invitation-token",
+					{ token: invitationToken },
+					"invitation_token",
+				);
+				if (r === "fail") {
+					setMessage("認証情報の保存に失敗しました。再度お試しください。");
+					return false;
+				}
+			}
+			return true;
+		} catch (error) {
+			console.error("[ERROR] Network error during cookie setup:", error);
+			setMessage("通信エラーが発生しました。再度お試しください。");
+			return false;
+		}
+	};
+
+	/**
+	 * `signInWith*` 失敗時に、setupAuthCookies で書いた invitation_token Cookie を
+	 * 破棄する。失敗放置だと Cookie が Max-Age=3600 残存し、次回ログイン時に古い
+	 * 招待が auto-apply されてしまう。
+	 *
+	 * 失敗はベストエフォートで握りつぶす（ロールバックの失敗を更にユーザーに
+	 * 出してもどうしようもない）。
+	 */
+	const clearInvitationCookie = async () => {
+		if (!invitationToken) return;
+		try {
+			await fetchWithCSRF("/api/auth/cookies/invitation-token", { method: "DELETE" });
+		} catch (error) {
+			console.error("[ERROR] Failed to clear invitation token cookie:", error);
+		}
+	};
 
 	const handleSendOtp = async () => {
 		if (!email) {
@@ -56,9 +137,10 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 			setIsLoading(true);
 			setMessage(null);
 
-			// Store post-login redirect in cookie if provided
-			if (propRedirectTo) {
-				document.cookie = `post_auth_redirect=${encodeURIComponent(propRedirectTo)}; path=/; SameSite=Lax; Secure`;
+			const cookiesOk = await setupAuthCookies();
+			if (!cookiesOk) {
+				setIsLoading(false);
+				return;
 			}
 
 			const { error } = await supabase.auth.signInWithOtp({
@@ -79,6 +161,7 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 			} else {
 				setMessage("認証コードの送信に失敗しました。再度お試しください。");
 			}
+			await clearInvitationCookie();
 		} finally {
 			setIsLoading(false);
 		}
@@ -133,6 +216,13 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 		setCurrentStep("email");
 		setOtpCode("");
 		setMessage(null);
+		// ユーザーが OTP フローを明示的に放棄した時点で Cookie をクリアする。
+		// 同じメールで再送信した場合 setupAuthCookies が再書き込みするので、
+		// 別メールに切り替える正規ケースで stale Cookie を残さないようにする。
+		// 注: handleVerifyOtp の失敗 catch では消さない。OTP 一回ミスごとに Cookie を
+		// 飛ばすと、正しいコードでのリトライが invitation_token 無しで callback に
+		// 到達して招待フローが壊れるため。
+		clearInvitationCookie();
 	};
 
 	const handleGoogleLogin = async () => {
@@ -140,9 +230,10 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 			setIsLoading(true);
 			setMessage(null);
 
-			// Store post-login redirect in cookie if provided
-			if (propRedirectTo) {
-				document.cookie = `post_auth_redirect=${encodeURIComponent(propRedirectTo)}; path=/; SameSite=Lax; Secure`;
+			const cookiesOk = await setupAuthCookies();
+			if (!cookiesOk) {
+				setIsLoading(false);
+				return;
 			}
 
 			const { error } = await supabase.auth.signInWithOAuth({
@@ -160,6 +251,7 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 			} else {
 				setMessage("Googleログインに失敗しました。再度お試しください。");
 			}
+			await clearInvitationCookie();
 			setIsLoading(false);
 		}
 	};

@@ -5,6 +5,7 @@
 
 import logger from "@/lib/logger";
 import { getClientIP } from "@/lib/security/client-ip";
+import { timingSafeEqual } from "@/lib/security/timing-safe";
 import type { NextRequest } from "next/server";
 
 // 許可されたIPアドレスのリスト（環境変数から取得）
@@ -53,7 +54,18 @@ export function isAllowedAdminIP(request: NextRequest): boolean {
 }
 
 /**
- * ベーシック認証の実装
+ * ベーシック認証の実装。
+ *
+ * タイミング攻撃対策:
+ *   - ユーザー名/パスワードはどちらも {@link timingSafeEqual} で定数時間比較する。
+ *   - 両方の比較を必ず実行した上で AND を取り、どちらが不一致だったかを timing から
+ *     推測できないようにする（先に `userOk` を見て短絡しない）。
+ *   - 仕分けの前段（ヘッダー有無・コロン有無・env 未設定）は資格情報の値ではなく
+ *     リクエストの形・サーバ設定の問題なので、早期 return でよい。
+ *
+ * その他:
+ *   - 資格情報の分割は `split(":")` ではなく `indexOf(":")` で行い、パスワードに
+ *     コロンが含まれていても切り捨てない。
  */
 export function verifyBasicAuth(request: NextRequest): boolean {
 	const authHeader = request.headers.get("authorization");
@@ -64,7 +76,12 @@ export function verifyBasicAuth(request: NextRequest): boolean {
 
 	const credentials = authHeader.slice(6);
 	const decoded = Buffer.from(credentials, "base64").toString("utf-8");
-	const [username, password] = decoded.split(":");
+	const colonIdx = decoded.indexOf(":");
+	if (colonIdx === -1) {
+		return false;
+	}
+	const username = decoded.slice(0, colonIdx);
+	const password = decoded.slice(colonIdx + 1);
 
 	const adminUsername = process.env.ADMIN_BASIC_USERNAME;
 	const adminPassword = process.env.ADMIN_BASIC_PASSWORD;
@@ -74,5 +91,7 @@ export function verifyBasicAuth(request: NextRequest): boolean {
 		return false;
 	}
 
-	return username === adminUsername && password === adminPassword;
+	const userOk = timingSafeEqual(username, adminUsername);
+	const passOk = timingSafeEqual(password, adminPassword);
+	return userOk && passOk;
 }
