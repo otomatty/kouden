@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { Resend } from "resend";
-import { buildReminderEmail } from "@/utils/emailTemplates/reminder";
 import logger from "@/lib/logger";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { buildReminderEmail } from "@/utils/emailTemplates/reminder";
+import { NextResponse } from "next/server";
+import { Resend } from "resend";
 
 const apiKey = process.env.RESEND_API_KEY;
 if (!apiKey) {
@@ -10,7 +10,54 @@ if (!apiKey) {
 }
 const resend = new Resend(apiKey);
 
-export async function GET() {
+const cronSecret = process.env.CRON_SECRET;
+if (!cronSecret || cronSecret.length < 32) {
+	throw new Error(
+		"CRON_SECRET environment variable is not set or too short (require >= 32 chars). " +
+			"Generate one with: openssl rand -hex 32",
+	);
+}
+
+/**
+ * 2つの文字列を定数時間で比較する（タイミング攻撃対策）。
+ */
+function timingSafeEqual(a: string, b: string): boolean {
+	if (a.length !== b.length) {
+		return false;
+	}
+	let diff = 0;
+	for (let i = 0; i < a.length; i++) {
+		diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+	}
+	return diff === 0;
+}
+
+/**
+ * Cron リクエストの認証。`Authorization: Bearer <CRON_SECRET>` を必須にする。
+ * Vercel Cron は環境変数 `CRON_SECRET` を自動的に Authorization ヘッダーに載せて
+ * 呼び出すので、単一の Bearer チェックでカバーできる。
+ */
+function isAuthorizedCronRequest(request: Request): boolean {
+	const authHeader = request.headers.get("authorization");
+	if (!authHeader?.startsWith("Bearer ")) {
+		return false;
+	}
+	const provided = authHeader.slice("Bearer ".length).trim();
+	return timingSafeEqual(provided, cronSecret as string);
+}
+
+export async function GET(request: Request) {
+	if (!isAuthorizedCronRequest(request)) {
+		logger.warn(
+			{
+				path: "/api/cron/send-reminders",
+				hasAuthHeader: !!request.headers.get("authorization"),
+			},
+			"Unauthorized cron request rejected",
+		);
+		return new NextResponse("Unauthorized", { status: 401 });
+	}
+
 	// Supabase 管理クライアント取得
 	const supabase = createAdminClient();
 

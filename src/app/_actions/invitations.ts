@@ -1,11 +1,14 @@
 "use server";
 
+import logger from "@/lib/logger";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { z } from "zod";
-import ms from "ms";
 import type { Database } from "@/types/supabase";
 import type { PostgrestError } from "@supabase/supabase-js";
-import logger from "@/lib/logger";
+import ms from "ms";
+import { z } from "zod";
+
+const INVITATION_TOKEN_SCHEMA = z.string().uuid();
 
 const createInvitationSchema = z.object({
 	koudenId: z.string().uuid(),
@@ -82,13 +85,23 @@ export async function createShareInvitation(
 
 export async function getInvitation(token: string) {
 	try {
-		const supabase = await createClient();
+		// 入力検証: UUID 以外をDBに当てない
+		const parsedToken = INVITATION_TOKEN_SCHEMA.safeParse(token);
+		if (!parsedToken.success) {
+			throw new Error("招待情報が見つかりません");
+		}
+
+		// セッション取得は通常クライアントで行う（auth.uid を取り出すため）
+		const userClient = await createClient();
 		const {
 			data: { user },
-		} = await supabase.auth.getUser();
+		} = await userClient.auth.getUser();
 
-		// 招待情報を取得
-		const query = supabase
+		// 招待行のルックアップは admin client で実行する。
+		// kouden_invitations への匿名 SELECT は RLS で禁止しているため、
+		// トークン入力をサーバー側で検証してから service-role で取得する。
+		const adminClient = createAdminClient();
+		const query = adminClient
 			.from("kouden_invitations")
 			.select(`
 				*,
@@ -97,7 +110,7 @@ export async function getInvitation(token: string) {
 					name
 				)
 			`)
-			.eq("invitation_token", token)
+			.eq("invitation_token", parsedToken.data)
 			.eq("status", "pending")
 			.gt("expires_at", new Date().toISOString())
 			.single();
@@ -113,7 +126,6 @@ export async function getInvitation(token: string) {
 				{
 					error: invitationError.message,
 					code: invitationError.code,
-					token,
 				},
 				"Database error in getInvitation",
 			);
@@ -124,12 +136,12 @@ export async function getInvitation(token: string) {
 		}
 
 		if (!invitation) {
-			logger.error({ token }, "No invitation found for token");
+			logger.error({}, "No invitation found for token");
 			throw new Error("招待情報が見つかりません");
 		}
 
-		// 作成者の情報を取得
-		const { data: creatorProfile, error: creatorError } = await supabase
+		// 作成者の情報を取得（profiles は誰でも閲覧可能なため通常クライアントでも可）
+		const { data: creatorProfile, error: creatorError } = await adminClient
 			.from("profiles")
 			.select("display_name")
 			.eq("id", invitation.created_by)
@@ -149,9 +161,9 @@ export async function getInvitation(token: string) {
 		// ユーザーが既にメンバーかどうかをチェック
 		let isExistingMember = false;
 		if (user) {
-			const { data: existingMember, error: memberCheckError } = await supabase
+			const { data: existingMember, error: memberCheckError } = await adminClient
 				.from("kouden_members")
-				.select()
+				.select("id")
 				.eq("kouden_id", invitation.kouden_id)
 				.eq("user_id", user.id)
 				.single();
@@ -194,20 +206,33 @@ export async function getInvitation(token: string) {
 
 export async function acceptInvitation(token: string) {
 	try {
-		const supabase = await createClient();
+		// 入力検証: UUID 以外は弾く
+		const parsedToken = INVITATION_TOKEN_SCHEMA.safeParse(token);
+		if (!parsedToken.success) {
+			throw new Error("招待が見つかりません");
+		}
+
+		// 認証チェックは必ず通常クライアントから（auth.uid()）
+		const userClient = await createClient();
 		const {
 			data: { user },
-		} = await supabase.auth.getUser();
+		} = await userClient.auth.getUser();
 
 		if (!user) {
 			throw new Error("認証が必要です");
 		}
 
+		// 以降は service-role で操作する:
+		// - kouden_invitations は RLS で匿名/他人からのSELECTを禁止しているため admin で参照
+		// - kouden_members への INSERT は所有者のみ許可するポリシーに変更したため
+		//   招待経由の自分自身の追加もサーバー側で検証してから admin で実施する
+		const supabase = createAdminClient();
+
 		// 1. 招待情報を取得
 		const { data: invitation, error: invitationError } = await supabase
 			.from("kouden_invitations")
 			.select("*")
-			.eq("invitation_token", token)
+			.eq("invitation_token", parsedToken.data)
 			.single();
 
 		if (invitationError) {
@@ -215,7 +240,6 @@ export async function acceptInvitation(token: string) {
 				{
 					error: invitationError.message,
 					code: invitationError.code,
-					token,
 				},
 				"Failed to get invitation",
 			);
@@ -226,17 +250,16 @@ export async function acceptInvitation(token: string) {
 		}
 
 		if (!invitation) {
-			logger.error({ token }, "No invitation found for token");
+			logger.error({}, "No invitation found for token");
 			throw new Error("招待が見つかりません");
 		}
 
 		// 2. 招待の有効性チェック
 		if (invitation.status !== "pending") {
-			logger.error(
+			logger.warn(
 				{
 					invitationId: invitation.id,
 					status: invitation.status,
-					token,
 				},
 				"Invitation status is not pending",
 			);
@@ -246,12 +269,11 @@ export async function acceptInvitation(token: string) {
 		const now = new Date();
 		const expiresAt = new Date(invitation.expires_at);
 		if (expiresAt < now) {
-			logger.error(
+			logger.warn(
 				{
 					invitationId: invitation.id,
 					expiresAt: expiresAt.toISOString(),
 					now: now.toISOString(),
-					token,
 				},
 				"Invitation expired",
 			);
@@ -259,12 +281,11 @@ export async function acceptInvitation(token: string) {
 		}
 
 		if (invitation.max_uses && invitation.used_count >= invitation.max_uses) {
-			logger.error(
+			logger.warn(
 				{
 					invitationId: invitation.id,
 					used_count: invitation.used_count,
 					max_uses: invitation.max_uses,
-					token,
 				},
 				"Invitation usage limit exceeded",
 			);
@@ -274,7 +295,7 @@ export async function acceptInvitation(token: string) {
 		// 3. 既存メンバーチェック
 		const { data: existingMember, error: memberCheckError } = await supabase
 			.from("kouden_members")
-			.select()
+			.select("id")
 			.eq("kouden_id", invitation.kouden_id)
 			.eq("user_id", user.id)
 			.single();
@@ -293,24 +314,23 @@ export async function acceptInvitation(token: string) {
 		}
 
 		if (existingMember) {
-			logger.error(
+			logger.warn(
 				{
 					userId: user.id,
 					koudenId: invitation.kouden_id,
-					token,
 				},
 				"User is already a member",
 			);
 			throw new Error("すでにメンバーとして参加しています");
 		}
 
-		// 4. メンバー追加
+		// 4. メンバー追加（招待の created_by を added_by として記録する）
 		const { error: memberError } = await supabase.from("kouden_members").insert({
 			kouden_id: invitation.kouden_id,
 			user_id: user.id,
 			role_id: invitation.role_id,
 			invitation_id: invitation.id,
-			added_by: user.id,
+			added_by: invitation.created_by,
 		});
 
 		if (memberError) {
