@@ -1,16 +1,84 @@
-import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { Resend } from "resend";
-import { buildReminderEmail } from "@/utils/emailTemplates/reminder";
 import logger from "@/lib/logger";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { buildReminderEmail } from "@/utils/emailTemplates/reminder";
+import { NextResponse } from "next/server";
+import { Resend } from "resend";
 
-const apiKey = process.env.RESEND_API_KEY;
-if (!apiKey) {
-	throw new Error("Missing RESEND_API_KEY");
+/**
+ * Web Crypto API で SHA-256 ハッシュを生成する。
+ */
+async function sha256(data: string): Promise<Uint8Array> {
+	const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(data));
+	return new Uint8Array(buf);
 }
-const resend = new Resend(apiKey);
 
-export async function GET() {
+/**
+ * SHA-256 ハッシュ後に定数時間比較することで、入力長の漏洩までを防ぐ。
+ *
+ * - 直接 `a.length !== b.length` を比較すると、誤った長さで早期 return することで
+ *   攻撃者がシークレットの長さを timing から推測できる可能性がある。
+ * - ハッシュ後は両方とも 32 バイト固定長になるため、length チェックの分岐は
+ *   入力に対して定数時間。XOR ループも全 32 バイトを必ず舐める。
+ */
+async function timingSafeEqualHashed(a: string, b: string): Promise<boolean> {
+	const [ha, hb] = await Promise.all([sha256(a), sha256(b)]);
+	// 両ハッシュとも 32 バイト固定。length 不一致は理論上発生しない防御線。
+	if (ha.length !== hb.length) return false;
+	let diff = 0;
+	for (let i = 0; i < ha.length; i++) {
+		diff |= (ha[i] as number) ^ (hb[i] as number);
+	}
+	return diff === 0;
+}
+
+/**
+ * Cron リクエストの認証。`Authorization: Bearer <CRON_SECRET>` を必須にする。
+ * Vercel Cron は環境変数 `CRON_SECRET` を自動的に Authorization ヘッダーに載せて
+ * 呼び出すので、単一の Bearer チェックでカバーできる。
+ *
+ * 環境変数は build 時ではなく **リクエスト時** に検証する。Next.js は build フェーズ
+ * で route モジュールを評価するため、トップレベルの throw は環境変数未設定時に
+ * ビルドを落としてしまう（Vercel Preview 等で問題になる）。フェイルクローズドの
+ * 性質はリクエスト時の戻り値 500/401 で維持できる。
+ */
+async function isAuthorizedCronRequest(request: Request, cronSecret: string): Promise<boolean> {
+	const authHeader = request.headers.get("authorization");
+	if (!authHeader?.startsWith("Bearer ")) {
+		return false;
+	}
+	const provided = authHeader.slice("Bearer ".length).trim();
+	return timingSafeEqualHashed(provided, cronSecret);
+}
+
+export async function GET(request: Request) {
+	// 環境変数チェック（リクエスト時に評価して build を落とさない）
+	const cronSecret = process.env.CRON_SECRET;
+	if (!cronSecret || cronSecret.length < 32) {
+		logger.error(
+			{ path: "/api/cron/send-reminders" },
+			"CRON_SECRET is not set or too short (require >= 32 chars). Generate one with: openssl rand -hex 32",
+		);
+		return new NextResponse("Server misconfiguration", { status: 500 });
+	}
+
+	const apiKey = process.env.RESEND_API_KEY;
+	if (!apiKey) {
+		logger.error({ path: "/api/cron/send-reminders" }, "RESEND_API_KEY is not set");
+		return new NextResponse("Server misconfiguration", { status: 500 });
+	}
+	const resend = new Resend(apiKey);
+
+	if (!(await isAuthorizedCronRequest(request, cronSecret))) {
+		logger.warn(
+			{
+				path: "/api/cron/send-reminders",
+				hasAuthHeader: !!request.headers.get("authorization"),
+			},
+			"Unauthorized cron request rejected",
+		);
+		return new NextResponse("Unauthorized", { status: 401 });
+	}
+
 	// Supabase 管理クライアント取得
 	const supabase = createAdminClient();
 
