@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { useCSRFToken } from "@/hooks/use-csrf-token";
 import { createClient } from "@/lib/supabase/client";
 import { useState } from "react";
 import { GoogleIcon } from "./icons/google";
@@ -12,14 +13,25 @@ interface LoginButtonProps {
 export function LoginButton({ invitationToken }: LoginButtonProps) {
 	const [loading, setLoading] = useState(false);
 	const supabase = createClient();
+	const { fetchWithCSRF } = useCSRFToken();
 
 	const handleLogin = async () => {
 		try {
 			setLoading(true);
 
-			// 認証前にinvitation_tokenをクッキーに保存
+			// 認証前に invitation_token を HttpOnly Cookie として保存する。
+			// 書き込みは /api/auth/cookies/invitation-token 経由で行い、document.cookie
+			// では付与できない HttpOnly を強制する。失敗時は OAuth を起動しない。
 			if (invitationToken) {
-				document.cookie = `invitation_token=${invitationToken}; path=/; max-age=3600; SameSite=Lax`;
+				const res = await fetchWithCSRF("/api/auth/cookies/invitation-token", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ token: invitationToken }),
+				});
+				if (!res.ok) {
+					console.error("[DEBUG] Failed to store invitation token cookie:", await res.text());
+					return;
+				}
 			}
 
 			const { error } = await supabase.auth.signInWithOAuth({

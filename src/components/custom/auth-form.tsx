@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { GoogleIcon } from "@/components/custom/icons/google";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { useCSRFToken } from "@/hooks/use-csrf-token";
 import { createClient } from "@/lib/supabase/client";
-import { GoogleIcon } from "@/components/custom/icons/google";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 interface AuthFormProps {
 	invitationToken?: string;
@@ -24,18 +25,9 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 	const [isLoading, setIsLoading] = useState(false);
 	const [currentStep, setCurrentStep] = useState<AuthStep>("email");
 	const supabase = createClient();
+	const { fetchWithCSRF } = useCSRFToken();
 
 	useEffect(() => {
-		// Store invitation token in cookie before authentication
-		if (invitationToken) {
-			try {
-				document.cookie = `invitation_token=${invitationToken}; path=/; max-age=3600; SameSite=Lax; Secure`;
-			} catch (error) {
-				console.error("[ERROR] Failed to store invitation token in cookie:", error);
-				setMessage("招待情報の保存に失敗しました。再度お試しください。");
-			}
-		}
-
 		// Build callback URL for Supabase OAuth (include invitation token if present)
 		const base = `${window.location.origin}/auth/callback`;
 		const params = new URLSearchParams();
@@ -45,6 +37,38 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 		const callbackUrl = params.toString() ? `${base}?${params.toString()}` : base;
 		setRedirectUrl(callbackUrl);
 	}, [invitationToken]);
+
+	/**
+	 * 認証フローに必要な Cookie をサーバー側で HttpOnly 付きで設定する。
+	 * 失敗時は false を返し、呼び出し側で OAuth/OTP 起動を中止する。
+	 */
+	const setupAuthCookies = async (): Promise<boolean> => {
+		if (invitationToken) {
+			const res = await fetchWithCSRF("/api/auth/cookies/invitation-token", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ token: invitationToken }),
+			});
+			if (!res.ok) {
+				console.error("[ERROR] Failed to store invitation token cookie:", await res.text());
+				setMessage("招待情報の保存に失敗しました。再度お試しください。");
+				return false;
+			}
+		}
+		if (propRedirectTo) {
+			const res = await fetchWithCSRF("/api/auth/cookies/post-auth-redirect", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ redirectTo: propRedirectTo }),
+			});
+			if (!res.ok) {
+				console.error("[ERROR] Failed to store post-auth redirect cookie:", await res.text());
+				setMessage("リダイレクト情報の保存に失敗しました。再度お試しください。");
+				return false;
+			}
+		}
+		return true;
+	};
 
 	const handleSendOtp = async () => {
 		if (!email) {
@@ -56,9 +80,10 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 			setIsLoading(true);
 			setMessage(null);
 
-			// Store post-login redirect in cookie if provided
-			if (propRedirectTo) {
-				document.cookie = `post_auth_redirect=${encodeURIComponent(propRedirectTo)}; path=/; SameSite=Lax; Secure`;
+			const cookiesOk = await setupAuthCookies();
+			if (!cookiesOk) {
+				setIsLoading(false);
+				return;
 			}
 
 			const { error } = await supabase.auth.signInWithOtp({
@@ -140,9 +165,10 @@ export function AuthForm({ invitationToken, redirectTo: propRedirectTo }: AuthFo
 			setIsLoading(true);
 			setMessage(null);
 
-			// Store post-login redirect in cookie if provided
-			if (propRedirectTo) {
-				document.cookie = `post_auth_redirect=${encodeURIComponent(propRedirectTo)}; path=/; SameSite=Lax; Secure`;
+			const cookiesOk = await setupAuthCookies();
+			if (!cookiesOk) {
+				setIsLoading(false);
+				return;
 			}
 
 			const { error } = await supabase.auth.signInWithOAuth({
