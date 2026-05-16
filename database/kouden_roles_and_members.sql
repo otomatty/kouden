@@ -1,8 +1,13 @@
 -- ロールテーブルを作成
+-- 本番マイグレーション (supabase/migrations/20250128134809_remote_schema.sql) に合わせた定義。
+-- `permissions` は権限ベース判定 (例: 'entry.write' / 'entry.read') に使用される。
 CREATE TABLE IF NOT EXISTS kouden_roles (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     kouden_id UUID NOT NULL REFERENCES koudens(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
+    description TEXT,
+    permissions TEXT[] NOT NULL DEFAULT '{}',
+    created_by UUID NOT NULL REFERENCES auth.users(id),
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
     UNIQUE(kouden_id, name)
