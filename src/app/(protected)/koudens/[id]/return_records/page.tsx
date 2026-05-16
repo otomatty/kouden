@@ -1,4 +1,4 @@
-import { getEntries } from "@/app/_actions/entries";
+import { getEntriesForSelector } from "@/app/_actions/entries";
 import { getKouden } from "@/app/_actions/koudens";
 import { getRelationships } from "@/app/_actions/relationships";
 import { getReturnItems } from "@/app/_actions/return-records/return-items";
@@ -38,25 +38,22 @@ export default async function ReturnRecordsPage({ params, searchParams }: Return
 
 	try {
 		// 並行データ取得
-		const [koudenDetails, entriesResult, relationships, initialReturns, returnItems] =
-			await Promise.all([
-				getKouden(koudenId),
-				getEntries(koudenId),
-				getRelationships(koudenId),
-				getReturnEntriesByKoudenPaginated(koudenId, 100, undefined, initialFilters),
-				getReturnItems(koudenId),
-			]);
+		const [koudenDetails, entries, relationships, initialReturns, returnItems] = await Promise.all([
+			getKouden(koudenId),
+			getEntriesForSelector(koudenId),
+			getRelationships(koudenId),
+			getReturnEntriesByKoudenPaginated(koudenId, 100, undefined, initialFilters),
+			getReturnItems(koudenId),
+		]);
 
 		if (!koudenDetails) {
 			notFound();
 		}
 
-		const entries = entriesResult;
-
 		// 返礼管理サマリーの型に変換（実際のお供物配分金額を取得）
 		const returnSummaries = await convertToReturnManagementSummaries(
 			initialReturns.data,
-			entries.entries,
+			entries,
 			relationships,
 			koudenId,
 		);
@@ -66,7 +63,7 @@ export default async function ReturnRecordsPage({ params, searchParams }: Return
 				<ReturnRecordsPageClient
 					koudenId={koudenId}
 					initialReturns={returnSummaries}
-					entries={entries.entries}
+					entries={entries}
 					relationships={relationships || []}
 					initialHasMore={initialReturns.hasMore}
 					initialCursor={initialReturns.nextCursor}

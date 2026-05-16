@@ -1,6 +1,6 @@
-import { OfferingView } from "./_components";
+import { getEntriesForSelector } from "@/app/_actions/entries";
 import { getOfferings } from "@/app/_actions/offerings";
-import { getEntries } from "@/app/_actions/entries";
+import { OfferingView } from "./_components";
 
 interface OfferingsPageProps {
 	params: Promise<{ id: string }>;
@@ -13,15 +13,27 @@ interface OfferingsPageProps {
  */
 export default async function OfferingsPage({ params }: OfferingsPageProps) {
 	const { id: koudenId } = await params;
-	const [offerings, entriesResult] = await Promise.all([
-		getOfferings(koudenId),
-		getEntries(koudenId, 1, Number.MAX_SAFE_INTEGER),
-	]);
-	const { entries } = entriesResult;
 
-	return (
-		<div className="mt-4">
-			<OfferingView koudenId={koudenId} offerings={offerings} entries={entries} />
-		</div>
-	);
+	try {
+		const [offerings, entries] = await Promise.all([
+			getOfferings(koudenId),
+			getEntriesForSelector(koudenId),
+		]);
+
+		return (
+			<div className="mt-4">
+				<OfferingView koudenId={koudenId} offerings={offerings} entries={entries} />
+			</div>
+		);
+	} catch (error) {
+		console.error("お供物ページの初期化エラー:", error);
+		return (
+			<div className="container mx-auto py-6">
+				<div className="flex flex-col items-center justify-center py-8">
+					<p className="text-destructive mb-4">データの読み込みに失敗しました</p>
+					<p className="text-sm text-muted-foreground">ページを再読み込みしてください</p>
+				</div>
+			</div>
+		);
+	}
 }

@@ -94,6 +94,64 @@ export async function createEntry(input: CreateEntryInput): Promise<EntryRespons
 	}
 }
 
+/**
+ * セレクター/ルックアップ用に香典エントリーを取得する
+ * - お供物・返礼ダイアログのエントリー選択や、ID→エントリーの参照を想定
+ * - 関係性テーブル・return_entry_records の JOIN を行わず、追加クエリも不要
+ * - ページネーションは行わないが、暴走防止のため上限件数を設ける
+ */
+const ENTRIES_SELECTOR_MAX = 5000;
+
+export async function getEntriesForSelector(koudenId: string): Promise<Entry[]> {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	if (!user) {
+		throw new Error("認証が必要です");
+	}
+
+	try {
+		const { data, error } = await supabase
+			.from("kouden_entries")
+			.select("*")
+			.eq("kouden_id", koudenId)
+			.order("created_at", { ascending: false })
+			.limit(ENTRIES_SELECTOR_MAX);
+
+		if (error) {
+			logger.error(
+				{
+					message: error.message,
+					details: error.details,
+					hint: error.hint,
+					code: error.code,
+					koudenId,
+				},
+				"Failed to fetch entries for selector",
+			);
+			throw new Error("香典情報の取得に失敗しました");
+		}
+
+		const rows = data ?? [];
+		return rows.map((entry) => ({
+			...entry,
+			attendanceType: entry.attendance_type as AttendanceType,
+			relationshipId: entry.relationship_id,
+		}));
+	} catch (error) {
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+				koudenId,
+			},
+			"Unexpected error in getEntriesForSelector",
+		);
+		throw error;
+	}
+}
+
 export async function getEntries(
 	koudenId: string,
 	page = 1,
