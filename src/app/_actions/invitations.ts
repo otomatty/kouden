@@ -348,12 +348,22 @@ export async function acceptInvitation(token: string) {
 		}
 
 		// 5. 招待のステータスと使用回数を更新
+		// マルチユーズ招待 (max_uses > 1 もしくは max_uses IS NULL) は、まだ枠が
+		// 残っている間 status='pending' のままにする。`getInvitation` は
+		// status='pending' のレコードのみを返すため、初回受諾で 'accepted' に
+		// すると 2 人目以降がトークンを使えなくなる。
+		const newUsedCount = invitation.used_count + 1;
+		const isExhausted = invitation.max_uses !== null && newUsedCount >= invitation.max_uses;
+		const invitationUpdate: { used_count: number; status?: "accepted" } = {
+			used_count: newUsedCount,
+		};
+		if (isExhausted) {
+			invitationUpdate.status = "accepted";
+		}
+
 		const { error: updateError } = await supabase
 			.from("kouden_invitations")
-			.update({
-				status: "accepted",
-				used_count: invitation.used_count + 1,
-			})
+			.update(invitationUpdate)
 			.eq("id", invitation.id);
 
 		if (updateError) {

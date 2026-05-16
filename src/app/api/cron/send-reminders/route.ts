@@ -5,15 +5,28 @@ import { NextResponse } from "next/server";
 import { Resend } from "resend";
 
 /**
- * 2つの文字列を定数時間で比較する（タイミング攻撃対策）。
+ * Web Crypto API で SHA-256 ハッシュを生成する。
  */
-function timingSafeEqual(a: string, b: string): boolean {
-	if (a.length !== b.length) {
-		return false;
-	}
+async function sha256(data: string): Promise<Uint8Array> {
+	const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(data));
+	return new Uint8Array(buf);
+}
+
+/**
+ * SHA-256 ハッシュ後に定数時間比較することで、入力長の漏洩までを防ぐ。
+ *
+ * - 直接 `a.length !== b.length` を比較すると、誤った長さで早期 return することで
+ *   攻撃者がシークレットの長さを timing から推測できる可能性がある。
+ * - ハッシュ後は両方とも 32 バイト固定長になるため、length チェックの分岐は
+ *   入力に対して定数時間。XOR ループも全 32 バイトを必ず舐める。
+ */
+async function timingSafeEqualHashed(a: string, b: string): Promise<boolean> {
+	const [ha, hb] = await Promise.all([sha256(a), sha256(b)]);
+	// 両ハッシュとも 32 バイト固定。length 不一致は理論上発生しない防御線。
+	if (ha.length !== hb.length) return false;
 	let diff = 0;
-	for (let i = 0; i < a.length; i++) {
-		diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+	for (let i = 0; i < ha.length; i++) {
+		diff |= (ha[i] as number) ^ (hb[i] as number);
 	}
 	return diff === 0;
 }
@@ -28,13 +41,13 @@ function timingSafeEqual(a: string, b: string): boolean {
  * ビルドを落としてしまう（Vercel Preview 等で問題になる）。フェイルクローズドの
  * 性質はリクエスト時の戻り値 500/401 で維持できる。
  */
-function isAuthorizedCronRequest(request: Request, cronSecret: string): boolean {
+async function isAuthorizedCronRequest(request: Request, cronSecret: string): Promise<boolean> {
 	const authHeader = request.headers.get("authorization");
 	if (!authHeader?.startsWith("Bearer ")) {
 		return false;
 	}
 	const provided = authHeader.slice("Bearer ".length).trim();
-	return timingSafeEqual(provided, cronSecret);
+	return timingSafeEqualHashed(provided, cronSecret);
 }
 
 export async function GET(request: Request) {
@@ -50,15 +63,12 @@ export async function GET(request: Request) {
 
 	const apiKey = process.env.RESEND_API_KEY;
 	if (!apiKey) {
-		logger.error(
-			{ path: "/api/cron/send-reminders" },
-			"RESEND_API_KEY is not set",
-		);
+		logger.error({ path: "/api/cron/send-reminders" }, "RESEND_API_KEY is not set");
 		return new NextResponse("Server misconfiguration", { status: 500 });
 	}
 	const resend = new Resend(apiKey);
 
-	if (!isAuthorizedCronRequest(request, cronSecret)) {
+	if (!(await isAuthorizedCronRequest(request, cronSecret))) {
 		logger.warn(
 			{
 				path: "/api/cron/send-reminders",
