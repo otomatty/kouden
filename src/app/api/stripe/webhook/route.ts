@@ -56,106 +56,71 @@ export async function POST(req: Request) {
 			return new NextResponse("Invalid webhook metadata", { status: 400 });
 		}
 
-		// Supabase admin client
-		const supabase = createAdminClient();
-
-		// Create kouden record if not exists
-		const { data: existingKouden } = await supabase
-			.from("koudens")
-			.select("id")
-			.eq("id", koudenId)
-			.single();
-		if (!existingKouden) {
-			const planRes = await supabase.from("plans").select("id").eq("code", planCode).single();
-			if (planRes.error || !planRes.data) {
-				logger.error({ planCode, error: planRes.error }, "Plan not found for code");
-				return new NextResponse("Plan not found", { status: 400 });
-			}
-			const planId = planRes.data.id;
-			const { error: koudenError } = await supabase.from("koudens").insert({
-				id: koudenId,
-				title: metadata.title || "",
-				description: metadata.description || "",
-				owner_id: userId,
-				created_by: userId,
-				plan_id: planId,
-			});
-			if (koudenError) {
-				logger.error(
-					{
-						error: koudenError.message,
-						code: koudenError.code,
-						koudenId,
-						userId,
-					},
-					"Error creating kouden",
-				);
-			}
-		}
-
-		// Upsert purchase history
-		const planRes2 = await supabase.from("plans").select("id").eq("code", planCode).single();
-		if (planRes2.error || !planRes2.data) {
-			logger.error({ planCode, error: planRes2.error }, "Plan not found for code");
-			return new NextResponse("Plan not found", { status: 400 });
-		}
-		const planId2 = planRes2.data.id;
 		const amountTotal = session.amount_total;
 		if (amountTotal == null) {
 			logger.error({ sessionId: session.id }, "Session amount_total is missing");
 			return new NextResponse("Invalid session data", { status: 400 });
 		}
-		const { data: purchaseRow, error: purchaseError } = await supabase
-			.from("kouden_purchases")
-			.insert({
-				kouden_id: koudenId,
-				user_id: userId,
-				plan_id: planId2,
-				expected_count: metadata.expectedCount ? Number(metadata.expectedCount) : null,
-				amount_paid: amountTotal,
-				stripe_session_id: session.id,
-			})
-			.select("id")
-			.single();
-		if (purchaseError || !purchaseRow) {
+
+		// Supabase admin client (service-role)
+		const supabase = createAdminClient();
+
+		// koudens の upsert・kouden_purchases の INSERT・koudens.plan_id/status の更新を
+		// 単一のトランザクション (RPC 関数) で実行する。
+		// stripe_session_id を冪等性キーとして使い、Webhook の再送に対しても安全。
+		const { data: rpcRows, error: rpcError } = await supabase.rpc(
+			"process_stripe_checkout_completed",
+			{
+				p_kouden_id: koudenId,
+				p_user_id: userId,
+				p_plan_code: planCode,
+				p_title: metadata.title || "",
+				p_description: metadata.description || "",
+				p_expected_count: metadata.expectedCount ? Number(metadata.expectedCount) : null,
+				p_amount_paid: amountTotal,
+				p_stripe_session_id: session.id,
+			},
+		);
+
+		if (rpcError) {
 			logger.error(
 				{
-					error: purchaseError?.message,
-					code: purchaseError?.code,
+					error: rpcError.message,
+					code: rpcError.code,
 					koudenId,
 					userId,
+					planCode,
+					sessionId: session.id,
 				},
-				"Error inserting purchase",
+				"Error processing stripe checkout completion (RPC)",
 			);
-		} else {
+			// 5xx を返して Stripe に再送させる (一時的なDB障害などに備える)
+			return new NextResponse("Failed to process checkout", { status: 500 });
+		}
+
+		const purchaseRow = rpcRows?.[0];
+		if (!purchaseRow) {
+			logger.error(
+				{ koudenId, userId, sessionId: session.id },
+				"process_stripe_checkout_completed returned no rows",
+			);
+			return new NextResponse("Failed to process checkout", { status: 500 });
+		}
+
+		// 領収書PDFは新規購入時のみ生成する (再送イベントでの二重発行を防ぐ)。
+		// PDF生成失敗は購入処理のロールバック対象外 (ログのみ)。
+		if (purchaseRow.is_new_purchase) {
 			try {
-				await exportReceiptToPdf(purchaseRow.id);
+				await exportReceiptToPdf(purchaseRow.purchase_id);
 			} catch (err) {
 				logger.error(
 					{
 						error: err instanceof Error ? err.message : String(err),
-						purchaseId: purchaseRow.id,
+						purchaseId: purchaseRow.purchase_id,
 					},
 					"Receipt export error",
 				);
 			}
-		}
-
-		// Update kouden plan_id for upgrades
-		const { error: updateError } = await supabase
-			.from("koudens")
-			.update({ plan_id: planId2, status: "active" })
-			.eq("id", koudenId);
-		if (updateError) {
-			logger.error(
-				{
-					error: updateError.message,
-					code: updateError.code,
-					koudenId,
-					planId: planId2,
-				},
-				"Error updating kouden plan_id and status",
-			);
 		}
 	}
 
