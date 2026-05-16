@@ -65,8 +65,10 @@ function sanitizeUrl(value: unknown): string | undefined {
 		}
 		return url.protocol;
 	} catch {
-		// 相対 URL や `inline` / `eval` など非 URL 文字列は先頭だけ残す。
-		return value.slice(0, 200);
+		// 相対 URL や `inline` / `eval` など非 URL 文字列はクエリ・フラグメントを
+		// 落としたうえで先頭だけ残す (相対パスにトークンが入る形を想定)。
+		const head = value.split(/[?#]/, 1)[0] ?? "";
+		return head.slice(0, 200);
 	}
 }
 
@@ -108,6 +110,31 @@ function normalize(report: Record<string, unknown>): NormalizedReport {
 	};
 }
 
+/**
+ * ボディをストリーミングで読み、累積バイト数が `limit` を超えた時点で
+ * 早期に中断する。Content-Length が信頼できない (chunked 等の) 場合でも
+ * 上限超過分をメモリへバッファしないための保護。
+ *
+ * @returns 読み切れた UTF-8 文字列、または上限超過時は `null`
+ */
+async function readBodyWithLimit(request: NextRequest, limit: number): Promise<string | null> {
+	const reader = request.body?.getReader();
+	if (!reader) return "";
+	const chunks: Uint8Array[] = [];
+	let total = 0;
+	while (true) {
+		const { done, value } = await reader.read();
+		if (done) break;
+		total += value.byteLength;
+		if (total > limit) {
+			await reader.cancel();
+			return null;
+		}
+		chunks.push(value);
+	}
+	return Buffer.concat(chunks).toString("utf8");
+}
+
 function logViolation(report: Record<string, unknown>, request: NextRequest): void {
 	logger.warn(
 		{
@@ -131,15 +158,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 	}
 
 	try {
-		const raw = await request.text();
-		if (!raw) {
+		// Content-Length が無い chunked リクエストでも、ストリームを
+		// チャンク単位で読みながら上限超過で打ち切ることで
+		// 64KB 以上のメモリ確保を防ぐ。
+		const raw = await readBodyWithLimit(request, MAX_CSP_REPORT_BYTES);
+		if (raw === null) {
+			logger.warn({ limit: MAX_CSP_REPORT_BYTES }, "CSP report payload too large");
 			return new NextResponse(null, { status: 204 });
 		}
-		// `raw.length` は UTF-16 単位の文字数なのでマルチバイト混在ペイロード
-		// では実バイト数とズレる。実バイト長 (UTF-8) で判定する。
-		const rawBytes = Buffer.byteLength(raw, "utf8");
-		if (rawBytes > MAX_CSP_REPORT_BYTES) {
-			logger.warn({ size: rawBytes }, "CSP report payload too large");
+		if (!raw) {
 			return new NextResponse(null, { status: 204 });
 		}
 
