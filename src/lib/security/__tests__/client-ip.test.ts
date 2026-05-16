@@ -55,6 +55,18 @@ describe("isValidIP", () => {
 		expect(isValidIP("::")).toBe(true);
 		expect(isValidIP("1:2:3:4:5:6:7:8")).toBe(true);
 	});
+
+	it("IPv4-mapped IPv6 (::ffff:a.b.c.d) を許可する", () => {
+		expect(isValidIP("::ffff:192.0.2.1")).toBe(true);
+		expect(isValidIP("::ffff:0.0.0.0")).toBe(true);
+		// 完全表記の IPv4-mapped
+		expect(isValidIP("0:0:0:0:0:ffff:192.0.2.1")).toBe(true);
+	});
+
+	it("IPv4 セグメントが末尾以外の位置にあるのは不正", () => {
+		expect(isValidIP("192.0.2.1::ffff")).toBe(false);
+		expect(isValidIP("::192.0.2.1:1")).toBe(false);
+	});
 });
 
 describe("getClientIPFromHeaders ヘッダー優先順位", () => {
@@ -172,9 +184,18 @@ describe("x-forwarded-for の右端採用ロジック", () => {
 		expect(getClientIPFromHeaders(headers)).toBe("2001:db8::1");
 	});
 
-	it("不正な IP 値しかなければ次の候補にフォールバックする", () => {
+	it("XFF が存在するが不正値の場合は x-real-ip へフォールバックせず null を返す", () => {
+		// 攻撃者が `X-Forwarded-For: garbage` + `X-Real-IP: <fake>` を送って
+		// IP 制限を回避しないよう、XFF 存在時は terminal として扱う。
 		const headers = buildHeaders({
 			"x-forwarded-for": "not-an-ip",
+			"x-real-ip": "7.7.7.7",
+		});
+		expect(getClientIPFromHeaders(headers)).toBeNull();
+	});
+
+	it("XFF ヘッダが無い場合のみ x-real-ip を採用する", () => {
+		const headers = buildHeaders({
 			"x-real-ip": "7.7.7.7",
 		});
 		expect(getClientIPFromHeaders(headers)).toBe("7.7.7.7");

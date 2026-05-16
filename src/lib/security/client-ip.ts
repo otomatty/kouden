@@ -66,6 +66,8 @@ function normalizeIPCandidate(raw: string): string | null {
 /**
  * IPv6 を緩いコロン列だけで通すと `::::` や `2001:::1` のような不正形式が
  * 素通りしてしまうため、`::` の出現回数と各セグメントを個別に検証する。
+ * IPv4-mapped 形式 (`::ffff:192.0.2.1`) もサポートする — 末尾セグメントが
+ * ドット表記の IPv4 の場合、論理的に 2 セグメント分を消費する。
  */
 function isValidIPv6(value: string): boolean {
 	if (value.length === 0 || value.length > 45) return false;
@@ -73,7 +75,6 @@ function isValidIPv6(value: string): boolean {
 	if (value.includes(":::")) return false;
 	// `::` 省略表記は1回まで
 	const segments = value.split(":");
-	if (segments.length > 8) return false;
 	const doubleColonCount = value.split("::").length - 1;
 	if (doubleColonCount > 1) return false;
 	const hasDoubleColon = doubleColonCount === 1;
@@ -81,19 +82,28 @@ function isValidIPv6(value: string): boolean {
 	if (value.startsWith(":") && !value.startsWith("::")) return false;
 	if (value.endsWith(":") && !value.endsWith("::")) return false;
 
-	let nonEmpty = 0;
-	for (const seg of segments) {
-		if (seg === "") continue;
+	let totalCount = 0; // 論理的な 16-bit チャンク数 (IPv4-mapped は 2 として数える)
+	for (let i = 0; i < segments.length; i++) {
+		const seg = segments[i];
+		if (seg === undefined || seg === "") continue;
+		if (seg.includes(".")) {
+			// IPv4-mapped 形式は末尾セグメントでのみ有効
+			if (i !== segments.length - 1) return false;
+			if (!IPV4_REGEX.test(seg)) return false;
+			totalCount += 2;
+			continue;
+		}
 		if (!IPV6_SEGMENT_REGEX.test(seg)) return false;
-		nonEmpty++;
+		totalCount += 1;
 	}
 
+	if (totalCount > 8) return false;
 	if (hasDoubleColon) {
-		// `::` を使う場合、明示セグメント数は最大 7 (1つは省略で表現)
-		return nonEmpty <= 7;
+		// `::` は 1 つ以上の zero group を圧縮するため、明示部分の合計は最大 7
+		return totalCount <= 7;
 	}
-	// `::` 無しの完全表記は 8 セグメント必須
-	return segments.length === 8 && nonEmpty === 8;
+	// `::` 無しの完全表記は論理 8 チャンク必須
+	return totalCount === 8;
 }
 
 /**
@@ -155,8 +165,11 @@ function getTrustedProxyProvider(): "vercel" | "cloudflare" | null {
  * 1. `x-vercel-forwarded-for` — Vercel 環境と判定された場合のみ。
  * 2. `cf-connecting-ip` — `TRUSTED_PROXY_PROVIDER=cloudflare` の場合のみ。
  * 3. `x-forwarded-for` — 右端から `TRUSTED_PROXY_HOPS` 個目 (デフォルト 1) を採用。
- *    値が IP として不正、または hop 数が足りない場合は次の候補に進む。
- * 4. `x-real-ip` — 単一プロキシ環境用の最終フォールバック。
+ *    XFF ヘッダが存在する場合はその結果 (失敗時は `null`) を即時返却する。
+ *    XFF が不正値の場合に `x-real-ip` へフォールバックすると、攻撃者が
+ *    `X-Forwarded-For: garbage` + `X-Real-IP: <admin-ip>` のような組合せで
+ *    認可をすり抜けられるため、XFF は terminal として扱う。
+ * 4. `x-real-ip` — XFF ヘッダ自体が存在しない場合の最終フォールバック。
  *
  * @returns 妥当な IPv4/IPv6 が抽出できれば文字列、抽出できなければ `null`。
  */
@@ -174,9 +187,9 @@ export function getClientIPFromHeaders(headers: ReadonlyHeadersLike): string | n
 	}
 
 	const forwardedFor = headers.get("x-forwarded-for");
-	if (forwardedFor) {
-		const fromXff = pickFromForwardedFor(forwardedFor, readTrustedProxyHops());
-		if (fromXff) return fromXff;
+	if (forwardedFor !== null) {
+		// XFF が存在する場合は、その値の評価結果 (成否) を最終判定として扱う。
+		return pickFromForwardedFor(forwardedFor, readTrustedProxyHops());
 	}
 
 	const realIP = pickSingleTrustedHeader(headers.get("x-real-ip"));
