@@ -18,6 +18,30 @@
 -- ------------------------------------------------------------------------
 -- 1. 既存データの不整合チェック後、stripe_session_id にユニーク部分インデックス
 -- ------------------------------------------------------------------------
+-- 重複行の存在を事前検出する。重複は課金レコードなので自動 DELETE しない
+-- (誤って売上履歴を失わないため)。重複があれば運用者が手動で精査する前提で
+-- 分かりやすい例外を投げてマイグレーションを止める。
+DO $$
+DECLARE
+    v_dup_count integer;
+BEGIN
+    SELECT COUNT(*) INTO v_dup_count
+    FROM (
+        SELECT 1
+        FROM public.kouden_purchases
+        WHERE stripe_session_id IS NOT NULL
+        GROUP BY stripe_session_id
+        HAVING COUNT(*) > 1
+    ) dups;
+
+    IF v_dup_count > 0 THEN
+        RAISE EXCEPTION
+            'Cannot create unique index on kouden_purchases.stripe_session_id: % duplicate value(s) found. Investigate and resolve manually before re-running this migration (billing records, do not auto-delete).',
+            v_dup_count;
+    END IF;
+END;
+$$;
+
 -- NOT NULL の値に対してのみユニーク性を要求 (古い手動投入レコードでは NULL のまま)
 CREATE UNIQUE INDEX IF NOT EXISTS uq_kouden_purchases_stripe_session_id
     ON public.kouden_purchases (stripe_session_id)
@@ -105,7 +129,9 @@ BEGIN
     )
     ON CONFLICT (id) DO UPDATE
         SET plan_id = EXCLUDED.plan_id,
-            status  = 'active';
+            status  = 'active'
+        WHERE koudens.plan_id IS DISTINCT FROM EXCLUDED.plan_id
+           OR koudens.status  IS DISTINCT FROM 'active';
     -- title/description は既存値を温存 (upgrade 時に上書きしない)
 
     -- Step 2: 購入履歴を挿入

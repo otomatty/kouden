@@ -94,8 +94,13 @@ export async function POST(req: Request) {
 				},
 				"Error processing stripe checkout completion (RPC)",
 			);
-			// 5xx を返して Stripe に再送させる (一時的なDB障害などに備える)
-			return new NextResponse("Failed to process checkout", { status: 500 });
+			// 恒久エラー (例: P0002 = plan_not_found) は Stripe の再送で解消しないため 4xx で
+			// 確定的に失敗させ、再送ループとログノイズを防ぐ。一時的なDB障害などは 5xx で再送させる。
+			const isPermanentError = rpcError.code === "P0002";
+			return new NextResponse(
+				isPermanentError ? "Invalid checkout metadata" : "Failed to process checkout",
+				{ status: isPermanentError ? 400 : 500 },
+			);
 		}
 
 		const purchaseRow = rpcRows?.[0];
