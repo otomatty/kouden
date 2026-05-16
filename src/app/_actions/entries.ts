@@ -1,16 +1,31 @@
 "use server";
 
+import { cacheTags } from "@/lib/cache-tags";
+import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
 import type { CellValue } from "@/types/data-table/table";
 import type {
+	AttendanceType,
 	CreateEntryInput,
+	Entry,
 	EntryResponse,
 	UpdateEntryInput,
-	Entry,
-	AttendanceType,
 } from "@/types/entries";
-import logger from "@/lib/logger";
+import { revalidatePath, revalidateTag } from "next/cache";
+
+/**
+ * Invalidate caches affected by an entry mutation.
+ *
+ * Entries are surfaced on the entries page and feed into statistics and
+ * return records, so we invalidate the whole kouden subtree via `layout`
+ * mode and emit cache tags for any future `unstable_cache` consumers.
+ */
+function revalidateEntriesCaches(koudenId: string) {
+	revalidatePath(`/koudens/${koudenId}`, "layout");
+	revalidateTag(cacheTags.entries(koudenId));
+	revalidateTag(cacheTags.statistics(koudenId));
+	revalidateTag(cacheTags.returnRecords(koudenId));
+}
 
 export async function createEntry(input: CreateEntryInput): Promise<EntryResponse> {
 	const supabase = await createClient();
@@ -69,9 +84,7 @@ export async function createEntry(input: CreateEntryInput): Promise<EntryRespons
 			throw new Error("香典情報の作成に失敗しました");
 		}
 
-		Promise.resolve().then(() => {
-			revalidatePath(`/koudens/${input.koudenId}`);
-		});
+		revalidateEntriesCaches(input.koudenId);
 
 		// スネークケースからキャメルケースへの変換
 		const response: EntryResponse = {
@@ -485,9 +498,7 @@ export async function updateEntry(id: string, input: UpdateEntryInput): Promise<
 			throw new Error("香典情報の更新に失敗しました");
 		}
 
-		Promise.resolve().then(() => {
-			revalidatePath(`/koudens/${updatedData.kouden_id}`);
-		});
+		revalidateEntriesCaches(updatedData.kouden_id);
 
 		return {
 			...updatedData,
@@ -522,9 +533,7 @@ export async function deleteEntry(id: string, koudenId: string): Promise<void> {
 		throw new Error("香典情報の削除に失敗しました");
 	}
 
-	Promise.resolve().then(() => {
-		revalidatePath(`/koudens/${koudenId}`);
-	});
+	revalidateEntriesCaches(koudenId);
 }
 
 // 複数エントリーの一括削除機能
@@ -544,9 +553,7 @@ export async function deleteEntries(ids: string[], koudenId: string): Promise<vo
 		throw new Error("香典情報の一括削除に失敗しました");
 	}
 
-	Promise.resolve().then(() => {
-		revalidatePath(`/koudens/${koudenId}`);
-	});
+	revalidateEntriesCaches(koudenId);
 }
 
 // セル単位の更新用に最適化した関数
@@ -589,9 +596,7 @@ export async function updateEntryField(
 			throw new Error(`${field}の更新に失敗しました`);
 		}
 
-		Promise.resolve().then(() => {
-			revalidatePath(`/koudens/${updatedData.kouden_id}`);
-		});
+		revalidateEntriesCaches(updatedData.kouden_id);
 
 		return {
 			...updatedData,

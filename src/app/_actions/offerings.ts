@@ -1,18 +1,35 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
-import type {
-	Offering,
-	CreateOfferingInput,
-	UpdateOfferingInput,
-	CreateOfferingPhotoInput,
-	UpdateOfferingPhotoInput,
-	OfferingWithKoudenEntries,
-} from "@/types/offerings";
-import { snakeToCamel } from "@/utils/case-converter";
-import type { Database } from "@/types/supabase";
+import { cacheTags } from "@/lib/cache-tags";
 import logger from "@/lib/logger";
+import { createClient } from "@/lib/supabase/server";
+import type {
+	CreateOfferingInput,
+	CreateOfferingPhotoInput,
+	Offering,
+	OfferingWithKoudenEntries,
+	UpdateOfferingInput,
+	UpdateOfferingPhotoInput,
+} from "@/types/offerings";
+import type { Database } from "@/types/supabase";
+import { snakeToCamel } from "@/utils/case-converter";
+import { revalidatePath, revalidateTag } from "next/cache";
+
+/**
+ * Invalidate caches affected by an offering mutation.
+ *
+ * Offerings are surfaced on the offerings page and reference kouden entries
+ * (for allocation/attribution), so this revalidates the whole kouden subtree
+ * via `layout` mode and emits the `offerings` and `entries` cache tags for
+ * any future `unstable_cache` consumers.
+ *
+ * @param koudenId - Target kouden ID whose caches should be invalidated.
+ */
+function revalidateOfferingsCaches(koudenId: string) {
+	revalidatePath(`/koudens/${koudenId}`, "layout");
+	revalidateTag(cacheTags.offerings(koudenId));
+	revalidateTag(cacheTags.entries(koudenId));
+}
 
 //お供物情報を作成する
 export async function createOffering(input: Omit<CreateOfferingInput, "created_by">) {
@@ -100,7 +117,7 @@ export async function createOffering(input: Omit<CreateOfferingInput, "created_b
 			// 更新エラーは致命的ではないのでログのみ
 		}
 
-		revalidatePath(`/koudens/${input.kouden_id}`);
+		revalidateOfferingsCaches(input.kouden_id as string);
 		return data;
 	} catch (error) {
 		logger.error(
@@ -219,7 +236,7 @@ export async function updateOffering(id: string, input: UpdateOfferingInput) {
 			// 更新エラーは致命的ではないのでログのみ
 		}
 
-		revalidatePath(`/koudens/${input.kouden_id}`);
+		revalidateOfferingsCaches(input.kouden_id as string);
 		return data;
 	} catch (error) {
 		logger.error(
@@ -277,7 +294,7 @@ export async function deleteOffering(id: string, koudenId: string) {
 		// 更新エラーは致命的ではないのでログのみ
 	}
 
-	revalidatePath(`/koudens/${koudenId}`);
+	revalidateOfferingsCaches(koudenId);
 }
 
 // お供物情報を取得する
@@ -380,7 +397,7 @@ export async function addOfferingPhoto(
 		throw new Error("写真の登録に失敗しました");
 	}
 
-	revalidatePath(`/koudens/${offering.kouden_id}`);
+	revalidateOfferingsCaches(offering.kouden_id);
 	return data;
 }
 
