@@ -1,5 +1,39 @@
-import withPWA from "next-pwa";
 import type { NextConfig } from "next";
+import withPWA from "next-pwa";
+
+// CSP の対象となる Supabase オリジン。
+// `NEXT_PUBLIC_SUPABASE_URL` が未設定のビルド時 (例: Storybook の型生成) でも
+// 値が消えないよう、本番で利用しているプロジェクトURLをフォールバックに置く。
+const supabaseOrigin =
+	process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://tcqnsslsaizqwjuyvoyu.supabase.co";
+
+// Content-Security-Policy のディレクティブ定義。
+// まずは Report-Only で配信し、`/api/csp-report` でレポートを収集する。
+const cspDirectives: Record<string, string[]> = {
+	"default-src": ["'self'"],
+	"script-src": ["'self'", "'unsafe-inline'", "https://js.stripe.com"],
+	"style-src": ["'self'", "'unsafe-inline'"],
+	"img-src": [
+		"'self'",
+		"data:",
+		"blob:",
+		supabaseOrigin,
+		"https://*.gyazo.com",
+		"https://*.imgur.com",
+	],
+	"font-src": ["'self'", "data:"],
+	"connect-src": ["'self'", supabaseOrigin, "https://api.stripe.com"],
+	"frame-src": ["https://js.stripe.com", "https://hooks.stripe.com"],
+	"frame-ancestors": ["'none'"],
+	"form-action": ["'self'"],
+	"base-uri": ["'self'"],
+	"object-src": ["'none'"],
+	"report-uri": ["/api/csp-report"],
+};
+
+const contentSecurityPolicy = Object.entries(cspDirectives)
+	.map(([directive, values]) => `${directive} ${values.join(" ")}`)
+	.join("; ");
 
 const config: NextConfig = withPWA({
 	dest: "public",
@@ -42,8 +76,7 @@ const config: NextConfig = withPWA({
 	// 本番環境での最適化設定
 	compress: true,
 	poweredByHeader: false,
-	reactStrictMode: false, // 一時的に無効化（デバッグ用）
-	// Next.js 15では不要な設定のため削除
+	reactStrictMode: true,
 
 	// セキュリティヘッダーの設定
 	async headers() {
@@ -68,12 +101,24 @@ const config: NextConfig = withPWA({
 						value: "nosniff",
 					},
 					{
+						key: "X-Permitted-Cross-Domain-Policies",
+						value: "none",
+					},
+					{
+						key: "Strict-Transport-Security",
+						value: "max-age=63072000; includeSubDomains; preload",
+					},
+					{
 						key: "Referrer-Policy",
 						value: "strict-origin-when-cross-origin",
 					},
 					{
 						key: "Permissions-Policy",
 						value: "camera=(), microphone=(), geolocation=()",
+					},
+					{
+						key: "Content-Security-Policy-Report-Only",
+						value: contentSecurityPolicy,
 					},
 				],
 			},

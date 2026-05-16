@@ -193,7 +193,7 @@ export async function checkCSRFToken(request: NextRequest): Promise<boolean> {
  * CSRF保護が必要なパスかどうかを判定する。
  *
  * - `/api/*` はデフォルトで保護対象（一部例外あり）
- * - 例外: `/api/stripe/webhook`, `/api/health`, `/api/csrf-token`
+ * - 例外: `/api/stripe/webhook`, `/api/health`, `/api/csrf-token`, `/api/csp-report`
  * - Server Actions は Next.js のビルトインCSRF保護に委ねるため対象外
  *
  * @param pathname リクエストパス
@@ -201,7 +201,12 @@ export async function checkCSRFToken(request: NextRequest): Promise<boolean> {
  */
 export function requiresCSRFProtection(pathname: string): boolean {
 	if (pathname.startsWith("/api/")) {
-		const exemptPaths = ["/api/stripe/webhook", "/api/health", "/api/csrf-token"];
+		const exemptPaths = [
+			"/api/stripe/webhook",
+			"/api/health",
+			"/api/csrf-token",
+			"/api/csp-report",
+		];
 		// 完全一致または明示的なサブルート（`path + "/"`）のみを除外対象とする。
 		// 単純な startsWith だと "/api/csrf-tokenize" のような prefix 一致パスまで
 		// 誤って除外されてしまうため。
