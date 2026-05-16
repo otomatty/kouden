@@ -95,20 +95,6 @@ export async function purchaseKouden({
 				.single();
 			currentPrice = cp?.price || 0;
 		}
-		// ダウングレード・同額プランへの変更は二重支払いになるためブロック
-		if (existingKouden && currentPrice > 0 && plan.price <= currentPrice) {
-			logger.warn(
-				{
-					userId,
-					koudenId,
-					planCode,
-					planPrice: plan.price,
-					currentPrice,
-				},
-				"[WARN] purchaseKouden: ダウングレード/同額プランへの変更は許可されていません",
-			);
-			return { error: "現在のプランと同額または下位のプランには変更できません" };
-		}
 		// Retrieve Stripe secret key safely and initialize
 		const stripeSecret = process.env.STRIPE_SECRET_KEY;
 		if (!stripeSecret) {
@@ -123,11 +109,28 @@ export async function purchaseKouden({
 		) as Stripe.StripeConfig["apiVersion"];
 		const stripe = new Stripe(stripeSecret, { apiVersion: stripeApiVersion });
 		// 決済金額の算出
-		let amount = plan.price;
+		// 実効新プラン価格を先に確定（premium_full_support は expectedCount で動的に変動するため
+		// plan.price のみで比較すると正当なアップグレードを誤ブロックする可能性がある）
+		let effectiveNewPrice = plan.price;
 		if (planCode === "premium_full_support" && typeof expectedCount === "number") {
-			amount = calcSupportFee(expectedCount, plan.price);
+			effectiveNewPrice = calcSupportFee(expectedCount, plan.price);
+		}
+		// ダウングレード・同額プランへの変更は二重支払いになるためブロック（実効価格で比較）
+		if (existingKouden && currentPrice > 0 && effectiveNewPrice <= currentPrice) {
+			logger.warn(
+				{
+					userId,
+					koudenId,
+					planCode,
+					effectiveNewPrice,
+					currentPrice,
+				},
+				"[WARN] purchaseKouden: ダウングレード/同額プランへの変更は許可されていません",
+			);
+			return { error: "現在のプランと同額または下位のプランには変更できません" };
 		}
 		// 既存有料プランからのアップグレード時は差額のみ請求
+		let amount = effectiveNewPrice;
 		if (currentPrice > 0) {
 			amount = amount - currentPrice;
 		}
