@@ -35,6 +35,26 @@ describe("isValidIP", () => {
 		expect(isValidIP("hello")).toBe(false);
 		expect(isValidIP("")).toBe(false);
 	});
+
+	it("コロンを含むが不正な IPv6 を拒否する", () => {
+		// 3連コロンや過剰な :: は不正
+		expect(isValidIP("::::")).toBe(false);
+		expect(isValidIP("2001:::1")).toBe(false);
+		// 単独 `:` で始まる/終わるのは不正
+		expect(isValidIP(":1")).toBe(false);
+		expect(isValidIP("1:")).toBe(false);
+		// `::` を 2 箇所使うのは不正
+		expect(isValidIP("1::1::1")).toBe(false);
+		// セグメントが 4 桁を超えるのは不正
+		expect(isValidIP("12345::1")).toBe(false);
+		// 完全表記でセグメント数が足りないのは不正
+		expect(isValidIP("1:2:3:4:5:6:7")).toBe(false);
+	});
+
+	it("正規 IPv6 と省略表記の境界ケースを許可する", () => {
+		expect(isValidIP("::")).toBe(true);
+		expect(isValidIP("1:2:3:4:5:6:7:8")).toBe(true);
+	});
 });
 
 describe("getClientIPFromHeaders ヘッダー優先順位", () => {
@@ -42,7 +62,8 @@ describe("getClientIPFromHeaders ヘッダー優先順位", () => {
 		vi.unstubAllEnvs();
 	});
 
-	it("x-vercel-forwarded-for を最優先で採用する", () => {
+	it("Vercel 環境では x-vercel-forwarded-for を最優先で採用する", () => {
+		vi.stubEnv("VERCEL", "1");
 		const headers = buildHeaders({
 			"x-vercel-forwarded-for": "1.2.3.4",
 			"cf-connecting-ip": "5.6.7.8",
@@ -52,13 +73,31 @@ describe("getClientIPFromHeaders ヘッダー優先順位", () => {
 		expect(getClientIPFromHeaders(headers)).toBe("1.2.3.4");
 	});
 
-	it("Vercel ヘッダー欠落時は cf-connecting-ip を採用する", () => {
+	it("非 Vercel 環境では x-vercel-forwarded-for を無視する (詐称防止)", () => {
+		// VERCEL 未設定 + TRUSTED_PROXY_PROVIDER 未設定 → CDN 固有ヘッダは信頼しない
+		const headers = buildHeaders({
+			"x-vercel-forwarded-for": "9.9.9.9",
+			"x-forwarded-for": "1.2.3.4",
+		});
+		expect(getClientIPFromHeaders(headers)).toBe("1.2.3.4");
+	});
+
+	it("TRUSTED_PROXY_PROVIDER=cloudflare の場合のみ cf-connecting-ip を採用する", () => {
+		vi.stubEnv("TRUSTED_PROXY_PROVIDER", "cloudflare");
 		const headers = buildHeaders({
 			"cf-connecting-ip": "5.6.7.8",
 			"x-forwarded-for": "9.9.9.9",
 			"x-real-ip": "7.7.7.7",
 		});
 		expect(getClientIPFromHeaders(headers)).toBe("5.6.7.8");
+	});
+
+	it("非 Cloudflare 環境では cf-connecting-ip を無視する (詐称防止)", () => {
+		const headers = buildHeaders({
+			"cf-connecting-ip": "9.9.9.9",
+			"x-forwarded-for": "1.2.3.4",
+		});
+		expect(getClientIPFromHeaders(headers)).toBe("1.2.3.4");
 	});
 
 	it("信頼ヘッダーが無ければ x-forwarded-for を採用する", () => {

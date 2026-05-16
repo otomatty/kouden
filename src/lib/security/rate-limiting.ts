@@ -45,7 +45,15 @@ interface MemoryEntry {
 const memoryStore = new Map<string, MemoryEntry>();
 let memoryStoreWarned = false;
 
-function memoryCleanup(now: number): void {
+// 期限切れエントリの一括掃除は O(N) のためリクエスト毎には行わず、
+// 最後の掃除から `MEMORY_CLEANUP_INTERVAL_MS` 経過したときだけ走らせる。
+// (個別エントリの期限は `memoryIncrement` のアクセス時にもチェックする)
+const MEMORY_CLEANUP_INTERVAL_MS = 60_000;
+let lastMemoryCleanupAt = 0;
+
+function maybeMemoryCleanup(now: number): void {
+	if (now - lastMemoryCleanupAt < MEMORY_CLEANUP_INTERVAL_MS) return;
+	lastMemoryCleanupAt = now;
 	for (const [key, record] of memoryStore.entries()) {
 		if (record.resetTime <= now) {
 			memoryStore.delete(key);
@@ -58,7 +66,7 @@ function memoryIncrement(
 	config: RateLimitConfig,
 	now: number,
 ): { count: number; resetAt: number } {
-	memoryCleanup(now);
+	maybeMemoryCleanup(now);
 	const current = memoryStore.get(key);
 	if (!current || current.resetTime <= now) {
 		const resetAt = now + config.windowMs;
@@ -83,6 +91,10 @@ function readUpstashConfig(): UpstashConfig | null {
 	return { url, token };
 }
 
+// Upstash がスローダウンした場合にリクエスト全体を引きずらないよう、
+// 短いタイムアウトで打ち切ってインメモリにフォールバックさせる。
+const UPSTASH_FETCH_TIMEOUT_MS = 1000;
+
 async function upstashPipeline(
 	config: UpstashConfig,
 	commands: Array<Array<string | number>>,
@@ -94,8 +106,8 @@ async function upstashPipeline(
 			"Content-Type": "application/json",
 		},
 		body: JSON.stringify(commands),
-		// レート制限自体が落ちたら通過させたいので短いタイムアウトを期待
 		cache: "no-store",
+		signal: AbortSignal.timeout(UPSTASH_FETCH_TIMEOUT_MS),
 	});
 
 	if (!response.ok) {
@@ -104,6 +116,25 @@ async function upstashPipeline(
 	}
 
 	return (await response.json()) as unknown[];
+}
+
+interface UpstashResultEntry {
+	result?: unknown;
+	error?: string;
+}
+
+function readUpstashNumber(entry: unknown, fieldLabel: string): number | null {
+	if (typeof entry === "number") return entry;
+	if (typeof entry === "object" && entry !== null) {
+		const obj = entry as UpstashResultEntry;
+		if (typeof obj.error === "string" && obj.error.length > 0) {
+			// HTTP 200 でも個別コマンドが失敗する pipeline 仕様に対応。
+			// 例外を投げて呼び出し側のフォールバック (in-memory) に倒す。
+			throw new Error(`Upstash pipeline command failed (${fieldLabel}): ${obj.error}`);
+		}
+		if (typeof obj.result === "number") return obj.result;
+	}
+	return null;
 }
 
 async function upstashIncrement(
@@ -119,22 +150,8 @@ async function upstashIncrement(
 		["PTTL", key],
 	]);
 
-	const incrEntry = results[0] as { result?: number } | number | undefined;
-	const ttlEntry = results[2] as { result?: number } | number | undefined;
-
-	const count =
-		typeof incrEntry === "number"
-			? incrEntry
-			: typeof incrEntry?.result === "number"
-				? incrEntry.result
-				: 0;
-	const ttlMs =
-		typeof ttlEntry === "number"
-			? ttlEntry
-			: typeof ttlEntry?.result === "number"
-				? ttlEntry.result
-				: -1;
-
+	const count = readUpstashNumber(results[0], "INCR") ?? 0;
+	const ttlMs = readUpstashNumber(results[2], "PTTL") ?? -1;
 	const resetAt = ttlMs > 0 ? now + ttlMs : now + windowMs;
 	return { count, resetAt };
 }

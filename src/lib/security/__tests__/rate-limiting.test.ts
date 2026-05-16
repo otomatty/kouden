@@ -77,3 +77,62 @@ describe("rateLimit (in-memory fallback)", () => {
 		expect(b.success).toBe(true);
 	});
 });
+
+describe("rateLimit (Upstash failure fallback)", () => {
+	afterEach(() => {
+		vi.unstubAllEnvs();
+		vi.restoreAllMocks();
+	});
+
+	function stubUpstashEnv() {
+		vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://example.upstash.io");
+		vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "token");
+	}
+
+	it("Upstash が 500 を返した場合インメモリにフォールバックする", async () => {
+		stubUpstashEnv();
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () => new Response("boom", { status: 500 })),
+		);
+		const rateLimit = await freshRateLimit();
+		const req = buildRequest("/api/foo", { "x-forwarded-for": "1.2.3.4" });
+		const result = await rateLimit(req, { windowMs: 60_000, maxRequests: 2 });
+		expect(result.success).toBe(true);
+		expect(result.remainingRequests).toBe(1);
+	});
+
+	it("Upstash が pipeline 個別エラーを返した場合もフォールバックする", async () => {
+		stubUpstashEnv();
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(
+				async () =>
+					new Response(JSON.stringify([{ error: "ERR boom" }, { result: 1 }, { result: 100 }]), {
+						status: 200,
+						headers: { "content-type": "application/json" },
+					}),
+			),
+		);
+		const rateLimit = await freshRateLimit();
+		const req = buildRequest("/api/foo", { "x-forwarded-for": "1.2.3.4" });
+		const result = await rateLimit(req, { windowMs: 60_000, maxRequests: 2 });
+		expect(result.success).toBe(true);
+		expect(result.remainingRequests).toBe(1);
+	});
+
+	it("Upstash 通信が AbortError でタイムアウトした場合もフォールバックする", async () => {
+		stubUpstashEnv();
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () => {
+				throw new DOMException("aborted", "AbortError");
+			}),
+		);
+		const rateLimit = await freshRateLimit();
+		const req = buildRequest("/api/foo", { "x-forwarded-for": "1.2.3.4" });
+		const result = await rateLimit(req, { windowMs: 60_000, maxRequests: 2 });
+		expect(result.success).toBe(true);
+		expect(result.remainingRequests).toBe(1);
+	});
+});
