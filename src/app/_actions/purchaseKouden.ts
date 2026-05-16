@@ -53,11 +53,24 @@ export async function purchaseKouden({
 			return { error: "プランが見つかりません" };
 		}
 		// 既存のプラン価格取得（アップグレード時の差額計算用）兼 所有者チェック
-		const { data: existingKouden } = await supabase
+		const { data: existingKouden, error: existingKoudenError } = await supabase
 			.from("koudens")
 			.select("plan_id, owner_id, created_by")
 			.eq("id", koudenId)
 			.maybeSingle();
+		// 不正な UUID や DB エラーで所有者チェックを fail-open させない
+		if (existingKoudenError) {
+			logger.error(
+				{
+					userId,
+					koudenId,
+					error: existingKoudenError.message,
+					code: existingKoudenError.code,
+				},
+				"[ERROR] purchaseKouden: 香典帳取得失敗",
+			);
+			return { error: "香典帳の取得に失敗しました" };
+		}
 		// 既存の香典帳の場合は所有者チェックを実施（新規作成フローでは存在しない）
 		if (existingKouden) {
 			const isOwner = existingKouden.owner_id === userId || existingKouden.created_by === userId;
@@ -82,6 +95,20 @@ export async function purchaseKouden({
 				.single();
 			currentPrice = cp?.price || 0;
 		}
+		// ダウングレード・同額プランへの変更は二重支払いになるためブロック
+		if (existingKouden && currentPrice > 0 && plan.price <= currentPrice) {
+			logger.warn(
+				{
+					userId,
+					koudenId,
+					planCode,
+					planPrice: plan.price,
+					currentPrice,
+				},
+				"[WARN] purchaseKouden: ダウングレード/同額プランへの変更は許可されていません",
+			);
+			return { error: "現在のプランと同額または下位のプランには変更できません" };
+		}
 		// Retrieve Stripe secret key safely and initialize
 		const stripeSecret = process.env.STRIPE_SECRET_KEY;
 		if (!stripeSecret) {
@@ -100,7 +127,8 @@ export async function purchaseKouden({
 		if (planCode === "premium_full_support" && typeof expectedCount === "number") {
 			amount = calcSupportFee(expectedCount, plan.price);
 		}
-		if (currentPrice && plan.price > currentPrice) {
+		// 既存有料プランからのアップグレード時は差額のみ請求
+		if (currentPrice > 0) {
 			amount = amount - currentPrice;
 		}
 		// 金額の妥当性チェック（差額計算で負になる/NaN/Stripe JPY 最小額 50 円未満を弾く）

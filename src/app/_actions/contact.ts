@@ -218,8 +218,15 @@ export async function uploadContactAttachment(requestId: string, file: File) {
 	}
 
 	// ファイル名をサニタイズ（path traversal 対策）
-	const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+	// 拡張子は維持しつつベース名から不正文字を除去し、結果が空/記号だけなら "file" にフォールバック
 	const timestamp = Date.now();
+	const lastDot = file.name.lastIndexOf(".");
+	const rawBase = lastDot > 0 ? file.name.slice(0, lastDot) : file.name;
+	const rawExt = lastDot > 0 ? file.name.slice(lastDot) : "";
+	const sanitizedBase = rawBase.replace(/[^a-zA-Z0-9._-]/g, "_");
+	const safeBase = /[a-zA-Z0-9]/.test(sanitizedBase) ? sanitizedBase : "file";
+	const safeExt = rawExt.replace(/[^a-zA-Z0-9.]/g, "");
+	const safeFileName = `${safeBase}${safeExt}`;
 	const filePath = `requests/${requestId}/${timestamp}_${safeFileName}`;
 	// ストレージにアップロード
 	const { error: uploadError } = await supabase.storage
