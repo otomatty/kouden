@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
-import Stripe from "stripe";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { exportReceiptToPdf } from "@/app/_actions/exportReceipt";
 import logger from "@/lib/logger";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { NextResponse } from "next/server";
+import Stripe from "stripe";
+import { koudenMetadataSchema } from "./schema";
 
 export const runtime = "nodejs";
 
@@ -39,22 +40,15 @@ export async function POST(req: Request) {
 
 	if (event.type === "checkout.session.completed") {
 		const session = event.data.object as Stripe.Checkout.Session;
-		const metadata = session.metadata as Record<string, string>;
-		const koudenId = metadata.koudenId;
-		if (!koudenId) {
-			logger.error({ metadata }, "Missing metadata.koudenId");
+		const parsed = koudenMetadataSchema.safeParse(session.metadata);
+		if (!parsed.success) {
+			logger.error(
+				{ metadata: session.metadata, issues: parsed.error.issues },
+				"Invalid checkout session metadata",
+			);
 			return new NextResponse("Invalid webhook metadata", { status: 400 });
 		}
-		const planCode = metadata.planCode;
-		if (!planCode) {
-			logger.error({ metadata }, "Missing metadata.planCode");
-			return new NextResponse("Invalid webhook metadata", { status: 400 });
-		}
-		const userId = metadata.userId;
-		if (!userId) {
-			logger.error({ metadata }, "Missing metadata.userId");
-			return new NextResponse("Invalid webhook metadata", { status: 400 });
-		}
+		const { koudenId, planCode, userId, title, description, expectedCount } = parsed.data;
 
 		const amountTotal = session.amount_total;
 		if (amountTotal == null) {
@@ -74,9 +68,9 @@ export async function POST(req: Request) {
 				p_kouden_id: koudenId,
 				p_user_id: userId,
 				p_plan_code: planCode,
-				p_title: metadata.title || "",
-				p_description: metadata.description || "",
-				p_expected_count: metadata.expectedCount ? Number(metadata.expectedCount) : null,
+				p_title: title,
+				p_description: description,
+				p_expected_count: expectedCount ? Number(expectedCount) : null,
 				p_amount_paid: amountTotal,
 				p_stripe_session_id: session.id,
 			},

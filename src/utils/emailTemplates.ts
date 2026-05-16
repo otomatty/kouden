@@ -1,10 +1,15 @@
+import { escapeHtml, sanitizeHttpsUrl } from "./html-escape";
+
 /**
  * Returns HTML string for invitation email.
  * @param title Title of the Kouden
- * @param link Invitation URL
+ * @param link Invitation URL (must start with `https://`)
  */
 export function generateInvitationEmailHtml(title: string, link: string): string {
 	const homepage = process.env.NEXT_PUBLIC_APP_URL ?? "https://kouden-app.com";
+	const safeTitle = escapeHtml(title);
+	const safeLink = sanitizeHttpsUrl(link);
+	const safeHomepage = sanitizeHttpsUrl(homepage);
 	return `
   <!DOCTYPE html>
   <html lang="ja">
@@ -72,19 +77,19 @@ export function generateInvitationEmailHtml(title: string, link: string): string
   <body>
     <div class="container">
       <div class="header">
-        <a href="${homepage}" class="logo">香典帳アプリ</a>
+        <a href="${safeHomepage}" class="logo">香典帳アプリ</a>
       </div>
       <div class="description">
         香典帳アプリは、デジタル化された香典帳です。香典の情報を簡単に共有・管理できます。
       </div>
-      <h1>「${title}」へのご招待</h1>
+      <h1>「${safeTitle}」へのご招待</h1>
       <p>下記のボタンから参加してください：</p>
       <div style="text-align: center;">
-        <a href="${link}" class="btn">参加する</a>
+        <a href="${safeLink}" class="btn">参加する</a>
       </div>
       <div class="footer">
         <p>このメールに心当たりがない場合は、破棄してください。</p>
-        <p><a href="${homepage}">${homepage}</a></p>
+        <p><a href="${safeHomepage}">${safeHomepage}</a></p>
       </div>
     </div>
   </body>
@@ -92,8 +97,16 @@ export function generateInvitationEmailHtml(title: string, link: string): string
   `;
 }
 
+/**
+ * Returns HTML string for magic link login email.
+ * @param email Recipient email address
+ * @param link Login URL (must start with `https://`)
+ */
 export function generateMagicLinkEmailHtml(email: string, link: string): string {
 	const homepage = process.env.NEXT_PUBLIC_APP_URL ?? "https://kouden-app.com";
+	const safeEmail = escapeHtml(email);
+	const safeLink = sanitizeHttpsUrl(link);
+	const safeHomepage = sanitizeHttpsUrl(homepage);
 	return `
   <!DOCTYPE html>
   <html lang="ja">
@@ -159,19 +172,19 @@ export function generateMagicLinkEmailHtml(email: string, link: string): string 
   <body>
     <div class="container">
       <div class="header">
-        <a href="${homepage}" class="logo">香典帳アプリ</a>
+        <a href="${safeHomepage}" class="logo">香典帳アプリ</a>
       </div>
       <div class="description">
-        <p>${email} 様、こちらはログインリンクです。</p>
+        <p>${safeEmail} 様、こちらはログインリンクです。</p>
       </div>
       <h1>香典帳アプリへのログイン</h1>
       <p>下記のボタンからログインしてください：</p>
       <div style="text-align: center;">
-        <a href="${link}" class="btn">ログイン</a>
+        <a href="${safeLink}" class="btn">ログイン</a>
       </div>
       <div class="footer">
         <p>このメールに心当たりがない場合は、破棄してください。</p>
-        <p><a href="${homepage}">${homepage}</a></p>
+        <p><a href="${safeHomepage}">${safeHomepage}</a></p>
       </div>
     </div>
   </body>
