@@ -7,7 +7,13 @@ import withPWA from "next-pwa";
 const supabaseOrigin =
 	process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://tcqnsslsaizqwjuyvoyu.supabase.co";
 
-const isProduction = process.env.NODE_ENV === "production";
+// Vercel preview deploy も `NODE_ENV=production` でビルドされるため、
+// HSTS のような「長期にブラウザへ焼き込まれる」ヘッダーは
+// 本番デプロイ (`VERCEL_ENV=production`) でのみ送りたい。
+// Vercel 以外 (ローカル / Cloudflare 等) では NODE_ENV にフォールバックする。
+const isProductionDeploy = process.env.VERCEL_ENV
+	? process.env.VERCEL_ENV === "production"
+	: process.env.NODE_ENV === "production";
 
 // Reporting API のグループ名。CSP の `report-to` ディレクティブと
 // レスポンスヘッダー `Reporting-Endpoints` の双方で参照する。
@@ -68,9 +74,9 @@ const securityHeaders: { key: string; value: string }[] = [
 	{ key: "Content-Security-Policy-Report-Only", value: contentSecurityPolicy },
 ];
 
-// HSTS は HTTPS が保証される本番ビルドでのみ送信する。
-// Vercel preview など他環境で誤って長期 HSTS を焼き付けないため。
-if (isProduction) {
+// HSTS は HTTPS が保証される本番デプロイでのみ送信する。
+// preview / staging のドメインにブラウザを長期間ピン留めしないように。
+if (isProductionDeploy) {
 	securityHeaders.splice(securityHeaders.length - 1, 0, {
 		key: "Strict-Transport-Security",
 		value: "max-age=63072000; includeSubDomains; preload",

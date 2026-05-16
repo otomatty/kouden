@@ -58,7 +58,12 @@ function sanitizeUrl(value: unknown): string | undefined {
 	if (typeof value !== "string" || value.length === 0) return undefined;
 	try {
 		const url = new URL(value);
-		return `${url.origin}${url.pathname}`;
+		// http(s) 以外 (data:, blob:, javascript: 等) は本体にペイロードが
+		// 含まれうるためプロトコルだけに丸める。
+		if (url.protocol === "http:" || url.protocol === "https:") {
+			return `${url.origin}${url.pathname}`;
+		}
+		return url.protocol;
 	} catch {
 		// 相対 URL や `inline` / `eval` など非 URL 文字列は先頭だけ残す。
 		return value.slice(0, 200);
@@ -130,8 +135,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 		if (!raw) {
 			return new NextResponse(null, { status: 204 });
 		}
-		if (raw.length > MAX_CSP_REPORT_BYTES) {
-			logger.warn({ size: raw.length }, "CSP report payload too large");
+		// `raw.length` は UTF-16 単位の文字数なのでマルチバイト混在ペイロード
+		// では実バイト数とズレる。実バイト長 (UTF-8) で判定する。
+		const rawBytes = Buffer.byteLength(raw, "utf8");
+		if (rawBytes > MAX_CSP_REPORT_BYTES) {
+			logger.warn({ size: rawBytes }, "CSP report payload too large");
 			return new NextResponse(null, { status: 204 });
 		}
 
