@@ -5,9 +5,9 @@
  * @module return-records/pagination
  */
 
+import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import type { ReturnEntryRecordWithKoudenEntry } from "@/types/return-records/return-records";
-import logger from "@/lib/logger";
 
 /**
  * 香典帳IDに紐づく返礼情報をページング付きで取得する（無限スクロール用）
@@ -32,34 +32,21 @@ export async function getReturnEntriesByKoudenPaginated(
 	try {
 		const supabase = await createClient();
 
-		// 最初に香典エントリーIDを取得
-		const { data: koudenEntries, error: entriesError } = await supabase
-			.from("kouden_entries")
-			.select("id")
-			.eq("kouden_id", koudenId);
-
-		if (entriesError) {
-			throw entriesError;
-		}
-
-		if (!koudenEntries || koudenEntries.length === 0) {
-			return { data: [], hasMore: false };
-		}
-
-		const entryIds = koudenEntries.map((entry) => entry.id);
-
+		// kouden_entries を INNER JOIN し、香典帳IDで絞り込む。
+		// 検索フィルタはJOIN先のカラムに対して同じクエリ内で適用するため、
+		// 事前にエントリーIDを取得する追加クエリは不要となる。
 		let query = supabase
 			.from("return_entry_records")
 			.select(`
 				*,
-				kouden_entries (
+				kouden_entries!inner (
 					kouden_id,
 					name,
 					organization,
 					position
 				)
 			`)
-			.in("kouden_entry_id", entryIds)
+			.eq("kouden_entries.kouden_id", koudenId)
 			.order("created_at", { ascending: false })
 			.limit(limit + 1); // 次のページがあるかチェックするため+1
 
@@ -73,25 +60,12 @@ export async function getReturnEntriesByKoudenPaginated(
 			query = query.eq("return_status", filters.status);
 		}
 
-		// 検索フィルター（エントリー名または組織名）は最初のクエリで処理する
+		// 検索フィルター（JOIN先テーブルのカラムに対して直接 OR を適用）
 		if (filters?.search) {
-			// 検索条件がある場合は、先に絞り込んだエントリーIDを取得し直す
-			const { data: filteredEntries, error: filterError } = await supabase
-				.from("kouden_entries")
-				.select("id")
-				.eq("kouden_id", koudenId)
-				.or(`name.ilike.%${filters.search}%,organization.ilike.%${filters.search}%`);
-
-			if (filterError) {
-				throw filterError;
-			}
-
-			const filteredIds = filteredEntries?.map((entry) => entry.id) || [];
-			if (filteredIds.length === 0) {
-				return { data: [], hasMore: false };
-			}
-
-			query = query.in("kouden_entry_id", filteredIds);
+			const search = `%${filters.search}%`;
+			query = query.or(`name.ilike.${search},organization.ilike.${search}`, {
+				referencedTable: "kouden_entries",
+			});
 		}
 
 		const { data, error } = await query;

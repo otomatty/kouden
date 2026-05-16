@@ -1,6 +1,6 @@
-import { OfferingView } from "./_components";
+import { getEntriesForSelector } from "@/app/_actions/entries";
 import { getOfferings } from "@/app/_actions/offerings";
-import { getEntries } from "@/app/_actions/entries";
+import { OfferingView } from "./_components";
 
 interface OfferingsPageProps {
 	params: Promise<{ id: string }>;
@@ -13,11 +13,10 @@ interface OfferingsPageProps {
  */
 export default async function OfferingsPage({ params }: OfferingsPageProps) {
 	const { id: koudenId } = await params;
-	const [offerings, entriesResult] = await Promise.all([
+	const [offerings, entries] = await Promise.all([
 		getOfferings(koudenId),
-		getEntries(koudenId, 1, Number.MAX_SAFE_INTEGER),
+		getEntriesForSelector(koudenId),
 	]);
-	const { entries } = entriesResult;
 
 	return (
 		<div className="mt-4">
