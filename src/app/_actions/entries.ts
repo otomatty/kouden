@@ -2,6 +2,7 @@
 
 import { cacheTags } from "@/lib/cache-tags";
 import logger from "@/lib/logger";
+import { buildOrIlikePattern, parseEntrySortValue } from "@/lib/security/search-sanitize";
 import { createClient } from "@/lib/supabase/server";
 import type { CellValue } from "@/types/data-table/table";
 import type {
@@ -210,7 +211,7 @@ export async function getEntries(
 		}
 		// Apply global search filter
 		if (searchValue) {
-			const search = `%${searchValue}%`;
+			const search = buildOrIlikePattern(searchValue);
 			query = query.or(
 				`name.ilike.${search},address.ilike.${search},organization.ilike.${search},position.ilike.${search}`,
 			);
@@ -222,14 +223,10 @@ export async function getEntries(
 		if (dateTo) {
 			query = query.lte("created_at", dateTo);
 		}
-		// Apply sorting
-		if (sortValue && sortValue !== "default") {
-			const [field = "created_at", direction = "desc"] = sortValue.split("_");
-			const ascending = direction === "asc";
+		// Apply sorting (sortValue は信頼できないユーザー入力のためホワイトリスト経由で解決)
+		{
+			const { field, ascending } = parseEntrySortValue(sortValue);
 			query = query.order(field, { ascending });
-		} else {
-			// Default sorting by created_at desc
-			query = query.order("created_at", { ascending: false });
 		}
 		const { data: rawEntries, count, error: entriesError } = await query.range(from, to);
 		const entries = rawEntries ?? [];
@@ -342,7 +339,7 @@ export async function getEntriesForAdmin(
 		}
 		// Apply global search filter
 		if (searchValue) {
-			const search = `%${searchValue}%`;
+			const search = buildOrIlikePattern(searchValue);
 			query = query.or(
 				`name.ilike.${search},address.ilike.${search},organization.ilike.${search},position.ilike.${search}`,
 			);
@@ -354,14 +351,10 @@ export async function getEntriesForAdmin(
 		if (dateTo) {
 			query = query.lte("created_at", dateTo);
 		}
-		// Apply sorting
-		if (sortValue && sortValue !== "default") {
-			const [field = "created_at", direction = "desc"] = sortValue.split("_");
-			const ascending = direction === "asc";
+		// Apply sorting (sortValue は信頼できないユーザー入力のためホワイトリスト経由で解決)
+		{
+			const { field, ascending } = parseEntrySortValue(sortValue);
 			query = query.order(field, { ascending });
-		} else {
-			// Default sorting by created_at desc
-			query = query.order("created_at", { ascending: false });
 		}
 		const { data: rawEntries, count, error: entriesError } = await query.range(from, to);
 		const entries = rawEntries ?? [];

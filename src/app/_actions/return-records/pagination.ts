@@ -6,6 +6,7 @@
  */
 
 import logger from "@/lib/logger";
+import { buildOrIlikePattern } from "@/lib/security/search-sanitize";
 import { createClient } from "@/lib/supabase/server";
 import type { ReturnEntryRecordWithKoudenEntry } from "@/types/return-records/return-records";
 
@@ -62,8 +63,9 @@ export async function getReturnEntriesByKoudenPaginated(
 		}
 
 		// 検索フィルター（JOIN先テーブルのカラムに対して直接 OR を適用）
+		// PostgREST .or() に渡す値は区切り文字と ILIKE ワイルドカードをサニタイズする
 		if (filters?.search) {
-			const search = `%${filters.search}%`;
+			const search = buildOrIlikePattern(filters.search);
 			query = query.or(`name.ilike.${search},organization.ilike.${search}`, {
 				referencedTable: "kouden_entries",
 			});
