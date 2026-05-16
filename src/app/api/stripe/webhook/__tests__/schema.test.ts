@@ -108,6 +108,24 @@ describe("koudenMetadataSchema", () => {
 		);
 	});
 
+	it("expectedCount が MAX_SAFE_INTEGER (2^53-1) 境界で成功する", () => {
+		const result = koudenMetadataSchema.safeParse({
+			...validBase,
+			expectedCount: String(Number.MAX_SAFE_INTEGER),
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("expectedCount が MAX_SAFE_INTEGER を超える場合は失敗する (精度劣化防止)", () => {
+		expect(
+			koudenMetadataSchema.safeParse({ ...validBase, expectedCount: "9007199254740992" }).success,
+		).toBe(false);
+		expect(
+			koudenMetadataSchema.safeParse({ ...validBase, expectedCount: "99999999999999999999" })
+				.success,
+		).toBe(false);
+	});
+
 	it("必須項目が欠けると失敗する", () => {
 		const { koudenId: _koudenId, ...withoutKoudenId } = validBase;
 		expect(koudenMetadataSchema.safeParse(withoutKoudenId).success).toBe(false);

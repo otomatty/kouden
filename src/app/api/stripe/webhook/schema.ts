@@ -17,7 +17,16 @@ export const koudenMetadataSchema = z.object({
 	// purchaseKouden は未指定時に "" を送るため空文字を許容する。
 	// route.ts の `expectedCount ? Number(expectedCount) : null` で
 	// 空文字は null として扱われる。
-	expectedCount: z.string().regex(/^\d*$/, "expectedCount must contain digits only").optional(),
+	// 桁数無制限だと Number() 変換時に MAX_SAFE_INTEGER (2^53-1) を超えて
+	// 精度劣化するため、安全整数範囲内であることを refine で確認する。
+	expectedCount: z
+		.string()
+		.regex(/^\d*$/, "expectedCount must contain digits only")
+		.refine(
+			(value) => value === "" || Number.isSafeInteger(Number(value)),
+			"expectedCount must be empty or within JS safe integer range",
+		)
+		.optional(),
 });
 
 export type KoudenCheckoutMetadata = z.infer<typeof koudenMetadataSchema>;

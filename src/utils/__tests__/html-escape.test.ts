@@ -71,6 +71,22 @@ describe("sanitizeHttpsUrl", () => {
 		expect(sanitizeHttpsUrl("http://example.com")).toBe("#");
 	});
 
+	it("localhost プレフィックス偽装 (localhost.evil.com) は # にフォールバックする", () => {
+		process.env.NODE_ENV = "development";
+		expect(sanitizeHttpsUrl("http://localhost.evil.com/path")).toBe("#");
+	});
+
+	it("localhost プレフィックス偽装 (localhost@evil.com) は # にフォールバックする", () => {
+		process.env.NODE_ENV = "development";
+		expect(sanitizeHttpsUrl("http://localhost@evil.com/path")).toBe("#");
+	});
+
+	it("http://localhost (ポートなし) は許可する", () => {
+		process.env.NODE_ENV = "development";
+		expect(sanitizeHttpsUrl("http://localhost")).toBe("http://localhost");
+		expect(sanitizeHttpsUrl("http://localhost/path")).toBe("http://localhost/path");
+	});
+
 	it("javascript: スキームを # にフォールバックする (XSS 防止)", () => {
 		expect(sanitizeHttpsUrl("javascript:alert(1)")).toBe("#");
 	});

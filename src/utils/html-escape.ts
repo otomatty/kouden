@@ -22,8 +22,15 @@ export function escapeHtml(s: string): string {
  */
 export function sanitizeHttpsUrl(url: string): string {
 	const isHttps = url.startsWith("https://");
+	// `http://localhost` のプレフィックス一致だけだと
+	// `http://localhost.evil.com` や `http://localhost@evil.com` のような
+	// ホスト名偽装が通ってしまうため、続く文字が `:` (port) / `/` (path) / 文字列終端
+	// のいずれかであることをもって「真のホスト localhost」と判定する。
 	const isDevLocalhost =
-		process.env.NODE_ENV === "development" && url.startsWith("http://localhost");
+		process.env.NODE_ENV === "development" &&
+		(url === "http://localhost" ||
+			url.startsWith("http://localhost:") ||
+			url.startsWith("http://localhost/"));
 	const safe = isHttps || isDevLocalhost ? url : "#";
 	return escapeHtml(safe);
 }
