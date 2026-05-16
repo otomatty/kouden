@@ -1,17 +1,23 @@
 "use server";
 
+import { cacheTags } from "@/lib/cache-tags";
+import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
+import { toCamelCase, toSnakeCase } from "@/store/telegrams";
 import type { CellValue } from "@/types/data-table/table";
+import type { AttendanceType, EntryResponse } from "@/types/entries";
 import type {
+	CreateTelegramInput,
 	Telegram,
 	TelegramRow,
-	CreateTelegramInput,
 	UpdateTelegramInput,
 } from "@/types/telegrams";
-import { toCamelCase, toSnakeCase } from "@/store/telegrams";
-import type { EntryResponse, AttendanceType } from "@/types/entries";
-import logger from "@/lib/logger";
+import { revalidatePath, revalidateTag } from "next/cache";
+
+function revalidateTelegramsCaches(koudenId: string) {
+	revalidatePath(`/koudens/${koudenId}`, "layout");
+	revalidateTag(cacheTags.telegrams(koudenId));
+}
 
 // 弔電の取得（単一）
 export async function getTelegram(id: string) {
@@ -78,7 +84,7 @@ export async function createTelegram(
 			.single();
 
 		if (error) throw error;
-		revalidatePath("/koudens/[id]", "page");
+		revalidateTelegramsCaches(input.koudenId);
 		return toCamelCase(data as TelegramRow);
 	} catch (error) {
 		logger.error(
@@ -106,7 +112,7 @@ export async function updateTelegram(id: string, input: UpdateTelegramInput): Pr
 			.single();
 
 		if (error) throw error;
-		revalidatePath("/koudens/[id]", "page");
+		revalidateTelegramsCaches(data.kouden_id);
 		return toCamelCase(data as TelegramRow);
 	} catch (error) {
 		logger.error(
@@ -129,7 +135,7 @@ export async function deleteTelegram(id: string, koudenId: string): Promise<void
 		const { error } = await supabase.from("telegrams").delete().eq("id", id);
 
 		if (error) throw error;
-		revalidatePath(`/koudens/${koudenId}`);
+		revalidateTelegramsCaches(koudenId);
 	} catch (error) {
 		logger.error(
 			{
@@ -160,9 +166,7 @@ export async function deleteTelegrams(ids: string[], koudenId: string): Promise<
 		throw new Error("弔電の一括削除に失敗しました");
 	}
 
-	Promise.resolve().then(() => {
-		revalidatePath(`/koudens/${koudenId}`, "page");
-	});
+	revalidateTelegramsCaches(koudenId);
 }
 
 // セル単位の更新用に最適化した関数
@@ -220,9 +224,7 @@ export async function updateTelegramField(
 
 		const camelCaseResult = toCamelCase(updatedData as TelegramRow);
 
-		Promise.resolve().then(() => {
-			revalidatePath(`/koudens/${updatedData.kouden_id}`);
-		});
+		revalidateTelegramsCaches(updatedData.kouden_id);
 
 		return camelCaseResult;
 	} catch (error) {
