@@ -1,8 +1,8 @@
 "use client";
 
+import { BarChart, BarChart2, CheckCircle, FileText, Filter } from "lucide-react";
 import type React from "react";
-import { ScenarioVideoSection, type Scenario } from "../../_components/ScenarioVideoSection";
-import { BarChart2, FileText, CheckCircle, Filter, BarChart } from "lucide-react";
+import { type Scenario, ScenarioVideoSection } from "../../_components/scenario-video-section";
 
 const scenarios: Scenario[] = [
 	{
@@ -35,6 +35,6 @@ const scenarios: Scenario[] = [
 	},
 ];
 
-export default function ScenarioVideoWrapper() {
+export function ScenarioVideoWrapper() {
 	return <ScenarioVideoSection scenarios={scenarios} />;
 }

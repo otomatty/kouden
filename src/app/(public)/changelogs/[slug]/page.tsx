@@ -1,7 +1,7 @@
 import { ChangelogNavigation } from "@/components/changelogs/changelog-navigation";
 import { BackLink } from "@/components/custom/back-link";
 import { Badge } from "@/components/ui/badge";
-import Container from "@/components/ui/container";
+import { Container } from "@/components/ui/container";
 import { getChangelogBySlug, getChangelogNavigation } from "@/lib/changelogs";
 import { mdxOptions } from "@/lib/mdx";
 import { mdxComponents } from "@/lib/mdx-components";

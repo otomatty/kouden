@@ -1,9 +1,9 @@
-import type { Metadata } from "next";
-import { checkKoudenPermission } from "@/app/_actions/permissions";
-import ClientProviders from "@/components/providers/ClientProviders";
 import { getKouden, getKoudenWithPlan } from "@/app/_actions/koudens/read";
+import { checkKoudenPermission } from "@/app/_actions/permissions";
+import { ClientProviders } from "@/components/providers/client-providers";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import KoudenHeader from "../../koudens/[id]/_components/_common/kouden-header";
+import { KoudenHeader } from "../../koudens/[id]/_components/_common/kouden-header";
 
 export const metadata: Metadata = {
 	title: "プラン購入 - 香典帳アプリ",

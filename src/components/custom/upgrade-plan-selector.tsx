@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { PlanSelector } from "@/components/custom/plan-selector";
 import { purchaseKouden } from "@/app/_actions/purchaseKouden";
+import { PlanSelector } from "@/components/custom/plan-selector";
+import { Button } from "@/components/ui/button";
 import type { Plan } from "@/types/plan-selector";
+import { useState } from "react";
 
 interface UpgradePlanSelectorProps {
 	/** 香典帳ID */
@@ -29,7 +29,7 @@ export function UpgradePlanSelector({
 }: UpgradePlanSelectorProps) {
 	const [selectedPlanCode, setSelectedPlanCode] = useState<string>("");
 	const [expectedCount, setExpectedCount] = useState<number>(0);
-	const [loading, setLoading] = useState(false);
+	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
 	const selectedPlan = plans.find((plan) => plan.code === selectedPlanCode);
@@ -39,7 +39,7 @@ export function UpgradePlanSelector({
 		if (!canPurchase) return;
 
 		setError(null);
-		setLoading(true);
+		setIsLoading(true);
 
 		try {
 			const result = await purchaseKouden({
@@ -63,7 +63,7 @@ export function UpgradePlanSelector({
 			console.error("[ERROR] 購入エラー:", e);
 			setError("購入処理中にエラーが発生しました");
 		} finally {
-			setLoading(false);
+			setIsLoading(false);
 		}
 	};
 
@@ -85,8 +85,8 @@ export function UpgradePlanSelector({
 				mode="upgrade"
 				onPlanChange={setSelectedPlanCode}
 				onExpectedCountChange={setExpectedCount}
-				loading={loading}
-				disabled={loading}
+				loading={isLoading}
+				disabled={isLoading}
 			/>
 
 			{/* 購入ボタン */}
@@ -109,11 +109,11 @@ export function UpgradePlanSelector({
 					<div className="flex-shrink-0">
 						<Button
 							onClick={handlePurchase}
-							disabled={loading || !canPurchase}
+							disabled={isLoading || !canPurchase}
 							size="lg"
 							className="w-full sm:w-auto"
 						>
-							{loading ? "処理中..." : "このプランを購入する"}
+							{isLoading ? "処理中..." : "このプランを購入する"}
 						</Button>
 					</div>
 				</div>

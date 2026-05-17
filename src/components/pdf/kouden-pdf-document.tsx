@@ -1,7 +1,7 @@
-import type React from "react";
 import type { KoudenData } from "@/types/entries";
-import { Document, Page, View, Text } from "@react-pdf/renderer";
-import styles from "./pdfStyles";
+import { Document, Page, Text, View } from "@react-pdf/renderer";
+import type React from "react";
+import { styles } from "./pdfStyles";
 
 interface KoudenPdfDocumentProps {
 	data: KoudenData;
@@ -54,7 +54,7 @@ function wrapByLength(text: string, maxChars: number): string[] {
 	return lines;
 }
 
-const KoudenPdfDocument: React.FC<KoudenPdfDocumentProps> = ({ data }) => (
+export const KoudenPdfDocument: React.FC<KoudenPdfDocumentProps> = ({ data }) => (
 	<Document>
 		<Page size="A4" orientation="landscape" style={styles.page}>
 			{/* ヘッダー */}
@@ -120,5 +120,3 @@ const KoudenPdfDocument: React.FC<KoudenPdfDocumentProps> = ({ data }) => (
 		</Page>
 	</Document>
 );
-
-export default KoudenPdfDocument;

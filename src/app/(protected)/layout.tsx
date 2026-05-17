@@ -1,16 +1,16 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
-import { ensureProfile } from "@/app/_actions/auth";
 import { isAdmin } from "@/app/_actions/admin/permissions";
+import { ensureProfile } from "@/app/_actions/auth";
+import { getNotifications } from "@/app/_actions/notifications";
 import { getUserSettings } from "@/app/_actions/settings";
-import { InitializeGuideMode } from "@/components/providers/initialize-guide-mode";
+import { LoadingProvider } from "@/components/custom/loading-provider";
 import { TourGuide } from "@/components/custom/tour-guide";
 import { WelcomeTourInitializer } from "@/components/custom/tour-guide/welcome-tour-initializer";
-import { LoadingProvider } from "@/components/custom/loading-provider";
+import { InitializeGuideMode } from "@/components/providers/initialize-guide-mode";
 import { Toaster } from "@/components/ui/sonner";
+import { createClient } from "@/lib/supabase/server";
 import { Provider } from "jotai";
-import { getNotifications } from "@/app/_actions/notifications";
-import ProtectedClientLayout from "./ProtectedClientLayout";
+import { redirect } from "next/navigation";
+import { ProtectedClientLayout } from "./protected-client-layout";
 
 // Version fetched from environment variable
 const version = process.env.NEXT_PUBLIC_APP_VERSION ?? "";

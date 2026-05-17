@@ -1,7 +1,7 @@
 import { BackLink } from "@/components/custom/back-link";
 import { MilestoneNavigation } from "@/components/milestones/milestone-navigation";
 import { Badge } from "@/components/ui/badge";
-import Container from "@/components/ui/container";
+import { Container } from "@/components/ui/container";
 import { Progress } from "@/components/ui/progress";
 import { mdxOptions } from "@/lib/mdx";
 import { mdxComponents } from "@/lib/mdx-components";

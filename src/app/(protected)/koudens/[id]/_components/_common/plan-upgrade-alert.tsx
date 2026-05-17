@@ -1,8 +1,8 @@
-import React from "react";
-import Link from "next/link";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { X } from "lucide-react";
+import Link from "next/link";
+import React from "react";
 
 interface PlanUpgradeAlertProps {
 	remainingDays: number;
@@ -10,11 +10,7 @@ interface PlanUpgradeAlertProps {
 	onClose: () => void;
 }
 
-export default function PlanUpgradeAlert({
-	remainingDays,
-	koudenId,
-	onClose,
-}: PlanUpgradeAlertProps) {
+export function PlanUpgradeAlert({ remainingDays, koudenId, onClose }: PlanUpgradeAlertProps) {
 	return (
 		<Alert className="w-full p-3 sm:p-4">
 			<div className="flex items-start justify-between gap-2">

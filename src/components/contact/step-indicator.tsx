@@ -1,6 +1,6 @@
-import { Check } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { Check } from "lucide-react";
 
 interface StepIndicatorProps {
 	currentStep: number;
@@ -11,7 +11,7 @@ interface StepIndicatorProps {
 	}>;
 }
 
-export default function StepIndicator({ currentStep, totalSteps, steps }: StepIndicatorProps) {
+export function StepIndicator({ currentStep, totalSteps, steps }: StepIndicatorProps) {
 	return (
 		<div className="w-full">
 			{/* デスクトップ版 */}

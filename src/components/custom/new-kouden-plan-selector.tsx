@@ -34,7 +34,7 @@ interface NewKoudenPlanSelectorProps {
  */
 export function NewKoudenPlanSelector({ plans }: NewKoudenPlanSelectorProps) {
 	const router = useRouter();
-	const [loading, setLoading] = useState(false);
+	const [isLoading, setIsLoading] = useState(false);
 
 	const form = useForm<NewKoudenPlanSelectorFormData>({
 		resolver: zodResolver(newKoudenPlanSelectorSchema),
@@ -50,7 +50,7 @@ export function NewKoudenPlanSelector({ plans }: NewKoudenPlanSelectorProps) {
 	const expectedCount = form.watch("expectedCount");
 
 	const handleSubmit = async (data: NewKoudenPlanSelectorFormData) => {
-		setLoading(true);
+		setIsLoading(true);
 		try {
 			if (data.planCode === "free") {
 				const { koudenId, error } = await createKoudenWithPlan({
@@ -83,7 +83,7 @@ export function NewKoudenPlanSelector({ plans }: NewKoudenPlanSelectorProps) {
 			console.error("[ERROR] 作成エラー:", err);
 			// TODO: user feedback with toast
 		} finally {
-			setLoading(false);
+			setIsLoading(false);
 		}
 	};
 
@@ -132,14 +132,14 @@ export function NewKoudenPlanSelector({ plans }: NewKoudenPlanSelectorProps) {
 						mode="create"
 						onPlanChange={(planCode) => form.setValue("planCode", planCode)}
 						onExpectedCountChange={(count) => form.setValue("expectedCount", count)}
-						loading={loading}
-						disabled={loading}
+						loading={isLoading}
+						disabled={isLoading}
 					/>
 
 					{/* デスクトップ用ボタン */}
 					<div className="hidden sm:flex justify-end">
-						<Button type="submit" disabled={loading} className="w-full sm:w-auto">
-							{loading ? "処理中..." : selectedPlanCode === "free" ? "作成する" : "購入に進む"}
+						<Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
+							{isLoading ? "処理中..." : selectedPlanCode === "free" ? "作成する" : "購入に進む"}
 						</Button>
 					</div>
 				</form>
@@ -148,11 +148,11 @@ export function NewKoudenPlanSelector({ plans }: NewKoudenPlanSelectorProps) {
 				<div className="sticky bottom-0 mt-6 p-4 sm:hidden -mx-4">
 					<Button
 						type="submit"
-						disabled={loading}
+						disabled={isLoading}
 						className="w-full"
 						onClick={form.handleSubmit(handleSubmit)}
 					>
-						{loading ? "処理中..." : selectedPlanCode === "free" ? "作成する" : "購入に進む"}
+						{isLoading ? "処理中..." : selectedPlanCode === "free" ? "作成する" : "購入に進む"}
 					</Button>
 				</div>
 			</Form>

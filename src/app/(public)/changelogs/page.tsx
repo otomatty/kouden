@@ -1,5 +1,5 @@
 import { ChangelogsTimeline } from "@/components/changelogs/changelogs-timeline";
-import Container from "@/components/ui/container";
+import { Container } from "@/components/ui/container";
 import { getAllChangelogs } from "@/lib/changelogs";
 import type { Metadata } from "next";
 import { PageHero } from "../_components/page-hero";

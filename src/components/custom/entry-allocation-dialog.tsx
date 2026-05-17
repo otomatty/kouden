@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
@@ -9,10 +10,9 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Users, Calculator, ExternalLink } from "lucide-react";
+import { Calculator, ExternalLink, Users } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { getEntryOfferingAllocations } from "@/app/_actions/offerings/queries";
@@ -43,7 +43,7 @@ export function EntryAllocationDialog({
 	children,
 }: EntryAllocationDialogProps) {
 	const [open, setOpen] = useState(false);
-	const [loading, setLoading] = useState(false);
+	const [isLoading, setIsLoading] = useState(false);
 	const [allocations, setAllocations] = useState<AllocationWithOffering[]>([]);
 
 	// 配分データを読み込み
@@ -54,7 +54,7 @@ export function EntryAllocationDialog({
 	}, [open]);
 
 	const loadAllocations = async () => {
-		setLoading(true);
+		setIsLoading(true);
 		try {
 			const result = await getEntryOfferingAllocations(entryId);
 			if (result.success && result.data) {
@@ -66,7 +66,7 @@ export function EntryAllocationDialog({
 			console.error("配分データ取得エラー:", error);
 			toast.error("配分データの取得中にエラーが発生しました");
 		} finally {
-			setLoading(false);
+			setIsLoading(false);
 		}
 	};
 
@@ -126,7 +126,7 @@ export function EntryAllocationDialog({
 							<Badge variant="secondary">{allocations.length}件</Badge>
 						</div>
 
-						{loading ? (
+						{isLoading ? (
 							<div className="flex items-center justify-center py-8">
 								<div className="text-muted-foreground">読み込み中...</div>
 							</div>

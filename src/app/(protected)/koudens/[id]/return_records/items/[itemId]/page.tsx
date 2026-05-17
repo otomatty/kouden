@@ -1,6 +1,6 @@
-import { notFound } from "next/navigation";
 import { getReturnItem } from "@/app/_actions/return-records/return-items";
-import { ReturnItemDetailPageClient } from "./ReturnItemDetailPageClient";
+import { notFound } from "next/navigation";
+import { ReturnItemDetailPageClient } from "./return-item-detail-page-client";
 
 interface ReturnItemDetailPageProps {
 	params: Promise<{

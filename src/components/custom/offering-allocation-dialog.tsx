@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
@@ -9,6 +10,8 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
 	Select,
 	SelectContent,
@@ -16,12 +19,9 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { AlertTriangle, CheckCircle, Users, Calculator } from "lucide-react";
+import { AlertTriangle, Calculator, CheckCircle, Users } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -29,8 +29,8 @@ import {
 	recalculateOfferingAllocation,
 } from "@/app/_actions/offerings/allocation";
 import {
-	getOfferingAllocations,
 	checkOfferingAllocationIntegrity,
+	getOfferingAllocations,
 } from "@/app/_actions/offerings/queries";
 import type { OfferingAllocation, OfferingAllocationRequest } from "@/types/entries";
 
@@ -57,7 +57,7 @@ export function OfferingAllocationDialog({
 	children,
 }: OfferingAllocationDialogProps) {
 	const [open, setOpen] = useState(false);
-	const [loading, setLoading] = useState(false);
+	const [isLoading, setIsLoading] = useState(false);
 	const [allocations, setAllocations] = useState<OfferingAllocation[]>([]);
 	const [allocationMethod, setAllocationMethod] = useState<"equal" | "weighted" | "manual">(
 		"equal",
@@ -110,7 +110,7 @@ export function OfferingAllocationDialog({
 			return;
 		}
 
-		setLoading(true);
+		setIsLoading(true);
 
 		try {
 			const request: OfferingAllocationRequest = {
@@ -136,12 +136,12 @@ export function OfferingAllocationDialog({
 			console.error("配分保存エラー:", error);
 			toast.error("配分の保存中にエラーが発生しました");
 		} finally {
-			setLoading(false);
+			setIsLoading(false);
 		}
 	};
 
 	const handleRecalculate = async () => {
-		setLoading(true);
+		setIsLoading(true);
 		try {
 			const manualAmountsArray =
 				allocationMethod === "manual"
@@ -164,7 +164,7 @@ export function OfferingAllocationDialog({
 			console.error("再計算エラー:", error);
 			toast.error("再計算中にエラーが発生しました");
 		} finally {
-			setLoading(false);
+			setIsLoading(false);
 		}
 	};
 
@@ -391,7 +391,7 @@ export function OfferingAllocationDialog({
 							<Button
 								variant="outline"
 								onClick={handleRecalculate}
-								disabled={loading || selectedEntries.length === 0}
+								disabled={isLoading || selectedEntries.length === 0}
 								className="flex items-center gap-2"
 							>
 								<Calculator className="h-4 w-4" />
@@ -401,12 +401,12 @@ export function OfferingAllocationDialog({
 						<Button
 							onClick={handleSaveAllocation}
 							disabled={
-								loading ||
+								isLoading ||
 								selectedEntries.length === 0 ||
 								(allocationMethod === "manual" && manualTotal !== offeringPrice)
 							}
 						>
-							{loading ? "保存中..." : allocations.length > 0 ? "更新" : "配分を作成"}
+							{isLoading ? "保存中..." : allocations.length > 0 ? "更新" : "配分を作成"}
 						</Button>
 					</div>
 				</div>

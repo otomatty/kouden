@@ -5,15 +5,15 @@
 
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { setupTwoFactorAuth } from "@/app/_actions/admin/admin-2fa";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Check, AlertCircle } from "lucide-react";
-import { setupTwoFactorAuth } from "@/app/_actions/admin/admin-2fa";
+import { AlertCircle, Check, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 
 interface TwoFactorSetupFormProps {
 	secret: string;
@@ -22,11 +22,7 @@ interface TwoFactorSetupFormProps {
 	isRequired: boolean;
 }
 
-export default function TwoFactorSetupForm({
-	secret,
-	returnUrl,
-	isRequired,
-}: TwoFactorSetupFormProps) {
+export function TwoFactorSetupForm({ secret, returnUrl, isRequired }: TwoFactorSetupFormProps) {
 	const [verificationCode, setVerificationCode] = useState("");
 	const [error, setError] = useState("");
 	const [isVerified, setIsVerified] = useState(false);

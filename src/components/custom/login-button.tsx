@@ -11,7 +11,7 @@ interface LoginButtonProps {
 }
 
 export function LoginButton({ invitationToken }: LoginButtonProps) {
-	const [loading, setLoading] = useState(false);
+	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const supabase = createClient();
 	const { fetchWithCSRF } = useCSRFToken();
@@ -32,7 +32,7 @@ export function LoginButton({ invitationToken }: LoginButtonProps) {
 
 	const handleLogin = async () => {
 		try {
-			setLoading(true);
+			setIsLoading(true);
 			setError(null);
 
 			// 認証前に invitation_token を HttpOnly Cookie として保存する。
@@ -67,16 +67,16 @@ export function LoginButton({ invitationToken }: LoginButtonProps) {
 			setError("ログインに失敗しました。再度お試しください。");
 			await clearInvitationCookie();
 		} finally {
-			setLoading(false);
+			setIsLoading(false);
 		}
 	};
 
 	return (
 		<div className="w-full space-y-2">
 			{error && <p className="text-sm text-destructive text-center">{error}</p>}
-			<Button onClick={handleLogin} disabled={loading} className="w-full" variant="outline">
+			<Button onClick={handleLogin} disabled={isLoading} className="w-full" variant="outline">
 				<GoogleIcon />
-				{loading ? "ログイン中..." : "Googleでログイン"}
+				{isLoading ? "ログイン中..." : "Googleでログイン"}
 			</Button>
 		</div>
 	);

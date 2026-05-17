@@ -5,16 +5,16 @@ import { usePathname } from "next/navigation";
 
 import type { LucideIcon } from "lucide-react";
 import {
+	BarChart2,
+	BarChart3,
+	Box,
 	Gift,
 	List,
-	Send,
+	Mail,
 	RefreshCcw,
-	BarChart2,
+	Send,
 	Settings,
 	Table2,
-	Box,
-	BarChart3,
-	Mail,
 } from "lucide-react";
 
 interface Tab {
@@ -32,7 +32,7 @@ const tabs: Tab[] = [
 	{ key: "settings", label: "設定", icon: Settings },
 ];
 
-export default function TabNavigation({ koudenId }: { koudenId: string }) {
+export function TabNavigation({ koudenId }: { koudenId: string }) {
 	const pathname = usePathname() || "";
 
 	// 管理者モードかどうかを判定

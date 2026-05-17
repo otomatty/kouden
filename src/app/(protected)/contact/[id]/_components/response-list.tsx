@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
-import ResponseItem from "./response-item";
 import type { Database } from "@/types/supabase";
+import React from "react";
+import { ResponseItem } from "./response-item";
 
 type ContactResponse = Database["public"]["Tables"]["contact_responses"]["Row"];
 
@@ -10,7 +10,7 @@ interface ResponseListProps {
 	responses: ContactResponse[];
 }
 
-export default function ResponseList({ responses }: ResponseListProps) {
+export function ResponseList({ responses }: ResponseListProps) {
 	if (responses.length === 0) {
 		return <p>まだ返信はありません。</p>;
 	}

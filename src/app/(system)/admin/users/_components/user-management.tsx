@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { type GetUsersParams, type UserListItem, getAllUsers } from "@/app/_actions/admin/users";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
 	Select,
 	SelectContent,
@@ -14,17 +13,18 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Search, Users, Crown, Calendar, Activity, ChevronLeft, ChevronRight } from "lucide-react";
-import { getAllUsers, type UserListItem, type GetUsersParams } from "@/app/_actions/admin/users";
 import { formatDistanceToNow } from "date-fns";
 import { ja } from "date-fns/locale";
+import { Activity, Calendar, ChevronLeft, ChevronRight, Crown, Search, Users } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 export function UserManagement() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 
 	const [users, setUsers] = useState<UserListItem[]>([]);
-	const [loading, setLoading] = useState(true);
+	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [total, setTotal] = useState(0);
 	const [hasMore, setHasMore] = useState(false);
@@ -51,7 +51,7 @@ export function UserManagement() {
 
 	// ユーザー一覧を取得
 	const fetchUsers = useCallback(async () => {
-		setLoading(true);
+		setIsLoading(true);
 		setError(null);
 
 		try {
@@ -71,7 +71,7 @@ export function UserManagement() {
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "ユーザー一覧の取得に失敗しました");
 		} finally {
-			setLoading(false);
+			setIsLoading(false);
 		}
 	}, [page, search, filter, sortBy, sortOrder]);
 
@@ -258,7 +258,7 @@ export function UserManagement() {
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
-					{loading ? (
+					{isLoading ? (
 						<div className="space-y-4">
 							{skeletonKeys.map((key) => (
 								<div

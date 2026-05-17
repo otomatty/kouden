@@ -1,17 +1,17 @@
 "use client";
 
-import type React from "react";
-import { PermissionProvider } from "./permission-provider";
 import { NavigationModeProvider } from "@/context/navigation-mode";
-import { CSRFProvider } from "./csrf-provider";
 import type { KoudenPermission } from "@/types/role";
+import type React from "react";
+import { CSRFProvider } from "./csrf-provider";
+import { PermissionProvider } from "./permission-provider";
 
 interface ClientProvidersProps {
 	permission: KoudenPermission;
 	children: React.ReactNode;
 }
 
-export default function ClientProviders({ permission, children }: ClientProvidersProps) {
+export function ClientProviders({ permission, children }: ClientProvidersProps) {
 	return (
 		<CSRFProvider>
 			<PermissionProvider permission={permission}>

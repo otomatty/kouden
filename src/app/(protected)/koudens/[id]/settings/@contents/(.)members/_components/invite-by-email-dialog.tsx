@@ -1,22 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { sendBatchInvitationEmails } from "@/app/_actions/batch-invitations";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
 	Select,
-	SelectTrigger,
 	SelectContent,
 	SelectItem,
+	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { toast } from "sonner";
-import { Plus, MailPlus, SendIcon, MailPlusIcon } from "lucide-react";
-import { sendBatchInvitationEmails } from "@/app/_actions/batch-invitations";
+import { MailPlus, MailPlusIcon, Plus, SendIcon } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface InviteByEmailDialogProps {
 	koudenId: string;
@@ -34,12 +34,12 @@ const getRoleDisplayName = (roleName: string) => {
 
 export function InviteByEmailDialog({ koudenId, roles }: InviteByEmailDialogProps) {
 	const isMobile = useMediaQuery("(max-width: 768px)");
-	const [loading, setLoading] = useState(false);
+	const [isLoading, setIsLoading] = useState(false);
 	// 表示するメール入力欄の数を管理
 	const [numInputs, setNumInputs] = useState(1);
 
 	const handleSend = async (formData: FormData) => {
-		setLoading(true);
+		setIsLoading(true);
 		try {
 			formData.append("koudenId", koudenId);
 			await sendBatchInvitationEmails(formData);
@@ -49,7 +49,7 @@ export function InviteByEmailDialog({ koudenId, roles }: InviteByEmailDialogProp
 				description: "しばらく時間をおいてから再度お試しください",
 			});
 		} finally {
-			setLoading(false);
+			setIsLoading(false);
 		}
 	};
 
@@ -102,8 +102,8 @@ export function InviteByEmailDialog({ koudenId, roles }: InviteByEmailDialogProp
 						メールアドレスを追加
 					</Button>
 				)}
-				<Button type="submit" disabled={loading} className="w-full">
-					{loading ? (
+				<Button type="submit" disabled={isLoading} className="w-full">
+					{isLoading ? (
 						<>
 							<SendIcon className="h-4 w-4 animate-spin" />
 							送信中...

@@ -1,21 +1,15 @@
 "use client";
 
-import type { InputHTMLAttributes } from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import type { InputHTMLAttributes } from "react";
 
 interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> {
 	name: string;
 	label: string;
 }
 
-export default function TextField({
-	name,
-	required,
-	type = "text",
-	className,
-	...rest
-}: TextFieldProps) {
+export function TextField({ name, required, type = "text", className, ...rest }: TextFieldProps) {
 	return (
 		<div>
 			<Input

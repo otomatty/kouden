@@ -1,8 +1,8 @@
 "use client";
 
+import { CloudOff, Monitor, Smartphone, Tablet, Users } from "lucide-react";
 import type React from "react";
-import { ScenarioVideoSection, type Scenario } from "../../_components/ScenarioVideoSection";
-import { Monitor, Smartphone, Users, CloudOff, Tablet } from "lucide-react";
+import { type Scenario, ScenarioVideoSection } from "../../_components/scenario-video-section";
 
 const scenarios: Scenario[] = [
 	{
@@ -42,6 +42,6 @@ const scenarios: Scenario[] = [
 	},
 ];
 
-export default function ScenarioVideoWrapper() {
+export function ScenarioVideoWrapper() {
 	return <ScenarioVideoSection scenarios={scenarios} />;
 }

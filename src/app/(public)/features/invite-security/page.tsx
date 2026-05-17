@@ -1,15 +1,15 @@
-import type { Metadata } from "next";
-import { Lock, UserPlus, Key } from "lucide-react";
-import { PageHero } from "../../_components/page-hero";
-import { SectionTitle } from "@/components/ui/section-title";
 import { Section } from "@/components/ui/section";
-import { FeaturePointCard } from "../_components/FeaturePointCard";
-import ScenarioVideoWrapper from "./_components/scenario-video-wrapper";
-import { TestimonialsSection } from "../_components/TestimonialsSection";
-import { testimonials } from "./testimonials";
+import { SectionTitle } from "@/components/ui/section-title";
+import { Key, Lock, UserPlus } from "lucide-react";
+import type { Metadata } from "next";
 import { CTASection } from "../../_components/cta-section";
-import { OtherFeaturesList } from "../_components/OtherFeaturesList";
-import { MediaSection } from "../_components/MediaSection";
+import { PageHero } from "../../_components/page-hero";
+import { FeaturePointCard } from "../_components/feature-point-card";
+import { MediaSection } from "../_components/media-section";
+import { OtherFeaturesList } from "../_components/other-features-list";
+import { TestimonialsSection } from "../_components/testimonials-section";
+import { ScenarioVideoWrapper } from "./_components/scenario-video-wrapper";
+import { testimonials } from "./testimonials";
 
 export const metadata: Metadata = {
 	title: "招待制セキュリティ | 機能詳細 | 香典帳",

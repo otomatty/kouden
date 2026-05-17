@@ -1,8 +1,8 @@
 "use client";
 
-import { LifeBuoy, User, Bug, Lightbulb, Briefcase, MoreHorizontal, Check } from "lucide-react";
+import { Briefcase, Bug, Check, LifeBuoy, Lightbulb, MoreHorizontal, User } from "lucide-react";
 
-export default function CategorySelect({
+export function CategorySelect({
 	value,
 	onChange,
 }: { value: string; onChange: (value: string) => void }) {
