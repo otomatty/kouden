@@ -3346,6 +3346,14 @@ export type Database = {
         }
         Returns: string
       }
+      create_kouden_with_owner: {
+        Args: {
+          p_title: string
+          p_description: string
+          p_plan_id: string
+        }
+        Returns: string
+      }
       detect_suspicious_activity: {
         Args: { p_user_id: string; p_ip_address: unknown; p_event_type: string }
         Returns: boolean
