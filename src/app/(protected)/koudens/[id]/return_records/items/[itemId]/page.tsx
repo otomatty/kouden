@@ -1,5 +1,5 @@
 import { getReturnItem } from "@/app/_actions/return-records/return-items";
-import { notFound, unstable_rethrow } from "next/navigation";
+import { notFound } from "next/navigation";
 import { ReturnItemDetailPageClient } from "./return-item-detail-page-client";
 
 interface ReturnItemDetailPageProps {
@@ -16,28 +16,23 @@ interface ReturnItemDetailPageProps {
 export default async function ReturnItemDetailPage({ params }: ReturnItemDetailPageProps) {
 	const { id: koudenId, itemId } = await params;
 
-	try {
-		// 返礼品詳細データを取得
-		const result = await getReturnItem(itemId);
+	// 返礼品詳細データを取得。`NOT_FOUND` のみ 404、
+	// 権限エラーや DB 障害はそのまま伝播させて error boundary に任せる。
+	const result = await getReturnItem(itemId);
 
-		if (!result.ok) {
-			if (result.error.code === "NOT_FOUND") {
-				notFound();
-			}
-			throw new Error(result.error.message);
-		}
-
-		const returnItem = result.data;
-
-		// 香典帳IDが一致しない場合は404
-		if (returnItem.kouden_id !== koudenId) {
+	if (!result.ok) {
+		if (result.error.code === "NOT_FOUND") {
 			notFound();
 		}
+		throw new Error(result.error.message);
+	}
 
-		return <ReturnItemDetailPageClient returnItem={returnItem} koudenId={koudenId} />;
-	} catch (error) {
-		unstable_rethrow(error);
-		console.error("[ERROR] Failed to fetch return item details:", error);
+	const returnItem = result.data;
+
+	// 香典帳IDが一致しない場合は404
+	if (returnItem.kouden_id !== koudenId) {
 		notFound();
 	}
+
+	return <ReturnItemDetailPageClient returnItem={returnItem} koudenId={koudenId} />;
 }

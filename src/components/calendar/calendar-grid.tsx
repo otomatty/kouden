@@ -11,7 +11,14 @@ interface CalendarGridProps {
 }
 
 async function reserveSlotAction(formData: FormData): Promise<void> {
-	await reserveSlot(formData);
+	const result = await reserveSlot(formData);
+	if (!result.ok) {
+		// `<form action>` の戻り値型 `Promise<void>` の制約上 ActionResult を
+		// そのまま返せないため、失敗時は throw して呼び出し側 (React のフォーム
+		// 送信ハンドラ → error boundary) にエラーを伝播させる。
+		// これがないと Google Calendar 挿入失敗時に「予約成功」と誤認される。
+		throw new Error(result.error.message);
+	}
 }
 
 export function CalendarGrid({ availability }: CalendarGridProps) {
