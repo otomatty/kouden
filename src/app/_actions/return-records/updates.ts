@@ -45,10 +45,7 @@ export async function updateReturnEntry(
 		const { kouden_entry_id, kouden_id, ...updateData } = input;
 
 		if (!kouden_entry_id) {
-			throw new KoudenError(
-				"香典エントリーIDが指定されていません",
-				ErrorCodes.INVALID_INPUT,
-			);
+			throw new KoudenError("香典エントリーIDが指定されていません", ErrorCodes.INVALID_INPUT);
 		}
 
 		const { data, error } = await supabase
@@ -111,10 +108,7 @@ export async function updateReturnEntryStatus(
 		}
 
 		if (!data) {
-			throw new KoudenError(
-				"返礼情報のステータス更新に失敗しました",
-				ErrorCodes.DB_UPDATE_ERROR,
-			);
+			throw new KoudenError("返礼情報のステータス更新に失敗しました", ErrorCodes.DB_UPDATE_ERROR);
 		}
 
 		// キャッシュの再検証
@@ -159,10 +153,7 @@ export async function updateReturnRecordField(
 		];
 
 		if (!allowedFields.includes(fieldName)) {
-			throw new KoudenError(
-				`フィールド '${fieldName}' は更新できません`,
-				ErrorCodes.INVALID_INPUT,
-			);
+			throw new KoudenError(`フィールド '${fieldName}' は更新できません`, ErrorCodes.INVALID_INPUT);
 		}
 
 		// 更新前に香典帳IDを取得（キャッシュ再検証用）
@@ -235,10 +226,7 @@ export async function updateReturnRecordFieldByKoudenEntryId(
 		];
 
 		if (!allowedFields.includes(fieldName)) {
-			throw new KoudenError(
-				`フィールド '${fieldName}' は更新できません`,
-				ErrorCodes.INVALID_INPUT,
-			);
+			throw new KoudenError(`フィールド '${fieldName}' は更新できません`, ErrorCodes.INVALID_INPUT);
 		}
 
 		// 更新前に香典帳IDを取得（キャッシュ再検証用）

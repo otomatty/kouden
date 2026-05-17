@@ -82,10 +82,7 @@ export async function executeBulkUpdateOptimized(
 			const returnItemsWithDetails = group.selectedReturnItemIds.map((itemId) => {
 				const item = returnItemsMap.get(itemId);
 				if (!item) {
-					throw new KoudenError(
-						`返礼品ID ${itemId} の情報が見つかりません`,
-						ErrorCodes.NOT_FOUND,
-					);
+					throw new KoudenError(`返礼品ID ${itemId} の情報が見つかりません`, ErrorCodes.NOT_FOUND);
 				}
 				return {
 					id: itemId,

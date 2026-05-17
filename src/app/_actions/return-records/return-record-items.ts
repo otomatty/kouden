@@ -48,10 +48,7 @@ export async function createReturnRecordItem(
 		}
 
 		if (!data) {
-			throw new KoudenError(
-				"返礼品詳細情報の作成に失敗しました",
-				ErrorCodes.DB_INSERT_ERROR,
-			);
+			throw new KoudenError("返礼品詳細情報の作成に失敗しました", ErrorCodes.DB_INSERT_ERROR);
 		}
 
 		// 返礼情報の合計金額を更新
@@ -138,10 +135,7 @@ export async function updateReturnRecordItem(
 		// 更新前の情報を取得して返礼情報IDを保持
 		const existingItem = await getReturnRecordItemInternal(input.id);
 		if (!existingItem) {
-			throw new KoudenError(
-				"返礼品詳細情報が見つかりません",
-				ErrorCodes.NOT_FOUND,
-			);
+			throw new KoudenError("返礼品詳細情報が見つかりません", ErrorCodes.NOT_FOUND);
 		}
 
 		const { id, ...updateData } = input;
@@ -158,10 +152,7 @@ export async function updateReturnRecordItem(
 		}
 
 		if (!data) {
-			throw new KoudenError(
-				"返礼品詳細情報の更新に失敗しました",
-				ErrorCodes.DB_UPDATE_ERROR,
-			);
+			throw new KoudenError("返礼品詳細情報の更新に失敗しました", ErrorCodes.DB_UPDATE_ERROR);
 		}
 
 		// 返礼情報の合計金額を更新
@@ -196,10 +187,7 @@ export async function deleteReturnRecordItem(
 		// 削除前の情報を取得して返礼情報IDを保持
 		const existingItem = await getReturnRecordItemInternal(id);
 		if (!existingItem) {
-			throw new KoudenError(
-				"返礼品詳細情報が見つかりません",
-				ErrorCodes.NOT_FOUND,
-			);
+			throw new KoudenError("返礼品詳細情報が見つかりません", ErrorCodes.NOT_FOUND);
 		}
 
 		const { error } = await supabase.from("return_record_items").delete().eq("id", id);

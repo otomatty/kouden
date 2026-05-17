@@ -131,17 +131,12 @@ export async function deleteReturnEntry(
 /**
  * 複数の返礼記録を一括削除する
  */
-export async function deleteReturnRecords(
-	returnRecordIds: string[],
-): Promise<ActionResult<null>> {
+export async function deleteReturnRecords(returnRecordIds: string[]): Promise<ActionResult<null>> {
 	return withActionResult(async () => {
 		const { supabase } = await getAuthenticatedClient();
 
 		if (!returnRecordIds.length) {
-			throw new KoudenError(
-				"削除対象のIDが指定されていません",
-				ErrorCodes.INVALID_INPUT,
-			);
+			throw new KoudenError("削除対象のIDが指定されていません", ErrorCodes.INVALID_INPUT);
 		}
 
 		// 削除前に関連する香典帳IDを取得（キャッシュ再検証用）
@@ -166,9 +161,7 @@ export async function deleteReturnRecords(
 
 		// 関連する香典帳のキャッシュを再検証
 		if (koudenIds) {
-			const uniqueKoudenIds = [
-				...new Set(koudenIds.map((item) => item.kouden_entries.kouden_id)),
-			];
+			const uniqueKoudenIds = [...new Set(koudenIds.map((item) => item.kouden_entries.kouden_id))];
 			for (const koudenId of uniqueKoudenIds) {
 				revalidatePath(`/koudens/${koudenId}`);
 			}

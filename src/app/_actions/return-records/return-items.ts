@@ -73,10 +73,7 @@ export async function createReturnItem(
 			.single();
 
 		if (permissionError || !permission) {
-			throw new KoudenError(
-				"この香典帳に対する権限がありません",
-				ErrorCodes.FORBIDDEN,
-			);
+			throw new KoudenError("この香典帳に対する権限がありません", ErrorCodes.FORBIDDEN);
 		}
 
 		const roleName = permission.kouden_roles?.name;
@@ -90,10 +87,7 @@ export async function createReturnItem(
 		if (error) {
 			// 一意制約違反は専用メッセージで返す（Supabase の生メッセージは UI に出さない）
 			if (error.code === "23505") {
-				throw new KoudenError(
-					"同じ名前の返礼品が既に存在します",
-					ErrorCodes.ALREADY_EXISTS,
-				);
+				throw new KoudenError("同じ名前の返礼品が既に存在します", ErrorCodes.ALREADY_EXISTS);
 			}
 			throw error;
 		}
@@ -174,10 +168,7 @@ export async function updateReturnItem(
 		}
 
 		if (!data) {
-			throw new KoudenError(
-				"返礼品マスター情報の更新に失敗しました",
-				ErrorCodes.DB_UPDATE_ERROR,
-			);
+			throw new KoudenError("返礼品マスター情報の更新に失敗しました", ErrorCodes.DB_UPDATE_ERROR);
 		}
 
 		// キャッシュの再検証
@@ -190,10 +181,7 @@ export async function updateReturnItem(
 /**
  * 返礼品マスター情報を削除する
  */
-export async function deleteReturnItem(
-	id: string,
-	koudenId: string,
-): Promise<ActionResult<null>> {
+export async function deleteReturnItem(id: string, koudenId: string): Promise<ActionResult<null>> {
 	return withActionResult(async () => {
 		const supabase = await createClient();
 
