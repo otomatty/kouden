@@ -1,7 +1,7 @@
-import React from "react";
-import type { Testimonial } from "@/types/testimonials";
 import { SectionTitle } from "@/components/ui/section-title";
-import { TestimonialCard } from "./TestimonialCard";
+import type { Testimonial } from "@/types/testimonials";
+import React from "react";
+import { TestimonialCard } from "./testimonial-card";
 
 /**
  * TestimonialsSection renders the 利用者の声 section with horizontal scrolling testimonials.

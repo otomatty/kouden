@@ -1,24 +1,24 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 import { acceptInvitation } from "@/app/_actions/invitations";
-import { Loader2, UserPlus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+import { Loader2, UserPlus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface AcceptInvitationButtonProps {
 	token: string;
 }
 
 export function AcceptInvitationButton({ token }: AcceptInvitationButtonProps) {
-	const [loading, setLoading] = useState(false);
+	const [isLoading, setIsLoading] = useState(false);
 	const router = useRouter();
 
 	const handleAccept = async () => {
 		try {
-			setLoading(true);
+			setIsLoading(true);
 			await acceptInvitation(token);
 
 			toast.success("参加しました", {
@@ -54,21 +54,21 @@ export function AcceptInvitationButton({ token }: AcceptInvitationButtonProps) {
 				});
 			}
 		} finally {
-			setLoading(false);
+			setIsLoading(false);
 		}
 	};
 
 	return (
 		<Button
 			onClick={handleAccept}
-			disabled={loading}
+			disabled={isLoading}
 			className="w-full relative overflow-hidden bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary transition-all duration-300"
 			size="lg"
 		>
 			<motion.span
 				className="absolute inset-0 bg-gradient-to-r from-primary-foreground/10 to-transparent"
 				initial={{ x: "100%" }}
-				animate={{ x: loading ? "100%" : "0%" }}
+				animate={{ x: isLoading ? "100%" : "0%" }}
 				transition={{
 					duration: 0.5,
 					ease: "easeInOut",
@@ -77,10 +77,10 @@ export function AcceptInvitationButton({ token }: AcceptInvitationButtonProps) {
 			<motion.div
 				className="flex items-center justify-center gap-2"
 				initial={{ scale: 1 }}
-				animate={{ scale: loading ? 0.95 : 1 }}
+				animate={{ scale: isLoading ? 0.95 : 1 }}
 				transition={{ duration: 0.2 }}
 			>
-				{loading ? (
+				{isLoading ? (
 					<>
 						<Loader2 className="mr-2 h-5 w-5 animate-spin" />
 						参加処理中...

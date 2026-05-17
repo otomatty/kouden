@@ -1,13 +1,13 @@
 "use client";
 
+import { duplicateKouden } from "@/app/_actions/koudens";
 import { Button } from "@/components/ui/button";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { cn } from "@/lib/utils";
 import { Copy } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { duplicateKouden } from "@/app/_actions/koudens";
 import { toast } from "sonner";
-import { useMediaQuery } from "@/hooks/use-media-query";
-import { cn } from "@/lib/utils";
 
 interface DuplicateKoudenButtonProps {
 	koudenId: string;
@@ -15,11 +15,11 @@ interface DuplicateKoudenButtonProps {
 
 export function DuplicateKoudenButton({ koudenId }: DuplicateKoudenButtonProps) {
 	const router = useRouter();
-	const [loading, setLoading] = useState(false);
+	const [isLoading, setIsLoading] = useState(false);
 	const isDesktop = useMediaQuery("(min-width: 768px)");
 	const handleDuplicate = async () => {
 		try {
-			setLoading(true);
+			setIsLoading(true);
 			const { kouden, error } = await duplicateKouden(koudenId);
 
 			if (error) {
@@ -42,7 +42,7 @@ export function DuplicateKoudenButton({ koudenId }: DuplicateKoudenButtonProps) 
 					error instanceof Error ? error.message : "しばらく時間をおいてから再度お試しください",
 			});
 		} finally {
-			setLoading(false);
+			setIsLoading(false);
 		}
 	};
 
@@ -51,11 +51,11 @@ export function DuplicateKoudenButton({ koudenId }: DuplicateKoudenButtonProps) 
 			<Button
 				variant="ghost"
 				onClick={handleDuplicate}
-				disabled={loading}
+				disabled={isLoading}
 				className="flex items-center gap-2 text-sm"
 			>
 				<Copy className="h-4 w-4" />
-				<span className="text-sm">{loading ? "複製中..." : "香典帳を複製する"}</span>
+				<span className="text-sm">{isLoading ? "複製中..." : "香典帳を複製する"}</span>
 			</Button>
 		);
 	}
@@ -64,15 +64,15 @@ export function DuplicateKoudenButton({ koudenId }: DuplicateKoudenButtonProps) 
 		<button
 			type="button"
 			onClick={handleDuplicate}
-			disabled={loading}
+			disabled={isLoading}
 			className={cn(
 				"flex flex-col items-center gap-1.5 min-w-[60px] py-2 px-3 rounded-md transition-colors",
 				"text-gray-600 hover:text-gray-900 hover:bg-gray-100",
-				loading && "opacity-50 cursor-not-allowed",
+				isLoading && "opacity-50 cursor-not-allowed",
 			)}
 		>
 			<Copy className="h-5 w-5" />
-			<span className="text-sm font-medium">{loading ? "複製中..." : "香典帳を複製する"}</span>
+			<span className="text-sm font-medium">{isLoading ? "複製中..." : "香典帳を複製する"}</span>
 		</button>
 	);
 }

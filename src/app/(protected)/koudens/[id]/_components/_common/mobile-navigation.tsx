@@ -1,20 +1,20 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import Link from "next/link";
-import { useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
-	Gift,
-	RefreshCcw,
 	BarChart2,
+	ChevronLeft,
+	ChevronRight,
+	Gift,
 	List,
+	Plus,
+	RefreshCcw,
 	Send,
 	Settings,
-	ChevronRight,
-	ChevronLeft,
-	Plus,
 } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
 
 interface MenuItem {
 	key: string;
@@ -46,7 +46,7 @@ const menuSets: [MenuItem[], MenuItem[]] = [
 	],
 ];
 
-export default function MobileNavigation({
+export function MobileNavigation({
 	koudenId,
 	onActionClick,
 	actionLabel = "",

@@ -1,5 +1,5 @@
 import { getContactRequests } from "@/app/_actions/contact";
-import ContactList from "./_components/contact-list";
+import { ContactList } from "./_components/contact-list";
 
 export default async function ContactHistoryPage() {
 	const requests = await getContactRequests();

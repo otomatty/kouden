@@ -1,6 +1,6 @@
-import React from "react";
-import ContactItem from "./contact-item";
 import type { Database } from "@/types/supabase";
+import React from "react";
+import { ContactItem } from "./contact-item";
 
 type ContactRequest = Database["public"]["Tables"]["contact_requests"]["Row"];
 
@@ -8,7 +8,7 @@ interface ContactListProps {
 	requests: ContactRequest[];
 }
 
-export default function ContactList({ requests }: ContactListProps) {
+export function ContactList({ requests }: ContactListProps) {
 	if (requests.length === 0) {
 		return <p>お問い合わせはまだありません。</p>;
 	}

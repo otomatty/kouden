@@ -15,13 +15,13 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { getPlaceholderByCategory } from "./category-placeholders";
-import CategorySelect from "./category-select";
-import FileUpload from "./file-upload";
-import StepIndicator from "./step-indicator";
-import StepSummary from "./step-summary";
-import SubmitButton from "./submit-button";
-import TextArea from "./text-area";
-import TextField from "./text-field";
+import { CategorySelect } from "./category-select";
+import { FileUpload } from "./file-upload";
+import { StepIndicator } from "./step-indicator";
+import { StepSummary } from "./step-summary";
+import { SubmitButton } from "./submit-button";
+import { TextArea } from "./text-area";
+import { TextField } from "./text-field";
 
 interface ContactFormValues {
 	category: string;
@@ -32,7 +32,7 @@ interface ContactFormValues {
 	attachment?: FileList;
 }
 
-export default function ContactForm() {
+export function ContactForm() {
 	const router = useRouter();
 	const form = useForm<ContactFormValues>({
 		defaultValues: {

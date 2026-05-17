@@ -1,7 +1,7 @@
-import type { Metadata } from "next";
-import FAQClient from "./_components/FAQClient";
-import { PageHero } from "../_components/page-hero";
 import { Section } from "@/components/ui/section";
+import type { Metadata } from "next";
+import { PageHero } from "../_components/page-hero";
+import { FAQClient } from "./_components/faq-client";
 
 export const metadata: Metadata = {
 	title: "よくある質問 | 香典帳",

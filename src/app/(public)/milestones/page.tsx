@@ -1,5 +1,5 @@
 import { MilestonesTimeline } from "@/components/milestones/milestones-timeline";
-import Container from "@/components/ui/container";
+import { Container } from "@/components/ui/container";
 import { getAllMilestones } from "@/lib/milestones";
 import type { Metadata } from "next";
 import { PageHero } from "../_components/page-hero";

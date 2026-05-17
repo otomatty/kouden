@@ -10,7 +10,7 @@ interface PlansPageClientProps {
 	currentPlan: Plan;
 }
 
-export default function PlansPageClient({ id, plans, currentPlan }: PlansPageClientProps) {
+export function PlansPageClient({ id, plans, currentPlan }: PlansPageClientProps) {
 	return (
 		<div className="py-8">
 			<h1 className="text-2xl font-bold mb-6">プランを選択</h1>

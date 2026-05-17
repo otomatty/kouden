@@ -1,6 +1,6 @@
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, FileText, User, Mail, Building } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Building, Check, FileText, Mail, User } from "lucide-react";
 
 interface StepSummaryProps {
 	currentStep: number;
@@ -24,7 +24,7 @@ const categoryLabels = {
 	other: "その他",
 } as const;
 
-export default function StepSummary({ currentStep, formData }: StepSummaryProps) {
+export function StepSummary({ currentStep, formData }: StepSummaryProps) {
 	// ステップ1では何も表示しない
 	if (currentStep <= 1) return null;
 

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import type { Entry } from "@/types/entries";
 import type { Relationship } from "@/types/relationships";
+import { useState } from "react";
 import { EntryView } from "./_components";
 import { EntryDialog } from "./_components/dialog/entry-dialog";
 
@@ -16,7 +16,7 @@ interface EntriesPageClientProps {
 	isAdminMode?: boolean;
 }
 
-export default function EntriesPageClient({
+export function EntriesPageClient({
 	koudenId,
 	entries,
 	relationships,

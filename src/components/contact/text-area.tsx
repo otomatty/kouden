@@ -1,14 +1,14 @@
 "use client";
 
-import type { TextareaHTMLAttributes } from "react";
 import { Textarea } from "@/components/ui/textarea";
+import type { TextareaHTMLAttributes } from "react";
 
 interface TextAreaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
 	name: string;
 	label: string;
 }
 
-export default function TextArea({ name, required, ...rest }: TextAreaProps) {
+export function TextArea({ name, required, ...rest }: TextAreaProps) {
 	return (
 		<div>
 			<Textarea

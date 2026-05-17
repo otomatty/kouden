@@ -10,7 +10,7 @@ import type {
 	ReturnStatus,
 } from "@/types/return-records/return-records";
 import { notFound } from "next/navigation";
-import ReturnRecordsPageClient from "./ReturnRecordsPageClient";
+import { ReturnRecordsPageClient } from "./return-records-page-client";
 
 interface ReturnRecordsPageProps {
 	params: Promise<{

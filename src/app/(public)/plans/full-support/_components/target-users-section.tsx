@@ -1,6 +1,6 @@
-import { HelpCircle, Users, ListChecks, ShieldCheck } from "lucide-react";
 import { Section } from "@/components/ui/section";
 import { SectionTitle } from "@/components/ui/section-title";
+import { HelpCircle, ListChecks, ShieldCheck, Users } from "lucide-react";
 
 const FullSupportBenefitItem = ({
 	icon: Icon,
@@ -20,7 +20,7 @@ const FullSupportBenefitItem = ({
 	</div>
 );
 
-export default function TargetUsersSection() {
+export function TargetUsersSection() {
 	return (
 		<Section className="mb-12 md:mb-16 bg-muted p-6 md:p-8 rounded-lg">
 			<SectionTitle

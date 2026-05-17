@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Section } from "@/components/ui/section";
+import Link from "next/link";
 
-export default function CtaSection() {
+export function CtaSection() {
 	return (
 		<Section className="text-center">
 			<h2 className="text-2xl md:text-3xl font-semibold mb-4">まずはお気軽にご相談ください</h2>

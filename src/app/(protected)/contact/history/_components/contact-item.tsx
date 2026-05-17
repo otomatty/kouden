@@ -1,6 +1,6 @@
-import React from "react";
-import Link from "next/link";
 import type { Database } from "@/types/supabase";
+import Link from "next/link";
+import React from "react";
 
 type ContactRequest = Database["public"]["Tables"]["contact_requests"]["Row"];
 
@@ -8,7 +8,7 @@ interface ContactItemProps {
 	request: ContactRequest;
 }
 
-export default function ContactItem({ request }: ContactItemProps) {
+export function ContactItem({ request }: ContactItemProps) {
 	return (
 		<Link href={`/contact/${request.id}`} className="block p-4 border rounded hover:bg-gray-50">
 			<div className="flex justify-between">

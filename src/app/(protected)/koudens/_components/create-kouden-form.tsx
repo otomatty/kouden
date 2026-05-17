@@ -14,13 +14,13 @@ import { useRef, useState } from "react";
 
 export function CreateKoudenForm() {
 	const router = useRouter();
-	const [loading, setLoading] = useState(false);
+	const [isLoading, setIsLoading] = useState(false);
 	const formRef = useRef<HTMLFormElement>(null);
 	const isMobile = useMediaQuery("(max-width: 640px)");
 
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
-		setLoading(true);
+		setIsLoading(true);
 
 		try {
 			const supabase = createClient();
@@ -47,7 +47,7 @@ export function CreateKoudenForm() {
 		} catch (error) {
 			console.error("[ERROR] 香典帳作成エラー:", error);
 		} finally {
-			setLoading(false);
+			setIsLoading(false);
 		}
 	};
 
@@ -77,8 +77,8 @@ export function CreateKoudenForm() {
 					<Textarea id="description" name="description" placeholder="説明を入力してください" />
 				</div>
 				<div className="flex justify-end">
-					<Button type="submit" disabled={loading} className="create-kouden-form-button">
-						{loading ? "作成中..." : "作成"}
+					<Button type="submit" disabled={isLoading} className="create-kouden-form-button">
+						{isLoading ? "作成中..." : "作成"}
 					</Button>
 				</div>
 			</form>

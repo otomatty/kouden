@@ -15,13 +15,13 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { getPlaceholderByCategory } from "./category-placeholders";
-import CategorySelect from "./category-select";
-import FileUpload from "./file-upload";
-import StepIndicator from "./step-indicator";
-import StepSummary from "./step-summary";
-import SubmitButton from "./submit-button";
-import TextArea from "./text-area";
-import TextField from "./text-field";
+import { CategorySelect } from "./category-select";
+import { FileUpload } from "./file-upload";
+import { StepIndicator } from "./step-indicator";
+import { StepSummary } from "./step-summary";
+import { SubmitButton } from "./submit-button";
+import { TextArea } from "./text-area";
+import { TextField } from "./text-field";
 
 interface ContactFormValues {
 	category: string;
@@ -37,7 +37,7 @@ interface AppContactFormProps {
 	onSuccess?: () => void;
 }
 
-export default function AppContactForm({ user, onSuccess }: AppContactFormProps) {
+export function AppContactForm({ user, onSuccess }: AppContactFormProps) {
 	const form = useForm<ContactFormValues>({
 		defaultValues: {
 			category: "support",

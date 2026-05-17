@@ -1,7 +1,7 @@
 import { StyleSheet } from "@react-pdf/renderer";
 import "./registerFonts";
 
-const styles = StyleSheet.create({
+export const styles = StyleSheet.create({
 	page: {
 		padding: 20,
 		fontSize: 12,
@@ -75,5 +75,3 @@ const styles = StyleSheet.create({
 		justifyContent: "flex-end",
 	},
 });
-
-export default styles;

@@ -1,4 +1,4 @@
-import type { FAQItem, FAQCategory } from "../_components/FAQClient";
+import type { FAQCategory, FAQItem } from "../_components/faq-client";
 
 export const gifts: FAQCategory = {
 	category: "返礼品管理",

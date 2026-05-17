@@ -1,6 +1,6 @@
 import { getContactRequestDetail } from "@/app/_actions/contact";
-import ContactDetail from "./_components/contact-detail";
-import ResponseList from "./_components/response-list";
+import { ContactDetail } from "./_components/contact-detail";
+import { ResponseList } from "./_components/response-list";
 
 export default async function ContactDetailPage({
 	params,

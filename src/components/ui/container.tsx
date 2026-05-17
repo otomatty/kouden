@@ -14,11 +14,7 @@ interface ContainerProps {
  * ページ幅に合わせたコンテナレイアウトを提供するコンポーネント
  * デフォルトで `container mx-auto px-4 md:px-6` のクラスを適用します。
  */
-export default function Container({
-	children,
-	className = "",
-	maxWidthClassName = "",
-}: ContainerProps) {
+export function Container({ children, className = "", maxWidthClassName = "" }: ContainerProps) {
 	return (
 		<div
 			className={cn(

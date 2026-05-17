@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { createShareInvitation } from "@/app/_actions/invitations";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
 	Select,
 	SelectContent,
@@ -11,12 +12,11 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
-import { createShareInvitation } from "@/app/_actions/invitations";
-import { Share2, Copy, QrCode, ChevronDown, ChevronUp } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { ChevronDown, ChevronUp, Copy, QrCode, Share2 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface ShareLinkFormProps {
 	koudenId: string;
@@ -37,14 +37,14 @@ const getRoleDisplayName = (roleName: string) => {
 
 export function ShareLinkForm({ koudenId, roles }: ShareLinkFormProps) {
 	const isMobile = useIsMobile();
-	const [loading, setLoading] = useState(false);
+	const [isLoading, setIsLoading] = useState(false);
 	const [invitationLink, setInvitationLink] = useState<string>("");
 	const [copied, setCopied] = useState(false);
 	const [showQR, setShowQR] = useState(false);
 
 	const handleCreateLink = async (formData: FormData) => {
 		try {
-			setLoading(true);
+			setIsLoading(true);
 			const roleId = formData.get("role") as string;
 			const maxUses = formData.get("maxUses") ? Number(formData.get("maxUses")) : null;
 			const expiresIn = (formData.get("expiresIn") as string) || "7d";
@@ -68,7 +68,7 @@ export function ShareLinkForm({ koudenId, roles }: ShareLinkFormProps) {
 				description: "しばらく時間をおいてから再度お試しください",
 			});
 		} finally {
-			setLoading(false);
+			setIsLoading(false);
 		}
 	};
 
@@ -141,8 +141,8 @@ export function ShareLinkForm({ koudenId, roles }: ShareLinkFormProps) {
 					</Select>
 				</div>
 
-				<Button type="submit" disabled={loading} className="w-full">
-					{loading ? "作成中..." : "リンクを作成"}
+				<Button type="submit" disabled={isLoading} className="w-full">
+					{isLoading ? "作成中..." : "リンクを作成"}
 				</Button>
 			</form>
 

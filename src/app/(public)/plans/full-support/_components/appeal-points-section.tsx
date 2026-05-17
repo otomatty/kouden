@@ -1,8 +1,8 @@
-import { CheckCircle2 } from "lucide-react";
 import { Section } from "@/components/ui/section";
 import { SectionTitle } from "@/components/ui/section-title";
+import { CheckCircle2 } from "lucide-react";
 
-export default function AppealPointsSection() {
+export function AppealPointsSection() {
 	return (
 		<Section className="mb-12 md:mb-16 bg-primary-foreground p-6 md:p-8 rounded-lg">
 			<SectionTitle

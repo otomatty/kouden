@@ -1,7 +1,7 @@
 import { Section } from "@/components/ui/section";
 import { SectionTitle } from "@/components/ui/section-title";
 
-export default function HowItWorksSection() {
+export function HowItWorksSection() {
 	return (
 		<Section className="mb-12 md:mb-16">
 			<SectionTitle
