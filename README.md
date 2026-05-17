@@ -61,6 +61,7 @@ cp .env.example .env.local
 以下の環境変数を`.env.local`に設定してください：
 - `NEXT_PUBLIC_SUPABASE_URL`: SupabaseのプロジェクトURL
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: SupabaseのPublishable Key
+- `SUPABASE_SECRET_KEY`: SupabaseのSecret Key（サーバー側のみで使用、ブラウザに露出させないこと）
 
 > Supabaseダッシュボードの `Project Settings → API Keys` または Connect ダイアログから新しいAPIキー (`sb_publishable_*` / `sb_secret_*`) を取得できます。詳細は [Supabase API Keys ドキュメント](https://supabase.com/docs/guides/api/api-keys) を参照してください。
 

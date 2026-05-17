@@ -106,6 +106,7 @@ export async function GET() {
 
 ## 3. 環境変数
 - `RESEND_API_KEY`（Resend APIキー）
+- `NEXT_PUBLIC_SUPABASE_URL`（SupabaseプロジェクトURL）
 - `SUPABASE_SECRET_KEY`（Supabase Secret Key）
 
 ## 4. 作業手順
