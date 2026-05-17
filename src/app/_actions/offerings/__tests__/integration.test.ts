@@ -88,7 +88,7 @@ describe("お供物配分システム統合テスト", () => {
 			};
 
 			const createResult = await allocateOfferingToEntries(createRequest);
-			expect(createResult.success).toBe(true);
+			expect(createResult.ok).toBe(true);
 
 			// 2. 配分データ取得のモック設定
 			const mockAllocationsResponse = expectedAllocations.map((alloc, index) => ({
@@ -110,8 +110,10 @@ describe("お供物配分システム統合テスト", () => {
 
 			// 2. 配分データ取得
 			const getAllocationsResult = await getOfferingAllocations(offeringId);
-			expect(getAllocationsResult.success).toBe(true);
-			expect(getAllocationsResult.data).toHaveLength(3);
+			expect(getAllocationsResult.ok).toBe(true);
+			if (getAllocationsResult.ok) {
+				expect(getAllocationsResult.data).toHaveLength(3);
+			}
 
 			// 3. 整合性チェックのモック設定
 			const mockIntegrityData = [
@@ -134,9 +136,11 @@ describe("お供物配分システム統合テスト", () => {
 
 			// 3. 整合性チェック
 			const integrityResult = await checkOfferingAllocationIntegrity(offeringId);
-			expect(integrityResult.success).toBe(true);
-			expect(integrityResult.data?.[0]?.is_valid).toBe(true);
-			expect(integrityResult.data?.[0]?.total_allocated).toBe(offeringPrice);
+			expect(integrityResult.ok).toBe(true);
+			if (integrityResult.ok) {
+				expect(integrityResult.data[0]?.is_valid).toBe(true);
+				expect(integrityResult.data[0]?.total_allocated).toBe(offeringPrice);
+			}
 		});
 	});
 
@@ -165,8 +169,10 @@ describe("お供物配分システム統合テスト", () => {
 			};
 
 			const result = await allocateOfferingToEntries(request);
-			expect(result.success).toBe(false);
-			expect(result.error).toContain("挿入失敗");
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.error.message).toContain("お供物の配分に失敗");
+			}
 		});
 
 		it("配分削除後に has_offering フラグが正しく更新される", async () => {
@@ -204,7 +210,7 @@ describe("お供物配分システム統合テスト", () => {
 				});
 
 			const result = await removeOfferingAllocation("offering1");
-			expect(result.success).toBe(true);
+			expect(result.ok).toBe(true);
 
 			// has_offering フラグ更新の呼び出しを確認
 			expect(supabaseMock.from).toHaveBeenCalledWith("kouden_entries");
@@ -243,7 +249,7 @@ describe("お供物配分システム統合テスト", () => {
 			};
 
 			const result = await allocateOfferingToEntries(request);
-			expect(result.success).toBe(true);
+			expect(result.ok).toBe(true);
 
 			// 挿入されたデータを確認
 			const insertedData = insertMock.mock.calls[0]?.[0];
@@ -289,12 +295,14 @@ describe("お供物配分システム統合テスト", () => {
 
 			const result = await calculateEntryTotalAmount(entryId);
 
-			expect(result.success).toBe(true);
-			expect(result.data).toEqual({
-				kouden_amount: koudenAmount,
-				offering_total: 6500, // 3000 + 2500 + 1000
-				calculated_total: 16500, // 10000 + 6500
-			});
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.data).toEqual({
+					kouden_amount: koudenAmount,
+					offering_total: 6500, // 3000 + 2500 + 1000
+					calculated_total: 16500, // 10000 + 6500
+				});
+			}
 		});
 	});
 

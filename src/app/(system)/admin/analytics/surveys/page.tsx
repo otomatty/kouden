@@ -32,12 +32,8 @@ async function SurveyAnalyticsDashboard() {
 	// アンケート分析データを取得
 	const analyticsResult = await getAdminSurveyAnalytics();
 
-	if (!analyticsResult.success) {
-		return <ErrorDisplay error={analyticsResult.error || "不明なエラー"} />;
-	}
-
-	if (!analyticsResult.data) {
-		return <ErrorDisplay error="データが見つかりません" />;
+	if (!analyticsResult.ok) {
+		return <ErrorDisplay error={analyticsResult.error.message} />;
 	}
 
 	const { data } = analyticsResult;

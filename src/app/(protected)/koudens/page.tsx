@@ -38,14 +38,16 @@ async function KoudensPageContent({
 		throw new Error("認証が必要です");
 	}
 
-	const { koudens = [], error } = await getKoudens();
+	const koudensResult = await getKoudens();
 
-	if (error) {
-		throw new Error(error);
+	if (!koudensResult.ok) {
+		throw new Error(koudensResult.error.message);
 	}
+	const koudens = koudensResult.data;
 
 	// お知らせデータを取得
-	const { announcements = [] } = await getActiveAnnouncements();
+	const announcementsResult = await getActiveAnnouncements();
+	const announcements = announcementsResult.ok ? announcementsResult.data : [];
 
 	const invitationStatus =
 		typeof searchParams.invitation === "string" ? searchParams.invitation : undefined;

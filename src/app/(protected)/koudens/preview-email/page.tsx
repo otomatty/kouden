@@ -8,7 +8,11 @@ export default async function PreviewEmailPage({
 	if (!koudenId) {
 		throw new Error("Missing koudenId query parameter");
 	}
-	const kouden = await getKouden(koudenId);
+	const koudenResult = await getKouden(koudenId);
+	if (!koudenResult.ok) {
+		throw new Error(koudenResult.error.message);
+	}
+	const kouden = koudenResult.data;
 	// Fallback invitation link placeholder
 	const origin = process.env.NEXT_PUBLIC_APP_URL ?? `http://localhost:${process.env.PORT ?? 3000}`;
 	const link = `${origin}/invitations/preview-token`;

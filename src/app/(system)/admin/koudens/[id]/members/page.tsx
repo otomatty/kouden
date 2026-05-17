@@ -17,10 +17,20 @@ export default async function AdminMembersPage({ params }: AdminMembersPageProps
 	const adminPermission = "viewer" as const;
 
 	// メンバーとロール情報を取得（管理者用関数を使用）
-	const [members, roles] = await Promise.all([
+	const [membersResult, rolesResult] = await Promise.all([
 		getMembersForAdmin(koudenId),
 		getKoudenRolesForAdmin(koudenId),
 	]);
+
+	if (!membersResult.ok) {
+		throw new Error(membersResult.error.message);
+	}
+	if (!rolesResult.ok) {
+		throw new Error(rolesResult.error.message);
+	}
+
+	const members = membersResult.data;
+	const roles = rolesResult.data;
 
 	return (
 		<div className="container mx-auto py-6 space-y-6">

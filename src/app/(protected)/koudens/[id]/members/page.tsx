@@ -21,7 +21,18 @@ export default async function MembersPage({ params }: MembersPageProps) {
 	const currentUser = await getCurrentUser();
 
 	// メンバーとロール情報を取得
-	const [members, roles] = await Promise.all([getMembers(koudenId), getKoudenRoles(koudenId)]);
+	const [membersResult, rolesResult] = await Promise.all([
+		getMembers(koudenId),
+		getKoudenRoles(koudenId),
+	]);
+	if (!membersResult.ok) {
+		throw new Error(membersResult.error.message);
+	}
+	if (!rolesResult.ok) {
+		throw new Error(rolesResult.error.message);
+	}
+	const members = membersResult.data;
+	const roles = rolesResult.data;
 
 	return (
 		<div className="container mx-auto py-6 space-y-6 px-0 sm:px-6">

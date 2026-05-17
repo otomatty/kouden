@@ -53,18 +53,18 @@ export function NewKoudenPlanSelector({ plans }: NewKoudenPlanSelectorProps) {
 		setIsLoading(true);
 		try {
 			if (data.planCode === "free") {
-				const { koudenId, error } = await createKoudenWithPlan({
+				const result = await createKoudenWithPlan({
 					title: data.title,
 					description: data.description || undefined,
 					planCode: data.planCode,
 					expectedCount: data.expectedCount,
 				});
-				if (error) throw new Error(error);
-				router.push(`/koudens/${koudenId}/entries`);
+				if (!result.ok) throw new Error(result.error.message);
+				router.push(`/koudens/${result.data.koudenId}/entries`);
 			} else {
 				// 有料プランの場合は購入処理へ
 				const koudenId = crypto.randomUUID();
-				const { url, error } = await purchaseKouden({
+				const result = await purchaseKouden({
 					koudenId,
 					planCode: data.planCode,
 					expectedCount: data.planCode === "premium_full_support" ? data.expectedCount : undefined,
@@ -72,9 +72,9 @@ export function NewKoudenPlanSelector({ plans }: NewKoudenPlanSelectorProps) {
 					description: data.description || undefined,
 					cancelPath: "/koudens/new",
 				});
-				if (error) throw new Error(error);
-				if (url) {
-					window.location.href = url;
+				if (!result.ok) throw new Error(result.error.message);
+				if (result.data.url) {
+					window.location.href = result.data.url;
 				} else {
 					throw new Error("購入URLが取得できませんでした");
 				}

@@ -11,7 +11,11 @@ interface GeneralSettingsPageProps {
 
 export default async function GeneralSettingsPage({ params }: GeneralSettingsPageProps) {
 	const { id } = await params;
-	const kouden = await getKouden(id);
+	const koudenResult = await getKouden(id);
+	if (!koudenResult.ok) {
+		throw new Error(koudenResult.error.message);
+	}
+	const kouden = koudenResult.data;
 
 	return (
 		<div className="container max-w-2xl mx-auto space-y-6">

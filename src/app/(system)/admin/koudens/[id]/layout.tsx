@@ -20,7 +20,11 @@ export async function generateMetadata({
 	const { id: koudenId } = await params;
 	let kouden: Kouden | null;
 	try {
-		kouden = await getKoudenForAdmin(koudenId);
+		const result = await getKoudenForAdmin(koudenId);
+		if (!result.ok) {
+			redirect("/admin/users");
+		}
+		kouden = result.data;
 	} catch {
 		redirect("/admin/users");
 	}
@@ -51,10 +55,23 @@ export default async function AdminKoudenLayout({ params, children }: AdminKoude
 		const { adminRole } = await checkAdminPermission();
 
 		// 香典帳データとプラン情報を取得（管理者用関数を使用）
-		const [kouden, planInfo] = await Promise.all([
+		const [koudenResult, planInfoResult] = await Promise.all([
 			getKoudenForAdmin(koudenId),
 			getKoudenWithPlanForAdmin(koudenId),
 		]);
+
+		if (!koudenResult.ok) {
+			if (koudenResult.error.code === "NOT_FOUND") {
+				notFound();
+			}
+			throw new Error(koudenResult.error.message);
+		}
+		if (!planInfoResult.ok) {
+			throw new Error(planInfoResult.error.message);
+		}
+
+		const kouden = koudenResult.data;
+		const planInfo = planInfoResult.data;
 
 		if (!kouden) {
 			notFound();

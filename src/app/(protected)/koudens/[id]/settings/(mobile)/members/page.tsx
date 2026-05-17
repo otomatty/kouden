@@ -9,7 +9,11 @@ interface MembersPageProps {
 
 export default async function MembersPage({ params }: MembersPageProps) {
 	const { id } = await params;
-	const members = await getMembers(id);
+	const membersResult = await getMembers(id);
+	if (!membersResult.ok) {
+		throw new Error(membersResult.error.message);
+	}
+	const members = membersResult.data;
 
 	return (
 		<div className="mx-auto py-4 space-y-4">

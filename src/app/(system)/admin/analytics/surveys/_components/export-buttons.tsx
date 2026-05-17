@@ -49,12 +49,12 @@ export function SurveyExportButtons() {
 		try {
 			const result = await exportSurveyDataToCsv();
 
-			if (result.success && result.data) {
-				downloadCsv(result.data, result.filename);
-				toast.success("アンケートデータをエクスポートしました");
-			} else {
-				toast.error(result.error || "エクスポートに失敗しました");
+			if (!result.ok) {
+				toast.error(result.error.message);
+				return;
 			}
+			downloadCsv(result.data.data, result.data.filename);
+			toast.success("アンケートデータをエクスポートしました");
 		} catch (error) {
 			console.error("エクスポートエラー:", error);
 			toast.error("予期しないエラーが発生しました");
@@ -71,12 +71,12 @@ export function SurveyExportButtons() {
 		try {
 			const result = await exportSurveySummaryToCsv();
 
-			if (result.success && result.data) {
-				downloadCsv(result.data, result.filename);
-				toast.success("統計サマリーをエクスポートしました");
-			} else {
-				toast.error(result.error || "エクスポートに失敗しました");
+			if (!result.ok) {
+				toast.error(result.error.message);
+				return;
 			}
+			downloadCsv(result.data.data, result.data.filename);
+			toast.success("統計サマリーをエクスポートしました");
 		} catch (error) {
 			console.error("エクスポートエラー:", error);
 			toast.error("予期しないエラーが発生しました");
@@ -147,12 +147,12 @@ export function ExportRawDataButton() {
 		try {
 			const result = await exportSurveyDataToCsv();
 
-			if (result.success && result.data) {
-				downloadCsv(result.data, result.filename);
-				toast.success("アンケートデータをエクスポートしました");
-			} else {
-				toast.error(result.error || "エクスポートに失敗しました");
+			if (!result.ok) {
+				toast.error(result.error.message);
+				return;
 			}
+			downloadCsv(result.data.data, result.data.filename);
+			toast.success("アンケートデータをエクスポートしました");
 		} catch (error) {
 			console.error("エクスポートエラー:", error);
 			toast.error("予期しないエラーが発生しました");
@@ -190,12 +190,12 @@ export function ExportSummaryButton() {
 		try {
 			const result = await exportSurveySummaryToCsv();
 
-			if (result.success && result.data) {
-				downloadCsv(result.data, result.filename);
-				toast.success("統計サマリーをエクスポートしました");
-			} else {
-				toast.error(result.error || "エクスポートに失敗しました");
+			if (!result.ok) {
+				toast.error(result.error.message);
+				return;
 			}
+			downloadCsv(result.data.data, result.data.filename);
+			toast.success("統計サマリーをエクスポートしました");
 		} catch (error) {
 			console.error("エクスポートエラー:", error);
 			toast.error("予期しないエラーが発生しました");

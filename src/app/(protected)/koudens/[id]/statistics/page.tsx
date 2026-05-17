@@ -14,11 +14,15 @@ interface StatisticsPageProps {
  */
 export default async function StatisticsPage({ params }: StatisticsPageProps) {
 	const { id: koudenId } = await params;
-	const { entries } = await getEntries(koudenId, 1, Number.MAX_SAFE_INTEGER);
+	const entriesResult = await getEntries(koudenId, 1, Number.MAX_SAFE_INTEGER);
+	if (!entriesResult.ok) {
+		throw new Error(entriesResult.error.message);
+	}
+	const { entries } = entriesResult.data;
 
 	// 配分込み金額をbulkで取得（N+1解消）
 	const bulkResult = await calculateEntryTotalAmountBulk(entries.map((e) => e.id));
-	if (!(bulkResult.success && bulkResult.data)) {
+	if (!bulkResult.ok) {
 		// 失敗時は0埋めではなく明示的に例外を投げ、誤った統計表示を防ぐ。
 		// 技術詳細はサーバーログにのみ残し、UI には汎用メッセージを返す。
 		console.error("[statistics] bulk fetch failed:", bulkResult.error);

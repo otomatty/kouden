@@ -29,16 +29,16 @@ export default async function ProfilePage() {
 		getActivityStats(user.id),
 	]);
 
-	if (profileResult.error || !profileResult.profile) {
-		throw new Error(profileResult.error || "プロフィールの取得に失敗しました");
+	if (!profileResult.ok) {
+		throw new Error(profileResult.error.message);
 	}
 
-	if (statsResult.error || !statsResult.stats) {
-		throw new Error(statsResult.error || "活動統計の取得に失敗しました");
+	if (!statsResult.ok) {
+		throw new Error(statsResult.error.message);
 	}
 
-	const { profile } = profileResult;
-	const { stats } = statsResult;
+	const profile = profileResult.data;
+	const stats = statsResult.data;
 
 	return (
 		<div className="container py-8">

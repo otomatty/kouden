@@ -42,18 +42,19 @@ export function TwoFactorSetupForm({ secret, returnUrl, isRequired }: TwoFactorS
 			try {
 				const result = await setupTwoFactorAuth(secret, verificationCode);
 
-				if (result.success) {
-					setIsVerified(true);
-
-					// 成功後2秒待ってからリダイレクト
-					setTimeout(() => {
-						const redirectUrl = returnUrl || "/admin";
-						router.push(redirectUrl);
-						router.refresh();
-					}, 2000);
-				} else {
-					setError(result.error || "設定に失敗しました");
+				if (!result.ok) {
+					setError(result.error.message);
+					return;
 				}
+
+				setIsVerified(true);
+
+				// 成功後2秒待ってからリダイレクト
+				setTimeout(() => {
+					const redirectUrl = returnUrl || "/admin";
+					router.push(redirectUrl);
+					router.refresh();
+				}, 2000);
 			} catch (error) {
 				console.error("2FA setup error:", error);
 				setError("設定中にエラーが発生しました");
@@ -72,7 +73,7 @@ export function TwoFactorSetupForm({ secret, returnUrl, isRequired }: TwoFactorS
 						<div>
 							<h3 className="font-semibold text-green-800">設定完了！</h3>
 							<p className="text-sm text-green-700">
-								二要素認証の設定が正常に完了しました。リダイレクトしています...
+								二要素認証が正常に設定されました。リダイレクトしています...
 							</p>
 						</div>
 					</div>

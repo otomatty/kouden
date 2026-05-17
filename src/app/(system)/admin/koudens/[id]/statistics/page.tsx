@@ -120,7 +120,11 @@ export default async function AdminStatisticsPage({ params }: AdminStatisticsPag
 	await checkAdminPermission();
 
 	// 統計情報の計算のため、全エントリーを取得
-	const { entries } = await getEntriesForAdmin(koudenId, 1, Number.MAX_SAFE_INTEGER);
+	const entriesResult = await getEntriesForAdmin(koudenId, 1, Number.MAX_SAFE_INTEGER);
+	if (!entriesResult.ok) {
+		throw new Error(entriesResult.error.message);
+	}
+	const { entries } = entriesResult.data;
 
 	// 統計データを計算（配分込み）
 	const statisticsData = await calculateStatistics(entries);

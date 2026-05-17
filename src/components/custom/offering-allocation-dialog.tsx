@@ -80,7 +80,7 @@ export function OfferingAllocationDialog({
 
 	const loadAllocations = async () => {
 		const result = await getOfferingAllocations(offeringId);
-		if (result.success && result.data) {
+		if (result.ok) {
 			setAllocations(result.data);
 			setSelectedEntries(
 				result.data.map((a) => a.kouden_entry_id).filter((id): id is string => id !== null),
@@ -94,7 +94,7 @@ export function OfferingAllocationDialog({
 
 	const checkIntegrity = async () => {
 		const result = await checkOfferingAllocationIntegrity(offeringId);
-		if (result.success && result.data && result.data.length > 0) {
+		if (result.ok && result.data.length > 0) {
 			const data = result.data[0];
 			setIntegrity({
 				isValid: data?.is_valid ?? false,
@@ -126,11 +126,11 @@ export function OfferingAllocationDialog({
 
 			const result = await allocateOfferingToEntries(request);
 
-			if (result.success) {
+			if (result.ok) {
 				toast.success("お供物の配分を保存しました");
 				await loadAllocations();
 			} else {
-				toast.error(result.error || "配分の保存に失敗しました");
+				toast.error(result.error.message);
 			}
 		} catch (error) {
 			console.error("配分保存エラー:", error);
@@ -154,11 +154,11 @@ export function OfferingAllocationDialog({
 				manualAmountsArray,
 			);
 
-			if (result.success) {
+			if (result.ok) {
 				toast.success("配分を再計算しました");
 				await loadAllocations();
 			} else {
-				toast.error(result.error || "再計算に失敗しました");
+				toast.error(result.error.message);
 			}
 		} catch (error) {
 			console.error("再計算エラー:", error);

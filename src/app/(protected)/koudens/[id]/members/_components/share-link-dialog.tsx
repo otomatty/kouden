@@ -49,14 +49,21 @@ export function ShareLinkForm({ koudenId, roles }: ShareLinkFormProps) {
 			const maxUses = formData.get("maxUses") ? Number(formData.get("maxUses")) : null;
 			const expiresIn = (formData.get("expiresIn") as string) || "7d";
 
-			const invitation = await createShareInvitation({
+			const result = await createShareInvitation({
 				koudenId,
 				roleId,
 				maxUses,
 				expiresIn,
 			});
 
-			const link = `${window.location.origin}/invitations/${invitation.invitation_token}`;
+			if (!result.ok) {
+				toast.error(result.error.message, {
+					description: "しばらく時間をおいてから再度お試しください",
+				});
+				return;
+			}
+
+			const link = `${window.location.origin}/invitations/${result.data.invitation_token}`;
 			setInvitationLink(link);
 
 			toast.success("招待リンクを作成しました", {

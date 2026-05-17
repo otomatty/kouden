@@ -37,12 +37,18 @@ const categoryConfig = {
 };
 
 export async function ContactRequestsTable({ status, category, page }: ContactRequestsTableProps) {
-	const result = await getContactRequests({
+	const resultRaw = await getContactRequests({
 		status,
 		category,
 		page,
 		limit: 20,
 	});
+
+	if (!resultRaw.ok) {
+		throw new Error(resultRaw.error.message);
+	}
+
+	const result = resultRaw.data;
 
 	if (result.data.length === 0) {
 		return (

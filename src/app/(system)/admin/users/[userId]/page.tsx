@@ -14,7 +14,16 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
 	try {
 		// ユーザー詳細情報を取得
 		const { userId } = await params;
-		const user = await getUserDetail(userId);
+		const userResult = await getUserDetail(userId);
+
+		if (!userResult.ok) {
+			if (userResult.error.code === "NOT_FOUND") {
+				notFound();
+			}
+			throw new Error(userResult.error.message);
+		}
+
+		const user = userResult.data;
 
 		return (
 			<div className="container mx-auto px-4 py-8">

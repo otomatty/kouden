@@ -38,18 +38,44 @@ export default async function AdminReturnRecordsPage({
 	await checkAdminPermission();
 
 	// 香典帳の存在確認
-	const kouden = await getKoudenForAdmin(koudenId);
+	const koudenResult = await getKoudenForAdmin(koudenId);
+	if (!koudenResult.ok) {
+		if (koudenResult.error.code === "NOT_FOUND") {
+			notFound();
+		}
+		throw new Error(koudenResult.error.message);
+	}
+	const kouden = koudenResult.data;
 	if (!kouden) {
 		notFound();
 	}
 
 	// 必要なデータを並列取得（管理者用関数を使用）
-	const [returnEntriesResult, { entries }, relationships, returnItems] = await Promise.all([
-		getReturnEntriesByKoudenPaginated(koudenId, 100, undefined, { search, status }),
-		getEntriesForAdmin(koudenId),
-		getRelationshipsForAdmin(koudenId),
-		getReturnItems(koudenId),
-	]);
+	const [returnEntriesResultRaw, entriesResult, relationshipsResult, returnItemsResult] =
+		await Promise.all([
+			getReturnEntriesByKoudenPaginated(koudenId, 100, undefined, { search, status }),
+			getEntriesForAdmin(koudenId),
+			getRelationshipsForAdmin(koudenId),
+			getReturnItems(koudenId),
+		]);
+
+	if (!returnEntriesResultRaw.ok) {
+		throw new Error(returnEntriesResultRaw.error.message);
+	}
+	if (!entriesResult.ok) {
+		throw new Error(entriesResult.error.message);
+	}
+	if (!relationshipsResult.ok) {
+		throw new Error(relationshipsResult.error.message);
+	}
+	if (!returnItemsResult.ok) {
+		throw new Error(returnItemsResult.error.message);
+	}
+
+	const returnEntriesResult = returnEntriesResultRaw.data;
+	const { entries } = entriesResult.data;
+	const relationships = relationshipsResult.data;
+	const returnItems = returnItemsResult.data;
 
 	const returnEntries: ReturnEntryRecordWithKoudenEntry[] = returnEntriesResult.data;
 

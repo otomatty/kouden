@@ -15,19 +15,22 @@ export default async function PurchasePage({ params }: PurchasePageProps) {
 	} catch {
 		notFound();
 	}
-	const [kouden, plansResult, planInfo] = await Promise.all([
+	const [koudenResult, plansResult, planInfoResult] = await Promise.all([
 		getKouden(koudenId),
 		getPlans(),
 		getKoudenWithPlan(koudenId),
 	]);
-	if (!kouden) {
+	if (!koudenResult.ok) {
 		notFound();
 	}
-	const { plans, error } = plansResult;
-	if (error || !plans) {
-		throw new Error(error || "プランの取得に失敗しました");
+	if (!plansResult.ok) {
+		throw new Error(plansResult.error.message);
 	}
-	const currentPlan = planInfo.plan;
+	if (!planInfoResult.ok) {
+		throw new Error(planInfoResult.error.message);
+	}
+	const plans = plansResult.data;
+	const currentPlan = planInfoResult.data.plan;
 
 	return (
 		<div className="py-8">

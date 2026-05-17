@@ -31,7 +31,11 @@ const categoryConfig = {
 };
 
 export async function ContactRequestsStats() {
-	const stats = await getContactRequestStats();
+	const statsResult = await getContactRequestStats();
+	if (!statsResult.ok) {
+		throw new Error(statsResult.error.message);
+	}
+	const stats = statsResult.data;
 
 	const statusCards = [
 		{

@@ -4,13 +4,18 @@ import { ReturnItemDialog } from "./return-item-dialog";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import type { ReturnItem } from "@/types/return-records/return-items";
 
 type Props = {
 	koudenId: string;
 };
 
 export async function ReturnItemCardList({ koudenId }: Props) {
-	const returnItems = await getReturnItems(koudenId);
+	const returnItemsResult = await getReturnItems(koudenId);
+	if (!returnItemsResult.ok) {
+		throw new Error(returnItemsResult.error.message);
+	}
+	const returnItems = returnItemsResult.data;
 
 	return (
 		<div className="space-y-4">
@@ -29,14 +34,20 @@ export async function ReturnItemCardList({ koudenId }: Props) {
 }
 
 type ReturnItemCardProps = {
-	returnItem: Awaited<ReturnType<typeof getReturnItems>>[number];
+	returnItem: ReturnItem;
 	koudenId: string;
 };
 
 function ReturnItemCard({ returnItem, koudenId }: ReturnItemCardProps) {
 	async function handleDelete() {
 		try {
-			await deleteReturnItem(returnItem.id, koudenId);
+			const result = await deleteReturnItem(returnItem.id, koudenId);
+			if (!result.ok) {
+				toast.error(result.error.message, {
+					description: "しばらく時間をおいてから再度お試しください",
+				});
+				return;
+			}
 			toast.success("返礼品を削除しました");
 		} catch (error) {
 			console.error(error);

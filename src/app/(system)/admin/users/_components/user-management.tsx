@@ -65,9 +65,13 @@ export function UserManagement() {
 			};
 
 			const result = await getAllUsers(params);
-			setUsers(result.users);
-			setTotal(result.total);
-			setHasMore(result.hasMore);
+			if (!result.ok) {
+				setError(result.error.message);
+				return;
+			}
+			setUsers(result.data.users);
+			setTotal(result.data.total);
+			setHasMore(result.data.hasMore);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "ユーザー一覧の取得に失敗しました");
 		} finally {

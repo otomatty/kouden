@@ -62,12 +62,13 @@ describe("お供物配分システム統合テスト", () => {
 		const { getOfferingAllocations } = await import("@/app/_actions/offerings/queries");
 
 		(getOfferingAllocations as Mock).mockResolvedValue({
-			success: true,
+			ok: true,
 			data: [],
 		});
 
 		(allocateOfferingToEntries as Mock).mockResolvedValue({
-			success: true,
+			ok: true,
+			data: null,
 		});
 
 		// モック関数が正しく設定されていることを確認
@@ -94,21 +95,24 @@ describe("お供物配分システム統合テスト", () => {
 		];
 
 		(getOfferingAllocations as Mock).mockResolvedValue({
-			success: true,
+			ok: true,
 			data: mockAllocations,
 		});
 
 		const result = await getOfferingAllocations("offering1");
 
-		expect(result.success).toBe(true);
-		expect(result.data).toEqual(mockAllocations);
+		expect(result.ok).toBe(true);
+		if (result.ok) {
+			expect(result.data).toEqual(mockAllocations);
+		}
 	});
 
 	it("配分作成が正しく呼び出される", async () => {
 		const { allocateOfferingToEntries } = await import("@/app/_actions/offerings/allocation");
 
 		(allocateOfferingToEntries as Mock).mockResolvedValue({
-			success: true,
+			ok: true,
+			data: null,
 		});
 
 		const mockRequest = {
@@ -120,7 +124,7 @@ describe("お供物配分システム統合テスト", () => {
 
 		const result = await allocateOfferingToEntries(mockRequest);
 
-		expect(result.success).toBe(true);
+		expect(result.ok).toBe(true);
 		expect(allocateOfferingToEntries).toHaveBeenCalledWith(mockRequest);
 	});
 
@@ -128,8 +132,12 @@ describe("お供物配分システム統合テスト", () => {
 		const { allocateOfferingToEntries } = await import("@/app/_actions/offerings/allocation");
 
 		(allocateOfferingToEntries as Mock).mockResolvedValue({
-			success: false,
-			error: "配分金額の合計（11000円）がお供物価格（10000円）と一致しません",
+			ok: false,
+			error: {
+				code: "VALIDATION_ERROR",
+				message: "配分金額の合計（11000円）がお供物価格（10000円）と一致しません",
+				status: 400,
+			},
 		});
 
 		const mockRequest = {
@@ -141,15 +149,17 @@ describe("お供物配分システム統合テスト", () => {
 
 		const result = await allocateOfferingToEntries(mockRequest);
 
-		expect(result.success).toBe(false);
-		expect(result.error).toContain("配分金額の合計");
+		expect(result.ok).toBe(false);
+		if (!result.ok) {
+			expect(result.error.message).toContain("配分金額の合計");
+		}
 	});
 
 	it("整合性チェックが正しく動作する", async () => {
 		const { checkOfferingAllocationIntegrity } = await import("@/app/_actions/offerings/queries");
 
 		(checkOfferingAllocationIntegrity as Mock).mockResolvedValue({
-			success: true,
+			ok: true,
 			data: [
 				{
 					offering_id: "offering1",
@@ -165,8 +175,10 @@ describe("お供物配分システム統合テスト", () => {
 
 		const result = await checkOfferingAllocationIntegrity("offering1");
 
-		expect(result.success).toBe(true);
-		expect(result.data?.[0]?.is_valid).toBe(true);
-		expect(result.data?.[0]?.allocation_difference).toBe(0);
+		expect(result.ok).toBe(true);
+		if (result.ok) {
+			expect(result.data[0]?.is_valid).toBe(true);
+			expect(result.data[0]?.allocation_difference).toBe(0);
+		}
 	});
 });

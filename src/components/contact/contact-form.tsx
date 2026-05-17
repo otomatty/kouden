@@ -112,8 +112,8 @@ export function ContactForm() {
 		}
 		try {
 			const result = await createContactRequest(formData);
-			if (!result.success) {
-				toast.error("お問い合わせの送信に失敗しました", { description: result.error });
+			if (!result.ok) {
+				toast.error("お問い合わせの送信に失敗しました", { description: result.error.message });
 				return;
 			}
 			router.push("/contact/success");

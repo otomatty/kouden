@@ -20,10 +20,20 @@ export default async function AdminTelegramsPage({ params }: AdminTelegramsPageP
 	await checkAdminPermission();
 
 	// 弔電情報とエントリー情報を取得
-	const [telegrams, { entries }] = await Promise.all([
+	const [telegramsResult, entriesResult] = await Promise.all([
 		getTelegrams(koudenId),
 		getEntriesForAdmin(koudenId),
 	]);
+
+	if (!telegramsResult.ok) {
+		throw new Error(telegramsResult.error.message);
+	}
+	if (!entriesResult.ok) {
+		throw new Error(entriesResult.error.message);
+	}
+
+	const telegrams = telegramsResult.data;
+	const { entries } = entriesResult.data;
 
 	return (
 		<div className="container mx-auto py-6 space-y-6">

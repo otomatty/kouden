@@ -6,7 +6,21 @@ import { AnnouncementsTable } from "./_components/announcements-table";
 import { AddAnnouncementButton } from "./_components/add-announcement-button";
 
 export default async function AnnouncementsPage() {
-	const announcements = await getAnnouncements();
+	const announcementsResult = await getAnnouncements();
+
+	if (!announcementsResult.ok) {
+		throw new Error(announcementsResult.error.message);
+	}
+
+	const announcements = announcementsResult.data;
+
+	async function handleDeleteAnnouncement(id: string): Promise<void> {
+		"use server";
+		const result = await deleteAnnouncement(id);
+		if (!result.ok) {
+			throw new Error(result.error.message);
+		}
+	}
 
 	return (
 		<div className="container py-10">
@@ -17,7 +31,7 @@ export default async function AnnouncementsPage() {
 			<div className="mt-6">
 				<AnnouncementsTable
 					announcements={announcements}
-					deleteAnnouncement={deleteAnnouncement}
+					deleteAnnouncement={handleDeleteAnnouncement}
 				/>
 			</div>
 		</div>

@@ -20,10 +20,20 @@ export default async function AdminOfferingsPage({ params }: AdminOfferingsPageP
 	await checkAdminPermission();
 
 	// 供物情報とエントリー情報を取得
-	const [offerings, { entries }] = await Promise.all([
+	const [offeringsResult, entriesResult] = await Promise.all([
 		getOfferings(koudenId),
 		getEntriesForAdmin(koudenId, 1, Number.MAX_SAFE_INTEGER),
 	]);
+
+	if (!offeringsResult.ok) {
+		throw new Error(offeringsResult.error.message);
+	}
+	if (!entriesResult.ok) {
+		throw new Error(entriesResult.error.message);
+	}
+
+	const offerings = offeringsResult.data;
+	const { entries } = entriesResult.data;
 
 	return (
 		<div className="container mx-auto py-6 space-y-6">

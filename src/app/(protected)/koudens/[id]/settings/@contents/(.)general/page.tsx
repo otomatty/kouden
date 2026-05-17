@@ -13,7 +13,11 @@ interface GeneralSettingsPageProps {
  */
 export default async function GeneralSettingsPage({ params }: GeneralSettingsPageProps) {
 	const { id: koudenId } = await params;
-	const kouden = await getKouden(koudenId);
+	const koudenResult = await getKouden(koudenId);
+	if (!koudenResult.ok) {
+		throw new Error(koudenResult.error.message);
+	}
+	const kouden = koudenResult.data;
 
 	return (
 		<div className="space-y-6">

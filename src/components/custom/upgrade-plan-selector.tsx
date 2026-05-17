@@ -49,13 +49,13 @@ export function UpgradePlanSelector({
 				cancelPath: cancelPath || `/purchase/${koudenId}`,
 			});
 
-			if (result.error) {
-				setError(result.error);
+			if (!result.ok) {
+				setError(result.error.message);
 				return;
 			}
 
-			if (result.url) {
-				window.location.href = result.url;
+			if (result.data.url) {
+				window.location.href = result.data.url;
 			} else {
 				setError("購入URLが取得できませんでした");
 			}

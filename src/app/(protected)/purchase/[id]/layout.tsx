@@ -24,11 +24,18 @@ export default async function PurchaseLayout({ params, children }: PurchaseLayou
 
 	try {
 		const permission = await checkKoudenPermission(koudenId);
-		const [kouden, planInfo] = await Promise.all([
+		const [koudenResult, planInfoResult] = await Promise.all([
 			getKouden(koudenId),
 			getKoudenWithPlan(koudenId),
 		]);
-		const { plan, expired, remainingDays } = planInfo;
+		if (!koudenResult.ok) {
+			notFound();
+		}
+		if (!planInfoResult.ok) {
+			notFound();
+		}
+		const kouden = koudenResult.data;
+		const { plan, expired, remainingDays } = planInfoResult.data;
 		const enableExcel = plan.code !== "free" && !expired;
 		const enableCsv = plan.code !== "free" && !expired;
 
