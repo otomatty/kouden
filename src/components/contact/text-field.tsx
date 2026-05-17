@@ -1,5 +1,3 @@
-"use client";
-
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { InputHTMLAttributes } from "react";

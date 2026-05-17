@@ -3,8 +3,8 @@
  * @module return-records
  */
 
-import type { Database } from "@/types/supabase";
 import type { AttendanceType } from "@/types/entries";
+import type { Database } from "@/types/supabase";
 
 /**
  * 返礼状況の型定義
@@ -19,6 +19,21 @@ export interface ReturnItem {
 	price: number;
 	quantity: number;
 	notes?: string;
+}
+
+/**
+ * `ReturnItem` 形状の最低限の構造チェック。
+ * JSON カラム由来の値を `ReturnItem` に narrow するために使う。
+ */
+export function isReturnItem(value: unknown): value is ReturnItem {
+	if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+	const v = value as Record<string, unknown>;
+	return (
+		typeof v.name === "string" &&
+		typeof v.price === "number" &&
+		typeof v.quantity === "number" &&
+		(v.notes === undefined || typeof v.notes === "string")
+	);
 }
 
 /**

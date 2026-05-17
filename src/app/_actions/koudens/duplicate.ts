@@ -1,17 +1,19 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
-import type { Kouden } from "@/types/kouden";
-import { checkKoudenPermission } from "../permissions";
-import { KOUDEN_ROLES } from "@/types/role";
 import logger from "@/lib/logger";
+import { createClient } from "@/lib/supabase/server";
+import type { KoudenWithOwner } from "@/types/kouden";
+import { KOUDEN_ROLES } from "@/types/role";
+import { checkKoudenPermission } from "../permissions";
 
 /**
  * 香典帳の複製（デフォルトで free プラン適用）
  * @param id 香典帳ID
  * @returns 複製された香典帳またはエラー
  */
-export async function duplicateKouden(id: string): Promise<{ kouden?: Kouden; error?: string }> {
+export async function duplicateKouden(
+	id: string,
+): Promise<{ kouden?: KoudenWithOwner; error?: string }> {
 	try {
 		const supabase = await createClient();
 		const role = await checkKoudenPermission(id);
@@ -310,7 +312,7 @@ export async function duplicateKouden(id: string): Promise<{ kouden?: Kouden; er
 			}
 		}
 
-		return { kouden: { ...newKouden, owner } as unknown as Kouden };
+		return { kouden: { ...newKouden, owner } };
 	} catch (error) {
 		logger.error(
 			{

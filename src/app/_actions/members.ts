@@ -1,9 +1,9 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
-import { cache } from "react";
 import { KoudenError, withErrorHandling } from "@/lib/errors";
 import logger from "@/lib/logger";
+import { createClient } from "@/lib/supabase/server";
+import { cache } from "react";
 
 /**
  * メンバー一覧を取得する（最適化版）
@@ -126,8 +126,8 @@ export const getMembers = cache(async (koudenId: string) => {
 		// メンバー情報の整形
 		return members.map((member) => {
 			const isOwnerUser = member.user_id === permission?.owner_id;
-			// 外部キー参照の結果を適切に処理
-			const roleData = member.kouden_roles;
+			// `kouden_roles` は join 結果なので戻り値には含めない
+			const { kouden_roles: roleData, ...rest } = member;
 			const role = roleData || { id: member.role_id, name: "unknown" };
 			const profile = profiles?.find((p) => p.id === member.user_id) || {
 				id: member.user_id,
@@ -136,7 +136,7 @@ export const getMembers = cache(async (koudenId: string) => {
 			};
 
 			return {
-				...member,
+				...rest,
 				profile,
 				isOwner: isOwnerUser,
 				role: isOwnerUser
@@ -250,8 +250,8 @@ export const getMembersForAdmin = cache(async (koudenId: string) => {
 		// メンバー情報の整形（管理者は全て閲覧可能だが編集権限は制限）
 		return members.map((member) => {
 			const isOwnerUser = member.user_id === kouden.owner_id;
-			// 外部キー参照の結果を適切に処理
-			const roleData = member.kouden_roles;
+			// `kouden_roles` は join 結果なので戻り値には含めない
+			const { kouden_roles: roleData, ...rest } = member;
 			const role = roleData || { id: member.role_id, name: "unknown" };
 			const profile = profiles?.find((p) => p.id === member.user_id) || {
 				id: member.user_id,
@@ -260,7 +260,7 @@ export const getMembersForAdmin = cache(async (koudenId: string) => {
 			};
 
 			return {
-				...member,
+				...rest,
 				profile,
 				isOwner: isOwnerUser,
 				role: isOwnerUser

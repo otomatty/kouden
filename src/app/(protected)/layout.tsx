@@ -40,9 +40,9 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
 	if (user) {
 		// デフォルト値
 
-		const { settings } = await getUserSettings(user.id);
-		if (settings) {
-			guideMode = settings.guide_mode ?? true;
+		const settingsResult = await getUserSettings(user.id);
+		if (settingsResult.ok) {
+			guideMode = settingsResult.data.guide_mode ?? true;
 		}
 	}
 

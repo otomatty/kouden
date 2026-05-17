@@ -1,8 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import * as XLSX from "xlsx";
 import type { Database } from "@/types/supabase";
+import * as XLSX from "xlsx";
 
 type Entry = Database["public"]["Tables"]["kouden_entries"]["Row"] & {
 	relationship: {
@@ -50,17 +50,20 @@ export async function exportKoudenToExcel(koudenId: string) {
 		throw new Error("関係性データの取得に失敗しました");
 	}
 
-	// データを結合
-	const mergedEntries = entries.map((entry) => ({
+	// データを結合 (find の O(n×m) を避けるため Map で前計算)
+	const relationshipById = new Map(relationships.map((r) => [r.id, r] as const));
+	const mergedEntries: Entry[] = entries.map((entry) => ({
 		...entry,
-		relationship: relationships.find((r) => r.id === entry.relationship_id),
+		relationship: entry.relationship_id
+			? (relationshipById.get(entry.relationship_id) ?? null)
+			: null,
 	}));
 
 	// Excelワークブックを作成
 	const workbook = XLSX.utils.book_new();
 
 	// データを変換
-	const excelData = (mergedEntries as unknown as Entry[]).map((entry) => ({
+	const excelData = mergedEntries.map((entry) => ({
 		ご芳名: entry.name,
 		団体名: entry.organization || "",
 		役職: entry.position || "",
@@ -137,10 +140,13 @@ export async function exportKoudenToCsv(koudenId: string) {
 		throw new Error("関係性データの取得に失敗しました");
 	}
 
-	// データを結合
-	const mergedEntries = entries.map((entry) => ({
+	// データを結合 (find の O(n×m) を避けるため Map で前計算)
+	const relationshipById = new Map(relationships.map((r) => [r.id, r] as const));
+	const mergedEntries: Entry[] = entries.map((entry) => ({
 		...entry,
-		relationship: relationships.find((r) => r.id === entry.relationship_id),
+		relationship: entry.relationship_id
+			? (relationshipById.get(entry.relationship_id) ?? null)
+			: null,
 	}));
 
 	// CSVヘッダー
@@ -159,7 +165,7 @@ export async function exportKoudenToCsv(koudenId: string) {
 	];
 
 	// CSVデータ行を生成
-	const csvRows = (mergedEntries as unknown as Entry[]).map((entry) => [
+	const csvRows = mergedEntries.map((entry) => [
 		entry.name,
 		entry.organization || "",
 		entry.position || "",

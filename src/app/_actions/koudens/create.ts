@@ -3,7 +3,7 @@
 import logger from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import type { CreateKoudenParams, Kouden } from "@/types/kouden";
+import type { CreateKoudenParams, KoudenWithOwner } from "@/types/kouden";
 
 export interface CreateKoudenWithPlanParams extends Omit<CreateKoudenParams, "userId"> {
 	planCode: string;
@@ -36,7 +36,7 @@ async function getAuthenticatedUserId(): Promise<string | null> {
 export async function createKouden({
 	title,
 	description,
-}: Omit<CreateKoudenParams, "userId">): Promise<{ kouden?: Kouden; error?: string }> {
+}: Omit<CreateKoudenParams, "userId">): Promise<{ kouden?: KoudenWithOwner; error?: string }> {
 	const userId = await getAuthenticatedUserId();
 	if (!userId) {
 		return { error: "認証が必要です" };
@@ -87,7 +87,7 @@ export async function createKouden({
 			kouden: {
 				...kouden,
 				owner: owner ?? { id: userId, display_name: null },
-			} as unknown as Kouden,
+			},
 		};
 	} catch (error) {
 		logger.error(

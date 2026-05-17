@@ -1,6 +1,6 @@
-import snakecaseKeys from "snakecase-keys";
-import camelcaseKeys from "camelcase-keys";
 import type { BaseOffering } from "@/types/offerings";
+import camelcaseKeys from "camelcase-keys";
+import snakecaseKeys from "snakecase-keys";
 
 /**
  * <<使い方>>
@@ -37,6 +37,11 @@ export type CamelCaseToSnakeNested<T> = T extends object
 		}
 	: T;
 
+/**
+ * `snakecase-keys` / `camelcase-keys` の戻り値型はキーのリネームを
+ * 表現できないため、`as unknown as` 経由で本ファイル内に閉じた二段キャストを
+ * 行う。実行時の振る舞いはライブラリ側で担保されている。
+ */
 export const camelToSnake = <
 	T extends Record<string, unknown> | readonly Record<string, unknown>[],
 >(
