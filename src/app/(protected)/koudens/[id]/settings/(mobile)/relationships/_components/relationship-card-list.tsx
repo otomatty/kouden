@@ -35,7 +35,13 @@ export function RelationshipCardList({ koudenId, relationships }: RelationshipCa
 
 	const handleDelete = async (id: string) => {
 		try {
-			await deleteRelationship(id);
+			const result = await deleteRelationship(id);
+			if (!result.ok) {
+				toast.error("関係性の削除に失敗しました", {
+					description: result.error.message,
+				});
+				return;
+			}
 			toast.success("関係性を削除しました");
 		} catch (error) {
 			console.error(error);
@@ -47,9 +53,15 @@ export function RelationshipCardList({ koudenId, relationships }: RelationshipCa
 
 	const handleToggle = async (id: string, isDefault: boolean) => {
 		try {
-			await updateRelationship(id, {
+			const result = await updateRelationship(id, {
 				is_default: isDefault,
 			});
+			if (!result.ok) {
+				toast.error("設定の更新に失敗しました", {
+					description: result.error.message,
+				});
+				return;
+			}
 		} catch (error) {
 			console.error(error);
 			toast.error("設定の更新に失敗しました", {

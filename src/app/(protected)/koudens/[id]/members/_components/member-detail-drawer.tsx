@@ -95,11 +95,18 @@ export function MemberDetailDrawer({
 	const handleRoleChange = async (roleId: string) => {
 		try {
 			setIsUpdatingRole(true);
-			await updateMemberRole(koudenId, member.user_id, roleId);
+			const result = await updateMemberRole(koudenId, member.user_id, roleId);
+			if (!result.ok) {
+				toast.error("ロールの更新に失敗しました", {
+					description: result.error.message,
+				});
+				return;
+			}
 			toast.success("ロールを更新しました", {
 				description: "メンバーのロールが正常に変更されました",
 			});
 		} catch (error) {
+			console.error(error);
 			toast.error(error instanceof Error ? error.message : "ロールの更新に失敗しました", {
 				description: "しばらく時間をおいてから再度お試しください",
 			});

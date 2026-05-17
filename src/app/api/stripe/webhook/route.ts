@@ -110,7 +110,17 @@ export async function POST(req: Request) {
 		// PDF生成失敗は購入処理のロールバック対象外 (ログのみ)。
 		if (purchaseRow.is_new_purchase) {
 			try {
-				await exportReceiptToPdf(purchaseRow.purchase_id);
+				const receiptResult = await exportReceiptToPdf(purchaseRow.purchase_id);
+				if (!receiptResult.ok) {
+					logger.error(
+						{
+							error: receiptResult.error.message,
+							code: receiptResult.error.code,
+							purchaseId: purchaseRow.purchase_id,
+						},
+						"Receipt export error",
+					);
+				}
 			} catch (err) {
 				logger.error(
 					{

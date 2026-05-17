@@ -13,7 +13,10 @@ interface EditAnnouncementButtonProps {
 export function EditAnnouncementButton({ announcement }: EditAnnouncementButtonProps) {
 	const onSubmit = async (values: AnnouncementFormData) => {
 		try {
-			await updateAnnouncement(announcement.id, values);
+			const result = await updateAnnouncement(announcement.id, values);
+			if (!result.ok) {
+				throw new Error(result.error.message);
+			}
 		} catch (error) {
 			console.error("Failed to update announcement:", error);
 		}

@@ -44,12 +44,20 @@ export function RemoveMemberButton({
 		try {
 			setIsLoading(true);
 
-			if (isSelf) {
-				// 自分自身の場合は leaveMember を使用
-				await leaveMember(member.kouden_id);
-			} else {
-				// 他のメンバーの場合は removeMember を使用
-				await removeMember(member.kouden_id, member.user_id);
+			const result = isSelf
+				? // 自分自身の場合は leaveMember を使用
+					await leaveMember(member.kouden_id)
+				: // 他のメンバーの場合は removeMember を使用
+					await removeMember(member.kouden_id, member.user_id);
+
+			if (!result.ok) {
+				toast.error(
+					isSelf ? "退出に失敗しました" : "メンバーの削除に失敗しました",
+					{
+						description: result.error.message,
+					},
+				);
+				return;
 			}
 
 			// クライアントサイドで状態を更新
@@ -64,6 +72,7 @@ export function RemoveMemberButton({
 				router.push("/koudens");
 			}
 		} catch (error) {
+			console.error(error);
 			toast.error(
 				error instanceof Error
 					? error.message
