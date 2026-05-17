@@ -22,7 +22,11 @@ export const PdfDownloadButton: React.FC<PdfDownloadButtonProps> = ({ koudenId }
 		setLoadingData(true);
 		try {
 			// データを取得
-			const d = await exportKoudenToPdf(koudenId);
+			const exportResult = await exportKoudenToPdf(koudenId);
+			if (!exportResult.ok) {
+				throw new Error(exportResult.error.message);
+			}
+			const d = exportResult.data;
 
 			// PDF生成
 			const asPdf = pdf(<KoudenPdfDocument data={d} />);

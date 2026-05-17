@@ -13,11 +13,19 @@ interface TelegramsPageProps {
  */
 export default async function TelegramsPage({ params }: TelegramsPageProps) {
 	const { id: koudenId } = await params;
-	const [telegrams, entriesResult] = await Promise.all([
+	const [telegramsResult, entriesResult] = await Promise.all([
 		getTelegrams(koudenId),
 		getEntries(koudenId),
 	]);
-	const entries = entriesResult.entries;
+
+	if (!telegramsResult.ok) {
+		throw new Error(telegramsResult.error.message);
+	}
+	if (!entriesResult.ok) {
+		throw new Error(entriesResult.error.message);
+	}
+	const telegrams = telegramsResult.data;
+	const entries = entriesResult.data.entries;
 
 	return (
 		<div className="mt-4">

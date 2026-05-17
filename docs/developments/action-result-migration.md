@@ -120,20 +120,32 @@ if (!result.ok) {
 
 ## 移行ステータス
 
-実施済み:
-- `src/app/_actions/settings.ts` (4関数すべて) — PR #98 (#41 の最初の段)
-- `src/app/_actions/admin/admin-2fa.ts` は `TwoFactorActionResult` 独自型を使用中（次の移行候補）
+issue #41 で `src/app/_actions/` 配下を一括移行済み。`ActionResult` を返す
+全 Server Action と呼び出し側 (約 130 ファイル) を同一 PR で揃えた。
 
-残り（57 ファイル中 約56 ファイル）は段階的に対応する。1モジュールずつ独立した PR にすることで、レビュー時の差分を小さく保つ。
+### `ActionResult` を返さない関数（例外として残存）
+
+「失敗時にフォールバック値を返す」設計が必要な以下は意図的に旧シグネチャを
+維持している。呼び出し側はこの戻り値をそのまま使う:
+
+- `auth.ts::getCurrentUser` / `user.ts::getUser` / `user.ts::getUserId`
+  — 未ログイン・取得失敗時 `null`
+- `settings.ts::getGuideVisibility` — 失敗時 `true`
+- `user-surveys.ts::getUserSurveyStatus` /
+  `checkOneWeekOwnershipSurvey` / `checkSurveySkipStatus`
+- `admin/permissions.ts::isAdmin` — 失敗時 `false`
+- `admin/dashboard.ts` の集計関数群 — 空配列・ゼロ件で UI を継続させる
+- `help/help-items.ts` の表示用ヘルパー
+- `permissions.ts` の判定系 (`canEditKouden` 等) — UI 直結の boolean
+- `admin/middleware.ts::withAdmin` / `withSuperAdmin` —
+  Next.js `redirect()` を内包する HOF。`withActionResult` で包むと
+  `NEXT_REDIRECT` 内部例外を吸収してしまうため。
+
+内部ヘルパー (非 export) はラップせず `KoudenError` を `throw` するだけ。
+呼び出し元の `withActionResult` がまとめて変換する。
 
 ## API Route のエラーレスポンス統一
 
-別タスクだが、API Route のエラーレスポンスも次の形に揃えるとよい:
-
-```json
-{
-  "error": { "code": "FORBIDDEN", "message": "権限がありません", "status": 403 }
-}
-```
-
-現状 `{ error: string }`, `{ error: string, details: any }`, `{ error: string, options: [...] }` などが混在している。
+別タスク。`src/app/api/` 配下の handler は `{ error: string }` 形式が
+歴史的に混在しており、本 PR では行わない。今後、共通ヘルパーを
+`src/lib/api/` に置いて段階的に揃える方針。

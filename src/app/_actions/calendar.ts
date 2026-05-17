@@ -1,5 +1,6 @@
 "use server";
 
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import { google } from "googleapis";
 
 // 環境変数の取得と必須チェック
@@ -39,90 +40,104 @@ export type DayAvailability = {
  * @param weekStart ISO 形式の週開始日 (例: "2025-07-14T00:00:00.000Z")
  * @returns 各日の日時と空きスロットリスト
  */
-export async function getWeeklyAvailability(weekStart: string): Promise<DayAvailability[]> {
-	const startDate = new Date(weekStart);
-	const endDate = new Date(startDate);
-	endDate.setDate(endDate.getDate() + 7);
+export async function getWeeklyAvailability(
+	weekStart: string,
+): Promise<ActionResult<DayAvailability[]>> {
+	return withActionResult(async () => {
+		const startDate = new Date(weekStart);
+		const endDate = new Date(startDate);
+		endDate.setDate(endDate.getDate() + 7);
 
-	// カレンダーイベントを取得
-	const res = await calendar.events.list({
-		calendarId: GOOGLE_CALENDAR_ID,
-		timeMin: startDate.toISOString(),
-		timeMax: endDate.toISOString(),
-		singleEvents: true,
-		orderBy: "startTime",
-	});
-	const events = res.data.items || [];
+		// カレンダーイベントを取得
+		const res = await calendar.events.list({
+			calendarId: GOOGLE_CALENDAR_ID,
+			timeMin: startDate.toISOString(),
+			timeMax: endDate.toISOString(),
+			singleEvents: true,
+			orderBy: "startTime",
+		});
+		const events = res.data.items || [];
 
-	// 時間重複チェック
-	const isOverlap = (s1: Date, e1: Date, s2: Date, e2: Date) => s1 < e2 && s2 < e1;
+		// 時間重複チェック
+		const isOverlap = (s1: Date, e1: Date, s2: Date, e2: Date) => s1 < e2 && s2 < e1;
 
-	const availability: DayAvailability[] = [];
+		const availability: DayAvailability[] = [];
 
-	for (let day = 0; day < 7; day++) {
-		const current = new Date(startDate);
-		current.setDate(startDate.getDate() + day);
-		const dateKey = current.toISOString().split("T")[0] ?? "";
+		for (let day = 0; day < 7; day++) {
+			const current = new Date(startDate);
+			current.setDate(startDate.getDate() + day);
+			const dateKey = current.toISOString().split("T")[0] ?? "";
 
-		const slots: Slot[] = [];
-		for (let hour = 0; hour < 24; hour++) {
-			const slotStart = new Date(current);
-			slotStart.setHours(hour, 0, 0, 0);
-			const slotEnd = new Date(slotStart);
-			slotEnd.setHours(hour + 1);
+			const slots: Slot[] = [];
+			for (let hour = 0; hour < 24; hour++) {
+				const slotStart = new Date(current);
+				slotStart.setHours(hour, 0, 0, 0);
+				const slotEnd = new Date(slotStart);
+				slotEnd.setHours(hour + 1);
 
-			const busy = events.some((ev) => {
-				const evStartRaw = ev.start?.dateTime ?? ev.start?.date;
-				const evEndRaw = ev.end?.dateTime ?? ev.end?.date;
-				if (!evStartRaw) return false;
-				if (!evEndRaw) return false;
-				const evStart = new Date(evStartRaw);
-				const evEnd = new Date(evEndRaw);
-				return isOverlap(slotStart, slotEnd, evStart, evEnd);
-			});
+				const busy = events.some((ev) => {
+					const evStartRaw = ev.start?.dateTime ?? ev.start?.date;
+					const evEndRaw = ev.end?.dateTime ?? ev.end?.date;
+					if (!evStartRaw) return false;
+					if (!evEndRaw) return false;
+					const evStart = new Date(evStartRaw);
+					const evEnd = new Date(evEndRaw);
+					return isOverlap(slotStart, slotEnd, evStart, evEnd);
+				});
 
-			slots.push({
-				start: slotStart.toISOString(),
-				end: slotEnd.toISOString(),
-				available: !busy,
-			});
+				slots.push({
+					start: slotStart.toISOString(),
+					end: slotEnd.toISOString(),
+					available: !busy,
+				});
+			}
+
+			availability.push({ date: dateKey, slots });
 		}
 
-		availability.push({ date: dateKey, slots });
-	}
-
-	return availability;
+		return availability;
+	}, "カレンダー空き状況の取得");
 }
 
 /**
  * FormData から値を抽出し、指定したスロットでイベントを登録します。
  */
-export async function reserveSlot(formData: FormData): Promise<void> {
-	const summary = formData.get("summary");
-	const email = formData.get("email");
-	const notes = formData.get("notes");
-	if (!email) {
-		throw new Error("フォームデータ email が不足しています");
-	}
-	const description = `メールアドレス: ${email.toString()}${notes ? `\n備考: ${notes.toString()}` : ""}`;
-	const startDateTime = formData.get("startDateTime");
-	const endDateTime = formData.get("endDateTime");
-	if (!summary) {
-		throw new Error("フォームデータ summary が不足しています");
-	}
-	if (!startDateTime) {
-		throw new Error("フォームデータ startDateTime が不足しています");
-	}
-	if (!endDateTime) {
-		throw new Error("フォームデータ endDateTime が不足しています");
-	}
-	await calendar.events.insert({
-		calendarId: GOOGLE_CALENDAR_ID,
-		requestBody: {
-			summary: summary.toString(),
-			description,
-			start: { dateTime: startDateTime.toString() },
-			end: { dateTime: endDateTime.toString() },
-		},
-	});
+export async function reserveSlot(formData: FormData): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
+		const summary = formData.get("summary");
+		const email = formData.get("email");
+		const notes = formData.get("notes");
+		if (!email) {
+			throw new KoudenError("フォームデータ email が不足しています", ErrorCodes.VALIDATION_ERROR);
+		}
+		const description = `メールアドレス: ${email.toString()}${notes ? `\n備考: ${notes.toString()}` : ""}`;
+		const startDateTime = formData.get("startDateTime");
+		const endDateTime = formData.get("endDateTime");
+		if (!summary) {
+			throw new KoudenError("フォームデータ summary が不足しています", ErrorCodes.VALIDATION_ERROR);
+		}
+		if (!startDateTime) {
+			throw new KoudenError(
+				"フォームデータ startDateTime が不足しています",
+				ErrorCodes.VALIDATION_ERROR,
+			);
+		}
+		if (!endDateTime) {
+			throw new KoudenError(
+				"フォームデータ endDateTime が不足しています",
+				ErrorCodes.VALIDATION_ERROR,
+			);
+		}
+		await calendar.events.insert({
+			calendarId: GOOGLE_CALENDAR_ID,
+			requestBody: {
+				summary: summary.toString(),
+				description,
+				start: { dateTime: startDateTime.toString() },
+				end: { dateTime: endDateTime.toString() },
+			},
+		});
+
+		return null;
+	}, "予約の登録");
 }

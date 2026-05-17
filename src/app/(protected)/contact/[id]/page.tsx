@@ -8,7 +8,11 @@ export default async function ContactDetailPage({
 	params: Promise<{ id: string }>;
 }) {
 	const { id } = await params;
-	const data = await getContactRequestDetail(id);
+	const result = await getContactRequestDetail(id);
+	if (!result.ok) {
+		throw new Error(result.error.message);
+	}
+	const data = result.data;
 
 	return (
 		<div className="container mx-auto p-4">

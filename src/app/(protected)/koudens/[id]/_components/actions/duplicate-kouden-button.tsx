@@ -20,15 +20,16 @@ export function DuplicateKoudenButton({ koudenId }: DuplicateKoudenButtonProps) 
 	const handleDuplicate = async () => {
 		try {
 			setIsLoading(true);
-			const { kouden, error } = await duplicateKouden(koudenId);
+			const result = await duplicateKouden(koudenId);
 
-			if (error) {
-				throw new Error(error);
+			if (!result.ok) {
+				toast.error("香典帳の複製に失敗しました", {
+					description: result.error.message,
+				});
+				return;
 			}
 
-			if (!kouden) {
-				throw new Error("香典帳の複製に失敗しました");
-			}
+			const kouden = result.data;
 
 			toast.success("香典帳を複製しました", {
 				description: "新しい香典帳が作成されました",

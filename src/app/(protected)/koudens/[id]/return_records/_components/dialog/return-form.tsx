@@ -117,7 +117,7 @@ export function ReturnForm({
 		try {
 			setSubmissionState({ isSubmitting: true, error: null });
 
-			await updateReturnEntry({
+			const actionResult = await updateReturnEntry({
 				kouden_entry_id: data.kouden_entry_id,
 				kouden_id: koudenId,
 				return_status: data.return_status,
@@ -128,6 +128,17 @@ export function ReturnForm({
 				remarks: data.remarks || null,
 				return_items: data.return_items,
 			});
+
+			if (!actionResult.ok) {
+				setSubmissionState({
+					isSubmitting: false,
+					error: actionResult.error.message,
+				});
+				toast.error(actionResult.error.message, {
+					description: "しばらく時間をおいてから再度お試しください",
+				});
+				return;
+			}
 
 			// 更新結果を作成
 			const result: ReturnManagementSummary = {

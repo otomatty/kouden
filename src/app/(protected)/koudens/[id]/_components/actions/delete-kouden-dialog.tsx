@@ -49,9 +49,9 @@ export function DeleteKoudenDialog({
 		try {
 			setIsDeleting(true);
 			const result = await deleteKouden(koudenId);
-			if (!result.success) {
+			if (!result.ok) {
 				toast.error("香典帳の削除に失敗しました", {
-					description: result.error,
+					description: result.error.message,
 				});
 				return;
 			}

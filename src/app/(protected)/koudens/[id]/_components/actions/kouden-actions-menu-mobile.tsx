@@ -66,8 +66,14 @@ export function KoudenActionsMenuMobile({
 		setIsLoading("duplicate-check");
 		try {
 			const result = await validateDuplicateEntries(koudenId);
+			if (!result.ok) {
+				toast.error("重複チェックに失敗しました", {
+					description: result.error.message,
+				});
+				return;
+			}
 			// 重複検証結果をlocalStorageに保存
-			localStorage.setItem("duplicateEntries", JSON.stringify(result));
+			localStorage.setItem("duplicateEntries", JSON.stringify(result.data));
 			// ページをリロードして重複状態を反映
 			window.location.reload();
 		} catch (error) {
@@ -90,14 +96,14 @@ export function KoudenActionsMenuMobile({
 		setIsLoading("duplicate");
 		try {
 			const result = await duplicateKouden(koudenId);
-			if (result.kouden) {
-				toast.success("香典帳を複製しました");
-				router.push(`/koudens/${result.kouden.id}`);
-			} else {
+			if (!result.ok) {
 				toast.error("香典帳の複製に失敗しました", {
-					description: result.error,
+					description: result.error.message,
 				});
+				return;
 			}
+			toast.success("香典帳を複製しました");
+			router.push(`/koudens/${result.data.id}`);
 		} catch (error) {
 			toast.error("香典帳の複製に失敗しました", {
 				description: error instanceof Error ? error.message : "エラーが発生しました",
@@ -113,8 +119,17 @@ export function KoudenActionsMenuMobile({
 		try {
 			const result = await exportKoudenToExcel(koudenId);
 
+			if (!result.ok) {
+				toast.error("Excelファイルの出力に失敗しました", {
+					description: result.error.message,
+				});
+				return;
+			}
+
+			const data = result.data;
+
 			// Base64文字列からBlobを作成
-			const binaryString = window.atob(result.base64);
+			const binaryString = window.atob(data.base64);
 			const bytes = new Uint8Array(binaryString.length);
 			for (let i = 0; i < binaryString.length; i++) {
 				bytes[i] = binaryString.charCodeAt(i);
@@ -127,14 +142,14 @@ export function KoudenActionsMenuMobile({
 			const url = window.URL.createObjectURL(blob);
 			const link = document.createElement("a");
 			link.href = url;
-			link.download = result.fileName;
+			link.download = data.fileName;
 			document.body.appendChild(link);
 			link.click();
 			document.body.removeChild(link);
 			window.URL.revokeObjectURL(url);
 
 			toast.success("Excelファイルを出力しました", {
-				description: `ファイル名: ${result.fileName}`,
+				description: `ファイル名: ${data.fileName}`,
 			});
 		} catch (error) {
 			toast.error("Excelファイルの出力に失敗しました", {
@@ -152,8 +167,17 @@ export function KoudenActionsMenuMobile({
 		try {
 			const result = await exportKoudenToCsv(koudenId);
 
+			if (!result.ok) {
+				toast.error("CSVファイルの出力に失敗しました", {
+					description: result.error.message,
+				});
+				return;
+			}
+
+			const data = result.data;
+
 			// CSV文字列からBlobを作成
-			const blob = new Blob([result.csvContent], {
+			const blob = new Blob([data.csvContent], {
 				type: "text/csv;charset=utf-8;",
 			});
 
@@ -161,14 +185,14 @@ export function KoudenActionsMenuMobile({
 			const url = window.URL.createObjectURL(blob);
 			const link = document.createElement("a");
 			link.href = url;
-			link.download = result.fileName;
+			link.download = data.fileName;
 			document.body.appendChild(link);
 			link.click();
 			document.body.removeChild(link);
 			window.URL.revokeObjectURL(url);
 
 			toast.success("CSVファイルを出力しました", {
-				description: `ファイル名: ${result.fileName}`,
+				description: `ファイル名: ${data.fileName}`,
 			});
 		} catch (error) {
 			toast.error("CSVファイルの出力に失敗しました", {
@@ -185,7 +209,16 @@ export function KoudenActionsMenuMobile({
 		setIsLoading("pdf");
 		try {
 			// データを取得
-			const data = await exportKoudenToPdf(koudenId);
+			const pdfResult = await exportKoudenToPdf(koudenId);
+
+			if (!pdfResult.ok) {
+				toast.error("PDF出力に失敗しました", {
+					description: pdfResult.error.message,
+				});
+				return;
+			}
+
+			const data = pdfResult.data;
 
 			// PDF生成
 			const asPdf = pdf(<KoudenPdfDocument data={data} />);

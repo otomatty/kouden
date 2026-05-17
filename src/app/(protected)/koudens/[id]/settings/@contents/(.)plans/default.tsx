@@ -23,14 +23,19 @@ export default async function PlansPage({ params }: PlansPageProps) {
 		notFound();
 	}
 
-	const [plansResult, planInfo] = await Promise.all([getPlans(), getKoudenWithPlan(koudenId)]);
+	const [plansResult, planInfoResult] = await Promise.all([
+		getPlans(),
+		getKoudenWithPlan(koudenId),
+	]);
 
-	const { plans, error } = plansResult;
-	if (error || !plans) {
-		throw new Error(error || "プランの取得に失敗しました");
+	if (!plansResult.ok) {
+		throw new Error(plansResult.error.message);
 	}
-
-	const currentPlan = planInfo.plan;
+	if (!planInfoResult.ok) {
+		throw new Error(planInfoResult.error.message);
+	}
+	const plans = plansResult.data;
+	const currentPlan = planInfoResult.data.plan;
 
 	return <PlansPageClient id={koudenId} plans={plans} currentPlan={currentPlan} />;
 }

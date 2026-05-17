@@ -1,4 +1,5 @@
 import { getReturnItem } from "@/app/_actions/return-records/return-items";
+import { KoudenError } from "@/lib/errors";
 import { notFound } from "next/navigation";
 import { ReturnItemDetailPageClient } from "./return-item-detail-page-client";
 
@@ -16,22 +17,28 @@ interface ReturnItemDetailPageProps {
 export default async function ReturnItemDetailPage({ params }: ReturnItemDetailPageProps) {
 	const { id: koudenId, itemId } = await params;
 
-	try {
-		// 返礼品詳細データを取得
-		const returnItem = await getReturnItem(itemId);
+	// 返礼品詳細データを取得。`NOT_FOUND` のみ 404、
+	// 権限エラーや DB 障害はそのまま伝播させて error boundary に任せる。
+	const result = await getReturnItem(itemId);
 
-		if (!returnItem) {
+	if (!result.ok) {
+		if (result.error.code === "NOT_FOUND") {
 			notFound();
 		}
+		// `ActionResult.error` は plain object のため、Error 派生として
+		// 再構築する。`code` / `status` を保持しておくと、上位の error.tsx
+		// から分類ロジックや構造化ログが組めるようになる。
+		throw new KoudenError(result.error.message, result.error.code, {
+			status: result.error.status,
+		});
+	}
 
-		// 香典帳IDが一致しない場合は404
-		if (returnItem.kouden_id !== koudenId) {
-			notFound();
-		}
+	const returnItem = result.data;
 
-		return <ReturnItemDetailPageClient returnItem={returnItem} koudenId={koudenId} />;
-	} catch (error) {
-		console.error("[ERROR] Failed to fetch return item details:", error);
+	// 香典帳IDが一致しない場合は404
+	if (returnItem.kouden_id !== koudenId) {
 		notFound();
 	}
+
+	return <ReturnItemDetailPageClient returnItem={returnItem} koudenId={koudenId} />;
 }

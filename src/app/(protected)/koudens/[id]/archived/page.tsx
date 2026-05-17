@@ -16,8 +16,17 @@ export default async function ArchivedPage({ params }: ArchivedPageProps) {
 	} catch {
 		notFound();
 	}
-	const [kouden, planInfo] = await Promise.all([getKouden(id), getKoudenWithPlan(id)]);
-	if (!kouden) notFound();
+	const [koudenResult, planInfoResult] = await Promise.all([getKouden(id), getKoudenWithPlan(id)]);
+	if (!koudenResult.ok) {
+		if (koudenResult.error.code === "NOT_FOUND") notFound();
+		throw new Error(koudenResult.error.message);
+	}
+	if (!planInfoResult.ok) {
+		if (planInfoResult.error.code === "NOT_FOUND") notFound();
+		throw new Error(planInfoResult.error.message);
+	}
+	const kouden = koudenResult.data;
+	const planInfo = planInfoResult.data;
 	const { plan, expired } = planInfo;
 	const enableExcel = plan.code !== "free" && !expired;
 	const enableCsv = plan.code !== "free" && !expired;

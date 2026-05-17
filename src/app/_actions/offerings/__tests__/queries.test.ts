@@ -83,8 +83,10 @@ describe("お供物配分クエリー機能", () => {
 
 			const result = await getOfferingAllocations("offering1");
 
-			expect(result.success).toBe(true);
-			expect(result.data).toEqual(mockAllocations);
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.data).toEqual(mockAllocations);
+			}
 			expect(supabaseMock.from).toHaveBeenCalledWith("offering_allocations");
 		});
 
@@ -101,8 +103,10 @@ describe("お供物配分クエリー機能", () => {
 
 			const result = await getOfferingAllocations("offering1");
 
-			expect(result.success).toBe(false);
-			expect(result.error).toContain("データベース接続エラー");
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.error.message).toContain("お供物配分データの取得に失敗");
+			}
 		});
 	});
 
@@ -138,13 +142,15 @@ describe("お供物配分クエリー機能", () => {
 
 			const result = await getEntryOfferingAllocations("entry1");
 
-			expect(result.success).toBe(true);
-			expect(result.data?.[0]).toMatchObject({
-				id: "alloc1",
-				offering_type: "FLOWER",
-				offering_price: 10000,
-				provider_name: "花屋さん",
-			});
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.data[0]).toMatchObject({
+					id: "alloc1",
+					offering_type: "FLOWER",
+					offering_price: 10000,
+					provider_name: "花屋さん",
+				});
+			}
 		});
 
 		it("関連するお供物情報が null の場合適切にハンドリングされる", async () => {
@@ -174,13 +180,15 @@ describe("お供物配分クエリー機能", () => {
 
 			const result = await getEntryOfferingAllocations("entry1");
 
-			expect(result.success).toBe(true);
-			expect(result.data?.[0]).toMatchObject({
-				id: "alloc1",
-				offering_type: "",
-				offering_price: 0,
-				provider_name: "",
-			});
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.data[0]).toMatchObject({
+					id: "alloc1",
+					offering_type: "",
+					offering_price: 0,
+					provider_name: "",
+				});
+			}
 		});
 	});
 
@@ -213,30 +221,32 @@ describe("お供物配分クエリー機能", () => {
 
 			const result = await checkOfferingAllocationIntegrity();
 
-			expect(result.success).toBe(true);
-			expect(result.data).toHaveLength(2);
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.data).toHaveLength(2);
 
-			// 整合性が取れているoffering1
-			expect(result.data?.[0]).toMatchObject({
-				offering_id: "offering1",
-				offering_type: "FLOWER",
-				offering_price: 10000,
-				total_allocated: 10000,
-				allocation_difference: 0,
-				ratio_sum: 1.0,
-				is_valid: true,
-			});
+				// 整合性が取れているoffering1
+				expect(result.data[0]).toMatchObject({
+					offering_id: "offering1",
+					offering_type: "FLOWER",
+					offering_price: 10000,
+					total_allocated: 10000,
+					allocation_difference: 0,
+					ratio_sum: 1.0,
+					is_valid: true,
+				});
 
-			// 不整合のあるoffering2
-			expect(result.data?.[1]).toMatchObject({
-				offering_id: "offering2",
-				offering_type: "FRUIT",
-				offering_price: 8000,
-				total_allocated: 7000,
-				allocation_difference: 1000,
-				ratio_sum: 0.875,
-				is_valid: false,
-			});
+				// 不整合のあるoffering2
+				expect(result.data[1]).toMatchObject({
+					offering_id: "offering2",
+					offering_type: "FRUIT",
+					offering_price: 8000,
+					total_allocated: 7000,
+					allocation_difference: 1000,
+					ratio_sum: 0.875,
+					is_valid: false,
+				});
+			}
 		});
 
 		it("特定のお供物だけをチェックできる", async () => {
@@ -261,7 +271,7 @@ describe("お供物配分クエリー機能", () => {
 
 			const result = await checkOfferingAllocationIntegrity("offering1");
 
-			expect(result.success).toBe(true);
+			expect(result.ok).toBe(true);
 			expect(eqMock).toHaveBeenCalledWith("id", "offering1");
 		});
 	});
@@ -285,12 +295,14 @@ describe("お供物配分クエリー機能", () => {
 
 			const result = await calculateEntryTotalAmount("entry1");
 
-			expect(result.success).toBe(true);
-			expect(result.data).toEqual({
-				kouden_amount: 10000,
-				offering_total: 5000, // 3000 + 2000
-				calculated_total: 15000, // 10000 + 5000
-			});
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.data).toEqual({
+					kouden_amount: 10000,
+					offering_total: 5000, // 3000 + 2000
+					calculated_total: 15000, // 10000 + 5000
+				});
+			}
 		});
 
 		it("香典エントリーが見つからない場合エラーになる", async () => {
@@ -302,8 +314,10 @@ describe("お供物配分クエリー機能", () => {
 
 			const result = await calculateEntryTotalAmount("nonexistent");
 
-			expect(result.success).toBe(false);
-			expect(result.error).toBe("香典エントリーが見つかりません");
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.error.code).toBe("NOT_FOUND");
+			}
 		});
 
 		it("お供物配分がない場合は0で計算される", async () => {
@@ -323,12 +337,14 @@ describe("お供物配分クエリー機能", () => {
 
 			const result = await calculateEntryTotalAmount("entry1");
 
-			expect(result.success).toBe(true);
-			expect(result.data).toEqual({
-				kouden_amount: 10000,
-				offering_total: 0,
-				calculated_total: 10000,
-			});
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.data).toEqual({
+					kouden_amount: 10000,
+					offering_total: 0,
+					calculated_total: 10000,
+				});
+			}
 		});
 
 		it("配分データ取得でエラーが発生した場合適切にハンドリングされる", async () => {
@@ -349,8 +365,10 @@ describe("お供物配分クエリー機能", () => {
 
 			const result = await calculateEntryTotalAmount("entry1");
 
-			expect(result.success).toBe(false);
-			expect(result.error).toContain("お供物配分データの取得に失敗");
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.error.message).toContain("合計金額の計算に失敗");
+			}
 		});
 	});
 
@@ -382,23 +400,25 @@ describe("お供物配分クエリー機能", () => {
 
 			const result = await calculateEntryTotalAmountBulk(["entry1", "entry2", "entry3"]);
 
-			expect(result.success).toBe(true);
-			expect(result.data?.size).toBe(3);
-			expect(result.data?.get("entry1")).toEqual({
-				kouden_amount: 10000,
-				offering_total: 5000,
-				calculated_total: 15000,
-			});
-			expect(result.data?.get("entry2")).toEqual({
-				kouden_amount: 20000,
-				offering_total: 1000,
-				calculated_total: 21000,
-			});
-			expect(result.data?.get("entry3")).toEqual({
-				kouden_amount: 5000,
-				offering_total: 0,
-				calculated_total: 5000,
-			});
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.data.size).toBe(3);
+				expect(result.data.get("entry1")).toEqual({
+					kouden_amount: 10000,
+					offering_total: 5000,
+					calculated_total: 15000,
+				});
+				expect(result.data.get("entry2")).toEqual({
+					kouden_amount: 20000,
+					offering_total: 1000,
+					calculated_total: 21000,
+				});
+				expect(result.data.get("entry3")).toEqual({
+					kouden_amount: 5000,
+					offering_total: 0,
+					calculated_total: 5000,
+				});
+			}
 			// from は2回（kouden_entries + offering_allocations）しか呼ばれない
 			expect(supabaseMock.from).toHaveBeenCalledTimes(2);
 			expect(supabaseMock.from).toHaveBeenNthCalledWith(1, "kouden_entries");
@@ -408,12 +428,14 @@ describe("お供物配分クエリー機能", () => {
 		it("空配列入力時はSupabaseを呼ばずに空Mapを返す", async () => {
 			const result = await calculateEntryTotalAmountBulk([]);
 
-			expect(result.success).toBe(true);
-			expect(result.data?.size).toBe(0);
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.data.size).toBe(0);
+			}
 			expect(supabaseMock.from).not.toHaveBeenCalled();
 		});
 
-		it("kouden_entries取得エラー時はsuccess: falseを返す", async () => {
+		it("kouden_entries取得エラー時はok: falseを返す", async () => {
 			const mockError = { message: "DB接続エラー" };
 
 			supabaseMock.from
@@ -430,11 +452,13 @@ describe("お供物配分クエリー機能", () => {
 
 			const result = await calculateEntryTotalAmountBulk(["entry1"]);
 
-			expect(result.success).toBe(false);
-			expect(result.error).toContain("香典エントリーの取得に失敗");
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.error.message).toContain("合計金額の一括計算に失敗");
+			}
 		});
 
-		it("offering_allocations取得エラー時はsuccess: falseを返す", async () => {
+		it("offering_allocations取得エラー時はok: falseを返す", async () => {
 			const mockError = { message: "配分データ取得失敗" };
 
 			supabaseMock.from
@@ -455,8 +479,10 @@ describe("お供物配分クエリー機能", () => {
 
 			const result = await calculateEntryTotalAmountBulk(["entry1"]);
 
-			expect(result.success).toBe(false);
-			expect(result.error).toContain("お供物配分データの取得に失敗");
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.error.message).toContain("合計金額の一括計算に失敗");
+			}
 		});
 
 		it("配分が無いエントリーもMapに含まれ offering_total: 0 になる", async () => {
@@ -476,15 +502,17 @@ describe("お供物配分クエリー機能", () => {
 
 			const result = await calculateEntryTotalAmountBulk(["entry1"]);
 
-			expect(result.success).toBe(true);
-			expect(result.data?.get("entry1")).toEqual({
-				kouden_amount: 8000,
-				offering_total: 0,
-				calculated_total: 8000,
-			});
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.data.get("entry1")).toEqual({
+					kouden_amount: 8000,
+					offering_total: 0,
+					calculated_total: 8000,
+				});
+			}
 		});
 
-		it("未認証時はsuccess: falseを返す", async () => {
+		it("未認証時はok: falseを返す", async () => {
 			serverClientMock.auth.getUser.mockResolvedValueOnce({
 				data: { user: null },
 				error: null,
@@ -492,13 +520,15 @@ describe("お供物配分クエリー機能", () => {
 
 			const result = await calculateEntryTotalAmountBulk(["entry1"]);
 
-			expect(result.success).toBe(false);
-			expect(result.error).toContain("認証が必要です");
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.error.code).toBe("UNAUTHORIZED");
+			}
 			// 認証失敗時はSupabaseアクセスを行わない
 			expect(supabaseMock.from).not.toHaveBeenCalled();
 		});
 
-		it("is_admin RPC エラー時はsuccess: falseを返す", async () => {
+		it("is_admin RPC エラー時はok: falseを返す", async () => {
 			serverClientMock.rpc.mockResolvedValueOnce({
 				data: null,
 				error: { message: "RPC実行エラー" },
@@ -506,8 +536,10 @@ describe("お供物配分クエリー機能", () => {
 
 			const result = await calculateEntryTotalAmountBulk(["entry1"]);
 
-			expect(result.success).toBe(false);
-			expect(result.error).toContain("管理者権限の確認に失敗");
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.error.code).toBe("DB_FETCH_ERROR");
+			}
 			// RPC失敗時はSupabaseアクセスを行わない
 			expect(supabaseMock.from).not.toHaveBeenCalled();
 		});
@@ -553,18 +585,20 @@ describe("お供物配分クエリー機能", () => {
 
 			const result = await calculateEntryTotalAmountBulk(["entry1", "entry2"]);
 
-			expect(result.success).toBe(true);
-			expect(result.data?.size).toBe(1);
-			expect(result.data?.get("entry1")).toEqual({
-				kouden_amount: 10000,
-				offering_total: 1500,
-				calculated_total: 11500,
-			});
-			// entry2 は除外される
-			expect(result.data?.has("entry2")).toBe(false);
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.data.size).toBe(1);
+				expect(result.data.get("entry1")).toEqual({
+					kouden_amount: 10000,
+					offering_total: 1500,
+					calculated_total: 11500,
+				});
+				// entry2 は除外される
+				expect(result.data.has("entry2")).toBe(false);
+			}
 		});
 
-		it("非管理者の所有koudens取得エラー時はsuccess: falseを返す", async () => {
+		it("非管理者の所有koudens取得エラー時はok: falseを返す", async () => {
 			serverClientMock.rpc.mockResolvedValueOnce({ data: false, error: null });
 
 			supabaseMock.from
@@ -592,14 +626,16 @@ describe("お供物配分クエリー機能", () => {
 
 			const result = await calculateEntryTotalAmountBulk(["entry1"]);
 
-			expect(result.success).toBe(false);
-			expect(result.error).toContain("アクセス権限の確認に失敗");
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.error.code).toBe("DB_FETCH_ERROR");
+			}
 			// 認可スコープ取得失敗後に allocations を取得しないことを確認
 			expect(supabaseMock.from).toHaveBeenCalledTimes(3);
 			expect(supabaseMock.from).not.toHaveBeenCalledWith("offering_allocations");
 		});
 
-		it("非管理者のメンバーkoudens取得エラー時はsuccess: falseを返す", async () => {
+		it("非管理者のメンバーkoudens取得エラー時はok: falseを返す", async () => {
 			serverClientMock.rpc.mockResolvedValueOnce({ data: false, error: null });
 
 			supabaseMock.from
@@ -627,8 +663,10 @@ describe("お供物配分クエリー機能", () => {
 
 			const result = await calculateEntryTotalAmountBulk(["entry1"]);
 
-			expect(result.success).toBe(false);
-			expect(result.error).toContain("アクセス権限の確認に失敗");
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.error.code).toBe("DB_FETCH_ERROR");
+			}
 			expect(supabaseMock.from).toHaveBeenCalledTimes(3);
 			expect(supabaseMock.from).not.toHaveBeenCalledWith("offering_allocations");
 		});

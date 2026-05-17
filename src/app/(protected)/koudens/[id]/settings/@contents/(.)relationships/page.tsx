@@ -12,7 +12,11 @@ interface RelationshipsPageProps {
  */
 export default async function RelationshipsPage({ params }: RelationshipsPageProps) {
 	const { id } = await params;
-	const relationships = await getRelationships(id);
+	const relationshipsResult = await getRelationships(id);
+	if (!relationshipsResult.ok) {
+		throw new Error(relationshipsResult.error.message);
+	}
+	const relationships = relationshipsResult.data;
 
 	return (
 		<div className="space-y-6">

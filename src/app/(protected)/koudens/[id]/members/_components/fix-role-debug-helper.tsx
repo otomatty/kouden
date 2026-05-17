@@ -34,8 +34,24 @@ export function FixRoleDebugHelper({ members, roles, koudenId }: FixRoleDebugHel
 
 		setIsFixing(true);
 		try {
+			const failures: { name: string; message: string }[] = [];
 			for (const member of problematicMembers) {
-				await updateMemberRole(koudenId, member.user_id, viewerRole.id);
+				const result = await updateMemberRole(koudenId, member.user_id, viewerRole.id);
+				if (!result.ok) {
+					failures.push({
+						name: member.profile?.display_name ?? "名前未設定",
+						message: result.error.message,
+					});
+				}
+			}
+
+			if (failures.length > 0) {
+				toast.error("ロール修正に失敗しました", {
+					description: `${failures.length}件失敗: ${failures
+						.map((f) => `${f.name} (${f.message})`)
+						.join(", ")}`,
+				});
+				return;
 			}
 
 			toast.success("不正なロールを修正しました", {

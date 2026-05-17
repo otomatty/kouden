@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
-import {
-	allocateOfferingToEntries,
-	removeOfferingAllocation,
-	recalculateOfferingAllocation,
-} from "../allocation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { OfferingAllocationRequest } from "@/types/entries";
+import { type Mock, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	allocateOfferingToEntries,
+	recalculateOfferingAllocation,
+	removeOfferingAllocation,
+} from "../allocation";
 
 // モック設定
 vi.mock("@/lib/supabase/admin", () => ({
@@ -60,7 +60,7 @@ describe("お供物配分システム", () => {
 
 			const result = await allocateOfferingToEntries(request);
 
-			expect(result.success).toBe(true);
+			expect(result.ok).toBe(true);
 			expect(supabaseMock.from).toHaveBeenCalledWith("offerings");
 			expect(supabaseMock.from).toHaveBeenCalledWith("offering_allocations");
 		});
@@ -87,8 +87,10 @@ describe("お供物配分システム", () => {
 
 			const result = await allocateOfferingToEntries(request);
 
-			expect(result.success).toBe(false);
-			expect(result.error).toContain("配分金額の合計");
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.error.code).toBe("VALIDATION_ERROR");
+			}
 		});
 
 		it("お供物が見つからない場合エラーになる", async () => {
@@ -106,8 +108,10 @@ describe("お供物配分システム", () => {
 
 			const result = await allocateOfferingToEntries(request);
 
-			expect(result.success).toBe(false);
-			expect(result.error).toBe("お供物が見つかりません");
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.error.code).toBe("NOT_FOUND");
+			}
 		});
 
 		it("主要提供者が正しく設定される", async () => {
@@ -143,6 +147,7 @@ describe("お供物配分システム", () => {
 			expect(insertMock).toHaveBeenCalledTimes(1);
 			const insertedData = insertMock.mock.calls[0]?.[0];
 			expect(insertedData).toBeDefined();
+			// biome-ignore lint/suspicious/noExplicitAny: supabase insert payload shape is internal
 			const primaryEntry = insertedData.find((data: any) => data.is_primary_contributor);
 			expect(primaryEntry.kouden_entry_id).toBe("entry2");
 		});
@@ -180,7 +185,7 @@ describe("お供物配分システム", () => {
 
 			const result = await removeOfferingAllocation("offering1");
 
-			expect(result.success).toBe(true);
+			expect(result.ok).toBe(true);
 			expect(supabaseMock.from).toHaveBeenCalledWith("offering_allocations");
 		});
 
@@ -197,8 +202,10 @@ describe("お供物配分システム", () => {
 
 			const result = await removeOfferingAllocation("offering1");
 
-			expect(result.success).toBe(false);
-			expect(result.error).toContain("削除エラー");
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.error.message).toContain("お供物配分の削除に失敗");
+			}
 		});
 	});
 
@@ -237,7 +244,7 @@ describe("お供物配分システム", () => {
 
 			const result = await recalculateOfferingAllocation("offering1", "manual", [5000, 5000]);
 
-			expect(result.success).toBe(true);
+			expect(result.ok).toBe(true);
 		});
 
 		it("配分データが見つからない場合エラーになる", async () => {
@@ -251,8 +258,10 @@ describe("お供物配分システム", () => {
 
 			const result = await recalculateOfferingAllocation("offering1", "equal");
 
-			expect(result.success).toBe(false);
-			expect(result.error).toBe("配分データが見つかりません");
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.error.code).toBe("NOT_FOUND");
+			}
 		});
 	});
 
@@ -290,6 +299,7 @@ describe("お供物配分システム", () => {
 			const insertedData = insertMock.mock.calls[0]?.[0];
 			expect(insertedData).toBeDefined();
 			const totalAllocated = insertedData.reduce(
+				// biome-ignore lint/suspicious/noExplicitAny: supabase insert payload shape is internal
 				(sum: number, data: any) => sum + data.allocated_amount,
 				0,
 			);

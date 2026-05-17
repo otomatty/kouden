@@ -50,7 +50,13 @@ export function GeneralSettingsForm({ koudenId, defaultValues }: GeneralSettings
 	const onSubmit = (values: FormValues) => {
 		startTransition(async () => {
 			try {
-				await updateKouden(koudenId, values);
+				const result = await updateKouden(koudenId, values);
+				if (!result.ok) {
+					toast.error("設定の保存に失敗しました", {
+						description: result.error.message,
+					});
+					return;
+				}
 				toast.success("設定を保存しました", {
 					description: "香典帳の基本情報が更新されました",
 				});

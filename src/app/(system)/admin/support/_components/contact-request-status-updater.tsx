@@ -39,7 +39,17 @@ export function ContactRequestStatusUpdater({
 
 		setIsUpdating(true);
 		try {
-			await updateContactRequestStatus(requestId, newStatus as "new" | "in_progress" | "closed");
+			const result = await updateContactRequestStatus(
+				requestId,
+				newStatus as "new" | "in_progress" | "closed",
+			);
+
+			if (!result.ok) {
+				toast.error("ステータスの更新に失敗しました", {
+					description: result.error.message,
+				});
+				return;
+			}
 
 			setStatus(newStatus);
 			toast.success("ステータスを更新しました", {

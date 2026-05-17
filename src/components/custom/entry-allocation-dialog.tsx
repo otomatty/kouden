@@ -57,10 +57,10 @@ export function EntryAllocationDialog({
 		setIsLoading(true);
 		try {
 			const result = await getEntryOfferingAllocations(entryId);
-			if (result.success && result.data) {
+			if (result.ok) {
 				setAllocations(result.data);
 			} else {
-				toast.error(result.error || "配分データの取得に失敗しました");
+				toast.error(result.error.message);
 			}
 		} catch (error) {
 			console.error("配分データ取得エラー:", error);

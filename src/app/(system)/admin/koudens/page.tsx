@@ -39,15 +39,22 @@ export default async function AdminKoudensPage({
 			sortOrder,
 			limit: 20,
 		});
-		koudens = result.koudens;
-		total = result.total;
-		hasMore = result.hasMore;
+		if (!result.ok) {
+			console.error("Failed to fetch koudens in page:", result.error);
+			koudens = [];
+			total = 0;
+			hasMore = false;
+		} else {
+			koudens = result.data.koudens;
+			total = result.data.total;
+			hasMore = result.data.hasMore;
 
-		console.log("Page received koudens:", {
-			count: koudens.length,
-			total,
-			hasMore,
-		});
+			console.log("Page received koudens:", {
+				count: koudens.length,
+				total,
+				hasMore,
+			});
+		}
 	} catch (error) {
 		console.error("Failed to fetch koudens in page:", error);
 		// エラーが発生した場合は空の結果を返す

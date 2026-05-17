@@ -175,12 +175,12 @@ export function SurveyModal({ trigger, isOpen, onClose, onSuccess }: SurveyModal
 		try {
 			const result = await createUserSurvey(data, trigger);
 
-			if (result.success) {
-				toast.success(result.message);
+			if (result.ok) {
+				toast.success(result.data.message);
 				onSuccess?.();
 				onClose();
 			} else {
-				toast.error(result.error);
+				toast.error(result.error.message);
 			}
 		} catch (error) {
 			console.error("アンケート送信エラー:", error);
@@ -195,11 +195,11 @@ export function SurveyModal({ trigger, isOpen, onClose, onSuccess }: SurveyModal
 		try {
 			const result = await createSurveySkip(trigger);
 
-			if (result.success) {
-				toast.success(result.message);
+			if (result.ok) {
+				toast.success(result.data.message);
 				onClose();
 			} else {
-				toast.error(result.error);
+				toast.error(result.error.message);
 			}
 		} catch (error) {
 			console.error("アンケートスキップエラー:", error);

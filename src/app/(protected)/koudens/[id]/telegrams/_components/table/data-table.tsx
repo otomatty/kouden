@@ -96,7 +96,13 @@ export function DataTable({ koudenId, telegrams, entries, onDataChange }: DataTa
 	const handleDeleteRows = useCallback(
 		async (ids: string[]) => {
 			try {
-				await deleteTelegrams(ids, koudenId);
+				const result = await deleteTelegrams(ids, koudenId);
+				if (!result.ok) {
+					toast.error(result.error.message, {
+						description: "しばらく時間をおいてから再度お試しください",
+					});
+					return;
+				}
 				setSelectedRows([]);
 				if (onDataChange) {
 					onDataChange(normalizedTelegrams.filter((telegram) => !ids.includes(telegram.id)));
@@ -137,11 +143,18 @@ export function DataTable({ koudenId, telegrams, entries, onDataChange }: DataTa
 				// relationship_idの場合はキーを変換
 				const fieldKey = columnId;
 
-				const updatedTelegram = await updateTelegramField(
+				const result = await updateTelegramField(
 					targetTelegram.id,
 					fieldKey as keyof Telegram,
 					value,
 				);
+				if (!result.ok) {
+					toast.error("エラーが発生しました", {
+						description: result.error.message,
+					});
+					return;
+				}
+				const updatedTelegram = result.data;
 
 				if (onDataChange) {
 					const newTelegrams = normalizedTelegrams.map((telegram) =>

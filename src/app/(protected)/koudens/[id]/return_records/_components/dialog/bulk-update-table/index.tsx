@@ -69,11 +69,19 @@ export function BulkUpdateTableDialog({
 				setLastUpdateErrors([]); // エラーをクリア
 				try {
 					// 全返礼記録を取得
-					const allRecords = await getAllReturnRecordsForBulkUpdate(koudenId);
+					const allRecordsResult = await getAllReturnRecordsForBulkUpdate(koudenId);
+					if (!allRecordsResult.ok) {
+						throw new Error(allRecordsResult.error.message);
+					}
+					const allRecords = allRecordsResult.data;
 					setAllReturnRecords(allRecords);
 
 					// 返礼品マスタを取得
-					const returnItems = await getReturnItemsForBulkUpdate(koudenId);
+					const returnItemsResult = await getReturnItemsForBulkUpdate(koudenId);
+					if (!returnItemsResult.ok) {
+						throw new Error(returnItemsResult.error.message);
+					}
+					const returnItems = returnItemsResult.data;
 					setAvailableReturnItems(returnItems);
 
 					// 金額グループを初期化
@@ -124,7 +132,11 @@ export function BulkUpdateTableDialog({
 
 		try {
 			// 最適化版を使用（超高速）
-			const result = await executeBulkUpdateOptimized(koudenId, groupsWithChanges);
+			const actionResult = await executeBulkUpdateOptimized(koudenId, groupsWithChanges);
+			if (!actionResult.ok) {
+				throw new Error(actionResult.error.message);
+			}
+			const result = actionResult.data;
 
 			// 成功した場合
 			if (result.successCount > 0) {

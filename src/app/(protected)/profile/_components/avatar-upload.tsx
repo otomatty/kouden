@@ -54,10 +54,10 @@ export function AvatarUpload({ userId, avatarUrl, displayName }: AvatarUploadPro
 			const { data: publicUrl } = supabase.storage.from("avatars").getPublicUrl(filePath);
 
 			// プロフィールを更新
-			const { error: updateError } = await updateAvatar(userId, publicUrl.publicUrl);
+			const updateResult = await updateAvatar(userId, publicUrl.publicUrl);
 
-			if (updateError) {
-				throw updateError;
+			if (!updateResult.ok) {
+				throw new Error(updateResult.error.message);
 			}
 
 			toast.success("アバターを更新しました");

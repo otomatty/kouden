@@ -38,12 +38,17 @@ export function RemoveMemberButton({ member, isSelf, membersAtom }: RemoveMember
 		try {
 			setIsLoading(true);
 
-			if (isSelf) {
-				// 自分自身の場合は leaveMember を使用
-				await leaveMember(member.kouden_id);
-			} else {
-				// 他のメンバーの場合は removeMember を使用
-				await removeMember(member.kouden_id, member.user_id);
+			const result = isSelf
+				? // 自分自身の場合は leaveMember を使用
+					await leaveMember(member.kouden_id)
+				: // 他のメンバーの場合は removeMember を使用
+					await removeMember(member.kouden_id, member.user_id);
+
+			if (!result.ok) {
+				toast.error(result.error.message, {
+					description: "しばらく時間をおいてから再度お試しください",
+				});
+				return;
 			}
 
 			// クライアントサイドで状態を更新

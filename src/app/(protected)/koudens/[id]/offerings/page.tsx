@@ -15,10 +15,18 @@ export default async function OfferingsPage({ params }: OfferingsPageProps) {
 	const { id: koudenId } = await params;
 
 	try {
-		const [offerings, entries] = await Promise.all([
+		const [offeringsResult, entriesResult] = await Promise.all([
 			getOfferings(koudenId),
 			getEntriesForSelector(koudenId),
 		]);
+		if (!offeringsResult.ok) {
+			throw new Error(offeringsResult.error.message);
+		}
+		if (!entriesResult.ok) {
+			throw new Error(entriesResult.error.message);
+		}
+		const offerings = offeringsResult.data;
+		const entries = entriesResult.data;
 
 		return (
 			<div className="mt-4">

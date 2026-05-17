@@ -19,7 +19,24 @@ export function AcceptInvitationButton({ token }: AcceptInvitationButtonProps) {
 	const handleAccept = async () => {
 		try {
 			setIsLoading(true);
-			await acceptInvitation(token);
+			// `acceptInvitation` は ActionResult を返すため、`ok: false` を
+			// 成功と取り違えないよう明示的に分岐する。
+			const result = await acceptInvitation(token);
+			if (!result.ok) {
+				const { code, message } = result.error;
+				if (code === "UNAUTHORIZED") {
+					router.push(`/auth/login?invitation_token=${token}`);
+					return;
+				}
+				if (code === "ALREADY_EXISTS") {
+					toast.info(message);
+					router.push("/koudens");
+					return;
+				}
+				toast.error(message);
+				router.refresh();
+				return;
+			}
 
 			toast.success("参加しました", {
 				description: "香典帳のメンバーとして参加しました",
@@ -28,31 +45,9 @@ export function AcceptInvitationButton({ token }: AcceptInvitationButtonProps) {
 			router.push("/koudens");
 		} catch (error) {
 			console.error("[DEBUG] Error accepting invitation:", error);
-
-			if (error instanceof Error) {
-				switch (error.message) {
-					case "認証が必要です":
-						router.push(`/auth/login?invitation_token=${token}`);
-						return;
-					case "招待が見つかりません":
-					case "招待の有効期限が切れています":
-					case "この招待は既に使用されています":
-					case "招待の使用回数が上限に達しました":
-						toast.error(error.message);
-						router.refresh();
-						return;
-					case "すでにメンバーとして参加しています":
-						toast.info(error.message);
-						router.push("/koudens");
-						return;
-					default:
-						toast.error(error.message);
-				}
-			} else {
-				toast.error("予期せぬエラーが発生しました", {
-					description: "しばらく時間をおいてから再度お試しください",
-				});
-			}
+			toast.error("予期せぬエラーが発生しました", {
+				description: "しばらく時間をおいてから再度お試しください",
+			});
 		} finally {
 			setIsLoading(false);
 		}

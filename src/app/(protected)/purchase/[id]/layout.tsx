@@ -2,7 +2,7 @@ import { getKouden, getKoudenWithPlan } from "@/app/_actions/koudens/read";
 import { checkKoudenPermission } from "@/app/_actions/permissions";
 import { ClientProviders } from "@/components/providers/client-providers";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, unstable_rethrow } from "next/navigation";
 import { KoudenHeader } from "../../koudens/[id]/_components/_common/kouden-header";
 
 export const metadata: Metadata = {
@@ -24,17 +24,20 @@ export default async function PurchaseLayout({ params, children }: PurchaseLayou
 
 	try {
 		const permission = await checkKoudenPermission(koudenId);
-		const [kouden, planInfo] = await Promise.all([
+		const [koudenResult, planInfoResult] = await Promise.all([
 			getKouden(koudenId),
 			getKoudenWithPlan(koudenId),
 		]);
-		const { plan, expired, remainingDays } = planInfo;
-		const enableExcel = plan.code !== "free" && !expired;
-		const enableCsv = plan.code !== "free" && !expired;
-
-		if (!kouden) {
+		if (!koudenResult.ok) {
 			notFound();
 		}
+		if (!planInfoResult.ok) {
+			notFound();
+		}
+		const kouden = koudenResult.data;
+		const { plan, expired, remainingDays } = planInfoResult.data;
+		const enableExcel = plan.code !== "free" && !expired;
+		const enableCsv = plan.code !== "free" && !expired;
 
 		return (
 			<ClientProviders permission={permission}>
@@ -59,7 +62,8 @@ export default async function PurchaseLayout({ params, children }: PurchaseLayou
 				</div>
 			</ClientProviders>
 		);
-	} catch {
+	} catch (error) {
+		unstable_rethrow(error);
 		notFound();
 	}
 }

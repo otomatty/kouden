@@ -36,7 +36,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 	const showDuplicates = url.searchParams.get("isDuplicate") === "true";
 
 	try {
-		const { entries, count } = await getEntries(
+		const result = await getEntries(
 			koudenId,
 			page,
 			pageSize,
@@ -47,6 +47,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 			dateTo,
 			showDuplicates,
 		);
+
+		if (!result.ok) {
+			return NextResponse.json(
+				{ error: result.error.message },
+				{ status: result.error.status },
+			);
+		}
+		const { entries, count } = result.data;
 
 		return NextResponse.json({ entries, count });
 	} catch (error) {

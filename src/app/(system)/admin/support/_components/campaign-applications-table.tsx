@@ -59,11 +59,17 @@ function formatSlotTime(slot: { start: string; end: string }) {
 }
 
 export async function CampaignApplicationsTable({ status, page }: CampaignApplicationsTableProps) {
-	const result = await getCampaignApplications({
+	const resultRaw = await getCampaignApplications({
 		status,
 		page,
 		limit: 20,
 	});
+
+	if (!resultRaw.ok) {
+		throw new Error(resultRaw.error.message);
+	}
+
+	const result = resultRaw.data;
 
 	if (result.data.length === 0) {
 		return (

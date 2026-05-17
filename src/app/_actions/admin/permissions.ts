@@ -1,8 +1,9 @@
 "use server";
 
+import { ErrorCodes, KoudenError } from "@/lib/errors";
+import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import logger from "@/lib/logger";
 
 /**
  * 管理者権限をチェックする
@@ -35,7 +36,7 @@ export async function checkAdminPermission() {
 			},
 			"Admin permission check error",
 		);
-		throw new Error("管理者権限の確認に失敗しました");
+		throw new KoudenError("管理者権限の確認に失敗しました", ErrorCodes.DB_FETCH_ERROR);
 	}
 
 	if (!adminUser) {
@@ -45,7 +46,7 @@ export async function checkAdminPermission() {
 			},
 			`User ${user.id} is not registered as admin in admin_users table`,
 		);
-		throw new Error("管理者権限が必要です");
+		throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
 	}
 
 	logger.info(
@@ -80,7 +81,7 @@ export async function checkSuperAdminPermission() {
 		.single();
 
 	if (!adminUser || adminUser.role !== "super_admin") {
-		throw new Error("スーパー管理者権限が必要です");
+		throw new KoudenError("スーパー管理者権限が必要です", ErrorCodes.FORBIDDEN);
 	}
 
 	return { supabase, user };

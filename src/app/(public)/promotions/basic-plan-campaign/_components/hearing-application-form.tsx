@@ -150,11 +150,11 @@ export function HearingApplicationForm() {
 			const { submitHearingApplication } = await import("@/app/_actions/hearing-applications");
 			const result = await submitHearingApplication(formData);
 
-			if (result.success) {
+			if (result.ok) {
 				setIsSubmitted(true);
 			} else {
 				// エラーハンドリング
-				throw new Error(result.error || "申し込み処理に失敗しました");
+				throw new Error(result.error.message || "申し込み処理に失敗しました");
 			}
 		} catch (error) {
 			console.error("申し込み処理でエラーが発生しました:", error);

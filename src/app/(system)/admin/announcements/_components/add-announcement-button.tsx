@@ -9,7 +9,10 @@ import { AnnouncementForm, type AnnouncementFormData } from "./announcement-form
 export function AddAnnouncementButton() {
 	const onSubmit = async (values: AnnouncementFormData) => {
 		try {
-			await createAnnouncement(values);
+			const result = await createAnnouncement(values);
+			if (!result.ok) {
+				throw new Error(result.error.message);
+			}
 		} catch (error) {
 			console.error("Failed to create announcement:", error);
 		}

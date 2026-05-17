@@ -65,7 +65,7 @@ export default async function AdminEntriesPage({
 	});
 
 	try {
-		const [{ entries, count }, relationships] = await Promise.all([
+		const [entriesResult, relationshipsResult] = await Promise.all([
 			getEntriesForAdmin(
 				koudenId,
 				page,
@@ -79,6 +79,16 @@ export default async function AdminEntriesPage({
 			),
 			getRelationshipsForAdmin(koudenId),
 		]);
+
+		if (!entriesResult.ok) {
+			throw new Error(entriesResult.error.message);
+		}
+		if (!relationshipsResult.ok) {
+			throw new Error(relationshipsResult.error.message);
+		}
+
+		const { entries, count } = entriesResult.data;
+		const relationships = relationshipsResult.data;
 
 		console.log("[DEBUG] Admin Entries Page - Data fetched:", {
 			entriesCount: entries.length,

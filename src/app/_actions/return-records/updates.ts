@@ -5,14 +5,14 @@
  * @module return-records/updates
  */
 
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
 import type {
 	ReturnEntryRecord,
 	ReturnStatus,
 	UpdateReturnEntryInput,
 } from "@/types/return-records/return-records";
-import logger from "@/lib/logger";
+import { revalidatePath } from "next/cache";
 
 /**
  * 返礼記録の更新可能フィールドの値の型定義
@@ -26,14 +26,11 @@ type ReturnRecordFieldValue =
 
 /**
  * 返礼情報を更新する
- * @param {UpdateReturnEntryInput & { kouden_id: string }} input - 更新する返礼情報
- * @returns {Promise<ReturnEntryRecord>} 更新された返礼情報
- * @throws {Error} 認証エラーまたは更新失敗時のエラー
  */
 export async function updateReturnEntry(
 	input: UpdateReturnEntryInput & { kouden_id: string },
-): Promise<ReturnEntryRecord> {
-	try {
+): Promise<ActionResult<ReturnEntryRecord>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		// セッションの取得
@@ -42,13 +39,13 @@ export async function updateReturnEntry(
 		} = await supabase.auth.getUser();
 
 		if (!user) {
-			throw new Error("認証されていません");
+			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 		}
 
 		const { kouden_entry_id, kouden_id, ...updateData } = input;
 
 		if (!kouden_entry_id) {
-			throw new Error("香典エントリーIDが指定されていません");
+			throw new KoudenError("香典エントリーIDが指定されていません", ErrorCodes.INVALID_INPUT);
 		}
 
 		const { data, error } = await supabase
@@ -69,40 +66,25 @@ export async function updateReturnEntry(
 		}
 
 		if (!data) {
-			throw new Error("返礼情報の更新に失敗しました");
+			throw new KoudenError("返礼情報の更新に失敗しました", ErrorCodes.DB_UPDATE_ERROR);
 		}
 
 		// キャッシュの再検証
 		revalidatePath(`/koudens/${kouden_id}`);
 
 		return data as ReturnEntryRecord;
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				koudenEntryId: input.kouden_entry_id,
-				koudenId: input.kouden_id,
-			},
-			"返礼情報の更新エラー",
-		);
-		throw error;
-	}
+	}, "返礼情報の更新");
 }
 
 /**
  * 返礼情報のステータスを更新する
- * @param {string} koudenEntryId - 香典エントリーID
- * @param {ReturnStatus} status - 新しいステータス
- * @param {string} koudenId - 香典帳ID（キャッシュ再検証用）
- * @returns {Promise<ReturnEntryRecord>} 更新された返礼情報
- * @throws {Error} 認証エラーまたは更新失敗時のエラー
  */
 export async function updateReturnEntryStatus(
 	koudenEntryId: string,
 	status: ReturnStatus,
 	koudenId: string,
-): Promise<ReturnEntryRecord> {
-	try {
+): Promise<ActionResult<ReturnEntryRecord>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		// セッションの取得
@@ -111,7 +93,7 @@ export async function updateReturnEntryStatus(
 		} = await supabase.auth.getUser();
 
 		if (!user) {
-			throw new Error("認証されていません");
+			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 		}
 
 		const { data, error } = await supabase
@@ -126,41 +108,25 @@ export async function updateReturnEntryStatus(
 		}
 
 		if (!data) {
-			throw new Error("返礼情報のステータス更新に失敗しました");
+			throw new KoudenError("返礼情報のステータス更新に失敗しました", ErrorCodes.DB_UPDATE_ERROR);
 		}
 
 		// キャッシュの再検証
 		revalidatePath(`/koudens/${koudenId}`);
 
 		return data as ReturnEntryRecord;
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				koudenEntryId,
-				status,
-				koudenId,
-			},
-			"返礼情報のステータス更新エラー",
-		);
-		throw error;
-	}
+	}, "返礼情報のステータス更新");
 }
 
 /**
  * 返礼記録の特定フィールドを更新する
- * @param {string} returnRecordId - 返礼記録ID
- * @param {string} fieldName - 更新するフィールド名
- * @param {ReturnRecordFieldValue} value - 新しい値
- * @returns {Promise<void>}
- * @throws {Error} 認証エラーまたは更新失敗時のエラー
  */
 export async function updateReturnRecordField(
 	returnRecordId: string,
 	fieldName: string,
 	value: ReturnRecordFieldValue,
-): Promise<void> {
-	try {
+): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		// セッションの取得
@@ -169,7 +135,7 @@ export async function updateReturnRecordField(
 		} = await supabase.auth.getUser();
 
 		if (!user) {
-			throw new Error("認証されていません");
+			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 		}
 
 		// 更新可能なフィールドのホワイトリスト
@@ -187,7 +153,7 @@ export async function updateReturnRecordField(
 		];
 
 		if (!allowedFields.includes(fieldName)) {
-			throw new Error(`フィールド '${fieldName}' は更新できません`);
+			throw new KoudenError(`フィールド '${fieldName}' は更新できません`, ErrorCodes.INVALID_INPUT);
 		}
 
 		// 更新前に香典帳IDを取得（キャッシュ再検証用）
@@ -220,33 +186,20 @@ export async function updateReturnRecordField(
 		if (recordData) {
 			revalidatePath(`/koudens/${recordData.kouden_entries.kouden_id}`);
 		}
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				returnRecordId,
-				fieldName,
-			},
-			"返礼記録フィールドの更新エラー",
-		);
-		throw error;
-	}
+
+		return null;
+	}, "返礼記録フィールドの更新");
 }
 
 /**
  * 香典エントリーIDベースで返礼記録の特定フィールドを更新する
- * @param {string} koudenEntryId - 香典エントリーID
- * @param {string} fieldName - 更新するフィールド名
- * @param {ReturnRecordFieldValue} value - 新しい値
- * @returns {Promise<void>}
- * @throws {Error} 認証エラーまたは更新失敗時のエラー
  */
 export async function updateReturnRecordFieldByKoudenEntryId(
 	koudenEntryId: string,
 	fieldName: string,
 	value: ReturnRecordFieldValue,
-): Promise<void> {
-	try {
+): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		// セッションの取得
@@ -255,7 +208,7 @@ export async function updateReturnRecordFieldByKoudenEntryId(
 		} = await supabase.auth.getUser();
 
 		if (!user) {
-			throw new Error("認証されていません");
+			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 		}
 
 		// 更新可能なフィールドのホワイトリスト
@@ -273,7 +226,7 @@ export async function updateReturnRecordFieldByKoudenEntryId(
 		];
 
 		if (!allowedFields.includes(fieldName)) {
-			throw new Error(`フィールド '${fieldName}' は更新できません`);
+			throw new KoudenError(`フィールド '${fieldName}' は更新できません`, ErrorCodes.INVALID_INPUT);
 		}
 
 		// 更新前に香典帳IDを取得（キャッシュ再検証用）
@@ -306,15 +259,7 @@ export async function updateReturnRecordFieldByKoudenEntryId(
 		if (recordData) {
 			revalidatePath(`/koudens/${recordData.kouden_entries.kouden_id}`);
 		}
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				koudenEntryId,
-				fieldName,
-			},
-			"返礼記録フィールドの更新エラー",
-		);
-		throw error;
-	}
+
+		return null;
+	}, "返礼記録フィールドの更新");
 }

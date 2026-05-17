@@ -1,8 +1,8 @@
 "use server";
 
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import logger from "@/lib/logger";
 
 export type Announcement = {
 	id: string;
@@ -18,28 +18,30 @@ export type Announcement = {
 	updatedAt: string;
 };
 
-export async function getAnnouncements() {
-	const supabase = await createClient();
-	const { data, error } = await supabase
-		.from("system_announcements")
-		.select("*")
-		.order("created_at", { ascending: false });
+export async function getAnnouncements(): Promise<ActionResult<Announcement[]>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const { data, error } = await supabase
+			.from("system_announcements")
+			.select("*")
+			.order("created_at", { ascending: false });
 
-	if (error) throw error;
+		if (error) throw error;
 
-	return data?.map((item) => ({
-		id: item.id,
-		title: item.title,
-		content: item.content,
-		category: item.category,
-		priority: item.priority,
-		status: item.status,
-		publishedAt: item.published_at,
-		expiresAt: item.expires_at,
-		createdBy: item.created_by,
-		createdAt: item.created_at,
-		updatedAt: item.updated_at,
-	})) as Announcement[];
+		return (data?.map((item) => ({
+			id: item.id,
+			title: item.title,
+			content: item.content,
+			category: item.category,
+			priority: item.priority,
+			status: item.status,
+			publishedAt: item.published_at,
+			expiresAt: item.expires_at,
+			createdBy: item.created_by,
+			createdAt: item.created_at,
+			updatedAt: item.updated_at,
+		})) ?? []) as Announcement[];
+	}, "お知らせ一覧の取得");
 }
 
 export async function createAnnouncement({
@@ -58,48 +60,36 @@ export async function createAnnouncement({
 	status: Announcement["status"];
 	publishedAt?: string;
 	expiresAt?: string;
-}) {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-	if (!user) throw new Error("Unauthorized");
+}): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
+		if (!user) throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
 
-	// デバッグ: リクエストデータをログ出力
-	const requestData = {
-		title,
-		content,
-		category,
-		priority,
-		status,
-		published_at: publishedAt,
-		expires_at: expiresAt,
-		created_by: user.id,
-	};
+		const requestData = {
+			title,
+			content,
+			category,
+			priority,
+			status,
+			published_at: publishedAt,
+			expires_at: expiresAt,
+			created_by: user.id,
+		};
 
-	const { error } = await supabase
-		.from("system_announcements")
-		.insert(requestData)
-		.select()
-		.single();
+		const { error } = await supabase
+			.from("system_announcements")
+			.insert(requestData)
+			.select()
+			.single();
 
-	if (error) {
-		// デバッグ: エラーの詳細をログ出力
-		logger.error(
-			{
-				error: error.message,
-				code: error.code,
-				details: error.details,
-				requestData,
-				userId: user.id,
-				userEmail: user.email,
-			},
-			"Failed to create announcement",
-		);
-		throw error;
-	}
+		if (error) throw error;
 
-	revalidatePath("/admin/announcements");
+		revalidatePath("/admin/announcements");
+		return null;
+	}, "お知らせの作成");
 }
 
 export async function updateAnnouncement(
@@ -121,29 +111,35 @@ export async function updateAnnouncement(
 		publishedAt?: string;
 		expiresAt?: string;
 	},
-) {
-	const supabase = await createClient();
-	const { error } = await supabase
-		.from("system_announcements")
-		.update({
-			title,
-			content,
-			category,
-			priority,
-			status,
-			published_at: publishedAt,
-			expires_at: expiresAt,
-		})
-		.eq("id", id);
+): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const { error } = await supabase
+			.from("system_announcements")
+			.update({
+				title,
+				content,
+				category,
+				priority,
+				status,
+				published_at: publishedAt,
+				expires_at: expiresAt,
+			})
+			.eq("id", id);
 
-	if (error) throw error;
-	revalidatePath("/admin/announcements");
+		if (error) throw error;
+		revalidatePath("/admin/announcements");
+		return null;
+	}, "お知らせの更新");
 }
 
-export async function deleteAnnouncement(id: string) {
-	const supabase = await createClient();
-	const { error } = await supabase.from("system_announcements").delete().eq("id", id);
+export async function deleteAnnouncement(id: string): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const { error } = await supabase.from("system_announcements").delete().eq("id", id);
 
-	if (error) throw error;
-	revalidatePath("/admin/announcements");
+		if (error) throw error;
+		revalidatePath("/admin/announcements");
+		return null;
+	}, "お知らせの削除");
 }

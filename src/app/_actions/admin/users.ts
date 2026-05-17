@@ -1,5 +1,6 @@
 "use server";
 
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import logger from "@/lib/logger";
 import { escapeIlikePattern } from "@/lib/security/search-sanitize";
 import { createClient } from "@/lib/supabase/server";
@@ -54,30 +55,32 @@ export interface GetUsersParams {
 /**
  * 全ユーザー一覧を取得（Admin API使用）
  */
-export async function getAllUsers(params: GetUsersParams = {}): Promise<{
-	users: UserListItem[];
-	total: number;
-	hasMore: boolean;
-}> {
-	// 管理者権限をチェック（入り口で1回だけ）
-	const { isAdmin: isAdminUser } = await import("@/app/_actions/admin/permissions");
-	const adminCheck = await isAdminUser();
-	if (!adminCheck) {
-		throw new Error("管理者権限が必要です");
-	}
+export async function getAllUsers(params: GetUsersParams = {}): Promise<
+	ActionResult<{
+		users: UserListItem[];
+		total: number;
+		hasMore: boolean;
+	}>
+> {
+	return withActionResult(async () => {
+		// 管理者権限をチェック（入り口で1回だけ）
+		const { isAdmin: isAdminUser } = await import("@/app/_actions/admin/permissions");
+		const adminCheck = await isAdminUser();
+		if (!adminCheck) {
+			throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
+		}
 
-	const supabase = await createClient();
-	const {
-		page = 1,
-		limit = 20,
-		search,
-		filter,
-		sortBy = "created_at",
-		sortOrder = "desc",
-	} = params;
-	const offset = (page - 1) * limit;
+		const supabase = await createClient();
+		const {
+			page = 1,
+			limit = 20,
+			search,
+			filter,
+			sortBy = "created_at",
+			sortOrder = "desc",
+		} = params;
+		const offset = (page - 1) * limit;
 
-	try {
 		// 1. まずprofilesテーブルから基本情報を取得
 		let query = supabase.from("profiles").select(
 			`
@@ -150,11 +153,10 @@ export async function getAllUsers(params: GetUsersParams = {}): Promise<{
 
 		if (aggregateResult.error) {
 			// 失敗時は0埋めで継続せず、明示的に例外を投げる（admin UIで誤った0統計を出さないため）
-			logger.error(
-				{ error: aggregateResult.error.message, userIdsCount: userIds.length },
-				"Failed to fetch user aggregate stats",
+			throw new KoudenError(
+				`Failed to fetch user aggregate stats: ${aggregateResult.error.message}`,
+				ErrorCodes.DB_FETCH_ERROR,
 			);
-			throw new Error(`Failed to fetch user aggregate stats: ${aggregateResult.error.message}`);
 		}
 
 		type AggregateRow = {
@@ -208,32 +210,23 @@ export async function getAllUsers(params: GetUsersParams = {}): Promise<{
 			total: count || 0,
 			hasMore: (count || 0) > offset + limit,
 		};
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				params,
-			},
-			"Error fetching users",
-		);
-		throw new Error("ユーザー一覧の取得に失敗しました");
-	}
+	}, "ユーザー一覧の取得");
 }
 
 /**
  * ユーザー詳細情報を取得
  */
-export async function getUserDetail(userId: string): Promise<UserDetail> {
-	// 管理者権限をチェック（入り口で1回だけ）
-	const { isAdmin: isAdminUser } = await import("@/app/_actions/admin/permissions");
-	const adminCheck = await isAdminUser();
-	if (!adminCheck) {
-		throw new Error("管理者権限が必要です");
-	}
+export async function getUserDetail(userId: string): Promise<ActionResult<UserDetail>> {
+	return withActionResult(async () => {
+		// 管理者権限をチェック（入り口で1回だけ）
+		const { isAdmin: isAdminUser } = await import("@/app/_actions/admin/permissions");
+		const adminCheck = await isAdminUser();
+		if (!adminCheck) {
+			throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
+		}
 
-	const supabase = await createClient();
+		const supabase = await createClient();
 
-	try {
 		// 基本情報を取得
 		const { data: profile, error: profileError } = await supabase
 			.from("profiles")
@@ -242,7 +235,7 @@ export async function getUserDetail(userId: string): Promise<UserDetail> {
 			.single();
 
 		if (profileError) throw profileError;
-		if (!profile) throw new Error("ユーザーが見つかりません");
+		if (!profile) throw new KoudenError("ユーザーが見つかりません", ErrorCodes.NOT_FOUND);
 
 		// 詳細情報を並列取得
 		const [authInfo, stats, adminInfo, koudens] = await Promise.all([
@@ -259,16 +252,7 @@ export async function getUserDetail(userId: string): Promise<UserDetail> {
 			admin_info: adminInfo,
 			koudens,
 		};
-	} catch (error) {
-		logger.error(
-			{
-				userId,
-				error: error instanceof Error ? error.message : String(error),
-			},
-			"Error fetching user detail",
-		);
-		throw new Error("ユーザー詳細の取得に失敗しました");
-	}
+	}, "ユーザー詳細の取得");
 }
 
 /**
@@ -563,82 +547,103 @@ async function getUserKoudens(userId: string): Promise<
 }
 
 // 既存の管理者関連の関数は維持
-export async function getAdminUsers() {
-	const supabase = await createClient();
+export async function getAdminUsers(): Promise<ActionResult<unknown[]>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
 
-	// 1. まず管理者一覧を取得
-	const { data: adminUsers, error: adminError } = await supabase
-		.from("admin_users")
-		.select("*")
-		.order("created_at", { ascending: false });
+		// 1. まず管理者一覧を取得
+		const { data: adminUsers, error: adminError } = await supabase
+			.from("admin_users")
+			.select("*")
+			.order("created_at", { ascending: false });
 
-	if (adminError) throw adminError;
+		if (adminError) throw adminError;
 
-	// 2. 各管理者のユーザー情報を取得
-	const adminUsersWithDetails = await Promise.all(
-		adminUsers.map(async (admin) => {
-			const { data: userData, error: userError } = await supabase
-				.from("profiles")
-				.select("id, display_name, avatar_url, created_at, updated_at")
-				.eq("id", admin.user_id)
-				.single();
+		// 2. 各管理者のユーザー情報を取得
+		const adminUsersWithDetails = await Promise.all(
+			adminUsers.map(async (admin) => {
+				const { data: userData, error: userError } = await supabase
+					.from("profiles")
+					.select("id, display_name, avatar_url, created_at, updated_at")
+					.eq("id", admin.user_id)
+					.single();
 
-			if (userError) throw userError;
+				if (userError) throw userError;
 
-			return {
-				...admin,
-				user: userData,
-			};
-		}),
-	);
+				return {
+					...admin,
+					user: userData,
+				};
+			}),
+		);
 
-	return adminUsersWithDetails;
+		return adminUsersWithDetails;
+	}, "管理者ユーザー一覧の取得");
 }
 
-export async function addAdminUser(userId: string, role: "admin" | "super_admin") {
-	const supabase = await createClient();
-	const { error } = await supabase.from("admin_users").insert({ user_id: userId, role });
+export async function addAdminUser(
+	userId: string,
+	role: "admin" | "super_admin",
+): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const { error } = await supabase.from("admin_users").insert({ user_id: userId, role });
 
-	if (error) throw error;
-	revalidatePath("/admin/users");
+		if (error) throw error;
+		revalidatePath("/admin/users");
+		return null;
+	}, "管理者の追加");
 }
 
-export async function updateAdminRole(adminId: string, role: "admin" | "super_admin") {
-	const supabase = await createClient();
-	const { error } = await supabase.from("admin_users").update({ role }).eq("id", adminId);
+export async function updateAdminRole(
+	adminId: string,
+	role: "admin" | "super_admin",
+): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const { error } = await supabase.from("admin_users").update({ role }).eq("id", adminId);
 
-	if (error) throw error;
-	revalidatePath("/admin/users");
+		if (error) throw error;
+		revalidatePath("/admin/users");
+		return null;
+	}, "管理者ロールの更新");
 }
 
-export async function removeAdminUser(adminId: string) {
-	const supabase = await createClient();
-	const { error } = await supabase.from("admin_users").delete().eq("id", adminId);
+export async function removeAdminUser(adminId: string): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const { error } = await supabase.from("admin_users").delete().eq("id", adminId);
 
-	if (error) throw error;
-	revalidatePath("/admin/users");
+		if (error) throw error;
+		revalidatePath("/admin/users");
+		return null;
+	}, "管理者の削除");
 }
 
-export async function isUserAdmin(userId: string) {
-	const supabase = await createClient();
-	const { data, error } = await supabase.rpc("is_admin", {
-		user_uid: userId,
-	});
+export async function isUserAdmin(userId: string): Promise<ActionResult<boolean>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const { data, error } = await supabase.rpc("is_admin", {
+			user_uid: userId,
+		});
 
-	if (error) throw error;
-	return data;
+		if (error) throw error;
+		return !!data;
+	}, "管理者判定");
 }
 
-export async function findUserByEmail(email: string) {
-	const supabase = await createClient();
-	const { data: user, error } = await supabase
-		.from("profiles")
-		.select("id, email, created_at")
-		.eq("email", email)
-		.single();
+export async function findUserByEmail(email: string): Promise<ActionResult<unknown>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const { data: user, error } = await supabase
+			.from("profiles")
+			.select("id, email, created_at")
+			.eq("email", email)
+			.single();
 
-	if (error) throw error;
-	return user;
+		if (error) throw error;
+		return user;
+	}, "メールでのユーザー検索");
 }
 
 // isAdmin関数は permissions.ts に統一されました
@@ -684,34 +689,33 @@ export interface GetAdminKoudensParams {
 /**
  * 管理者用: 全香典帳一覧を取得
  */
-export async function getAllKoudens(params: GetAdminKoudensParams = {}): Promise<{
-	koudens: AdminKoudenListItem[];
-	total: number;
-	hasMore: boolean;
-}> {
-	// 管理者権限をチェック（通常のクライアントで）
+export async function getAllKoudens(params: GetAdminKoudensParams = {}): Promise<
+	ActionResult<{
+		koudens: AdminKoudenListItem[];
+		total: number;
+		hasMore: boolean;
+	}>
+> {
+	return withActionResult(async () => {
+		// 管理者用にサービスロールクライアントを使用（RLSをバイパス）
+		const { createAdminClient } = await import("@/lib/supabase/admin");
+		const supabase = createAdminClient();
+		const {
+			page = 1,
+			limit = 20,
+			search,
+			status = "all",
+			sortBy = "created_at",
+			sortOrder = "desc",
+		} = params;
+		const offset = (page - 1) * limit;
 
-	// 管理者用にサービスロールクライアントを使用（RLSをバイパス）
-	const { createAdminClient } = await import("@/lib/supabase/admin");
-	const supabase = createAdminClient();
-	const {
-		page = 1,
-		limit = 20,
-		search,
-		status = "all",
-		sortBy = "created_at",
-		sortOrder = "desc",
-	} = params;
-	const offset = (page - 1) * limit;
-
-	try {
 		// 管理者権限をチェック（通常のクライアントで）
 		const { isAdmin: isAdminUser } = await import("@/app/_actions/admin/permissions");
 		const adminCheck = await isAdminUser();
 
 		if (!adminCheck) {
-			logger.error({}, "Admin permission denied");
-			throw new Error("管理者権限が必要です");
+			throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
 		}
 
 		// 1. 香典帳の基本情報を取得
@@ -752,16 +756,7 @@ export async function getAllKoudens(params: GetAdminKoudensParams = {}): Promise
 
 		const { data: koudens, error: koudensError, count } = await query;
 
-		if (koudensError) {
-			logger.error(
-				{
-					error: koudensError.message,
-					code: koudensError.code,
-				},
-				"Koudens query error",
-			);
-			throw new Error(`香典帳の取得に失敗しました: ${koudensError.message}`);
-		}
+		if (koudensError) throw koudensError;
 
 		if (!koudens || koudens.length === 0) {
 			return { koudens: [], total: count || 0, hasMore: false };
@@ -836,21 +831,7 @@ export async function getAllKoudens(params: GetAdminKoudensParams = {}): Promise
 			total: count || 0,
 			hasMore: (count || 0) > offset + limit,
 		};
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				params,
-			},
-			"Error fetching admin koudens",
-		);
-
-		// エラーの詳細を含めて再スロー
-		if (error instanceof Error) {
-			throw new Error(`香典帳一覧の取得に失敗しました: ${error.message}`);
-		}
-		throw new Error("香典帳一覧の取得に失敗しました（不明なエラー）");
-	}
+	}, "香典帳一覧の取得");
 }
 
 /**

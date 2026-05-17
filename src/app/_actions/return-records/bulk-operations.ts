@@ -6,6 +6,7 @@
  */
 
 import { convertToReturnManagementSummaries } from "@/app/_actions/return-records/summaries";
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import type { AttendanceType, Entry } from "@/types/entries";
@@ -17,14 +18,11 @@ import { revalidatePath } from "next/cache";
 
 /**
  * 一括変更用：香典帳の全返礼記録を取得する（ReturnManagementSummary形式）
- * @param {string} koudenId - 香典帳ID
- * @returns {Promise<ReturnManagementSummary[]>} 全返礼記録のサマリー
- * @throws {Error} 認証エラーまたは取得失敗時のエラー
  */
 export async function getAllReturnRecordsForBulkUpdate(
 	koudenId: string,
-): Promise<ReturnManagementSummary[]> {
-	try {
+): Promise<ActionResult<ReturnManagementSummary[]>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		// セッションの取得
@@ -33,7 +31,7 @@ export async function getAllReturnRecordsForBulkUpdate(
 		} = await supabase.auth.getUser();
 
 		if (!user) {
-			throw new Error("認証されていません");
+			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 		}
 
 		// 全返礼記録を取得（制限なし）
@@ -94,38 +92,28 @@ export async function getAllReturnRecordsForBulkUpdate(
 		}));
 
 		// ReturnManagementSummary形式に変換（実際のお供物配分金額を取得）
-		const summaries = await convertToReturnManagementSummaries(
+		const summariesResult = await convertToReturnManagementSummaries(
 			returnRecords,
 			entryList,
 			relationships,
 			koudenId,
 		);
+		if (!summariesResult.ok) {
+			throw new KoudenError(summariesResult.error.message, summariesResult.error.code);
+		}
 
-		return summaries;
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				koudenId,
-			},
-			"一括変更用全返礼記録の取得エラー",
-		);
-		throw error;
-	}
+		return summariesResult.data;
+	}, "一括変更用全返礼記録の取得");
 }
 
 /**
  * 返礼記録の一括更新
- * @param {string} koudenId - 香典帳ID
- * @param {BulkUpdateConfig} config - 一括更新設定
- * @returns {Promise<number>} 更新された件数
- * @throws {Error} 認証エラーまたは更新失敗時のエラー
  */
 export async function bulkUpdateReturnRecords(
 	koudenId: string,
 	config: BulkUpdateConfig,
-): Promise<number> {
-	try {
+): Promise<ActionResult<number>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		// セッションの取得
@@ -134,7 +122,7 @@ export async function bulkUpdateReturnRecords(
 		} = await supabase.auth.getUser();
 
 		if (!user) {
-			throw new Error("認証されていません");
+			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 		}
 
 		// 対象レコードを取得するためのクエリを構築
@@ -248,15 +236,5 @@ export async function bulkUpdateReturnRecords(
 		revalidatePath(`/koudens/${koudenId}`);
 
 		return targetRecords.length;
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				koudenId,
-				config,
-			},
-			"返礼記録の一括更新エラー",
-		);
-		throw error;
-	}
+	}, "返礼記録の一括更新");
 }

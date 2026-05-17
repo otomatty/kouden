@@ -1,13 +1,14 @@
-/// <reference types="vitest" />
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { ErrorCodes } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
-import {
-	createUserSurvey,
-	getUserSurveyStatus,
-	checkOneWeekOwnershipSurvey,
-	getAdminSurveyAnalytics,
-} from "../user-surveys";
 import type { UserSurveyFormInput } from "@/schemas/user-surveys";
+/// <reference types="vitest" />
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	checkOneWeekOwnershipSurvey,
+	createUserSurvey,
+	getAdminSurveyAnalytics,
+	getUserSurveyStatus,
+} from "../user-surveys";
 
 vi.mock("@/lib/supabase/server", () => ({
 	createClient: vi.fn(),
@@ -96,9 +97,11 @@ describe("user-surveys server actions", () => {
 			const result = await createUserSurvey(mockSurveyData, "pdf_export");
 
 			// Assert
-			expect(result.success).toBe(true);
-			expect(result.data).toEqual(mockDbSurvey);
-			expect(result.message).toContain("ありがとうございました");
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.data).toMatchObject(mockDbSurvey);
+				expect(result.data.message).toContain("ありがとうございました");
+			}
 		});
 
 		it("未認証ユーザーの場合にエラーを返す", async () => {
@@ -109,8 +112,10 @@ describe("user-surveys server actions", () => {
 			const result = await createUserSurvey(mockSurveyData, "pdf_export");
 
 			// Assert
-			expect(result.success).toBe(false);
-			expect(result.error).toContain("認証が必要です");
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.error.message).toContain("認証が必要です");
+			}
 		});
 
 		it("既に回答済みの場合にエラーを返す", async () => {
@@ -122,8 +127,11 @@ describe("user-surveys server actions", () => {
 			const result = await createUserSurvey(mockSurveyData, "pdf_export");
 
 			// Assert
-			expect(result.success).toBe(false);
-			expect(result.error).toContain("既にアンケートにご回答いただいております");
+			// 重複データは Supabase の `ALREADY_EXISTS` コードに正規化される
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.error.code).toBe(ErrorCodes.ALREADY_EXISTS);
+			}
 		});
 
 		it("データベースエラー時にエラーを返す", async () => {
@@ -137,8 +145,11 @@ describe("user-surveys server actions", () => {
 			const result = await createUserSurvey(mockSurveyData, "pdf_export");
 
 			// Assert
-			expect(result.success).toBe(false);
-			expect(result.error).toContain("アンケートの保存に失敗しました");
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				// `withActionResult` のコンテキスト ("アンケートの作成") から既定メッセージが組まれる
+				expect(result.error.message).toContain("アンケートの作成");
+			}
 		});
 	});
 
@@ -256,12 +267,14 @@ describe("user-surveys server actions", () => {
 			const result = await getAdminSurveyAnalytics();
 
 			// Assert
-			expect(result.success).toBe(true);
-			expect(result.data).toBeDefined();
-			expect(result.data?.totalResponses).toBe(3);
-			expect(result.data?.npsBreakdown.promoters).toBe(1);
-			expect(result.data?.npsBreakdown.passives).toBe(1);
-			expect(result.data?.npsBreakdown.detractors).toBe(1);
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.data).toBeDefined();
+				expect(result.data.totalResponses).toBe(3);
+				expect(result.data.npsBreakdown.promoters).toBe(1);
+				expect(result.data.npsBreakdown.passives).toBe(1);
+				expect(result.data.npsBreakdown.detractors).toBe(1);
+			}
 		});
 
 		it("非管理者の場合にエラーを返す", async () => {
@@ -273,8 +286,11 @@ describe("user-surveys server actions", () => {
 			const result = await getAdminSurveyAnalytics();
 
 			// Assert
-			expect(result.success).toBe(false);
-			expect(result.error).toContain("管理者権限が必要です");
+			// 管理者権限不足は `FORBIDDEN` の既定 userMessage（権限エラー）に正規化される
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.error.code).toBe(ErrorCodes.FORBIDDEN);
+			}
 		});
 
 		it("未認証の場合にエラーを返す", async () => {
@@ -285,8 +301,10 @@ describe("user-surveys server actions", () => {
 			const result = await getAdminSurveyAnalytics();
 
 			// Assert
-			expect(result.success).toBe(false);
-			expect(result.error).toContain("認証が必要です");
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.error.message).toContain("認証が必要です");
+			}
 		});
 	});
 });

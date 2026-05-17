@@ -45,7 +45,7 @@ export default async function EntriesPage({
 	const dateFromValue = dateFrom ?? undefined;
 	const dateToValue = dateTo ?? undefined;
 	const showDuplicates = rawSearchParams.isDuplicate === "true";
-	const [{ entries, count }, relationships] = await Promise.all([
+	const [entriesResult, relationshipsResult] = await Promise.all([
 		getEntries(
 			koudenId,
 			page,
@@ -59,6 +59,14 @@ export default async function EntriesPage({
 		),
 		getRelationships(koudenId),
 	]);
+	if (!entriesResult.ok) {
+		throw new Error(entriesResult.error.message);
+	}
+	if (!relationshipsResult.ok) {
+		throw new Error(relationshipsResult.error.message);
+	}
+	const { entries, count } = entriesResult.data;
+	const relationships = relationshipsResult.data;
 
 	return (
 		<div className="mt-4">

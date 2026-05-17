@@ -5,22 +5,17 @@
 
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
+import logger from "@/lib/logger";
+import { logTwoFactorEventServerAction } from "@/lib/security/security-logger";
 import {
-	verifyTwoFactorToken,
-	saveTwoFactorSecret,
 	disableTwoFactor,
 	isTwoFactorEnabled,
+	saveTwoFactorSecret,
+	verifyTwoFactorToken,
 } from "@/lib/security/two-factor-auth";
-import { logTwoFactorEventServerAction } from "@/lib/security/security-logger";
+import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import logger from "@/lib/logger";
-
-export interface TwoFactorActionResult {
-	success: boolean;
-	error?: string;
-	message?: string;
-}
 
 /**
  * 2FA設定を完了する
@@ -28,18 +23,16 @@ export interface TwoFactorActionResult {
 export async function setupTwoFactorAuth(
 	secret: string,
 	verificationCode: string,
-): Promise<TwoFactorActionResult> {
-	let userId: string | undefined;
-	try {
+): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 		const {
 			data: { user },
 		} = await supabase.auth.getUser();
 
 		if (!user) {
-			return { success: false, error: "認証が必要です" };
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
 		}
-		userId = user.id;
 
 		// 管理者かどうかを確認
 		const { data: isAdmin } = await supabase.rpc("is_admin", {
@@ -47,13 +40,13 @@ export async function setupTwoFactorAuth(
 		});
 
 		if (!isAdmin) {
-			return { success: false, error: "管理者権限が必要です" };
+			throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
 		}
 
 		// 既に2FAが設定済みかチェック
 		const isAlreadyEnabled = await isTwoFactorEnabled(user.id);
 		if (isAlreadyEnabled) {
-			return { success: false, error: "二要素認証は既に設定済みです" };
+			throw new KoudenError("二要素認証は既に設定済みです", ErrorCodes.ALREADY_EXISTS);
 		}
 
 		// 認証コードを検証
@@ -66,7 +59,7 @@ export async function setupTwoFactorAuth(
 				attempted_code: `${verificationCode.slice(0, 2)}****`, // 最初の2桁のみ記録
 			});
 
-			return { success: false, error: "認証コードが正しくありません" };
+			throw new KoudenError("認証コードが正しくありません", ErrorCodes.VALIDATION_ERROR);
 		}
 
 		// 2FA設定を保存
@@ -82,40 +75,25 @@ export async function setupTwoFactorAuth(
 		revalidatePath("/admin");
 		revalidatePath("/admin/settings");
 
-		return {
-			success: true,
-			message: "二要素認証が正常に設定されました",
-		};
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				userId,
-			},
-			"2FA setup error",
-		);
-		return {
-			success: false,
-			error: "設定中にエラーが発生しました",
-		};
-	}
+		logger.info({ userId: user.id }, "二要素認証が正常に設定されました");
+
+		return null;
+	}, "二要素認証の設定");
 }
 
 /**
  * 2FAを無効化する
  */
-export async function disableTwoFactorAuth(): Promise<TwoFactorActionResult> {
-	let userId: string | undefined;
-	try {
+export async function disableTwoFactorAuth(): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 		const {
 			data: { user },
 		} = await supabase.auth.getUser();
 
 		if (!user) {
-			return { success: false, error: "認証が必要です" };
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
 		}
-		userId = user.id;
 
 		// 管理者かどうかを確認
 		const { data: isAdmin } = await supabase.rpc("is_admin", {
@@ -123,15 +101,15 @@ export async function disableTwoFactorAuth(): Promise<TwoFactorActionResult> {
 		});
 
 		if (!isAdmin) {
-			return { success: false, error: "管理者権限が必要です" };
+			throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
 		}
 
 		// 本番環境では2FA無効化を制限
 		if (process.env.NODE_ENV === "production") {
-			return {
-				success: false,
-				error: "本番環境では二要素認証の無効化は制限されています",
-			};
+			throw new KoudenError(
+				"本番環境では二要素認証の無効化は制限されています",
+				ErrorCodes.INVALID_OPERATION,
+			);
 		}
 
 		// 2FAを無効化
@@ -147,42 +125,25 @@ export async function disableTwoFactorAuth(): Promise<TwoFactorActionResult> {
 		revalidatePath("/admin");
 		revalidatePath("/admin/settings");
 
-		return {
-			success: true,
-			message: "二要素認証が無効化されました",
-		};
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				userId,
-			},
-			"2FA disable error",
-		);
-		return {
-			success: false,
-			error: "無効化中にエラーが発生しました",
-		};
-	}
+		logger.info({ userId: user.id }, "二要素認証が無効化されました");
+
+		return null;
+	}, "二要素認証の無効化");
 }
 
 /**
  * 2FAログイン時の認証コード検証
  */
-export async function verifyTwoFactorLogin(
-	verificationCode: string,
-): Promise<TwoFactorActionResult> {
-	let userId: string | undefined;
-	try {
+export async function verifyTwoFactorLogin(verificationCode: string): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 		const {
 			data: { user },
 		} = await supabase.auth.getUser();
 
 		if (!user) {
-			return { success: false, error: "認証が必要です" };
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
 		}
-		userId = user.id;
 
 		// 管理者かどうかを確認
 		const { data: isAdmin } = await supabase.rpc("is_admin", {
@@ -190,19 +151,24 @@ export async function verifyTwoFactorLogin(
 		});
 
 		if (!isAdmin) {
-			return { success: false, error: "管理者権限が必要です" };
+			throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
 		}
 
-		// 2FAシークレットを取得
+		// 2FAシークレットを取得 (PGRST116 = 0 行 → 未設定、それ以外 = DB エラーとして上位へ)
 		const { data: adminUser, error: adminError } = await supabase
 			.from("admin_users")
 			.select("two_factor_secret")
 			.eq("user_id", user.id)
 			.eq("two_factor_enabled", true)
-			.single();
+			.maybeSingle();
 
-		if (adminError || !adminUser?.two_factor_secret) {
-			return { success: false, error: "二要素認証が設定されていません" };
+		if (adminError) {
+			// 真に DB 取得が失敗した場合は Supabase エラーを伝播させて
+			// `withActionResult` 側で適切に分類させる
+			throw adminError;
+		}
+		if (!adminUser?.two_factor_secret) {
+			throw new KoudenError("二要素認証が設定されていません", ErrorCodes.NOT_FOUND);
 		}
 
 		// 認証コードを検証
@@ -215,7 +181,7 @@ export async function verifyTwoFactorLogin(
 				attempted_code: `${verificationCode.slice(0, 2)}****`,
 			});
 
-			return { success: false, error: "認証コードが正しくありません" };
+			throw new KoudenError("認証コードが正しくありません", ErrorCodes.VALIDATION_ERROR);
 		}
 
 		// 成功をログに記録
@@ -223,21 +189,8 @@ export async function verifyTwoFactorLogin(
 			login_success: true,
 		});
 
-		return {
-			success: true,
-			message: "認証が成功しました",
-		};
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				userId,
-			},
-			"2FA verification error",
-		);
-		return {
-			success: false,
-			error: "認証中にエラーが発生しました",
-		};
-	}
+		logger.info({ userId: user.id }, "認証が成功しました");
+
+		return null;
+	}, "二要素認証の検証");
 }

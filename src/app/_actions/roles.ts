@@ -1,84 +1,67 @@
 "use server";
 
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
+import type { KoudenRole } from "@/types/role";
 import { revalidatePath } from "next/cache";
 import { cache } from "react";
-import { KoudenError, withErrorHandling } from "@/lib/errors";
 import { isKoudenOwner } from "./permissions";
-import type { KoudenRole } from "@/types/role";
-import logger from "@/lib/logger";
 
 /**
  * 香典帳のロールを取得（キャッシュ対応）
  * @param koudenId 香典帳ID
  * @returns ロール一覧
  */
-export const getKoudenRoles = cache(async (koudenId: string): Promise<KoudenRole[]> => {
-	return withErrorHandling(async () => {
-		const supabase = await createClient();
-		const { data: roles, error } = await supabase
-			.from("kouden_roles")
-			.select("id, name")
-			.eq("kouden_id", koudenId)
-			.in("name", ["編集者", "閲覧者"])
-			.order("name");
+export const getKoudenRoles = cache(
+	async (koudenId: string): Promise<ActionResult<KoudenRole[]>> => {
+		return withActionResult(async () => {
+			const supabase = await createClient();
+			const { data: roles, error } = await supabase
+				.from("kouden_roles")
+				.select("id, name")
+				.eq("kouden_id", koudenId)
+				.in("name", ["編集者", "閲覧者"])
+				.order("name");
 
-		if (error) {
-			logger.error(
-				{
-					error: error.message,
-					code: error.code,
-					koudenId,
-				},
-				"Error fetching roles",
-			);
-			throw new KoudenError("ロール一覧の取得に失敗しました", "FETCH_ROLES_ERROR");
-		}
+			if (error) throw error;
 
-		return roles || [];
-	}, "ロール一覧の取得");
-});
+			return roles || [];
+		}, "ロール一覧の取得");
+	},
+);
 
 /**
  * 管理者用: 香典帳のロールを取得
  * @param koudenId 香典帳ID
  * @returns ロール一覧
  */
-export const getKoudenRolesForAdmin = cache(async (koudenId: string): Promise<KoudenRole[]> => {
-	return withErrorHandling(async () => {
-		// 管理者権限をチェック
-		const { isAdmin } = await import("@/app/_actions/admin/permissions");
-		const adminCheck = await isAdmin();
-		if (!adminCheck) {
-			throw new KoudenError("管理者権限が必要です", "UNAUTHORIZED");
-		}
+export const getKoudenRolesForAdmin = cache(
+	async (koudenId: string): Promise<ActionResult<KoudenRole[]>> => {
+		return withActionResult(async () => {
+			// 管理者権限をチェック
+			const { isAdmin } = await import("@/app/_actions/admin/permissions");
+			const adminCheck = await isAdmin();
+			if (!adminCheck) {
+				throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
+			}
 
-		// 管理者用クライアント（RLSバイパス）を使用
-		const { createAdminClient } = await import("@/lib/supabase/admin");
-		const supabase = createAdminClient();
+			// 管理者用クライアント（RLSバイパス）を使用
+			const { createAdminClient } = await import("@/lib/supabase/admin");
+			const supabase = createAdminClient();
 
-		const { data: roles, error } = await supabase
-			.from("kouden_roles")
-			.select("id, name")
-			.eq("kouden_id", koudenId)
-			.in("name", ["編集者", "閲覧者"])
-			.order("name");
+			const { data: roles, error } = await supabase
+				.from("kouden_roles")
+				.select("id, name")
+				.eq("kouden_id", koudenId)
+				.in("name", ["編集者", "閲覧者"])
+				.order("name");
 
-		if (error) {
-			logger.error(
-				{
-					error: error.message,
-					code: error.code,
-					koudenId,
-				},
-				"Error fetching roles for admin",
-			);
-			throw new KoudenError("ロール情報の取得に失敗しました", "FETCH_ROLES_ERROR");
-		}
+			if (error) throw error;
 
-		return roles || [];
-	}, "管理者用ロール一覧の取得");
-});
+			return roles || [];
+		}, "管理者用ロール一覧の取得");
+	},
+);
 
 /**
  * メンバーのロールを更新
@@ -86,14 +69,18 @@ export const getKoudenRolesForAdmin = cache(async (koudenId: string): Promise<Ko
  * @param userId ユーザーID
  * @param roleId ロールID
  */
-export async function updateMemberRole(koudenId: string, userId: string, roleId: string) {
-	return withErrorHandling(async () => {
+export async function updateMemberRole(
+	koudenId: string,
+	userId: string,
+	roleId: string,
+): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		// 管理者権限のチェック
 		const isOwner = await isKoudenOwner(koudenId);
 		if (!isOwner) {
-			throw new KoudenError("権限がありません", "UNAUTHORIZED");
+			throw new KoudenError("権限がありません", ErrorCodes.FORBIDDEN);
 		}
 
 		// オーナーのロールを変更しようとしていないかチェック
@@ -104,7 +91,7 @@ export async function updateMemberRole(koudenId: string, userId: string, roleId:
 			.single();
 
 		if (kouden?.owner_id === userId) {
-			throw new KoudenError("オーナーのロールは変更できません", "INVALID_OPERATION");
+			throw new KoudenError("オーナーのロールは変更できません", ErrorCodes.INVALID_OPERATION);
 		}
 
 		// RPC関数を使用してロールを更新
@@ -114,23 +101,12 @@ export async function updateMemberRole(koudenId: string, userId: string, roleId:
 			p_role_id: roleId,
 		});
 
-		if (error) {
-			logger.error(
-				{
-					error: error.message,
-					code: error.code,
-					koudenId,
-					userId,
-					roleId,
-				},
-				"Failed to update member role",
-			);
-			throw new KoudenError("ロールの更新に失敗しました", "UPDATE_ROLE_ERROR");
-		}
+		if (error) throw error;
 
 		// キャッシュを更新
 		revalidatePath(`/koudens/${koudenId}/members`);
 		revalidatePath(`/koudens/${koudenId}`);
+		return null;
 	}, "メンバーロールの更新");
 }
 
@@ -139,14 +115,14 @@ export async function updateMemberRole(koudenId: string, userId: string, roleId:
  * @param koudenId 香典帳ID
  * @param userId ユーザーID
  */
-export async function removeMember(koudenId: string, userId: string) {
-	return withErrorHandling(async () => {
+export async function removeMember(koudenId: string, userId: string): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		// 管理者権限のチェック
 		const isOwner = await isKoudenOwner(koudenId);
 		if (!isOwner) {
-			throw new KoudenError("権限がありません", "UNAUTHORIZED");
+			throw new KoudenError("権限がありません", ErrorCodes.FORBIDDEN);
 		}
 
 		// オーナーが自身を削除しようとしていないかチェック
@@ -157,7 +133,7 @@ export async function removeMember(koudenId: string, userId: string) {
 			.single();
 
 		if (kouden?.owner_id === userId) {
-			throw new KoudenError("オーナーは削除できません", "INVALID_OPERATION");
+			throw new KoudenError("オーナーは削除できません", ErrorCodes.INVALID_OPERATION);
 		}
 
 		// RPC関数を使用してメンバーを削除
@@ -166,22 +142,12 @@ export async function removeMember(koudenId: string, userId: string) {
 			p_user_id: userId,
 		});
 
-		if (error) {
-			logger.error(
-				{
-					error: error.message,
-					code: error.code,
-					koudenId,
-					userId,
-				},
-				"Failed to remove member",
-			);
-			throw new KoudenError("メンバーの削除に失敗しました", "REMOVE_MEMBER_ERROR");
-		}
+		if (error) throw error;
 
 		// キャッシュを更新
 		revalidatePath(`/koudens/${koudenId}/members`);
 		revalidatePath(`/koudens/${koudenId}`);
+		return null;
 	}, "メンバーの削除");
 }
 
@@ -189,8 +155,8 @@ export async function removeMember(koudenId: string, userId: string) {
  * 自分自身を香典帳から退出させる
  * @param koudenId 香典帳ID
  */
-export async function leaveMember(koudenId: string) {
-	return withErrorHandling(async () => {
+export async function leaveMember(koudenId: string): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		// 現在のユーザーを取得
@@ -198,7 +164,7 @@ export async function leaveMember(koudenId: string) {
 		const currentUser = await getCurrentUser();
 
 		if (!currentUser) {
-			throw new KoudenError("認証が必要です", "UNAUTHORIZED");
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
 		}
 
 		// オーナーが自身を退出しようとしていないかチェック
@@ -211,7 +177,7 @@ export async function leaveMember(koudenId: string) {
 		if (kouden?.owner_id === currentUser.id) {
 			throw new KoudenError(
 				"オーナーは香典帳から退出できません。香典帳を削除するか、他のメンバーにオーナー権限を移譲してください。",
-				"INVALID_OPERATION",
+				ErrorCodes.INVALID_OPERATION,
 			);
 		}
 
@@ -224,7 +190,7 @@ export async function leaveMember(koudenId: string) {
 			.single();
 
 		if (!memberExists) {
-			throw new KoudenError("この香典帳のメンバーではありません", "NOT_FOUND");
+			throw new KoudenError("この香典帳のメンバーではありません", ErrorCodes.NOT_FOUND);
 		}
 
 		// RPC関数を使用して自分自身を削除
@@ -233,22 +199,12 @@ export async function leaveMember(koudenId: string) {
 			p_user_id: currentUser.id,
 		});
 
-		if (error) {
-			logger.error(
-				{
-					error: error.message,
-					code: error.code,
-					koudenId,
-					userId: currentUser.id,
-				},
-				"Failed to leave member",
-			);
-			throw new KoudenError("香典帳からの退出に失敗しました", "LEAVE_MEMBER_ERROR");
-		}
+		if (error) throw error;
 
 		// キャッシュを更新
 		revalidatePath(`/koudens/${koudenId}/members`);
 		revalidatePath(`/koudens/${koudenId}`);
 		revalidatePath("/koudens"); // 香典帳一覧も更新
+		return null;
 	}, "香典帳からの退出");
 }

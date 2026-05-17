@@ -15,11 +15,13 @@ export default async function AdminSettingsPage({ params }: AdminSettingsPagePro
 	await checkAdminPermission();
 
 	const { id: koudenId } = await params;
-	const kouden = await getKoudenForAdmin(koudenId);
+	const koudenResult = await getKoudenForAdmin(koudenId);
 
-	if (!kouden) {
-		throw new Error("香典帳が見つかりません");
+	if (!koudenResult.ok) {
+		throw new Error(koudenResult.error.message);
 	}
+
+	const kouden = koudenResult.data;
 
 	return (
 		<div className="container mx-auto py-6 space-y-6">

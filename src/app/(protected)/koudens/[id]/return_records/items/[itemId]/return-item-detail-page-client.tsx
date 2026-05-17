@@ -107,11 +107,18 @@ export function ReturnItemDetailPageClient({
 			setIsUpdating(true);
 			const newActiveState = !item.is_active;
 
-			await updateReturnItem({
+			const result = await updateReturnItem({
 				id: item.id,
 				is_active: newActiveState,
 				kouden_id: koudenId,
 			});
+
+			if (!result.ok) {
+				toast.error("更新エラー", {
+					description: result.error.message,
+				});
+				return;
+			}
 
 			setItem((prev) => ({ ...prev, is_active: newActiveState }));
 
@@ -133,7 +140,15 @@ export function ReturnItemDetailPageClient({
 		try {
 			setIsDeleting(true);
 
-			await deleteReturnItem(item.id, koudenId);
+			const result = await deleteReturnItem(item.id, koudenId);
+
+			if (!result.ok) {
+				toast.error("削除エラー", {
+					description: result.error.message,
+				});
+				setIsDeleting(false);
+				return;
+			}
 
 			toast.success("削除完了", {
 				description: "返礼品を削除しました",

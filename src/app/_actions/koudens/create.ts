@@ -1,5 +1,6 @@
 "use server";
 
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import logger from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -36,13 +37,13 @@ async function getAuthenticatedUserId(): Promise<string | null> {
 export async function createKouden({
 	title,
 	description,
-}: Omit<CreateKoudenParams, "userId">): Promise<{ kouden?: KoudenWithOwner; error?: string }> {
-	const userId = await getAuthenticatedUserId();
-	if (!userId) {
-		return { error: "認証が必要です" };
-	}
+}: Omit<CreateKoudenParams, "userId">): Promise<ActionResult<KoudenWithOwner>> {
+	return withActionResult(async () => {
+		const userId = await getAuthenticatedUserId();
+		if (!userId) {
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
+		}
 
-	try {
 		const supabase = await createClient();
 		const adminSupabase = createAdminClient();
 
@@ -56,7 +57,7 @@ export async function createKouden({
 		});
 
 		if (rpcError || !newKoudenId) {
-			throw rpcError ?? new Error("香典帳の作成に失敗しました");
+			throw rpcError ?? new KoudenError("香典帳の作成に失敗しました", ErrorCodes.DB_INSERT_ERROR);
 		}
 
 		// 作成した香典帳を取得
@@ -66,7 +67,7 @@ export async function createKouden({
 			.eq("id", newKoudenId)
 			.single();
 		if (koudenError || !kouden) {
-			throw koudenError ?? new Error("香典帳の取得に失敗しました");
+			throw koudenError ?? new KoudenError("香典帳の取得に失敗しました", ErrorCodes.DB_FETCH_ERROR);
 		}
 
 		// オーナーのプロフィール取得は best-effort: ここで失敗しても香典帳は既に
@@ -84,22 +85,10 @@ export async function createKouden({
 		}
 
 		return {
-			kouden: {
-				...kouden,
-				owner: owner ?? { id: userId, display_name: null },
-			},
+			...kouden,
+			owner: owner ?? { id: userId, display_name: null },
 		};
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				title,
-				userId,
-			},
-			"Error creating kouden",
-		);
-		return { error: "香典帳の作成に失敗しました" };
-	}
+	}, "香典帳の作成");
 }
 
 /**
@@ -115,22 +104,25 @@ export async function createKoudenWithPlan({
 	description,
 	planCode,
 	expectedCount,
-}: CreateKoudenWithPlanParams): Promise<{ koudenId?: string; error?: string }> {
-	const uid = await getAuthenticatedUserId();
-	if (!uid) {
-		return { error: "認証が必要です" };
-	}
+}: CreateKoudenWithPlanParams): Promise<ActionResult<{ koudenId: string }>> {
+	return withActionResult(async () => {
+		const uid = await getAuthenticatedUserId();
+		if (!uid) {
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
+		}
 
-	// 有料プランの場合はこの経路を許可しない（Stripe Webhook 経由のみ）。
-	if (planCode !== "free") {
-		logger.warn(
-			{ planCode, userId: uid },
-			"createKoudenWithPlan called with non-free planCode; rejecting",
-		);
-		return { error: "有料プランは決済フローからのみ作成できます" };
-	}
+		// 有料プランの場合はこの経路を許可しない（Stripe Webhook 経由のみ）。
+		if (planCode !== "free") {
+			logger.warn(
+				{ planCode, userId: uid },
+				"createKoudenWithPlan called with non-free planCode; rejecting",
+			);
+			throw new KoudenError(
+				"有料プランは決済フローからのみ作成できます",
+				ErrorCodes.INVALID_OPERATION,
+			);
+		}
 
-	try {
 		const supabase = createAdminClient();
 		// プラン取得（IDと価格）
 		const { data: plan, error: planError } = await supabase
@@ -139,7 +131,7 @@ export async function createKoudenWithPlan({
 			.eq("code", planCode)
 			.single();
 		if (planError || !plan) {
-			return { error: "プランが見つかりません" };
+			throw new KoudenError("プランが見つかりません", ErrorCodes.NOT_FOUND);
 		}
 		// 念のため price の0円も確認しておく（DB側で free が誤って課金プランに変わるのを防ぐ）
 		if (plan.code !== "free" || (plan.price ?? 0) !== 0) {
@@ -147,7 +139,7 @@ export async function createKoudenWithPlan({
 				{ planCode, planPrice: plan.price, planDbCode: plan.code, userId: uid },
 				"createKoudenWithPlan: plan integrity check failed (expected free / price 0)",
 			);
-			return { error: "プラン整合性エラー" };
+			throw new KoudenError("プラン整合性エラー", ErrorCodes.INVALID_OPERATION);
 		}
 		// 香典帳作成
 		const { data: kouden, error: koudenError } = await supabase
@@ -156,7 +148,9 @@ export async function createKoudenWithPlan({
 			.select("id")
 			.single();
 		if (koudenError || !kouden) {
-			throw koudenError;
+			throw (
+				koudenError ?? new KoudenError("香典帳の作成に失敗しました", ErrorCodes.DB_INSERT_ERROR)
+			);
 		}
 		// 購入履歴作成（無料プランは amount_paid=0）
 		const { error: purchaseError } = await supabase.from("kouden_purchases").insert({
@@ -170,16 +164,5 @@ export async function createKoudenWithPlan({
 			throw purchaseError;
 		}
 		return { koudenId: kouden.id };
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				title,
-				planCode,
-				userId: uid,
-			},
-			"Error creating kouden with plan",
-		);
-		return { error: "有料香典帳の作成に失敗しました" };
-	}
+	}, "有料香典帳の作成");
 }

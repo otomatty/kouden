@@ -101,8 +101,8 @@ export function AppContactForm({ user, onSuccess }: AppContactFormProps) {
 
 			const result = await createContactRequest(formData);
 
-			if (!result.success) {
-				toast.error("送信に失敗しました", { description: result.error });
+			if (!result.ok) {
+				toast.error("送信に失敗しました", { description: result.error.message });
 				return;
 			}
 

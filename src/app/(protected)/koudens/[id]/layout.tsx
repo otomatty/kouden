@@ -5,9 +5,8 @@ import { ClientProviders } from "@/components/providers/client-providers";
 import type { Metadata } from "next";
 
 import { BottomNavigation } from "@/app/(protected)/koudens/[id]/_components/_common/bottom-navigation";
-import type { Kouden } from "@/types/kouden";
 // components
-import { notFound, redirect } from "next/navigation";
+import { notFound, redirect, unstable_rethrow } from "next/navigation";
 import { KoudenHeader } from "./_components/_common/kouden-header";
 import { TabNavigation } from "./_components/_common/tab-navigation";
 import ArchivedPage from "./archived/page";
@@ -20,16 +19,12 @@ export async function generateMetadata({
 	params,
 }: { params: Promise<{ id: string }> }): Promise<Metadata> {
 	const { id: koudenId } = await params;
-	let kouden: Kouden | null;
-	try {
-		kouden = await getKouden(koudenId);
-	} catch {
+	const result = await getKouden(koudenId);
+	if (!result.ok) {
 		// データ取得エラー時は一覧にリダイレクト
 		redirect("/koudens");
 	}
-	if (!kouden) {
-		redirect("/koudens");
-	}
+	const kouden = result.data;
 	return {
 		title: `${kouden.title} | 香典帳`,
 		description: kouden.description || "香典帳詳細",
@@ -52,20 +47,25 @@ export default async function KoudenLayout({ params, children }: KoudenLayoutPro
 	try {
 		const permission = await checkKoudenPermission(koudenId);
 		// 共通で使用するデータとプラン情報を取得
-		const [kouden, planInfo] = await Promise.all([
+		const [koudenResult, planInfoResult] = await Promise.all([
 			getKouden(koudenId),
 			getKoudenWithPlan(koudenId),
 		]);
+		if (!koudenResult.ok) {
+			if (koudenResult.error.code === "NOT_FOUND") notFound();
+			throw new Error(koudenResult.error.message);
+		}
+		if (!planInfoResult.ok) {
+			if (planInfoResult.error.code === "NOT_FOUND") notFound();
+			throw new Error(planInfoResult.error.message);
+		}
+		const kouden = koudenResult.data;
+		const planInfo = planInfoResult.data;
 		const { plan, expired, remainingDays } = planInfo;
 		// Excel出力は有料プランかつ期限切れでない場合のみ有効
 		const enableExcel = plan.code !== "free" && !expired;
 		// CSV出力もExcel出力と同じ制限を適用
 		const enableCsv = plan.code !== "free" && !expired;
-
-		// koudenが見つからない場合は404エラーを投げる
-		if (!kouden) {
-			notFound();
-		}
 
 		if (kouden.status === "archived") {
 			return <ArchivedPage params={params} />;
@@ -96,8 +96,11 @@ export default async function KoudenLayout({ params, children }: KoudenLayoutPro
 				<BottomNavigation id={kouden.id} />
 			</ClientProviders>
 		);
-	} catch {
-		// エラー発生時は一覧ページへリダイレクト
+	} catch (error) {
+		// `notFound()` / `redirect()` は内部的に throw されるため、
+		// ここで `unstable_rethrow` を通して制御フロー例外を再 throw する。
+		// これを忘れると 404 が `/koudens` リダイレクトに置き換わってしまう。
+		unstable_rethrow(error);
 		redirect("/koudens");
 	}
 }

@@ -118,14 +118,16 @@ export function EntryForm({
 			}
 			const result = await handleEntrySubmission(values, koudenId, defaultValues);
 
-			if (!result) {
-				throw new Error("エントリーの保存に失敗しました");
+			if (!result.ok) {
+				throw new Error(result.error.message);
 			}
 
+			const entry = result.data;
+
 			// 成功時の処理
-			onSuccess?.(result);
+			onSuccess?.(entry);
 			toast.success(defaultValues ? "エントリーを更新しました" : "エントリーを登録しました", {
-				description: `${result.name || "名称未設定"}を${defaultValues ? "更新" : "登録"}しました`,
+				description: `${entry.name || "名称未設定"}を${defaultValues ? "更新" : "登録"}しました`,
 			});
 
 			// フォーム送信後にドラフトをリセット

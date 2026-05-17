@@ -27,7 +27,11 @@ const statusConfig = {
 };
 
 export async function CampaignApplicationsStats() {
-	const stats = await getCampaignApplicationStats();
+	const statsResult = await getCampaignApplicationStats();
+	if (!statsResult.ok) {
+		throw new Error(statsResult.error.message);
+	}
+	const stats = statsResult.data;
 
 	const statusCards = [
 		{

@@ -5,27 +5,24 @@
  * @module return-record-items
  */
 
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
+import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
 import type {
-	ReturnRecordItem,
 	CreateReturnRecordItemInput,
+	ReturnRecordItem,
 	UpdateReturnRecordItemInput,
 } from "@/types/return-records/return-record-items";
-import logger from "@/lib/logger";
+import { revalidatePath } from "next/cache";
 
 /**
  * 返礼品詳細情報を作成する
- * @param {CreateReturnRecordItemInput} input - 作成する返礼品詳細情報
- * @param {string} koudenId - 香典帳ID（キャッシュ再検証用）
- * @returns {Promise<ReturnRecordItem>} 作成された返礼品詳細情報
- * @throws {Error} 認証エラーまたは作成失敗時のエラー
  */
 export async function createReturnRecordItem(
 	input: CreateReturnRecordItemInput,
 	koudenId: string,
-): Promise<ReturnRecordItem> {
-	try {
+): Promise<ActionResult<ReturnRecordItem>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		// セッションの取得
@@ -34,7 +31,7 @@ export async function createReturnRecordItem(
 		} = await supabase.auth.getUser();
 
 		if (!user) {
-			throw new Error("認証されていません");
+			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 		}
 
 		const { data, error } = await supabase
@@ -51,7 +48,7 @@ export async function createReturnRecordItem(
 		}
 
 		if (!data) {
-			throw new Error("返礼品詳細情報の作成に失敗しました");
+			throw new KoudenError("返礼品詳細情報の作成に失敗しました", ErrorCodes.DB_INSERT_ERROR);
 		}
 
 		// 返礼情報の合計金額を更新
@@ -61,27 +58,16 @@ export async function createReturnRecordItem(
 		revalidatePath(`/koudens/${koudenId}`);
 
 		return data as ReturnRecordItem;
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				returnRecordId: input.return_record_id,
-				koudenId,
-			},
-			"返礼品詳細情報の作成エラー",
-		);
-		throw error;
-	}
+	}, "返礼品詳細情報の作成");
 }
 
 /**
  * 返礼情報IDに紐づく返礼品詳細情報一覧を取得する
- * @param {string} returnRecordId - 返礼情報ID
- * @returns {Promise<ReturnRecordItem[]>} 返礼品詳細情報一覧
- * @throws {Error} 取得失敗時のエラー
  */
-export async function getReturnRecordItems(returnRecordId: string): Promise<ReturnRecordItem[]> {
-	try {
+export async function getReturnRecordItems(
+	returnRecordId: string,
+): Promise<ActionResult<ReturnRecordItem[]>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		const { data, error } = await supabase
@@ -95,63 +81,46 @@ export async function getReturnRecordItems(returnRecordId: string): Promise<Retu
 		}
 
 		return data as ReturnRecordItem[];
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				returnRecordId,
-			},
-			"返礼品詳細情報一覧の取得エラー",
-		);
+	}, "返礼品詳細情報一覧の取得");
+}
+
+/**
+ * 内部用: 返礼品詳細情報を取得する（throws）
+ * `withActionResult` 内で他アクションから利用する想定。
+ */
+async function getReturnRecordItemInternal(id: string): Promise<ReturnRecordItem | null> {
+	const supabase = await createClient();
+
+	const { data, error } = await supabase
+		.from("return_record_items")
+		.select("*")
+		.eq("id", id)
+		.single();
+
+	if (error) {
 		throw error;
 	}
+
+	return data as ReturnRecordItem | null;
 }
 
 /**
  * 返礼品詳細情報を取得する
- * @param {string} id - 返礼品詳細情報ID
- * @returns {Promise<ReturnRecordItem | null>} 返礼品詳細情報
- * @throws {Error} 取得失敗時のエラー
  */
-export async function getReturnRecordItem(id: string): Promise<ReturnRecordItem | null> {
-	try {
-		const supabase = await createClient();
-
-		const { data, error } = await supabase
-			.from("return_record_items")
-			.select("*")
-			.eq("id", id)
-			.single();
-
-		if (error) {
-			throw error;
-		}
-
-		return data as ReturnRecordItem | null;
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				id,
-			},
-			"返礼品詳細情報の取得エラー",
-		);
-		throw error;
-	}
+export async function getReturnRecordItem(
+	id: string,
+): Promise<ActionResult<ReturnRecordItem | null>> {
+	return withActionResult(async () => getReturnRecordItemInternal(id), "返礼品詳細情報の取得");
 }
 
 /**
  * 返礼品詳細情報を更新する
- * @param {UpdateReturnRecordItemInput} input - 更新する返礼品詳細情報
- * @param {string} koudenId - 香典帳ID（キャッシュ再検証用）
- * @returns {Promise<ReturnRecordItem>} 更新された返礼品詳細情報
- * @throws {Error} 認証エラーまたは更新失敗時のエラー
  */
 export async function updateReturnRecordItem(
 	input: UpdateReturnRecordItemInput,
 	koudenId: string,
-): Promise<ReturnRecordItem> {
-	try {
+): Promise<ActionResult<ReturnRecordItem>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		// セッションの取得
@@ -160,13 +129,13 @@ export async function updateReturnRecordItem(
 		} = await supabase.auth.getUser();
 
 		if (!user) {
-			throw new Error("認証されていません");
+			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 		}
 
 		// 更新前の情報を取得して返礼情報IDを保持
-		const existingItem = await getReturnRecordItem(input.id);
+		const existingItem = await getReturnRecordItemInternal(input.id);
 		if (!existingItem) {
-			throw new Error("返礼品詳細情報が見つかりません");
+			throw new KoudenError("返礼品詳細情報が見つかりません", ErrorCodes.NOT_FOUND);
 		}
 
 		const { id, ...updateData } = input;
@@ -183,7 +152,7 @@ export async function updateReturnRecordItem(
 		}
 
 		if (!data) {
-			throw new Error("返礼品詳細情報の更新に失敗しました");
+			throw new KoudenError("返礼品詳細情報の更新に失敗しました", ErrorCodes.DB_UPDATE_ERROR);
 		}
 
 		// 返礼情報の合計金額を更新
@@ -193,28 +162,17 @@ export async function updateReturnRecordItem(
 		revalidatePath(`/koudens/${koudenId}`);
 
 		return data as ReturnRecordItem;
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				id: input.id,
-				koudenId,
-			},
-			"返礼品詳細情報の更新エラー",
-		);
-		throw error;
-	}
+	}, "返礼品詳細情報の更新");
 }
 
 /**
  * 返礼品詳細情報を削除する
- * @param {string} id - 返礼品詳細情報ID
- * @param {string} koudenId - 香典帳ID（キャッシュ再検証用）
- * @returns {Promise<void>}
- * @throws {Error} 認証エラーまたは削除失敗時のエラー
  */
-export async function deleteReturnRecordItem(id: string, koudenId: string): Promise<void> {
-	try {
+export async function deleteReturnRecordItem(
+	id: string,
+	koudenId: string,
+): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		// セッションの取得
@@ -223,13 +181,13 @@ export async function deleteReturnRecordItem(id: string, koudenId: string): Prom
 		} = await supabase.auth.getUser();
 
 		if (!user) {
-			throw new Error("認証されていません");
+			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 		}
 
 		// 削除前の情報を取得して返礼情報IDを保持
-		const existingItem = await getReturnRecordItem(id);
+		const existingItem = await getReturnRecordItemInternal(id);
 		if (!existingItem) {
-			throw new Error("返礼品詳細情報が見つかりません");
+			throw new KoudenError("返礼品詳細情報が見つかりません", ErrorCodes.NOT_FOUND);
 		}
 
 		const { error } = await supabase.from("return_record_items").delete().eq("id", id);
@@ -243,57 +201,45 @@ export async function deleteReturnRecordItem(id: string, koudenId: string): Prom
 
 		// キャッシュの再検証
 		revalidatePath(`/koudens/${koudenId}`);
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				id,
-				koudenId,
-			},
-			"返礼品詳細情報の削除エラー",
-		);
-		throw error;
-	}
+		return null;
+	}, "返礼品詳細情報の削除");
 }
 
 /**
  * 返礼情報の合計金額を更新する（内部関数）
- * @param {string} returnRecordId - 返礼情報ID
- * @returns {Promise<void>}
+ *
+ * 現在は select のみで実体の update はコメントアウトされている。
+ * 失敗時は呼び出し元の `withActionResult` に伝播させる。
  */
 async function updateReturnRecordTotalAmount(returnRecordId: string): Promise<void> {
-	try {
-		const supabase = await createClient();
+	const supabase = await createClient();
 
-		// 返礼品詳細の合計金額を計算
-		const { error: itemsError } = await supabase
-			.from("return_record_items")
-			.select("price, quantity")
-			.eq("return_record_id", returnRecordId);
+	// 返礼品詳細の合計金額を計算
+	const { error: itemsError } = await supabase
+		.from("return_record_items")
+		.select("price, quantity")
+		.eq("return_record_id", returnRecordId);
 
-		if (itemsError) {
-			throw itemsError;
-		}
-
-		// const totalAmount = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-		// 返礼情報の合計金額を更新
-		// const { error: updateError } = await supabase
-		//     .from("return_records")
-		//     .update({ total_amount: totalAmount })
-		//     .eq("id", returnRecordId);
-
-		// if (updateError) {
-		//     throw updateError;
-		// }
-	} catch (error) {
+	if (itemsError) {
 		logger.error(
 			{
-				error: error instanceof Error ? error.message : String(error),
+				error: itemsError.message,
 				returnRecordId,
 			},
 			"返礼情報の合計金額更新エラー",
 		);
-		throw error;
+		throw itemsError;
 	}
+
+	// const totalAmount = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+	// 返礼情報の合計金額を更新
+	// const { error: updateError } = await supabase
+	//     .from("return_records")
+	//     .update({ total_amount: totalAmount })
+	//     .eq("id", returnRecordId);
+
+	// if (updateError) {
+	//     throw updateError;
+	// }
 }

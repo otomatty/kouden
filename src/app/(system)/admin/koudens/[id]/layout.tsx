@@ -8,7 +8,7 @@ import type { KoudenPermission } from "@/types/role";
 import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound, redirect, unstable_rethrow } from "next/navigation";
 
 /**
  * 管理者用香典帳詳細ページのメタデータを生成する
@@ -18,13 +18,15 @@ export async function generateMetadata({
 	params,
 }: { params: Promise<{ id: string }> }): Promise<Metadata> {
 	const { id: koudenId } = await params;
-	let kouden: Kouden | null;
+	let kouden: Kouden;
 	try {
-		kouden = await getKoudenForAdmin(koudenId);
-	} catch {
-		redirect("/admin/users");
-	}
-	if (!kouden) {
+		const result = await getKoudenForAdmin(koudenId);
+		if (!result.ok) {
+			redirect("/admin/users");
+		}
+		kouden = result.data;
+	} catch (error) {
+		unstable_rethrow(error);
 		redirect("/admin/users");
 	}
 	return {
@@ -51,14 +53,23 @@ export default async function AdminKoudenLayout({ params, children }: AdminKoude
 		const { adminRole } = await checkAdminPermission();
 
 		// 香典帳データとプラン情報を取得（管理者用関数を使用）
-		const [kouden, planInfo] = await Promise.all([
+		const [koudenResult, planInfoResult] = await Promise.all([
 			getKoudenForAdmin(koudenId),
 			getKoudenWithPlanForAdmin(koudenId),
 		]);
 
-		if (!kouden) {
-			notFound();
+		if (!koudenResult.ok) {
+			if (koudenResult.error.code === "NOT_FOUND") {
+				notFound();
+			}
+			throw new Error(koudenResult.error.message);
 		}
+		if (!planInfoResult.ok) {
+			throw new Error(planInfoResult.error.message);
+		}
+
+		const kouden = koudenResult.data;
+		const planInfo = planInfoResult.data;
 
 		const { plan, expired, remainingDays } = planInfo;
 		// 管理者は全ての機能にアクセス可能
@@ -109,6 +120,9 @@ export default async function AdminKoudenLayout({ params, children }: AdminKoude
 			</div>
 		);
 	} catch (error) {
+		// `notFound()` / `redirect()` の内部 throw を吸収しないよう、
+		// 先に制御フロー例外を再 throw する。
+		unstable_rethrow(error);
 		console.error("Admin kouden layout error:", error);
 
 		// 権限エラーの場合は適切なメッセージを表示

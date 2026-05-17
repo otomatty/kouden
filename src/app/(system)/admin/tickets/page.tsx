@@ -7,10 +7,42 @@ import {
 	updateTicketPriority,
 	assignTicket,
 } from "@/app/_actions/admin/tickets";
+import type { Ticket } from "@/types/admin";
 import { Skeleton } from "@/components/ui/skeleton";
 
+async function handleUpdateTicketStatus(id: string, status: Ticket["status"]): Promise<void> {
+	"use server";
+	const result = await updateTicketStatus(id, status);
+	if (!result.ok) {
+		throw new Error(result.error.message);
+	}
+}
+
+async function handleUpdateTicketPriority(
+	id: string,
+	priority: Ticket["priority"],
+): Promise<void> {
+	"use server";
+	const result = await updateTicketPriority(id, priority);
+	if (!result.ok) {
+		throw new Error(result.error.message);
+	}
+}
+
+async function handleAssignTicket(id: string, adminId: string | null): Promise<void> {
+	"use server";
+	const result = await assignTicket(id, adminId);
+	if (!result.ok) {
+		throw new Error(result.error.message);
+	}
+}
+
 async function TicketsContent() {
-	const tickets = await getTickets();
+	const ticketsResult = await getTickets();
+	if (!ticketsResult.ok) {
+		throw new Error(ticketsResult.error.message);
+	}
+	const tickets = ticketsResult.data;
 
 	return (
 		<div className="space-y-4">
@@ -20,9 +52,9 @@ async function TicketsContent() {
 			<TicketFilters />
 			<TicketsTable
 				tickets={tickets}
-				updateTicketStatus={updateTicketStatus}
-				updateTicketPriority={updateTicketPriority}
-				assignTicket={assignTicket}
+				updateTicketStatus={handleUpdateTicketStatus}
+				updateTicketPriority={handleUpdateTicketPriority}
+				assignTicket={handleAssignTicket}
 			/>
 		</div>
 	);

@@ -44,10 +44,10 @@ export function ProfileForm({ userId, initialData }: ProfileFormProps) {
 	async function onSubmit(values: z.infer<typeof formSchema>) {
 		try {
 			setIsPending(true);
-			const { error } = await updateProfile(userId, values);
+			const result = await updateProfile(userId, values);
 
-			if (error) {
-				throw new Error(error);
+			if (!result.ok) {
+				throw new Error(result.error.message);
 			}
 
 			toast.success("プロフィールを更新しました");

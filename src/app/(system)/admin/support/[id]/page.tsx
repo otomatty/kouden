@@ -30,10 +30,36 @@ const categoryConfig = {
 	other: "その他",
 };
 
+interface ContactRequestDetail {
+	id: string;
+	status: string;
+	category: string;
+	subject: string | null;
+	message: string;
+	name: string | null;
+	email: string;
+	company_name: string | null;
+	created_at: string;
+	updated_at: string;
+	contact_request_attachments?: Array<{
+		id: string;
+		file_url: string;
+		file_name: string;
+		uploaded_at: string;
+	}>;
+}
+
 export default async function ContactRequestDetailPage({ params }: ContactRequestDetailPageProps) {
 	try {
 		const { id } = await params;
-		const request = await getContactRequestDetail(id);
+		const detailResult = await getContactRequestDetail(id);
+		if (!detailResult.ok) {
+			if (detailResult.error.code === "NOT_FOUND") {
+				notFound();
+			}
+			throw new Error(detailResult.error.message);
+		}
+		const request = detailResult.data as ContactRequestDetail;
 
 		return (
 			<div className="space-y-6">

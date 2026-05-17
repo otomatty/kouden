@@ -76,7 +76,15 @@ export function EntryDrawerContent({
 			setOptimisticEntries([...optimisticEntries, optimisticEntry]);
 
 			// サーバーに更新を送信
-			const updatedEntry = await updateEntryField(entry.id, field, value);
+			const result = await updateEntryField(entry.id, field, value);
+			if (!result.ok) {
+				setOptimisticEntries(optimisticEntries.filter((e) => e.id !== entry.id));
+				toast.error("データの更新に失敗しました", {
+					description: result.error.message,
+				});
+				return;
+			}
+			const updatedEntry = result.data;
 
 			// 成功したら実際のエントリーを更新
 			if (entries.length === 0) {
@@ -112,7 +120,14 @@ export function EntryDrawerContent({
 			setOptimisticEntries([...optimisticEntries, optimisticEntry]);
 
 			// サーバーに削除を送信
-			await deleteEntry(entry.id, koudenId);
+			const deleteResult = await deleteEntry(entry.id, koudenId);
+			if (!deleteResult.ok) {
+				setOptimisticEntries(optimisticEntries.filter((e) => e.id !== entry.id));
+				toast.error("データの削除に失敗しました", {
+					description: deleteResult.error.message,
+				});
+				return;
+			}
 
 			// 成功したら実際のエントリーを削除
 			setEntries(entries.filter((e) => e.id !== entry.id));

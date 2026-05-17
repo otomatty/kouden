@@ -17,11 +17,19 @@ interface MembersPageProps {
 export default async function MembersPage({ params }: MembersPageProps) {
 	const { id: koudenId } = await params;
 
-	const [members, roles, permission] = await Promise.all([
+	const [membersResult, rolesResult, permission] = await Promise.all([
 		getMembers(koudenId),
 		getKoudenRoles(koudenId),
 		checkKoudenPermission(koudenId),
 	]);
+	if (!membersResult.ok) {
+		throw new Error(membersResult.error.message);
+	}
+	if (!rolesResult.ok) {
+		throw new Error(rolesResult.error.message);
+	}
+	const members = membersResult.data;
+	const roles = rolesResult.data;
 
 	return (
 		<div className="space-y-6">

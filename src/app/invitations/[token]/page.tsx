@@ -22,7 +22,11 @@ export const metadata: Metadata = {
 export default async function InvitationPage({ params }: InvitationPageProps) {
 	const { token } = await params;
 	try {
-		const invitation = await getInvitation(token);
+		const invitationResult = await getInvitation(token);
+		if (!invitationResult.ok) {
+			throw new Error(invitationResult.error.message);
+		}
+		const invitation = invitationResult.data;
 		const supabase = await createClient();
 		const {
 			data: { user },

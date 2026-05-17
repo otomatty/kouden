@@ -1,15 +1,25 @@
 "use server";
 
+import { type ActionResult, withActionResult } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/types/supabase";
 import { revalidatePath } from "next/cache";
-import logger from "@/lib/logger";
+
+type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
 interface UpdateProfileParams {
 	display_name: string;
 }
 
-export async function getProfile(userId: string) {
-	try {
+interface ActivityStats {
+	ownedKoudensCount: number;
+	participatingKoudensCount: number;
+	totalEntriesCount: number;
+	lastActivityAt: string | null;
+}
+
+export async function getProfile(userId: string): Promise<ActionResult<Profile>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		const { data: profile, error } = await supabase
@@ -18,28 +28,13 @@ export async function getProfile(userId: string) {
 			.eq("id", userId)
 			.single();
 
-		if (error) {
-			throw error;
-		}
-
-		return { profile, error: null };
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				userId,
-			},
-			"Error getting profile",
-		);
-		return {
-			profile: null,
-			error: "プロフィールの取得に失敗しました",
-		};
-	}
+		if (error) throw error;
+		return profile;
+	}, "プロフィールの取得");
 }
 
-export async function getActivityStats(userId: string) {
-	try {
+export async function getActivityStats(userId: string): Promise<ActionResult<ActivityStats>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		// 作成した香典帳の数を取得
@@ -80,31 +75,19 @@ export async function getActivityStats(userId: string) {
 		}
 
 		return {
-			stats: {
-				ownedKoudensCount: ownedKoudensCount || 0,
-				participatingKoudensCount: participatingKoudensCount || 0,
-				totalEntriesCount: totalEntriesCount || 0,
-				lastActivityAt: lastActivity?.created_at || null,
-			},
-			error: null,
+			ownedKoudensCount: ownedKoudensCount || 0,
+			participatingKoudensCount: participatingKoudensCount || 0,
+			totalEntriesCount: totalEntriesCount || 0,
+			lastActivityAt: lastActivity?.created_at || null,
 		};
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				userId,
-			},
-			"Error getting activity stats",
-		);
-		return {
-			stats: null,
-			error: "活動統計の取得に失敗しました",
-		};
-	}
+	}, "活動統計の取得");
 }
 
-export async function updateProfile(userId: string, params: UpdateProfileParams) {
-	try {
+export async function updateProfile(
+	userId: string,
+	params: UpdateProfileParams,
+): Promise<ActionResult<Profile>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		const { data: profile, error } = await supabase
@@ -117,30 +100,18 @@ export async function updateProfile(userId: string, params: UpdateProfileParams)
 			.select()
 			.single();
 
-		if (error) {
-			throw error;
-		}
+		if (error) throw error;
 
 		revalidatePath("/profile");
-		return { profile, error: null };
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				userId,
-				params,
-			},
-			"Error updating profile",
-		);
-		return {
-			profile: null,
-			error: "プロフィールの更新に失敗しました",
-		};
-	}
+		return profile;
+	}, "プロフィールの更新");
 }
 
-export async function updateAvatar(userId: string, avatarUrl: string) {
-	try {
+export async function updateAvatar(
+	userId: string,
+	avatarUrl: string,
+): Promise<ActionResult<Profile>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		const { data: profile, error } = await supabase
@@ -153,24 +124,9 @@ export async function updateAvatar(userId: string, avatarUrl: string) {
 			.select()
 			.single();
 
-		if (error) {
-			throw error;
-		}
+		if (error) throw error;
 
 		revalidatePath("/profile");
-		return { profile, error: null };
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				userId,
-				avatarUrl,
-			},
-			"Error updating avatar",
-		);
-		return {
-			profile: null,
-			error: "アバターの更新に失敗しました",
-		};
-	}
+		return profile;
+	}, "アバターの更新");
 }

@@ -75,7 +75,18 @@ export function DataTable({ koudenId, entries, offerings, onDataChange }: DataTa
 	const handleDeleteRows = useCallback(
 		async (ids: string[]) => {
 			try {
-				await Promise.all(ids.map((id) => deleteOffering(id, koudenId)));
+				const results = await Promise.all(ids.map((id) => deleteOffering(id, koudenId)));
+				const failures = results.filter((r) => !r.ok);
+				if (failures.length > 0) {
+					const firstError = failures[0];
+					toast.error("エラーが発生しました", {
+						description:
+							firstError && !firstError.ok
+								? `${failures.length}件の削除に失敗しました: ${firstError.error.message}`
+								: `${failures.length}件の削除に失敗しました`,
+					});
+					return;
+				}
 				setSelectedRows([]);
 				if (onDataChange) {
 					onDataChange(offerings.filter((offering) => !ids.includes(offering.id)));
@@ -114,11 +125,18 @@ export function DataTable({ koudenId, entries, offerings, onDataChange }: DataTa
 			}
 
 			try {
-				const updatedOffering = await updateOfferingField(
+				const result = await updateOfferingField(
 					targetOffering.id,
 					columnId as keyof Omit<Offering, "offering_entries">,
 					value,
 				);
+				if (!result.ok) {
+					toast.error("エラーが発生しました", {
+						description: result.error.message,
+					});
+					return;
+				}
+				const updatedOffering = result.data;
 
 				if (onDataChange) {
 					const newOfferings = offerings.map((offering) =>

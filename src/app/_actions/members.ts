@@ -1,7 +1,6 @@
 "use server";
 
-import { KoudenError, withErrorHandling } from "@/lib/errors";
-import logger from "@/lib/logger";
+import { ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
 import { cache } from "react";
 
@@ -11,14 +10,14 @@ import { cache } from "react";
  * @returns メンバー一覧
  */
 export const getMembers = cache(async (koudenId: string) => {
-	return withErrorHandling(async () => {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 		const {
 			data: { user },
 		} = await supabase.auth.getUser();
 
 		if (!user) {
-			throw new KoudenError("認証が必要です", "UNAUTHORIZED");
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
 		}
 
 		// まず、ユーザーの権限を確認
@@ -28,17 +27,7 @@ export const getMembers = cache(async (koudenId: string) => {
 			.eq("id", koudenId)
 			.single();
 
-		if (permissionError) {
-			logger.error(
-				{
-					error: permissionError.message,
-					code: permissionError.code,
-					koudenId,
-				},
-				"Failed to fetch permission",
-			);
-			throw new KoudenError("権限の確認に失敗しました", "FETCH_PERMISSION_ERROR");
-		}
+		if (permissionError) throw permissionError;
 
 		const isOwner = permission?.owner_id === user.id;
 
@@ -51,21 +40,10 @@ export const getMembers = cache(async (koudenId: string) => {
 				.eq("user_id", user.id)
 				.single();
 
-			if (membershipError) {
-				logger.error(
-					{
-						error: membershipError.message,
-						code: membershipError.code,
-						koudenId,
-						userId: user.id,
-					},
-					"Failed to check membership",
-				);
-				throw new KoudenError("メンバー権限の確認に失敗しました", "FETCH_MEMBERSHIP_ERROR");
-			}
+			if (membershipError) throw membershipError;
 
 			if (!membership) {
-				throw new KoudenError("アクセス権限がありません", "FORBIDDEN");
+				throw new KoudenError("アクセス権限がありません", ErrorCodes.FORBIDDEN);
 			}
 		}
 
@@ -88,17 +66,7 @@ export const getMembers = cache(async (koudenId: string) => {
 			`)
 			.eq("kouden_id", koudenId);
 
-		if (membersError) {
-			logger.error(
-				{
-					error: membersError.message,
-					code: membersError.code,
-					koudenId,
-				},
-				"Failed to fetch members",
-			);
-			throw new KoudenError("メンバー一覧の取得に失敗しました", "FETCH_MEMBERS_ERROR");
-		}
+		if (membersError) throw membersError;
 
 		if (!members) {
 			return [];
@@ -111,17 +79,7 @@ export const getMembers = cache(async (koudenId: string) => {
 			.select("id, display_name, avatar_url")
 			.in("id", userIds);
 
-		if (profilesError) {
-			logger.error(
-				{
-					error: profilesError.message,
-					code: profilesError.code,
-					koudenId,
-				},
-				"Failed to fetch profiles",
-			);
-			throw new KoudenError("プロフィール情報の取得に失敗しました", "FETCH_PROFILES_ERROR");
-		}
+		if (profilesError) throw profilesError;
 
 		// メンバー情報の整形
 		return members.map((member) => {
@@ -158,12 +116,12 @@ export const getMembers = cache(async (koudenId: string) => {
  * @returns メンバー一覧
  */
 export const getMembersForAdmin = cache(async (koudenId: string) => {
-	return withErrorHandling(async () => {
+	return withActionResult(async () => {
 		// 管理者権限をチェック
 		const { isAdmin } = await import("@/app/_actions/admin/permissions");
 		const adminCheck = await isAdmin();
 		if (!adminCheck) {
-			throw new KoudenError("管理者権限が必要です", "UNAUTHORIZED");
+			throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
 		}
 
 		// 管理者用クライアント（RLSバイパス）を使用
@@ -177,20 +135,10 @@ export const getMembersForAdmin = cache(async (koudenId: string) => {
 			.eq("id", koudenId)
 			.single();
 
-		if (koudenError) {
-			logger.error(
-				{
-					error: koudenError.message,
-					code: koudenError.code,
-					koudenId,
-				},
-				"Failed to fetch kouden",
-			);
-			throw new KoudenError("香典帳の取得に失敗しました", "FETCH_KOUDEN_ERROR");
-		}
+		if (koudenError) throw koudenError;
 
 		if (!kouden) {
-			throw new KoudenError("香典帳が見つかりません", "NOT_FOUND");
+			throw new KoudenError("香典帳が見つかりません", ErrorCodes.NOT_FOUND);
 		}
 
 		// メンバー一覧とロール情報を取得（外部キー参照を使用）
@@ -212,17 +160,7 @@ export const getMembersForAdmin = cache(async (koudenId: string) => {
 			`)
 			.eq("kouden_id", koudenId);
 
-		if (membersError) {
-			logger.error(
-				{
-					error: membersError.message,
-					code: membersError.code,
-					koudenId,
-				},
-				"Failed to fetch members",
-			);
-			throw new KoudenError("メンバー一覧の取得に失敗しました", "FETCH_MEMBERS_ERROR");
-		}
+		if (membersError) throw membersError;
 
 		if (!members) {
 			return [];
@@ -235,17 +173,7 @@ export const getMembersForAdmin = cache(async (koudenId: string) => {
 			.select("id, display_name, avatar_url")
 			.in("id", userIds);
 
-		if (profilesError) {
-			logger.error(
-				{
-					error: profilesError.message,
-					code: profilesError.code,
-					koudenId,
-				},
-				"Failed to fetch profiles",
-			);
-			throw new KoudenError("プロフィール情報の取得に失敗しました", "FETCH_PROFILES_ERROR");
-		}
+		if (profilesError) throw profilesError;
 
 		// メンバー情報の整形（管理者は全て閲覧可能だが編集権限は制限）
 		return members.map((member) => {

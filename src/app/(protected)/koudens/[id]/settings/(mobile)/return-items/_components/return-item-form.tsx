@@ -41,17 +41,29 @@ export function ReturnItemForm({ koudenId, returnItem, onSuccess }: Props) {
 	async function onSubmit(values: z.infer<typeof formSchema>) {
 		try {
 			if (returnItem) {
-				await updateReturnItem({
+				const result = await updateReturnItem({
 					id: returnItem.id,
 					kouden_id: koudenId,
 					...values,
 				});
+				if (!result.ok) {
+					toast.error("返礼品の保存に失敗しました", {
+						description: result.error.message,
+					});
+					return;
+				}
 				toast.success("返礼品を更新しました");
 			} else {
-				await createReturnItem({
+				const result = await createReturnItem({
 					...values,
 					kouden_id: koudenId,
 				});
+				if (!result.ok) {
+					toast.error("返礼品の保存に失敗しました", {
+						description: result.error.message,
+					});
+					return;
+				}
 				toast.success("返礼品を作成しました");
 			}
 			onSuccess?.();

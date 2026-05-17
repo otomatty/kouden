@@ -1,132 +1,128 @@
 "use server";
 
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
 import type { Kouden } from "@/types/kouden";
-import { canEditKouden, checkKoudenPermission } from "../permissions";
 import { KOUDEN_ROLES } from "@/types/role";
-import logger from "@/lib/logger";
+import { revalidatePath } from "next/cache";
+import { canEditKouden, checkKoudenPermission } from "../permissions";
 
 /**
  * 香典帳の更新
  */
-export async function updateKouden(id: string, input: { title: string; description?: string }) {
-	// 入力バリデーション
-	if (!input.title?.trim()) {
-		throw new Error("タイトルを入力してください");
-	}
+export async function updateKouden(
+	id: string,
+	input: { title: string; description?: string },
+): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
+		// 入力バリデーション
+		if (!input.title?.trim()) {
+			throw new KoudenError("タイトルを入力してください", ErrorCodes.VALIDATION_ERROR);
+		}
 
-	if (input.title.length > 100) {
-		throw new Error("タイトルは100文字以内で入力してください");
-	}
+		if (input.title.length > 100) {
+			throw new KoudenError("タイトルは100文字以内で入力してください", ErrorCodes.VALIDATION_ERROR);
+		}
 
-	if (input.description && input.description.length > 500) {
-		throw new Error("説明は500文字以内で入力してください");
-	}
+		if (input.description && input.description.length > 500) {
+			throw new KoudenError("説明は500文字以内で入力してください", ErrorCodes.VALIDATION_ERROR);
+		}
 
-	// 権限チェック（最適化版を使用）
-	const canEdit = await canEditKouden(id);
-	if (!canEdit) {
-		throw new Error("この香典帳を編集する権限がありません");
-	}
+		// 権限チェック（最適化版を使用）
+		const canEdit = await canEditKouden(id);
+		if (!canEdit) {
+			throw new KoudenError("この香典帳を編集する権限がありません", ErrorCodes.FORBIDDEN);
+		}
 
-	const supabase = await createClient();
+		const supabase = await createClient();
 
-	// データの整形
-	const updateData = {
-		title: input.title.trim(),
-		description: input.description?.trim() || null,
-	};
+		// データの整形
+		const updateData = {
+			title: input.title.trim(),
+			description: input.description?.trim() || null,
+		};
 
-	const { error } = await supabase.from("koudens").update(updateData).eq("id", id);
+		const { error } = await supabase.from("koudens").update(updateData).eq("id", id);
 
-	if (error) {
-		logger.error(
-			{
-				error: error.message,
-				code: error.code,
-				id,
-				input,
-			},
-			"Failed to update kouden",
-		);
-		throw new Error("香典帳の更新に失敗しました。しばらく経ってから再度お試しください。");
-	}
+		if (error) throw error;
 
-	revalidatePath(`/koudens/${id}`);
+		revalidatePath(`/koudens/${id}`);
+		return null;
+	}, "香典帳の更新");
 }
 
 /**
  * 香典帳の共有
  */
-export async function shareKouden(id: string, userIds: string[]) {
-	const supabase = await createClient();
-	const role = await checkKoudenPermission(id);
+export async function shareKouden(id: string, userIds: string[]): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const role = await checkKoudenPermission(id);
 
-	if (role !== "owner") {
-		throw new Error("共有権限がありません");
-	}
+		if (role !== "owner") {
+			throw new KoudenError("共有権限がありません", ErrorCodes.FORBIDDEN);
+		}
 
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 
-	if (!user) {
-		throw new Error("認証が必要です");
-	}
+		if (!user) {
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
+		}
 
-	// 閲覧者ロールを取得
-	const { data: viewerRole } = await supabase
-		.from("kouden_roles")
-		.select("id")
-		.eq("kouden_id", id)
-		.eq("name", KOUDEN_ROLES.VIEWER)
-		.single();
+		// 閲覧者ロールを取得
+		const { data: viewerRole } = await supabase
+			.from("kouden_roles")
+			.select("id")
+			.eq("kouden_id", id)
+			.eq("name", KOUDEN_ROLES.VIEWER)
+			.single();
 
-	if (!viewerRole) {
-		throw new Error("閲覧者ロールの取得に失敗しました");
-	}
+		if (!viewerRole) {
+			throw new KoudenError("閲覧者ロールの取得に失敗しました", ErrorCodes.DB_FETCH_ERROR);
+		}
 
-	await supabase.from("kouden_members").delete().eq("kouden_id", id).neq("user_id", user.id);
+		await supabase.from("kouden_members").delete().eq("kouden_id", id).neq("user_id", user.id);
 
-	const { error: shareError } = await supabase.from("kouden_members").insert(
-		userIds.map((userId) => ({
-			kouden_id: id,
-			user_id: userId,
-			role_id: viewerRole.id,
-			added_by: user.id,
-		})),
-	);
+		const { error: shareError } = await supabase.from("kouden_members").insert(
+			userIds.map((userId) => ({
+				kouden_id: id,
+				user_id: userId,
+				role_id: viewerRole.id,
+				added_by: user.id,
+			})),
+		);
 
-	if (shareError) {
-		throw new Error("香典帳の共有に失敗しました");
-	}
+		if (shareError) throw shareError;
 
-	revalidatePath(`/koudens/${id}`);
+		revalidatePath(`/koudens/${id}`);
+		return null;
+	}, "香典帳の共有");
 }
 
 /**
  * 香典帳のアーカイブ
  */
-export async function archiveKouden(id: string): Promise<Kouden> {
-	const supabase = await createClient();
-	const role = await checkKoudenPermission(id);
+export async function archiveKouden(id: string): Promise<ActionResult<Kouden>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const role = await checkKoudenPermission(id);
 
-	if (role !== "owner") {
-		throw new Error("アーカイブ権限がありません");
-	}
+		if (role !== "owner") {
+			throw new KoudenError("アーカイブ権限がありません", ErrorCodes.FORBIDDEN);
+		}
 
-	const { data, error } = await supabase
-		.from("koudens")
-		.update({ status: "archived" })
-		.eq("id", id)
-		.select()
-		.single();
+		const { data, error } = await supabase
+			.from("koudens")
+			.update({ status: "archived" })
+			.eq("id", id)
+			.select()
+			.single();
 
-	if (error) {
-		throw new Error("香典帳のアーカイブに失敗しました");
-	}
+		if (error) throw error;
 
-	revalidatePath(`/koudens/${id}`);
-	return data;
+		revalidatePath(`/koudens/${id}`);
+		return data;
+	}, "香典帳のアーカイブ");
 }

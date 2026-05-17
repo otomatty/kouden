@@ -45,7 +45,13 @@ export const createColumns = ({
 }: CreateColumnsOptions): ColumnDef<KoudenMember>[] => {
 	const handleRoleChange = async (userId: string, roleId: string) => {
 		try {
-			await updateMemberRole(koudenId, userId, roleId);
+			const result = await updateMemberRole(koudenId, userId, roleId);
+			if (!result.ok) {
+				toast.error(result.error.message, {
+					description: "しばらく時間をおいてから再度お試しください",
+				});
+				return;
+			}
 			toast.success("ロールを更新しました");
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : "ロールの更新に失敗しました", {

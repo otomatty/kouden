@@ -50,7 +50,14 @@ export function ReturnItemCreateDialog({
 					recommended_amount_max: formData.recommended_amount_max,
 				};
 
-				await createReturnItem(createData);
+				const result = await createReturnItem(createData);
+
+				if (!result.ok) {
+					toast.error("作成エラー", {
+						description: result.error.message,
+					});
+					return;
+				}
 
 				toast.success("作成完了", {
 					description: "返礼品を作成しました",

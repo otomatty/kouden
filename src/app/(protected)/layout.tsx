@@ -31,8 +31,8 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
 
 	// プロフィールの確認
 	const result = await ensureProfile();
-	if (result.error) {
-		console.error("[ERROR] Failed to ensure profile:", result.error);
+	if (!result.ok) {
+		console.error("[ERROR] Failed to ensure profile:", result.error.message);
 	}
 
 	let guideMode = true;
@@ -50,7 +50,8 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
 	const isAdminUser = await isAdmin();
 
 	// ユーザー通知事前取得
-	const { notifications: userNotifications } = await getNotifications();
+	const notificationsResult = await getNotifications();
+	const userNotifications = notificationsResult.ok ? notificationsResult.data : [];
 
 	return (
 		<LoadingProvider>

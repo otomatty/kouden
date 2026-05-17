@@ -39,8 +39,8 @@ export function CreateKoudenForm() {
 				description,
 			});
 
-			if (result.error) {
-				throw new Error(result.error);
+			if (!result.ok) {
+				throw new Error(result.error.message);
 			}
 
 			router.refresh();

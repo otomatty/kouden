@@ -8,8 +8,11 @@ export const metadata: Metadata = {
 };
 
 export default async function NewKoudenPage() {
-	const { plans = [], error } = await getPlans();
-	if (error) throw new Error(error);
+	const plansResult = await getPlans();
+	if (!plansResult.ok) {
+		throw new Error(plansResult.error.message);
+	}
+	const plans = plansResult.data;
 
 	// 認証チェックのみ（userId はサーバーアクション側で auth.uid() から導出するため不要）
 	const supabase = await createClient();

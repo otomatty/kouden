@@ -84,7 +84,13 @@ export function TelegramDrawerContent({
 			setOptimisticTelegrams([...optimisticTelegrams, optimisticTelegram]);
 
 			// サーバーに更新を送信
-			const updatedTelegram = await updateTelegramField(telegram.id, field, value);
+			const updateResult = await updateTelegramField(telegram.id, field, value);
+			if (!updateResult.ok) {
+				setOptimisticTelegrams(optimisticTelegrams.filter((t) => t.id !== telegram.id));
+				toast.error(updateResult.error.message);
+				return;
+			}
+			const updatedTelegram = updateResult.data;
 
 			// 成功したら実際のエントリーを更新
 			if (telegrams.length === 0) {
@@ -120,7 +126,12 @@ export function TelegramDrawerContent({
 			setOptimisticTelegrams([...optimisticTelegrams, optimisticTelegram]);
 
 			// サーバーに削除を送信
-			await deleteTelegram(telegram.id, koudenId);
+			const deleteResult = await deleteTelegram(telegram.id, koudenId);
+			if (!deleteResult.ok) {
+				setOptimisticTelegrams(optimisticTelegrams.filter((t) => t.id !== telegram.id));
+				toast.error(deleteResult.error.message);
+				return;
+			}
 
 			// 成功したら実際のエントリーを削除
 			setTelegrams(telegrams.filter((t) => t.id !== telegram.id));

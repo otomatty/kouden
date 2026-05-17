@@ -1,6 +1,6 @@
 "use server";
 
-import logger from "@/lib/logger";
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
 import type { KoudenWithOwner } from "@/types/kouden";
 import { KOUDEN_ROLES } from "@/types/role";
@@ -9,22 +9,20 @@ import { checkKoudenPermission } from "../permissions";
 /**
  * 香典帳の複製（デフォルトで free プラン適用）
  * @param id 香典帳ID
- * @returns 複製された香典帳またはエラー
+ * @returns 複製された香典帳の `ActionResult`
  */
-export async function duplicateKouden(
-	id: string,
-): Promise<{ kouden?: KoudenWithOwner; error?: string }> {
-	try {
+export async function duplicateKouden(id: string): Promise<ActionResult<KoudenWithOwner>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 		const role = await checkKoudenPermission(id);
 		if (!role || (role !== "owner" && role !== "editor")) {
-			return { error: "複製権限がありません" };
+			throw new KoudenError("複製権限がありません", ErrorCodes.FORBIDDEN);
 		}
 
 		const { data: authData, error: authError } = await supabase.auth.getUser();
 		const user = authData.user;
 		if (authError || !user) {
-			return { error: "認証が必要です" };
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
 		}
 
 		// 1. 元の香典帳情報取得
@@ -34,7 +32,7 @@ export async function duplicateKouden(
 			.eq("id", id)
 			.single();
 		if (origError || !original) {
-			throw origError;
+			throw origError ?? new KoudenError("香典帳の取得に失敗しました", ErrorCodes.DB_FETCH_ERROR);
 		}
 
 		// 複製元は有料プランのみ
@@ -44,10 +42,12 @@ export async function duplicateKouden(
 			.eq("id", original.plan_id)
 			.single();
 		if (origPlanError || !origPlanData) {
-			throw origPlanError;
+			throw (
+				origPlanError ?? new KoudenError("プランの取得に失敗しました", ErrorCodes.DB_FETCH_ERROR)
+			);
 		}
 		if (origPlanData.code === "free") {
-			return { error: "無料プランの香典帳は複製できません" };
+			throw new KoudenError("無料プランの香典帳は複製できません", ErrorCodes.INVALID_OPERATION);
 		}
 
 		// freeプランID取得
@@ -57,7 +57,7 @@ export async function duplicateKouden(
 			.eq("code", "free")
 			.single();
 		if (planError || !freePlan) {
-			throw new Error("プランの取得に失敗しました");
+			throw new KoudenError("プランの取得に失敗しました", ErrorCodes.DB_FETCH_ERROR);
 		}
 
 		// 2. 新しい香典帳作成
@@ -73,7 +73,9 @@ export async function duplicateKouden(
 			.select("*")
 			.single();
 		if (createError || !newKouden) {
-			throw createError;
+			throw (
+				createError ?? new KoudenError("香典帳の作成に失敗しました", ErrorCodes.DB_INSERT_ERROR)
+			);
 		}
 
 		// 3. オーナー情報取得
@@ -83,7 +85,9 @@ export async function duplicateKouden(
 			.eq("id", user.id)
 			.single();
 		if (ownerError || !owner) {
-			throw ownerError;
+			throw (
+				ownerError ?? new KoudenError("オーナー情報の取得に失敗しました", ErrorCodes.DB_FETCH_ERROR)
+			);
 		}
 
 		// 4. 編集者ロール取得
@@ -94,7 +98,7 @@ export async function duplicateKouden(
 			.eq("name", KOUDEN_ROLES.EDITOR)
 			.single();
 		if (!ownerRole || roleErr) {
-			throw new Error("編集者ロールの取得に失敗しました");
+			throw new KoudenError("編集者ロールの取得に失敗しました", ErrorCodes.DB_FETCH_ERROR);
 		}
 
 		// 5. メンバー登録
@@ -137,19 +141,19 @@ export async function duplicateKouden(
 		const { data: entries, error: entriesError } = await supabase
 			.from("kouden_entries")
 			.select(`
-				id,
-				name,
-				organization,
-				position,
-				amount,
-				postal_code,
-				address,
-				phone_number,
-				attendance_type,
-				has_offering,
-				notes,
-				relationship_id
-			`) // prettier-ignore
+					id,
+					name,
+					organization,
+					position,
+					amount,
+					postal_code,
+					address,
+					phone_number,
+					attendance_type,
+					has_offering,
+					notes,
+					relationship_id
+				`) // prettier-ignore
 			.eq("kouden_id", id);
 		if (entriesError) {
 			throw entriesError;
@@ -171,7 +175,10 @@ export async function duplicateKouden(
 				)
 				.select("id");
 			if (copyEntriesError || !newEntries) {
-				throw copyEntriesError || new Error("Failed to copy entries");
+				throw (
+					copyEntriesError ??
+					new KoudenError("エントリーの複製に失敗しました", ErrorCodes.DB_INSERT_ERROR)
+				);
 			}
 
 			entries.forEach((oldEntry, index) => {
@@ -186,7 +193,7 @@ export async function duplicateKouden(
 				.select("id, name")
 				.eq("kouden_id", newKouden.id);
 			if (newRelError || !newRelationships) {
-				throw new Error("新しい関係性の取得に失敗しました");
+				throw new KoudenError("新しい関係性の取得に失敗しました", ErrorCodes.DB_FETCH_ERROR);
 			}
 			const relationshipMap = new Map(
 				relationships
@@ -217,11 +224,11 @@ export async function duplicateKouden(
 			const { data: offerings, error: offeringsError } = await supabase
 				.from("offerings")
 				.select(`
-					*,
-					offering_entries!inner (
-						kouden_entry_id
-					)
-				`)
+						*,
+						offering_entries!inner (
+							kouden_entry_id
+						)
+					`)
 				.in(
 					"id",
 					entries.map((e) => e.id),
@@ -246,7 +253,10 @@ export async function duplicateKouden(
 					)
 					.select();
 				if (copyOfferingsError || !newOfferings) {
-					throw copyOfferingsError || new Error("Failed to copy offerings");
+					throw (
+						copyOfferingsError ??
+						new KoudenError("供物の複製に失敗しました", ErrorCodes.DB_INSERT_ERROR)
+					);
 				}
 
 				// 12. offering_entriesのコピー
@@ -296,7 +306,10 @@ export async function duplicateKouden(
 					returnItems.map((item) => {
 						const newEntryId = entryIdMap.get(item.return_record_id);
 						if (!newEntryId) {
-							throw new Error("Failed to map entry ID for return item");
+							throw new KoudenError(
+								"返礼品IDのマッピングに失敗しました",
+								ErrorCodes.INVALID_OPERATION,
+							);
 						}
 						return {
 							...item,
@@ -312,15 +325,6 @@ export async function duplicateKouden(
 			}
 		}
 
-		return { kouden: { ...newKouden, owner } };
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				koudenId: id,
-			},
-			"[ERROR] Error duplicating kouden",
-		);
-		return { error: "香典帳の複製に失敗しました" };
-	}
+		return { ...newKouden, owner };
+	}, "香典帳の複製");
 }
