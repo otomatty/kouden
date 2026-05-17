@@ -5,17 +5,17 @@
 
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
+import logger from "@/lib/logger";
+import { logTwoFactorEventServerAction } from "@/lib/security/security-logger";
 import {
-	verifyTwoFactorToken,
-	saveTwoFactorSecret,
 	disableTwoFactor,
 	isTwoFactorEnabled,
+	saveTwoFactorSecret,
+	verifyTwoFactorToken,
 } from "@/lib/security/two-factor-auth";
-import { logTwoFactorEventServerAction } from "@/lib/security/security-logger";
+import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import logger from "@/lib/logger";
-import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 
 /**
  * 2FA設定を完了する
@@ -134,9 +134,7 @@ export async function disableTwoFactorAuth(): Promise<ActionResult<null>> {
 /**
  * 2FAログイン時の認証コード検証
  */
-export async function verifyTwoFactorLogin(
-	verificationCode: string,
-): Promise<ActionResult<null>> {
+export async function verifyTwoFactorLogin(verificationCode: string): Promise<ActionResult<null>> {
 	return withActionResult(async () => {
 		const supabase = await createClient();
 		const {

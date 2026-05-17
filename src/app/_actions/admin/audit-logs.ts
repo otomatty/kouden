@@ -1,8 +1,8 @@
+import { type ActionResult, withActionResult } from "@/lib/errors";
 import { getClientIPFromHeaders } from "@/lib/security/client-ip";
 import { createClient } from "@/lib/supabase/server";
 import type { Json } from "@/types/supabase";
 import { headers } from "next/headers";
-import { type ActionResult, withActionResult } from "@/lib/errors";
 
 interface AuditLogData {
 	action: string;
@@ -11,10 +11,7 @@ interface AuditLogData {
 	details?: Json;
 }
 
-export async function getAuditLogs(
-	limit = 100,
-	offset = 0,
-): Promise<ActionResult<unknown[]>> {
+export async function getAuditLogs(limit = 100, offset = 0): Promise<ActionResult<unknown[]>> {
 	return withActionResult(async () => {
 		const supabase = await createClient();
 		const { data: logs, error } = await supabase

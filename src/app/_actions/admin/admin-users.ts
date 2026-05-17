@@ -1,7 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
-import type { AdminUser } from "@/types/admin";
 import { type ActionResult, withActionResult } from "@/lib/errors";
+import { createClient } from "@/lib/supabase/server";
+import type { AdminUser } from "@/types/admin";
+import { revalidatePath } from "next/cache";
 
 export async function getAdminUsers(): Promise<ActionResult<AdminUser[]>> {
 	return withActionResult(async () => {

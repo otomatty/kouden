@@ -1,7 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
-import type { Ticket, TicketMessage } from "@/types/admin";
 import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
+import { createClient } from "@/lib/supabase/server";
+import type { Ticket, TicketMessage } from "@/types/admin";
+import { revalidatePath } from "next/cache";
 
 /**
  * 管理者権限チェック
@@ -182,9 +182,7 @@ export async function getTicketById(ticketId: string): Promise<ActionResult<Tick
 	}, "チケット詳細の取得");
 }
 
-export async function getTicketMessages(
-	ticketId: string,
-): Promise<ActionResult<TicketMessage[]>> {
+export async function getTicketMessages(ticketId: string): Promise<ActionResult<TicketMessage[]>> {
 	return withActionResult(async () => {
 		const { supabase } = await assertAdmin();
 

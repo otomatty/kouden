@@ -1,11 +1,10 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
+import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/supabase";
 
-type CampaignApplicationRow =
-	Database["public"]["Tables"]["campaign_hearing_applications"]["Row"];
+type CampaignApplicationRow = Database["public"]["Tables"]["campaign_hearing_applications"]["Row"];
 
 /**
  * 管理者権限チェック
