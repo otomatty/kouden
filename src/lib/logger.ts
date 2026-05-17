@@ -72,22 +72,26 @@ function createBrowserLogger(): BrowserLogger {
 	return {
 		debug: (obj: Record<string, unknown>, msg?: string) => {
 			if (shouldLog("debug")) {
-				console.debug(msg || "", obj);
+				// `msg` を console.* の第1引数に直接渡すと、フォーマット指定子
+				// (`%s` 等) が解釈される潜在的なリスクがあるため、固定の "%s"
+				// テンプレートを使い `msg` をパラメータとして注入する
+				// (CodeQL: Use of externally-controlled format string)。
+				console.debug("%s", msg || "", obj);
 			}
 		},
 		info: (obj: Record<string, unknown>, msg?: string) => {
 			if (shouldLog("info")) {
-				console.info(msg || "", obj);
+				console.info("%s", msg || "", obj);
 			}
 		},
 		warn: (obj: Record<string, unknown>, msg?: string) => {
 			if (shouldLog("warn")) {
-				console.warn(msg || "", obj);
+				console.warn("%s", msg || "", obj);
 			}
 		},
 		error: (obj: Record<string, unknown>, msg?: string) => {
 			if (shouldLog("error")) {
-				console.error(msg || "", obj);
+				console.error("%s", msg || "", obj);
 			}
 		},
 	};
