@@ -42,7 +42,13 @@ export function InviteByEmailDialog({ koudenId, roles }: InviteByEmailDialogProp
 		setIsLoading(true);
 		try {
 			formData.append("koudenId", koudenId);
-			await sendBatchInvitationEmails(formData);
+			const result = await sendBatchInvitationEmails(formData);
+			if (!result.ok) {
+				toast.error(result.error.message, {
+					description: "しばらく時間をおいてから再度お試しください",
+				});
+				return;
+			}
 			toast.success("招待メールを送信しました");
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : "メール送信に失敗しました", {

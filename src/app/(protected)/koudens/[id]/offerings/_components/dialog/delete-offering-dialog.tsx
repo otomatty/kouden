@@ -24,7 +24,10 @@ export function DeleteOfferingDialog({
 			description={`${offeringName}を削除してもよろしいですか？`}
 			targetName={offeringName}
 			onDelete={async () => {
-				await deleteOffering(offeringId, koudenId);
+				const result = await deleteOffering(offeringId, koudenId);
+				if (!result.ok) {
+					throw new Error(result.error.message);
+				}
 			}}
 			onSuccess={onSuccess}
 			successMessage="お供物情報を削除しました"

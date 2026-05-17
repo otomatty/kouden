@@ -175,7 +175,14 @@ export function DataTable({
 						columnId as keyof ReturnManagementSummary,
 						newValue as ReturnManagementSummary[keyof ReturnManagementSummary],
 						async () => {
-							await updateReturnRecordFieldByKoudenEntryId(rowId, dbFieldName, newValue);
+							const result = await updateReturnRecordFieldByKoudenEntryId(
+								rowId,
+								dbFieldName,
+								newValue,
+							);
+							if (!result.ok) {
+								throw new Error(result.error.message);
+							}
 						},
 					);
 
@@ -184,14 +191,27 @@ export function DataTable({
 					});
 				} catch (error) {
 					console.error("[ERROR] Optimistic cell edit failed:", error);
-					toast.error("データの更新に失敗しました", {
-						description: "しばらく時間をおいてから再度お試しください",
-					});
+					toast.error(
+						error instanceof Error ? error.message : "データの更新に失敗しました",
+						{
+							description: "しばらく時間をおいてから再度お試しください",
+						},
+					);
 				}
 			} else {
 				// フォールバック：従来の方法
 				try {
-					await updateReturnRecordFieldByKoudenEntryId(rowId, dbFieldName, newValue);
+					const result = await updateReturnRecordFieldByKoudenEntryId(
+						rowId,
+						dbFieldName,
+						newValue,
+					);
+					if (!result.ok) {
+						toast.error(result.error.message, {
+							description: "しばらく時間をおいてから再度お試しください",
+						});
+						return;
+					}
 					onDataChange();
 					toast.success("データを更新しました", {
 						description: `${columnLabels[columnId] || columnId}を更新しました`,
@@ -211,7 +231,13 @@ export function DataTable({
 	const handleDeleteRows = useCallback(
 		async (rowIds: string[]) => {
 			try {
-				await deleteReturnRecords(rowIds);
+				const result = await deleteReturnRecords(rowIds);
+				if (!result.ok) {
+					toast.error(result.error.message, {
+						description: "しばらく時間をおいてから再度お試しください",
+					});
+					return;
+				}
 				onDataChange();
 				setRowSelection({});
 				setSelectedRows([]);

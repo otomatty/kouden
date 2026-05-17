@@ -55,7 +55,14 @@ export function ReturnItemEditDialog({
 					recommended_amount_max: formData.recommended_amount_max,
 				};
 
-				await updateReturnItem(updateData);
+				const result = await updateReturnItem(updateData);
+
+				if (!result.ok) {
+					toast.error("更新エラー", {
+						description: result.error.message,
+					});
+					return;
+				}
 
 				toast.success("更新完了", {
 					description: "返礼品を更新しました",

@@ -96,7 +96,13 @@ export function DataTable({ koudenId, telegrams, entries, onDataChange }: DataTa
 	const handleDeleteRows = useCallback(
 		async (ids: string[]) => {
 			try {
-				await deleteTelegrams(ids, koudenId);
+				const result = await deleteTelegrams(ids, koudenId);
+				if (!result.ok) {
+					toast.error(result.error.message, {
+						description: "しばらく時間をおいてから再度お試しください",
+					});
+					return;
+				}
 				setSelectedRows([]);
 				if (onDataChange) {
 					onDataChange(normalizedTelegrams.filter((telegram) => !ids.includes(telegram.id)));

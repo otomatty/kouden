@@ -60,7 +60,26 @@ export async function GET(request: Request) {
 		// Handle invitation acceptance if token is present
 		if (finalInvitationToken) {
 			try {
-				await acceptInvitation(finalInvitationToken);
+				// `acceptInvitation` は ActionResult を返すため、`ok: false` を
+				// 成功と取り違えないよう分岐する。失敗時もトークン Cookie を掃除する。
+				const result = await acceptInvitation(finalInvitationToken);
+				if (!result.ok) {
+					cookieStore.delete("invitation_token");
+					const { code, message } = result.error;
+					if (code === "ALREADY_EXISTS") {
+						return Response.redirect(
+							new URL("/koudens?invitation=existing", requestUrl.origin),
+						);
+					}
+					const errorType =
+						code === "NOT_FOUND" || code === "INVALID_OPERATION" ? "invalid" : "server";
+					return Response.redirect(
+						new URL(
+							`/invitation-error?error=${encodeURIComponent(message)}&type=${errorType}`,
+							requestUrl.origin,
+						),
+					);
+				}
 
 				// Clean up cookies after successful invitation acceptance
 				cookieStore.delete("invitation_token");
@@ -75,31 +94,6 @@ export async function GET(request: Request) {
 
 				const errorMessage =
 					error instanceof Error ? error.message : "招待の受け入れに失敗しました";
-
-				// Handle specific invitation errors
-				if (error instanceof Error) {
-					switch (error.message) {
-						case "招待が見つかりません":
-						case "招待の有効期限が切れています":
-						case "この招待は既に使用されています":
-						case "招待の使用回数が上限に達しました":
-							return Response.redirect(
-								new URL(
-									`/invitation-error?error=${encodeURIComponent(error.message)}&type=invalid`,
-									requestUrl.origin,
-								),
-							);
-						case "すでにメンバーとして参加しています":
-							return Response.redirect(new URL("/koudens?invitation=existing", requestUrl.origin));
-						default:
-							return Response.redirect(
-								new URL(
-									`/invitation-error?error=${encodeURIComponent(errorMessage)}&type=server`,
-									requestUrl.origin,
-								),
-							);
-					}
-				}
 
 				return Response.redirect(
 					new URL(

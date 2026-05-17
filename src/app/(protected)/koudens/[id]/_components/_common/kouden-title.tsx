@@ -35,10 +35,14 @@ export function KoudenTitle({
 
 		setIsLoading(true);
 		try {
-			await updateKouden(koudenId, {
+			const result = await updateKouden(koudenId, {
 				title: title.trim(),
 				description: description.trim() || undefined,
 			});
+			if (!result.ok) {
+				toast.error(result.error.message);
+				return;
+			}
 			setIsEditing(false);
 			toast.success("香典帳の情報を更新しました");
 		} catch (error) {

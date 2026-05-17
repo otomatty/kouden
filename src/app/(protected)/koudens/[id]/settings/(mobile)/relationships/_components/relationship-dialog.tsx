@@ -24,17 +24,29 @@ export function RelationshipDialog({
 		setIsSubmitting(true);
 		try {
 			if (relationship) {
-				await updateRelationship(relationship.id, {
+				const result = await updateRelationship(relationship.id, {
 					name: values.name,
 					description: values.description ?? undefined,
 				});
+				if (!result.ok) {
+					toast.error("関係性の保存に失敗しました", {
+						description: result.error.message,
+					});
+					return;
+				}
 				toast.success("関係性を更新しました");
 			} else {
-				await createRelationship({
+				const result = await createRelationship({
 					name: values.name,
 					description: values.description ?? undefined,
 					koudenId,
 				});
+				if (!result.ok) {
+					toast.error("関係性の保存に失敗しました", {
+						description: result.error.message,
+					});
+					return;
+				}
 				toast.success("関係性を作成しました");
 			}
 			onOpenChange(false);
