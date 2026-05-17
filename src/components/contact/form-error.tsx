@@ -1,5 +1,3 @@
-"use client";
-
 interface FormErrorProps {
 	message: string;
 }
