@@ -9,8 +9,25 @@ export async function GET(request: Request) {
 		return NextResponse.json({ error: "weekStart is required" }, { status: 400 });
 	}
 	try {
-		const availability = await getWeeklyAvailability(weekStart);
-		return NextResponse.json(availability);
+		const result = await getWeeklyAvailability(weekStart);
+		if (!result.ok) {
+			// `getWeeklyAvailability` は ActionResult を返すため、ここで unwrap
+			// しないと `{ ok, data, ... }` を JSON として返してしまい、
+			// 既存の API 利用側 (`DayAvailability[]` を期待) が壊れる。
+			logger.error(
+				{
+					code: result.error.code,
+					error: result.error.message,
+					weekStart,
+				},
+				"Error fetching availability",
+			);
+			return NextResponse.json(
+				{ error: result.error.message },
+				{ status: result.error.status },
+			);
+		}
+		return NextResponse.json(result.data);
 	} catch (err: unknown) {
 		logger.error(
 			{
