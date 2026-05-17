@@ -1,4 +1,5 @@
 import { getReturnItem } from "@/app/_actions/return-records/return-items";
+import { KoudenError } from "@/lib/errors";
 import { notFound } from "next/navigation";
 import { ReturnItemDetailPageClient } from "./return-item-detail-page-client";
 
@@ -24,7 +25,12 @@ export default async function ReturnItemDetailPage({ params }: ReturnItemDetailP
 		if (result.error.code === "NOT_FOUND") {
 			notFound();
 		}
-		throw new Error(result.error.message);
+		// `ActionResult.error` は plain object のため、Error 派生として
+		// 再構築する。`code` / `status` を保持しておくと、上位の error.tsx
+		// から分類ロジックや構造化ログが組めるようになる。
+		throw new KoudenError(result.error.message, result.error.code, {
+			status: result.error.status,
+		});
 	}
 
 	const returnItem = result.data;

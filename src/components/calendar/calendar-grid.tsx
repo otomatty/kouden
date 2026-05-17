@@ -10,13 +10,21 @@ interface CalendarGridProps {
 	availability: DayAvailability[];
 }
 
+/**
+ * `<form action>` から `reserveSlot` (Server Action) を呼び出すクライアント側ラッパー。
+ *
+ * `<form action>` の戻り値型は `Promise<void>` 固定で `ActionResult` を直接返せないため、
+ * 失敗時は throw して React のフォーム送信ハンドラ → error boundary に伝播させる
+ * (これを怠ると Google Calendar 連携失敗時に「予約成功」と誤認される)。
+ *
+ * @param formData 予約フォームの送信データ。`summary` / `email` / `startDateTime` /
+ *   `endDateTime` を必須、`notes` を任意で含む。
+ * @throws {Error} `reserveSlot` が `ok: false` を返したとき (バリデーション失敗・
+ *   Google Calendar API 障害・既存予約との重複など)。
+ */
 async function reserveSlotAction(formData: FormData): Promise<void> {
 	const result = await reserveSlot(formData);
 	if (!result.ok) {
-		// `<form action>` の戻り値型 `Promise<void>` の制約上 ActionResult を
-		// そのまま返せないため、失敗時は throw して呼び出し側 (React のフォーム
-		// 送信ハンドラ → error boundary) にエラーを伝播させる。
-		// これがないと Google Calendar 挿入失敗時に「予約成功」と誤認される。
 		throw new Error(result.error.message);
 	}
 }
