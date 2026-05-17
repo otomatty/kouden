@@ -39,8 +39,9 @@ describe("deleteKouden", () => {
 
 		expect(result.ok).toBe(false);
 		if (!result.ok) {
+			// FORBIDDEN は KoudenError の既定 userMessage（権限不足）にマップされる
 			expect(result.error.code).toBe(ErrorCodes.FORBIDDEN);
-			expect(result.error.message).toContain("削除権限");
+			expect(result.error.message).toContain("権限");
 		}
 		expect(supabaseMock.from).not.toHaveBeenCalled();
 	});

@@ -1,8 +1,9 @@
 import React from "react";
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
+import { type Mock, beforeEach, describe, expect, it, vi } from "vitest";
 
 // UIコンポーネントをモック化
 vi.mock("@/components/custom/OfferingAllocationDialog", () => ({
+	// biome-ignore lint/suspicious/noExplicitAny: jsx mock props shape is intentionally loose
 	OfferingAllocationDialog: ({ children, ...props }: any) => (
 		<div data-testid="offering-allocation-dialog" {...props}>
 			{children}

@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
-import {
-	allocateOfferingToEntries,
-	removeOfferingAllocation,
-	recalculateOfferingAllocation,
-} from "../allocation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { OfferingAllocationRequest } from "@/types/entries";
+import { type Mock, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	allocateOfferingToEntries,
+	recalculateOfferingAllocation,
+	removeOfferingAllocation,
+} from "../allocation";
 
 // モック設定
 vi.mock("@/lib/supabase/admin", () => ({
@@ -147,6 +147,7 @@ describe("お供物配分システム", () => {
 			expect(insertMock).toHaveBeenCalledTimes(1);
 			const insertedData = insertMock.mock.calls[0]?.[0];
 			expect(insertedData).toBeDefined();
+			// biome-ignore lint/suspicious/noExplicitAny: supabase insert payload shape is internal
 			const primaryEntry = insertedData.find((data: any) => data.is_primary_contributor);
 			expect(primaryEntry.kouden_entry_id).toBe("entry2");
 		});
@@ -298,6 +299,7 @@ describe("お供物配分システム", () => {
 			const insertedData = insertMock.mock.calls[0]?.[0];
 			expect(insertedData).toBeDefined();
 			const totalAllocated = insertedData.reduce(
+				// biome-ignore lint/suspicious/noExplicitAny: supabase insert payload shape is internal
 				(sum: number, data: any) => sum + data.allocated_amount,
 				0,
 			);

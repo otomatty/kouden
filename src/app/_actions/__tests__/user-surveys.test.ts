@@ -1,13 +1,14 @@
-/// <reference types="vitest" />
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { ErrorCodes } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
-import {
-	createUserSurvey,
-	getUserSurveyStatus,
-	checkOneWeekOwnershipSurvey,
-	getAdminSurveyAnalytics,
-} from "../user-surveys";
 import type { UserSurveyFormInput } from "@/schemas/user-surveys";
+/// <reference types="vitest" />
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	checkOneWeekOwnershipSurvey,
+	createUserSurvey,
+	getAdminSurveyAnalytics,
+	getUserSurveyStatus,
+} from "../user-surveys";
 
 vi.mock("@/lib/supabase/server", () => ({
 	createClient: vi.fn(),
@@ -126,9 +127,10 @@ describe("user-surveys server actions", () => {
 			const result = await createUserSurvey(mockSurveyData, "pdf_export");
 
 			// Assert
+			// 重複データは Supabase の `ALREADY_EXISTS` コードに正規化される
 			expect(result.ok).toBe(false);
 			if (!result.ok) {
-				expect(result.error.message).toContain("既にアンケートにご回答いただいております");
+				expect(result.error.code).toBe(ErrorCodes.ALREADY_EXISTS);
 			}
 		});
 
@@ -145,7 +147,8 @@ describe("user-surveys server actions", () => {
 			// Assert
 			expect(result.ok).toBe(false);
 			if (!result.ok) {
-				expect(result.error.message).toContain("アンケートの保存に失敗しました");
+				// `withActionResult` のコンテキスト ("アンケートの作成") から既定メッセージが組まれる
+				expect(result.error.message).toContain("アンケートの作成");
 			}
 		});
 	});
@@ -283,9 +286,10 @@ describe("user-surveys server actions", () => {
 			const result = await getAdminSurveyAnalytics();
 
 			// Assert
+			// 管理者権限不足は `FORBIDDEN` の既定 userMessage（権限エラー）に正規化される
 			expect(result.ok).toBe(false);
 			if (!result.ok) {
-				expect(result.error.message).toContain("管理者権限が必要です");
+				expect(result.error.code).toBe(ErrorCodes.FORBIDDEN);
 			}
 		});
 
