@@ -51,7 +51,15 @@ export function EntryDialog({
 
 		try {
 			setIsDeleting(true);
-			await deleteEntry(defaultValues.id, koudenId);
+			// `deleteEntry` は `ActionResult` を返すため、`ok: false` を成功と
+			// 誤認しないよう明示的にチェックする (throw しなくなった)。
+			const result = await deleteEntry(defaultValues.id, koudenId);
+			if (!result.ok) {
+				toast.error("削除に失敗しました", {
+					description: result.error.message,
+				});
+				return;
+			}
 
 			// エントリーリストから削除
 			setEntries(entries.filter((e) => e.id !== defaultValues.id));
