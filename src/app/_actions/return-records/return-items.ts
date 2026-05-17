@@ -122,10 +122,12 @@ export async function getReturnItems(koudenId: string): Promise<ActionResult<Ret
 /**
  * 返礼品マスター情報を取得する
  */
-export async function getReturnItem(id: string): Promise<ActionResult<ReturnItem | null>> {
+export async function getReturnItem(id: string): Promise<ActionResult<ReturnItem>> {
 	return withActionResult(async () => {
 		const supabase = await createClient();
 
+		// `.single()` は 0 行で PGRST116 を返し、`KoudenError.fromSupabase` が
+		// `NOT_FOUND` にマッピングするため、本体ではエラーをそのまま伝播するだけでよい。
 		const { data, error } = await supabase.from("return_items").select("*").eq("id", id).single();
 
 		if (error) {

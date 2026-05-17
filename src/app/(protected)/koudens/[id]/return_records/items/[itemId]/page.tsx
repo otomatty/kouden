@@ -29,11 +29,6 @@ export default async function ReturnItemDetailPage({ params }: ReturnItemDetailP
 
 		const returnItem = result.data;
 
-		// `getReturnItem` の戻り値型が `ReturnItem | null` のため null チェックが必要
-		if (!returnItem) {
-			notFound();
-		}
-
 		// 香典帳IDが一致しない場合は404
 		if (returnItem.kouden_id !== koudenId) {
 			notFound();
