@@ -3350,7 +3350,6 @@ export type Database = {
         Args: {
           p_title: string
           p_description: string
-          p_plan_id: string
         }
         Returns: string
       }

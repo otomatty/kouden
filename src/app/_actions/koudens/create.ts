@@ -46,30 +46,20 @@ export async function createKouden({
 		const supabase = await createClient();
 		const adminSupabase = createAdminClient();
 
-		// freeプランIDを取得 (plans テーブルは authenticated でも SELECT 可能だが、
-		// 表示用ではなく内部ロジックのため admin client で取得する)
-		const { data: freePlan, error: freePlanError } = await adminSupabase
-			.from("plans")
-			.select("id")
-			.eq("code", "free")
-			.single();
-		if (freePlanError || !freePlan) {
-			throw new Error("プランの取得に失敗しました");
-		}
-
 		// 香典帳作成: RPC で koudens INSERT を実行し、トリガで kouden_roles と
 		// kouden_members が同一トランザクション内に作成されるのを待つ。
+		// `plan_id` は RPC 内部で `code = 'free'` から解決される (クライアントから
+		// 渡すと有料プラン ID を指定して悪用される脆弱性となるため受け取らない)。
 		const { data: newKoudenId, error: rpcError } = await supabase.rpc("create_kouden_with_owner", {
 			p_title: title,
 			p_description: description ?? "",
-			p_plan_id: freePlan.id,
 		});
 
 		if (rpcError || !newKoudenId) {
 			throw rpcError ?? new Error("香典帳の作成に失敗しました");
 		}
 
-		// 作成した香典帳とオーナープロフィールを取得
+		// 作成した香典帳を取得
 		const { data: kouden, error: koudenError } = await adminSupabase
 			.from("koudens")
 			.select("*")
@@ -79,16 +69,26 @@ export async function createKouden({
 			throw koudenError ?? new Error("香典帳の取得に失敗しました");
 		}
 
+		// オーナーのプロフィール取得は best-effort: ここで失敗しても香典帳は既に
+		// 作成済みなのでエラー返却はしない (ユーザー再試行による重複作成を防ぐ)。
 		const { data: owner, error: ownerError } = await adminSupabase
 			.from("profiles")
 			.select("id, display_name")
 			.eq("id", userId)
 			.single();
 		if (ownerError) {
-			throw ownerError;
+			logger.warn(
+				{ userId, koudenId: newKoudenId, error: ownerError.message },
+				"Owner profile fetch failed after kouden creation; continuing with fallback",
+			);
 		}
 
-		return { kouden: { ...kouden, owner } as unknown as Kouden };
+		return {
+			kouden: {
+				...kouden,
+				owner: owner ?? { id: userId, display_name: null },
+			} as unknown as Kouden,
+		};
 	} catch (error) {
 		logger.error(
 			{
