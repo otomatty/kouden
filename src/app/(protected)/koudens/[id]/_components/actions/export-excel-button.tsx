@@ -36,8 +36,17 @@ export function ExportExcelButton({ koudenId }: ExportExcelButtonProps) {
 			setIsExporting(true);
 			const result = await exportKoudenToExcel(koudenId);
 
+			if (!result.ok) {
+				toast.error("Excelファイルの出力に失敗しました", {
+					description: result.error.message,
+				});
+				return;
+			}
+
+			const data = result.data;
+
 			// Base64文字列からBlobを作成
-			const binaryString = window.atob(result.base64);
+			const binaryString = window.atob(data.base64);
 			const bytes = new Uint8Array(binaryString.length);
 			for (let i = 0; i < binaryString.length; i++) {
 				bytes[i] = binaryString.charCodeAt(i);
@@ -50,14 +59,14 @@ export function ExportExcelButton({ koudenId }: ExportExcelButtonProps) {
 			const url = window.URL.createObjectURL(blob);
 			const link = document.createElement("a");
 			link.href = url;
-			link.download = result.fileName;
+			link.download = data.fileName;
 			document.body.appendChild(link);
 			link.click();
 			document.body.removeChild(link);
 			window.URL.revokeObjectURL(url);
 
 			toast.success("Excelファイルを出力しました", {
-				description: `ファイル名: ${result.fileName}`,
+				description: `ファイル名: ${data.fileName}`,
 			});
 		} catch (error) {
 			toast.error("Excelファイルの出力に失敗しました", {

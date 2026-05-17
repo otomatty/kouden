@@ -18,7 +18,16 @@ export default async function ReturnItemDetailPage({ params }: ReturnItemDetailP
 
 	try {
 		// 返礼品詳細データを取得
-		const returnItem = await getReturnItem(itemId);
+		const result = await getReturnItem(itemId);
+
+		if (!result.ok) {
+			if (result.error.code === "NOT_FOUND") {
+				notFound();
+			}
+			throw new Error(result.error.message);
+		}
+
+		const returnItem = result.data;
 
 		if (!returnItem) {
 			notFound();

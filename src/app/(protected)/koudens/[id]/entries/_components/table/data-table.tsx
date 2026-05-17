@@ -234,7 +234,13 @@ export function DataTable({
 	const handleDeleteRows = useCallback(
 		async (ids: string[]) => {
 			try {
-				await deleteEntries(ids, koudenId);
+				const result = await deleteEntries(ids, koudenId);
+				if (!result.ok) {
+					toast.error("削除処理に失敗しました", {
+						description: result.error.message,
+					});
+					return;
+				}
 				setSelectedRows([]);
 				setRowSelection({}); // 選択状態をリセット
 				if (onDataChange) {
@@ -275,11 +281,20 @@ export function DataTable({
 				// relationship_idの場合はキーを変換
 				const fieldKey = columnId === "relationshipId" ? "relationship_id" : columnId;
 
-				const updatedEntry = await updateEntryField(
+				const result = await updateEntryField(
 					targetEntry.id,
 					fieldKey as keyof Omit<Entry, "relationship">,
 					value,
 				);
+
+				if (!result.ok) {
+					toast.error("データの更新に失敗しました", {
+						description: result.error.message,
+					});
+					return;
+				}
+
+				const updatedEntry = result.data;
 
 				if (onDataChange) {
 					const newEntries = normalizedEntries.map((entry) =>
@@ -366,15 +381,20 @@ export function DataTable({
 	useEffect(() => {
 		(async () => {
 			try {
-				let mems: Awaited<ReturnType<typeof getMembers>>;
+				let memsResult: Awaited<ReturnType<typeof getMembers>>;
 				if (isAdminMode) {
 					// 管理者モードの場合は管理者用関数を使用
 					const { getMembersForAdmin } = await import("@/app/_actions/members");
-					mems = await getMembersForAdmin(koudenId);
+					memsResult = await getMembersForAdmin(koudenId);
 				} else {
 					// 通常モードの場合は通常の関数を使用
-					mems = await getMembers(koudenId);
+					memsResult = await getMembers(koudenId);
 				}
+				if (!memsResult.ok) {
+					console.error("[ERROR] Failed to fetch members:", memsResult.error);
+					return;
+				}
+				const mems = memsResult.data;
 				setMembers(
 					mems.map((m) => ({
 						value: m.user_id,
@@ -534,7 +554,11 @@ export function DataTable({
 									options: relationshipOptions.map((rel) => ({ value: rel.id, label: rel.name })),
 									addOptionPlaceholder: "関係性を追加",
 									onAddOption: async (option: SelectOption) => {
-										const newRel = await createRelationship({ koudenId, name: option.value });
+										const result = await createRelationship({ koudenId, name: option.value });
+										if (!result.ok) {
+											throw new Error(result.error.message);
+										}
+										const newRel = result.data;
 										setRelationshipOptions((prev) => [...prev, newRel]);
 										return newRel.id;
 									},

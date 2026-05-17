@@ -99,13 +99,21 @@ export function ReturnItemForm({
 					// 新しい画像をアップロード
 					const response = await fetch(imageUrl);
 					const blob = await response.blob();
-					const uploadedUrl = await uploadReturnItemImage(blob, koudenId);
-					form.setValue("image_url", uploadedUrl);
+					const uploadResult = await uploadReturnItemImage(blob, koudenId);
+					if (!uploadResult.ok) {
+						toast.error(uploadResult.error.message);
+						return;
+					}
+					form.setValue("image_url", uploadResult.data);
 				} else {
 					// 既存画像を削除
 					const currentImageUrl = form.getValues("image_url");
 					if (currentImageUrl) {
-						await deleteReturnItemImage(currentImageUrl);
+						const deleteResult = await deleteReturnItemImage(currentImageUrl);
+						if (!deleteResult.ok) {
+							toast.error(deleteResult.error.message);
+							return;
+						}
 					}
 					form.setValue("image_url", "");
 				}

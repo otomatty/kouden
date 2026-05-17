@@ -38,7 +38,13 @@ export default async function ReturnRecordsPage({ params, searchParams }: Return
 
 	try {
 		// 並行データ取得
-		const [koudenDetails, entries, relationships, initialReturns, returnItems] = await Promise.all([
+		const [
+			koudenDetailsResult,
+			entriesResult,
+			relationshipsResult,
+			initialReturnsResult,
+			returnItemsResult,
+		] = await Promise.all([
 			getKouden(koudenId),
 			getEntriesForSelector(koudenId),
 			getRelationships(koudenId),
@@ -46,17 +52,49 @@ export default async function ReturnRecordsPage({ params, searchParams }: Return
 			getReturnItems(koudenId),
 		]);
 
+		if (!koudenDetailsResult.ok) {
+			if (koudenDetailsResult.error.code === "NOT_FOUND") {
+				notFound();
+			}
+			throw new Error(koudenDetailsResult.error.message);
+		}
+		const koudenDetails = koudenDetailsResult.data;
+
+		if (!entriesResult.ok) {
+			throw new Error(entriesResult.error.message);
+		}
+		const entries = entriesResult.data;
+
+		if (!relationshipsResult.ok) {
+			throw new Error(relationshipsResult.error.message);
+		}
+		const relationships = relationshipsResult.data;
+
+		if (!initialReturnsResult.ok) {
+			throw new Error(initialReturnsResult.error.message);
+		}
+		const initialReturns = initialReturnsResult.data;
+
+		if (!returnItemsResult.ok) {
+			throw new Error(returnItemsResult.error.message);
+		}
+		const returnItems = returnItemsResult.data;
+
 		if (!koudenDetails) {
 			notFound();
 		}
 
 		// 返礼管理サマリーの型に変換（実際のお供物配分金額を取得）
-		const returnSummaries = await convertToReturnManagementSummaries(
+		const returnSummariesResult = await convertToReturnManagementSummaries(
 			initialReturns.data,
 			entries,
 			relationships,
 			koudenId,
 		);
+		if (!returnSummariesResult.ok) {
+			throw new Error(returnSummariesResult.error.message);
+		}
+		const returnSummaries = returnSummariesResult.data;
 
 		return (
 			<div className="mt-4">

@@ -36,8 +36,17 @@ export function ExportCsvButton({ koudenId }: ExportCsvButtonProps) {
 			setIsExporting(true);
 			const result = await exportKoudenToCsv(koudenId);
 
+			if (!result.ok) {
+				toast.error("CSVファイルの出力に失敗しました", {
+					description: result.error.message,
+				});
+				return;
+			}
+
+			const data = result.data;
+
 			// CSV文字列からBlobを作成
-			const blob = new Blob([result.csvContent], {
+			const blob = new Blob([data.csvContent], {
 				type: "text/csv;charset=utf-8;",
 			});
 
@@ -45,14 +54,14 @@ export function ExportCsvButton({ koudenId }: ExportCsvButtonProps) {
 			const url = window.URL.createObjectURL(blob);
 			const link = document.createElement("a");
 			link.href = url;
-			link.download = result.fileName;
+			link.download = data.fileName;
 			document.body.appendChild(link);
 			link.click();
 			document.body.removeChild(link);
 			window.URL.revokeObjectURL(url);
 
 			toast.success("CSVファイルを出力しました", {
-				description: `ファイル名: ${result.fileName}`,
+				description: `ファイル名: ${data.fileName}`,
 			});
 		} catch (error) {
 			toast.error("CSVファイルの出力に失敗しました", {

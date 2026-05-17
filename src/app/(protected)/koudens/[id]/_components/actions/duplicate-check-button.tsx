@@ -23,7 +23,14 @@ export function DuplicateCheckButton({ koudenId }: DuplicateCheckButtonProps) {
 	const handleClick = async () => {
 		try {
 			setIsLoading(true);
-			const results = await validateDuplicateEntries(koudenId);
+			const result = await validateDuplicateEntries(koudenId);
+			if (!result.ok) {
+				toast.error("重複検証中にエラーが発生しました", {
+					description: result.error.message,
+				});
+				return;
+			}
+			const results = result.data;
 			setDupResults(results);
 			const params = new URLSearchParams(searchParams.toString());
 			params.set("isDuplicate", "true");

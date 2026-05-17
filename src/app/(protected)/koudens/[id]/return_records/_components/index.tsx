@@ -63,20 +63,33 @@ export function ReturnRecordsView({
 				status: statusFilter !== "all" ? statusFilter : undefined,
 			};
 
-			const result = await getReturnEntriesByKoudenPaginated(koudenId, 100, cursor, filters);
+			const paginatedResult = await getReturnEntriesByKoudenPaginated(
+				koudenId,
+				100,
+				cursor,
+				filters,
+			);
+			if (!paginatedResult.ok) {
+				throw new Error(paginatedResult.error.message);
+			}
+			const paginated = paginatedResult.data;
 
 			// データを ReturnManagementSummary 形式に変換（実際のお供物配分金額を取得）
-			const summaries = await convertToReturnManagementSummaries(
-				result.data,
+			const summariesResult = await convertToReturnManagementSummaries(
+				paginated.data,
 				entries,
 				relationships,
 				koudenId,
 			);
+			if (!summariesResult.ok) {
+				throw new Error(summariesResult.error.message);
+			}
+			const summaries = summariesResult.data;
 
 			return {
 				data: summaries,
-				hasMore: result.hasMore,
-				nextCursor: result.nextCursor,
+				hasMore: paginated.hasMore,
+				nextCursor: paginated.nextCursor,
 			};
 		},
 		[koudenId, entries, searchInput, statusFilter, relationships],

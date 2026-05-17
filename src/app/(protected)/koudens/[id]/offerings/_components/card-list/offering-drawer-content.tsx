@@ -81,7 +81,15 @@ export function OfferingDrawerContent({
 			setOptimisticOfferings([...optimisticOfferings, optimisticOffering]);
 
 			// サーバーに更新を送信
-			const updatedOffering = await updateOfferingField(offering.id, field, value);
+			const result = await updateOfferingField(offering.id, field, value);
+			if (!result.ok) {
+				setOptimisticOfferings(optimisticOfferings.filter((o) => o.id !== offering.id));
+				toast.error("データの更新に失敗しました", {
+					description: result.error.message,
+				});
+				return;
+			}
+			const updatedOffering = result.data;
 
 			// 成功したら実際の提供物を更新（既存のリレーションデータを保持）
 			const updatedOfferingWithRelations = {
@@ -123,7 +131,14 @@ export function OfferingDrawerContent({
 			setOptimisticOfferings([...optimisticOfferings, optimisticOffering]);
 
 			// サーバーに削除を送信
-			await deleteOffering(offering.id, koudenId);
+			const deleteResult = await deleteOffering(offering.id, koudenId);
+			if (!deleteResult.ok) {
+				setOptimisticOfferings(optimisticOfferings.filter((o) => o.id !== offering.id));
+				toast.error("データの削除に失敗しました", {
+					description: deleteResult.error.message,
+				});
+				return;
+			}
 
 			// 成功したら実際の提供物を削除
 			setOfferings(offerings.filter((o) => o.id !== offering.id));

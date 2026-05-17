@@ -34,8 +34,12 @@ export function ReturnItemsPageClient({ koudenId }: ReturnItemsPageClientProps) 
 		const loadInitialData = async () => {
 			try {
 				setIsLoading(true);
-				const data = await getReturnItems(koudenId);
-				setItems(data);
+				const result = await getReturnItems(koudenId);
+				if (!result.ok) {
+					toast.error(result.error.message);
+					return;
+				}
+				setItems(result.data);
 			} catch (error) {
 				console.error("[ERROR] Failed to load initial return items:", error);
 				toast.error("データ読み込みエラー", {
@@ -53,8 +57,12 @@ export function ReturnItemsPageClient({ koudenId }: ReturnItemsPageClientProps) 
 	const handleRefresh = useCallback(async () => {
 		try {
 			setIsLoading(true);
-			const data = await getReturnItems(koudenId);
-			setItems(data);
+			const result = await getReturnItems(koudenId);
+			if (!result.ok) {
+				toast.error(result.error.message);
+				return;
+			}
+			setItems(result.data);
 
 			toast.success("更新完了", {
 				description: "返礼品データを更新しました",
@@ -85,7 +93,11 @@ export function ReturnItemsPageClient({ koudenId }: ReturnItemsPageClientProps) 
 	const handleDeleteItem = useCallback(
 		async (itemId: string) => {
 			try {
-				await deleteReturnItem(itemId, koudenId);
+				const result = await deleteReturnItem(itemId, koudenId);
+				if (!result.ok) {
+					toast.error(result.error.message);
+					return;
+				}
 				// データを再取得してUIを更新
 				await handleRefresh();
 
@@ -106,11 +118,15 @@ export function ReturnItemsPageClient({ koudenId }: ReturnItemsPageClientProps) 
 	const handleToggleActive = useCallback(
 		async (itemId: string, isActive: boolean) => {
 			try {
-				await updateReturnItem({
+				const result = await updateReturnItem({
 					id: itemId,
 					is_active: isActive,
 					kouden_id: koudenId,
 				});
+				if (!result.ok) {
+					toast.error(result.error.message);
+					return;
+				}
 				// データを再取得してUIを更新
 				await handleRefresh();
 

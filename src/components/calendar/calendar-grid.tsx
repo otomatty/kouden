@@ -10,6 +10,10 @@ interface CalendarGridProps {
 	availability: DayAvailability[];
 }
 
+async function reserveSlotAction(formData: FormData): Promise<void> {
+	await reserveSlot(formData);
+}
+
 export function CalendarGrid({ availability }: CalendarGridProps) {
 	return (
 		<div className="space-y-4">
@@ -56,7 +60,7 @@ export function CalendarGrid({ availability }: CalendarGridProps) {
 											description={`${startH}:00~${endH}:00 の予約`}
 										>
 											{({ close }) => (
-												<form action={reserveSlot} className="grid gap-2">
+												<form action={reserveSlotAction} className="grid gap-2">
 													<input type="hidden" name="startDateTime" value={slot.start} />
 													<input type="hidden" name="endDateTime" value={slot.end} />
 													<Input type="text" name="summary" placeholder="お名前" required />

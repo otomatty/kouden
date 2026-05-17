@@ -96,9 +96,11 @@ describe("user-surveys server actions", () => {
 			const result = await createUserSurvey(mockSurveyData, "pdf_export");
 
 			// Assert
-			expect(result.success).toBe(true);
-			expect(result.data).toEqual(mockDbSurvey);
-			expect(result.message).toContain("ありがとうございました");
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.data).toMatchObject(mockDbSurvey);
+				expect(result.data.message).toContain("ありがとうございました");
+			}
 		});
 
 		it("未認証ユーザーの場合にエラーを返す", async () => {
@@ -109,8 +111,10 @@ describe("user-surveys server actions", () => {
 			const result = await createUserSurvey(mockSurveyData, "pdf_export");
 
 			// Assert
-			expect(result.success).toBe(false);
-			expect(result.error).toContain("認証が必要です");
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.error.message).toContain("認証が必要です");
+			}
 		});
 
 		it("既に回答済みの場合にエラーを返す", async () => {
@@ -122,8 +126,10 @@ describe("user-surveys server actions", () => {
 			const result = await createUserSurvey(mockSurveyData, "pdf_export");
 
 			// Assert
-			expect(result.success).toBe(false);
-			expect(result.error).toContain("既にアンケートにご回答いただいております");
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.error.message).toContain("既にアンケートにご回答いただいております");
+			}
 		});
 
 		it("データベースエラー時にエラーを返す", async () => {
@@ -137,8 +143,10 @@ describe("user-surveys server actions", () => {
 			const result = await createUserSurvey(mockSurveyData, "pdf_export");
 
 			// Assert
-			expect(result.success).toBe(false);
-			expect(result.error).toContain("アンケートの保存に失敗しました");
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.error.message).toContain("アンケートの保存に失敗しました");
+			}
 		});
 	});
 
@@ -256,12 +264,14 @@ describe("user-surveys server actions", () => {
 			const result = await getAdminSurveyAnalytics();
 
 			// Assert
-			expect(result.success).toBe(true);
-			expect(result.data).toBeDefined();
-			expect(result.data?.totalResponses).toBe(3);
-			expect(result.data?.npsBreakdown.promoters).toBe(1);
-			expect(result.data?.npsBreakdown.passives).toBe(1);
-			expect(result.data?.npsBreakdown.detractors).toBe(1);
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.data).toBeDefined();
+				expect(result.data.totalResponses).toBe(3);
+				expect(result.data.npsBreakdown.promoters).toBe(1);
+				expect(result.data.npsBreakdown.passives).toBe(1);
+				expect(result.data.npsBreakdown.detractors).toBe(1);
+			}
 		});
 
 		it("非管理者の場合にエラーを返す", async () => {
@@ -273,8 +283,10 @@ describe("user-surveys server actions", () => {
 			const result = await getAdminSurveyAnalytics();
 
 			// Assert
-			expect(result.success).toBe(false);
-			expect(result.error).toContain("管理者権限が必要です");
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.error.message).toContain("管理者権限が必要です");
+			}
 		});
 
 		it("未認証の場合にエラーを返す", async () => {
@@ -285,8 +297,10 @@ describe("user-surveys server actions", () => {
 			const result = await getAdminSurveyAnalytics();
 
 			// Assert
-			expect(result.success).toBe(false);
-			expect(result.error).toContain("認証が必要です");
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.error.message).toContain("認証が必要です");
+			}
 		});
 	});
 });

@@ -86,16 +86,26 @@ export function TelegramForm({
 			let result: Telegram | null = null;
 			if (defaultValues?.id) {
 				const response = await updateTelegram(defaultValues.id, input);
+				if (!response.ok) {
+					setSubmissionState({ isSubmitting: false, error: response.error.message });
+					toast.error(response.error.message);
+					return;
+				}
 				result = {
-					...response,
+					...response.data,
 				};
 				setTelegrams((prev) =>
 					prev.map((telegram) => (telegram.id === result?.id ? result : telegram)),
 				);
 			} else {
 				const response = await createTelegram(input);
+				if (!response.ok) {
+					setSubmissionState({ isSubmitting: false, error: response.error.message });
+					toast.error(response.error.message);
+					return;
+				}
 				result = {
-					...response,
+					...response.data,
 				};
 			}
 

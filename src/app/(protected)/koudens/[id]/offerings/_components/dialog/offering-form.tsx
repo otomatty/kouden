@@ -86,13 +86,15 @@ export function OfferingForm({ koudenId, entries, defaultValues, onSuccess }: Of
 				? await updateOffering(defaultValues.id, input)
 				: await createOffering(input);
 
-			if (!result) {
-				throw new Error("保存に失敗しました");
+			if (!result.ok) {
+				throw new Error(result.error.message);
 			}
+
+			const created = result.data;
 
 			// OfferingWithKoudenEntries型に必要なプロパティを追加
 			const offering: OfferingWithKoudenEntries = {
-				...result,
+				...created,
 				offeringPhotos: [],
 				offeringEntries: [],
 			};
@@ -109,7 +111,7 @@ export function OfferingForm({ koudenId, entries, defaultValues, onSuccess }: Of
 
 			onSuccess?.(offering);
 			toast.success(defaultValues ? "供花・供物を更新しました" : "供花・供物を登録しました", {
-				description: `${result.description || "説明未設定"}の処理が正常に完了しました`,
+				description: `${created.description || "説明未設定"}の処理が正常に完了しました`,
 			});
 
 			if (!defaultValues) {
