@@ -9,6 +9,9 @@ interface LoadingOverlayProps {
 /**
  * ローディング画面の共通シェル。
  * 固定オーバーレイ + 中央配置のカードを提供する。
+ *
+ * @param children - オーバーレイ内に表示するコンテンツ
+ * @param className - コンテナに付与する追加の CSS クラス
  */
 export function LoadingOverlay({ children, className }: LoadingOverlayProps) {
 	return (

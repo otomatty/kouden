@@ -27,6 +27,7 @@ export type ActionResult<T> =
 ## 既存パターンとの対応
 
 ### パターン A: throw する → `withActionResult` でラップ
+
 ```ts
 // Before
 export async function createCase(...) {
@@ -43,6 +44,7 @@ export async function createCase(...): Promise<ActionResult<Case>> {
 ```
 
 ### パターン B: `{ data, error: null }` 形式 → `ActionResult`
+
 ```ts
 // Before
 return { settings, error: null };
@@ -55,6 +57,7 @@ return { ok: false, error: { code: "...", message: "失敗しました", status:
 ```
 
 ### パターン C: 日本語 throw → `KoudenError`
+
 ```ts
 // Before
 throw new Error("香典帳へのアクセス権限がありません");
@@ -74,6 +77,7 @@ throw new KoudenError("香典帳へのアクセス権限がありません", Err
 ## 呼び出し側パターン
 
 ### サーバーコンポーネント / ページ
+
 ```tsx
 const result = await getUserSettings(userId);
 if (!result.ok) {
@@ -83,6 +87,7 @@ const settings = result.data;
 ```
 
 ### クライアントコンポーネント（toast）
+
 ```tsx
 const result = await updateUserSettings(userId, params);
 if (!result.ok) {
@@ -93,6 +98,7 @@ toast.success("更新しました");
 ```
 
 ### エラーコードで分岐
+
 ```tsx
 if (!result.ok) {
   if (result.error.code === "FORBIDDEN") {
@@ -123,6 +129,7 @@ if (!result.ok) {
 ## API Route のエラーレスポンス統一
 
 別タスクだが、API Route のエラーレスポンスも次の形に揃えるとよい:
+
 ```json
 {
   "error": { "code": "FORBIDDEN", "message": "権限がありません", "status": 403 }

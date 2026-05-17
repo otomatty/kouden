@@ -111,9 +111,7 @@ export function BulkUpdateLoadingScreen({
 										key={hint.id}
 										className={cn(
 											"h-2 w-2 rounded-full transition-colors",
-											index === currentHintIndex % hints.length
-												? "bg-primary"
-												: "bg-muted-foreground/30",
+											index === currentHintIndex ? "bg-primary" : "bg-muted-foreground/30",
 										)}
 									/>
 								))}

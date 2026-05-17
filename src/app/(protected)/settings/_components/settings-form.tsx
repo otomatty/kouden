@@ -35,15 +35,19 @@ export function SettingsForm({ userId, initialSettings }: SettingsFormProps) {
 			const result = await updateUserSettings(userId, { guide_mode: checked });
 
 			if (!result.ok) {
-				toast.error(result.error.message, {
-					description: "しばらく時間をおいてから再度お試しください",
-				});
+				toast.error("エラー", { description: result.error.message });
 				return;
 			}
 
 			setGuideMode(checked);
 			toast.success("設定を更新しました");
 			router.refresh();
+		} catch {
+			// `withActionResult` がサーバー側エラーは ActionResult に変換するが、
+			// クライアント→サーバー間の通信失敗・シリアライズエラーはここで補足する
+			toast.error("エラー", {
+				description: "通信環境をご確認のうえ、しばらく時間をおいて再度お試しください",
+			});
 		} finally {
 			setIsPending(false);
 		}
@@ -61,6 +65,10 @@ export function SettingsForm({ userId, initialSettings }: SettingsFormProps) {
 
 			toast.success("設定を更新しました");
 			router.refresh();
+		} catch {
+			toast.error("エラー", {
+				description: "通信環境をご確認のうえ、しばらく時間をおいて再度お試しください",
+			});
 		} finally {
 			setIsPending(false);
 		}

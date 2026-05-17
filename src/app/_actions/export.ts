@@ -50,10 +50,13 @@ export async function exportKoudenToExcel(koudenId: string) {
 		throw new Error("関係性データの取得に失敗しました");
 	}
 
-	// データを結合
+	// データを結合 (find の O(n×m) を避けるため Map で前計算)
+	const relationshipById = new Map(relationships.map((r) => [r.id, r] as const));
 	const mergedEntries: Entry[] = entries.map((entry) => ({
 		...entry,
-		relationship: relationships.find((r) => r.id === entry.relationship_id) ?? null,
+		relationship: entry.relationship_id
+			? (relationshipById.get(entry.relationship_id) ?? null)
+			: null,
 	}));
 
 	// Excelワークブックを作成
@@ -137,10 +140,13 @@ export async function exportKoudenToCsv(koudenId: string) {
 		throw new Error("関係性データの取得に失敗しました");
 	}
 
-	// データを結合
+	// データを結合 (find の O(n×m) を避けるため Map で前計算)
+	const relationshipById = new Map(relationships.map((r) => [r.id, r] as const));
 	const mergedEntries: Entry[] = entries.map((entry) => ({
 		...entry,
-		relationship: relationships.find((r) => r.id === entry.relationship_id) ?? null,
+		relationship: entry.relationship_id
+			? (relationshipById.get(entry.relationship_id) ?? null)
+			: null,
 	}));
 
 	// CSVヘッダー

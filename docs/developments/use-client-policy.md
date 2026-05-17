@@ -14,7 +14,7 @@ Next.js App Router における `"use client"` 指令の適用ルール。
 2. **Next.js クライアントフック**: `useRouter` / `usePathname` / `useSearchParams` (from `next/navigation`)
 3. **状態管理ライブラリ**: jotai (`useAtom*`) / zustand (`useStore`) / SWR (`useSWR`) / TanStack Query (`useQuery`)
 4. **フォームライブラリ**: `react-hook-form` の `useForm`/`useFormContext` など
-5. **DOM イベントハンドラ**: `onClick` / `onChange` / `onSubmit` / `onKeyDown` などを JSX 内で直接定義する場合
+5. **DOM イベントハンドラを宿す場合**: `onClick` / `onChange` / `onSubmit` / `onKeyDown` などを JSX 内で直接定義する、もしくは関数として props 経由で渡す場合 (関数値はサーバー→クライアント境界を越えられないため)
 6. **ブラウザ API**: `window` / `document` / `localStorage` / `sessionStorage` / `navigator` などを参照する場合
 7. **クラスコンポーネント / `ErrorBoundary`**
 8. **`dynamic(() => …, { ssr: false })`** を使う場合
@@ -32,6 +32,7 @@ Next.js App Router における `"use client"` 指令の適用ルール。
 ## アンチパターン
 
 ### NG: 「念のため」付与
+
 ```tsx
 "use client"; // ❌ 子に Radix を使うだけのために付けている
 
@@ -42,6 +43,7 @@ export function FAQ() {
 ```
 
 ### OK: 必要箇所だけクライアント化
+
 ```tsx
 import { Accordion } from "@/components/ui/accordion";
 export function FAQ() {
@@ -51,6 +53,7 @@ export function FAQ() {
 ```
 
 ### NG: クライアント化したくないのに hooks を引きずる
+
 ```tsx
 "use client";
 import { useEffect } from "react";

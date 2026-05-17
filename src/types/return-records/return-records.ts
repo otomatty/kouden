@@ -29,7 +29,10 @@ export function isReturnItem(value: unknown): value is ReturnItem {
 	if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
 	const v = value as Record<string, unknown>;
 	return (
-		typeof v.name === "string" && typeof v.price === "number" && typeof v.quantity === "number"
+		typeof v.name === "string" &&
+		typeof v.price === "number" &&
+		typeof v.quantity === "number" &&
+		(v.notes === undefined || typeof v.notes === "string")
 	);
 }
 

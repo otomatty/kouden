@@ -1,6 +1,6 @@
 "use server";
 
-import { type ActionResult, withActionResult } from "@/lib/errors";
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/supabase";
@@ -13,8 +13,32 @@ interface UpdateSettingsParams {
 	theme?: "light" | "dark" | "system";
 }
 
+/**
+ * 認証セッションから取得した `auth.uid()` と引数の `userId` の一致を確認する。
+ *
+ * Server Action はネットワーク経由で公開される endpoint であるため、
+ * クライアントから渡された `userId` は信用せず、必ずセッションと突き合わせる
+ * (IDOR 対策)。
+ */
+async function assertOwnSettings(userId: string): Promise<void> {
+	const supabase = await createClient();
+	const {
+		data: { user },
+		error: userError,
+	} = await supabase.auth.getUser();
+
+	if (userError || !user) {
+		throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
+	}
+
+	if (user.id !== userId) {
+		throw new KoudenError("他ユーザーの設定にはアクセスできません", ErrorCodes.FORBIDDEN);
+	}
+}
+
 export async function getUserSettings(userId: string): Promise<ActionResult<UserSettings>> {
 	return withActionResult(async () => {
+		await assertOwnSettings(userId);
 		const supabase = await createClient();
 
 		const { data, error } = await supabase
@@ -33,6 +57,7 @@ export async function updateUserSettings(
 	params: UpdateSettingsParams,
 ): Promise<ActionResult<UserSettings>> {
 	return withActionResult(async () => {
+		await assertOwnSettings(userId);
 		const supabase = await createClient();
 
 		const { data, error } = await supabase
@@ -59,7 +84,7 @@ export async function updateUserSettings(
  * - 取得失敗時もユーザー操作を妨げないようフォールバック値を返す責務がある
  * - 呼び出し元が「失敗時の挙動」を判定する必要がない
  *
- * @returns ガイドを表示するかどうか（失敗時は `true` フォールバック）
+ * @returns ガイドを表示するかどうか（取得失敗時は `true` フォールバック）
  */
 export async function getGuideVisibility(): Promise<boolean> {
 	try {
@@ -76,7 +101,7 @@ export async function getGuideVisibility(): Promise<boolean> {
 				},
 				"getGuideVisibility: ユーザー情報の取得に失敗",
 			);
-			return false;
+			return true;
 		}
 
 		const { data, error } = await supabase
