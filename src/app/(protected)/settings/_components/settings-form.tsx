@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { updateUserSettings } from "@/app/_actions/settings";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import {
 	Select,
 	SelectContent,
@@ -11,10 +9,12 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
-import { updateUserSettings } from "@/app/_actions/settings";
-import { useSetAtom } from "jotai";
+import { Switch } from "@/components/ui/switch";
 import { guideModeAtom } from "@/store/guide";
+import { useSetAtom } from "jotai";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface SettingsFormProps {
 	userId: string;
@@ -30,45 +30,37 @@ export function SettingsForm({ userId, initialSettings }: SettingsFormProps) {
 	const setGuideMode = useSetAtom(guideModeAtom);
 
 	const handleGuideMode = async (checked: boolean) => {
+		setIsPending(true);
 		try {
-			setIsPending(true);
-			const { error } = await updateUserSettings(userId, {
-				guide_mode: checked,
-			});
+			const result = await updateUserSettings(userId, { guide_mode: checked });
 
-			if (error) {
-				throw new Error(error);
+			if (!result.ok) {
+				toast.error(result.error.message, {
+					description: "しばらく時間をおいてから再度お試しください",
+				});
+				return;
 			}
 
 			setGuideMode(checked);
 			toast.success("設定を更新しました");
 			router.refresh();
-		} catch (error) {
-			toast.error(error instanceof Error ? error.message : "設定の更新に失敗しました", {
-				description: "しばらく時間をおいてから再度お試しください",
-			});
 		} finally {
 			setIsPending(false);
 		}
 	};
 
 	const handleTheme = async (value: "light" | "dark" | "system") => {
+		setIsPending(true);
 		try {
-			setIsPending(true);
-			const { error } = await updateUserSettings(userId, {
-				theme: value,
-			});
+			const result = await updateUserSettings(userId, { theme: value });
 
-			if (error) {
-				throw new Error(error);
+			if (!result.ok) {
+				toast.error("エラー", { description: result.error.message });
+				return;
 			}
 
 			toast.success("設定を更新しました");
 			router.refresh();
-		} catch (error) {
-			toast.error("エラー", {
-				description: error instanceof Error ? error.message : "設定の更新に失敗しました",
-			});
 		} finally {
 			setIsPending(false);
 		}

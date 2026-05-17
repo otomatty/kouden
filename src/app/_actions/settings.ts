@@ -1,49 +1,41 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
+import { type ActionResult, withActionResult } from "@/lib/errors";
 import logger from "@/lib/logger";
+import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/types/supabase";
+import { revalidatePath } from "next/cache";
+
+type UserSettings = Database["public"]["Tables"]["user_settings"]["Row"];
 
 interface UpdateSettingsParams {
 	guide_mode?: boolean;
 	theme?: "light" | "dark" | "system";
 }
 
-export async function getUserSettings(userId: string) {
-	try {
+export async function getUserSettings(userId: string): Promise<ActionResult<UserSettings>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
-		const { data: settings, error } = await supabase
+		const { data, error } = await supabase
 			.from("user_settings")
 			.select("*")
 			.eq("id", userId)
 			.single();
 
-		if (error) {
-			throw error;
-		}
-
-		return { settings, error: null };
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				userId,
-			},
-			"Error getting user settings",
-		);
-		return {
-			settings: null,
-			error: "設定の取得に失敗しました",
-		};
-	}
+		if (error) throw error;
+		return data;
+	}, "ユーザー設定の取得");
 }
 
-export async function updateUserSettings(userId: string, params: UpdateSettingsParams) {
-	try {
+export async function updateUserSettings(
+	userId: string,
+	params: UpdateSettingsParams,
+): Promise<ActionResult<UserSettings>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
-		const { data: settings, error } = await supabase
+		const { data, error } = await supabase
 			.from("user_settings")
 			.update({
 				...params,
@@ -53,31 +45,21 @@ export async function updateUserSettings(userId: string, params: UpdateSettingsP
 			.select()
 			.single();
 
-		if (error) {
-			throw error;
-		}
+		if (error) throw error;
 
 		revalidatePath("/settings");
-		return { settings, error: null };
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				userId,
-				params,
-			},
-			"Error updating user settings",
-		);
-		return {
-			settings: null,
-			error: "設定の更新に失敗しました",
-		};
-	}
+		return data;
+	}, "ユーザー設定の更新");
 }
 
 /**
- * ユーザーのガイド表示設定を取得する
- * @returns {Promise<boolean>} ガイドを表示するかどうか
+ * ユーザーのガイド表示設定を取得する。
+ *
+ * `ActionResult` ではなく `boolean` を直接返す:
+ * - 取得失敗時もユーザー操作を妨げないようフォールバック値を返す責務がある
+ * - 呼び出し元が「失敗時の挙動」を判定する必要がない
+ *
+ * @returns ガイドを表示するかどうか（失敗時は `true` フォールバック）
  */
 export async function getGuideVisibility(): Promise<boolean> {
 	try {
@@ -132,8 +114,8 @@ export async function getGuideVisibility(): Promise<boolean> {
  * ガイドの表示設定を更新する
  * @param show ガイドを表示するかどうか
  */
-export async function updateGuideVisibility(show: boolean) {
-	try {
+export async function updateGuideVisibility(show: boolean): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 		const {
 			data: { user },
@@ -154,20 +136,7 @@ export async function updateGuideVisibility(show: boolean) {
 
 		if (error) throw error;
 
-		// キャッシュを再検証
 		revalidatePath("/koudens");
-		return { success: true, error: null };
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				show,
-			},
-			"Error updating guide visibility",
-		);
-		return {
-			success: false,
-			error: "設定の更新に失敗しました",
-		};
-	}
+		return null;
+	}, "ガイド表示設定の更新");
 }
