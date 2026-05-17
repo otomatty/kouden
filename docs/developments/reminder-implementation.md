@@ -106,7 +106,7 @@ export async function GET() {
 
 ## 3. 環境変数
 - `RESEND_API_KEY`（Resend APIキー）
-- `SUPABASE_SERVICE_ROLE_KEY`（Supabase サービスロールキー）
+- `SUPABASE_SECRET_KEY`（Supabase Secret Key）
 
 ## 4. 作業手順
 1. `src/app/api/cron/send-reminders/route.ts` を作成し、上記コードを実装する

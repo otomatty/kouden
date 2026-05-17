@@ -6,12 +6,12 @@ import logger from "@/lib/logger";
 export async function createClient() {
 	const cookieStore = await cookies();
 	const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-	const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+	const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
 	if (!supabaseUrl) throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL");
-	if (!supabaseAnonKey) throw new Error("Missing NEXT_PUBLIC_SUPABASE_ANON_KEY");
+	if (!supabasePublishableKey) throw new Error("Missing NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
 
-	return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+	return createServerClient<Database>(supabaseUrl, supabasePublishableKey, {
 		cookies: {
 			getAll() {
 				return Array.from(cookieStore.getAll()).map(({ name, value }) => ({
