@@ -331,6 +331,9 @@ export async function getOfferings(koudenId: string) {
 	}
 
 	// データをキャメルケースに変換
+	// 注: `snakeToCamel` の戻り値型は join 後のネストした型変換まで追跡できないため、
+	// `OfferingWithKoudenEntries` へ二段キャストで合わせる。実体はライブラリ側で
+	// snake_case→camelCase に再構築済み。
 	const convertedData =
 		data?.map((item) => {
 			const converted = snakeToCamel(item as Record<string, unknown>);

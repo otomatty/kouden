@@ -10,11 +10,12 @@
 import type { EntryAmountStats } from "@/app/_actions/offerings/queries";
 import type { Entry } from "@/types/entries";
 import type { Relationship } from "@/types/relationships";
-import type {
-	ReturnEntryRecord,
-	ReturnItem,
-	ReturnManagementSummary,
-	ReturnStatus,
+import {
+	type ReturnEntryRecord,
+	type ReturnItem,
+	type ReturnManagementSummary,
+	type ReturnStatus,
+	isReturnItem,
 } from "@/types/return-records/return-records";
 
 /**
@@ -54,10 +55,9 @@ export function convertToReturnManagementSummary(
 	const entry = entries.find((e) => e.id === returnRecord.kouden_entry_id);
 	if (!entry) return null;
 
-	// return_itemsの型安全な変換
-	const returnItems: ReturnItem[] = Array.isArray(returnRecord.return_items)
-		? (returnRecord.return_items as unknown as ReturnItem[])
-		: [];
+	// return_items は JSON カラムなので、型ガードで `ReturnItem` のみ通す
+	const rawItems: unknown = returnRecord.return_items;
+	const returnItems: ReturnItem[] = Array.isArray(rawItems) ? rawItems.filter(isReturnItem) : [];
 
 	// 関係性名を取得
 	const relationship = relationships.find((r) => r.id === entry.relationship_id);

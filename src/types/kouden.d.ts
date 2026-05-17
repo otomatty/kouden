@@ -1,14 +1,24 @@
 import { z } from "zod";
 import type { Database } from "./supabase";
-import type { Profile } from "./profile";
 
 // データベースの型定義
 export type Kouden = Database["public"]["Tables"]["koudens"]["Row"];
 
-// アプリケーション内で使用する型定義
-export interface KoudenExtended extends Omit<KoudenRow, "owner_id" | "created_by"> {
-	owner: Profile;
-	created_by: Profile;
+/**
+ * 香典帳取得 API が返すオーナー情報。
+ * profiles テーブルから id と display_name のみを SELECT した結果に対応する。
+ */
+export interface KoudenOwnerInfo {
+	id: string;
+	display_name: string | null;
+}
+
+/**
+ * オーナー情報を含む香典帳。
+ * `getKouden` / `createKouden` / `duplicateKouden` などが返す形。
+ */
+export interface KoudenWithOwner extends Kouden {
+	owner: KoudenOwnerInfo;
 }
 
 // パラメータの型定義
