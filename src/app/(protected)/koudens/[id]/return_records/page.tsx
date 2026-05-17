@@ -9,7 +9,7 @@ import type {
 	ReturnManagementSummary,
 	ReturnStatus,
 } from "@/types/return-records/return-records";
-import { notFound } from "next/navigation";
+import { notFound, unstable_rethrow } from "next/navigation";
 import { ReturnRecordsPageClient } from "./return-records-page-client";
 
 interface ReturnRecordsPageProps {
@@ -80,10 +80,6 @@ export default async function ReturnRecordsPage({ params, searchParams }: Return
 		}
 		const returnItems = returnItemsResult.data;
 
-		if (!koudenDetails) {
-			notFound();
-		}
-
 		// 返礼管理サマリーの型に変換（実際のお供物配分金額を取得）
 		const returnSummariesResult = await convertToReturnManagementSummaries(
 			initialReturns.data,
@@ -110,6 +106,8 @@ export default async function ReturnRecordsPage({ params, searchParams }: Return
 			</div>
 		);
 	} catch (error) {
+		// `notFound()` / `redirect()` の内部 throw を吸収しないよう先に再送する
+		unstable_rethrow(error);
 		console.error("返礼管理ページの初期化エラー:", error);
 		return (
 			<div className="container mx-auto py-6">

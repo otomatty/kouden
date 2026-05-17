@@ -154,15 +154,20 @@ export async function verifyTwoFactorLogin(verificationCode: string): Promise<Ac
 			throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
 		}
 
-		// 2FAシークレットを取得
+		// 2FAシークレットを取得 (PGRST116 = 0 行 → 未設定、それ以外 = DB エラーとして上位へ)
 		const { data: adminUser, error: adminError } = await supabase
 			.from("admin_users")
 			.select("two_factor_secret")
 			.eq("user_id", user.id)
 			.eq("two_factor_enabled", true)
-			.single();
+			.maybeSingle();
 
-		if (adminError || !adminUser?.two_factor_secret) {
+		if (adminError) {
+			// 真に DB 取得が失敗した場合は Supabase エラーを伝播させて
+			// `withActionResult` 側で適切に分類させる
+			throw adminError;
+		}
+		if (!adminUser?.two_factor_secret) {
 			throw new KoudenError("二要素認証が設定されていません", ErrorCodes.NOT_FOUND);
 		}
 

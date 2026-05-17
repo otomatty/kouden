@@ -2,7 +2,7 @@ import { getKouden, getKoudenWithPlan } from "@/app/_actions/koudens/read";
 import { checkKoudenPermission } from "@/app/_actions/permissions";
 import { ClientProviders } from "@/components/providers/client-providers";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, unstable_rethrow } from "next/navigation";
 import { KoudenHeader } from "../../koudens/[id]/_components/_common/kouden-header";
 
 export const metadata: Metadata = {
@@ -39,10 +39,6 @@ export default async function PurchaseLayout({ params, children }: PurchaseLayou
 		const enableExcel = plan.code !== "free" && !expired;
 		const enableCsv = plan.code !== "free" && !expired;
 
-		if (!kouden) {
-			notFound();
-		}
-
 		return (
 			<ClientProviders permission={permission}>
 				<div className="flex h-full flex-col">
@@ -66,7 +62,8 @@ export default async function PurchaseLayout({ params, children }: PurchaseLayou
 				</div>
 			</ClientProviders>
 		);
-	} catch {
+	} catch (error) {
+		unstable_rethrow(error);
 		notFound();
 	}
 }

@@ -1,5 +1,5 @@
 import { getReturnItem } from "@/app/_actions/return-records/return-items";
-import { notFound } from "next/navigation";
+import { notFound, unstable_rethrow } from "next/navigation";
 import { ReturnItemDetailPageClient } from "./return-item-detail-page-client";
 
 interface ReturnItemDetailPageProps {
@@ -29,6 +29,7 @@ export default async function ReturnItemDetailPage({ params }: ReturnItemDetailP
 
 		const returnItem = result.data;
 
+		// `getReturnItem` の戻り値型が `ReturnItem | null` のため null チェックが必要
 		if (!returnItem) {
 			notFound();
 		}
@@ -40,6 +41,7 @@ export default async function ReturnItemDetailPage({ params }: ReturnItemDetailP
 
 		return <ReturnItemDetailPageClient returnItem={returnItem} koudenId={koudenId} />;
 	} catch (error) {
+		unstable_rethrow(error);
 		console.error("[ERROR] Failed to fetch return item details:", error);
 		notFound();
 	}

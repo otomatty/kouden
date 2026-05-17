@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 
 import { BottomNavigation } from "@/app/(protected)/koudens/[id]/_components/_common/bottom-navigation";
 // components
-import { notFound, redirect } from "next/navigation";
+import { notFound, redirect, unstable_rethrow } from "next/navigation";
 import { KoudenHeader } from "./_components/_common/kouden-header";
 import { TabNavigation } from "./_components/_common/tab-navigation";
 import ArchivedPage from "./archived/page";
@@ -96,8 +96,11 @@ export default async function KoudenLayout({ params, children }: KoudenLayoutPro
 				<BottomNavigation id={kouden.id} />
 			</ClientProviders>
 		);
-	} catch {
-		// エラー発生時は一覧ページへリダイレクト
+	} catch (error) {
+		// `notFound()` / `redirect()` は内部的に throw されるため、
+		// ここで `unstable_rethrow` を通して制御フロー例外を再 throw する。
+		// これを忘れると 404 が `/koudens` リダイレクトに置き換わってしまう。
+		unstable_rethrow(error);
 		redirect("/koudens");
 	}
 }

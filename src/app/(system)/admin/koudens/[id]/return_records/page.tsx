@@ -46,9 +46,6 @@ export default async function AdminReturnRecordsPage({
 		throw new Error(koudenResult.error.message);
 	}
 	const kouden = koudenResult.data;
-	if (!kouden) {
-		notFound();
-	}
 
 	// 必要なデータを並列取得（管理者用関数を使用）
 	const [returnEntriesResultRaw, entriesResult, relationshipsResult, returnItemsResult] =

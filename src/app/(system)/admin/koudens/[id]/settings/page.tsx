@@ -23,10 +23,6 @@ export default async function AdminSettingsPage({ params }: AdminSettingsPagePro
 
 	const kouden = koudenResult.data;
 
-	if (!kouden) {
-		throw new Error("香典帳が見つかりません");
-	}
-
 	return (
 		<div className="container mx-auto py-6 space-y-6">
 			<div className="flex items-center gap-2 mb-6">
