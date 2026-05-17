@@ -5,22 +5,21 @@
  * @module return-records/crud
  */
 
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
+import type {
+	CreateReturnEntryInput,
+	ReturnEntryRecord,
+} from "@/types/return-records/return-records";
 import { revalidatePath } from "next/cache";
 import { getAuthenticatedClient, getKoudenIdFromEntry } from "./utils";
-import type {
-	ReturnEntryRecord,
-	CreateReturnEntryInput,
-} from "@/types/return-records/return-records";
-import logger from "@/lib/logger";
 
 /**
  * 返礼情報を作成する
- * @param {CreateReturnEntryInput} input - 作成する返礼情報
- * @returns {Promise<ReturnEntryRecord>} 作成された返礼情報
- * @throws {Error} 認証エラーまたは作成失敗時のエラー
  */
-export async function createReturnEntry(input: CreateReturnEntryInput): Promise<ReturnEntryRecord> {
-	try {
+export async function createReturnEntry(
+	input: CreateReturnEntryInput,
+): Promise<ActionResult<ReturnEntryRecord>> {
+	return withActionResult(async () => {
 		const { supabase, user } = await getAuthenticatedClient();
 
 		const { data, error } = await supabase
@@ -41,7 +40,7 @@ export async function createReturnEntry(input: CreateReturnEntryInput): Promise<
 		}
 
 		if (!data) {
-			throw new Error("返礼情報の作成に失敗しました");
+			throw new KoudenError("返礼情報の作成に失敗しました", ErrorCodes.DB_INSERT_ERROR);
 		}
 
 		// キャッシュの再検証
@@ -49,28 +48,16 @@ export async function createReturnEntry(input: CreateReturnEntryInput): Promise<
 		revalidatePath(`/koudens/${koudenId}`);
 
 		return data as ReturnEntryRecord;
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				koudenEntryId: input.kouden_entry_id,
-			},
-			"返礼情報の作成エラー",
-		);
-		throw error;
-	}
+	}, "返礼情報の作成");
 }
 
 /**
  * 香典エントリーIDに紐づく返礼情報を取得する
- * @param {string} koudenEntryId - 香典エントリーID
- * @returns {Promise<ReturnEntryRecord | null>} 返礼情報
- * @throws {Error} 取得失敗時のエラー
  */
 export async function getReturnEntryRecord(
 	koudenEntryId: string,
-): Promise<ReturnEntryRecord | null> {
-	try {
+): Promise<ActionResult<ReturnEntryRecord | null>> {
+	return withActionResult(async () => {
 		const { supabase } = await getAuthenticatedClient();
 
 		const { data, error } = await supabase
@@ -85,26 +72,16 @@ export async function getReturnEntryRecord(
 		}
 
 		return data as ReturnEntryRecord | null;
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				koudenEntryId,
-			},
-			"返礼情報の取得エラー",
-		);
-		throw error;
-	}
+	}, "返礼情報の取得");
 }
 
 /**
  * 香典帳IDに紐づく全ての返礼情報を取得する
- * @param {string} koudenId - 香典帳ID
- * @returns {Promise<ReturnEntryRecord[]>} 返礼情報一覧
- * @throws {Error} 取得失敗時のエラー
  */
-export async function getReturnEntriesByKouden(koudenId: string): Promise<ReturnEntryRecord[]> {
-	try {
+export async function getReturnEntriesByKouden(
+	koudenId: string,
+): Promise<ActionResult<ReturnEntryRecord[]>> {
+	return withActionResult(async () => {
 		const { supabase } = await getAuthenticatedClient();
 
 		const { data, error } = await supabase
@@ -123,27 +100,17 @@ export async function getReturnEntriesByKouden(koudenId: string): Promise<Return
 		}
 
 		return data as ReturnEntryRecord[];
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				koudenId,
-			},
-			"返礼情報一覧の取得エラー",
-		);
-		throw error;
-	}
+	}, "返礼情報一覧の取得");
 }
 
 /**
  * 返礼情報を削除する
- * @param {string} koudenEntryId - 香典エントリーID
- * @param {string} koudenId - 香典帳ID（キャッシュ再検証用）
- * @returns {Promise<void>}
- * @throws {Error} 認証エラーまたは削除失敗時のエラー
  */
-export async function deleteReturnEntry(koudenEntryId: string, koudenId: string): Promise<void> {
-	try {
+export async function deleteReturnEntry(
+	koudenEntryId: string,
+	koudenId: string,
+): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
 		const { supabase } = await getAuthenticatedClient();
 
 		const { error } = await supabase
@@ -157,31 +124,24 @@ export async function deleteReturnEntry(koudenEntryId: string, koudenId: string)
 
 		// キャッシュの再検証
 		revalidatePath(`/koudens/${koudenId}`);
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				koudenEntryId,
-				koudenId,
-			},
-			"返礼情報の削除エラー",
-		);
-		throw error;
-	}
+		return null;
+	}, "返礼情報の削除");
 }
 
 /**
  * 複数の返礼記録を一括削除する
- * @param {string[]} returnRecordIds - 削除する返礼記録のID配列
- * @returns {Promise<void>}
- * @throws {Error} 認証エラーまたは削除失敗時のエラー
  */
-export async function deleteReturnRecords(returnRecordIds: string[]): Promise<void> {
-	try {
+export async function deleteReturnRecords(
+	returnRecordIds: string[],
+): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
 		const { supabase } = await getAuthenticatedClient();
 
 		if (!returnRecordIds.length) {
-			throw new Error("削除対象のIDが指定されていません");
+			throw new KoudenError(
+				"削除対象のIDが指定されていません",
+				ErrorCodes.INVALID_INPUT,
+			);
 		}
 
 		// 削除前に関連する香典帳IDを取得（キャッシュ再検証用）
@@ -206,19 +166,14 @@ export async function deleteReturnRecords(returnRecordIds: string[]): Promise<vo
 
 		// 関連する香典帳のキャッシュを再検証
 		if (koudenIds) {
-			const uniqueKoudenIds = [...new Set(koudenIds.map((item) => item.kouden_entries.kouden_id))];
+			const uniqueKoudenIds = [
+				...new Set(koudenIds.map((item) => item.kouden_entries.kouden_id)),
+			];
 			for (const koudenId of uniqueKoudenIds) {
 				revalidatePath(`/koudens/${koudenId}`);
 			}
 		}
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				returnRecordIds,
-			},
-			"返礼記録の一括削除エラー",
-		);
-		throw error;
-	}
+
+		return null;
+	}, "返礼記録の一括削除");
 }

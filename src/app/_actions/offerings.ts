@@ -1,6 +1,7 @@
 "use server";
 
 import { cacheTags } from "@/lib/cache-tags";
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import type {
@@ -14,6 +15,9 @@ import type {
 import type { Database } from "@/types/supabase";
 import { snakeToCamel } from "@/utils/case-converter";
 import { revalidatePath, revalidateTag } from "next/cache";
+
+type OfferingRow = Database["public"]["Tables"]["offerings"]["Row"];
+type OfferingPhotoRow = Database["public"]["Tables"]["offering_photos"]["Row"];
 
 /**
  * Invalidate caches affected by an offering mutation.
@@ -32,16 +36,17 @@ function revalidateOfferingsCaches(koudenId: string) {
 }
 
 //お供物情報を作成する
-export async function createOffering(input: Omit<CreateOfferingInput, "created_by">) {
-	try {
+export async function createOffering(
+	input: Omit<CreateOfferingInput, "created_by">,
+): Promise<ActionResult<OfferingRow>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 		const {
 			data: { user },
 		} = await supabase.auth.getUser();
 
 		if (!user) {
-			logger.error({}, "Authentication required");
-			throw new Error("認証が必要です");
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
 		}
 
 		const { kouden_entry_ids, photos, ...offeringData } = input;
@@ -58,18 +63,7 @@ export async function createOffering(input: Omit<CreateOfferingInput, "created_b
 			.select()
 			.single();
 
-		if (error) {
-			logger.error(
-				{
-					error: error.message,
-					code: error.code,
-					koudenId: input.kouden_id,
-					userId: user.id,
-				},
-				"お供え物の作成に失敗しました",
-			);
-			throw new Error("お供え物の作成に失敗しました。");
-		}
+		if (error) throw error;
 
 		// 関連する香典エントリーを offering_entries テーブルに挿入
 		if (kouden_entry_ids && kouden_entry_ids.length > 0) {
@@ -83,21 +77,10 @@ export async function createOffering(input: Omit<CreateOfferingInput, "created_b
 				.from("offering_entries")
 				.insert(offeringEntries);
 
-			if (offeringEntriesError) {
-				logger.error(
-					{
-						error: offeringEntriesError.message,
-						code: offeringEntriesError.code,
-						offeringId: data.id,
-						entryIds: kouden_entry_ids,
-					},
-					"香典エントリーの関連付けに失敗しました",
-				);
-				throw new Error("香典エントリーの関連付けに失敗しました。");
-			}
+			if (offeringEntriesError) throw offeringEntriesError;
 		}
 
-		// 香典の更新日時を更新
+		// 香典の更新日時を更新（更新エラーは致命的ではないのでログのみ）
 		const { error: updateError } = await supabase
 			.from("koudens")
 			.update({ updated_at: new Date().toISOString() })
@@ -114,35 +97,27 @@ export async function createOffering(input: Omit<CreateOfferingInput, "created_b
 				},
 				"Failed to update kouden",
 			);
-			// 更新エラーは致命的ではないのでログのみ
 		}
 
 		revalidateOfferingsCaches(input.kouden_id as string);
 		return data;
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				koudenId: input.kouden_id,
-			},
-			"お供え物の作成処理中にエラーが発生しました",
-		);
-		throw error;
-	}
+	}, "お供え物の作成");
 }
 
 // お供物情報を更新する
-export async function updateOffering(id: string, input: UpdateOfferingInput) {
-	const supabase = await createClient();
-
-	try {
+export async function updateOffering(
+	id: string,
+	input: UpdateOfferingInput,
+): Promise<ActionResult<OfferingRow>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
 		// 認証済みのユーザーを取得
 		const {
 			data: { user },
 		} = await supabase.auth.getUser();
 
 		if (!user) {
-			throw new Error("ユーザーが見つかりませんでした。");
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
 		}
 
 		// kouden_entry_ids を分離してお供物データのみを更新
@@ -156,18 +131,7 @@ export async function updateOffering(id: string, input: UpdateOfferingInput) {
 			.select()
 			.single();
 
-		if (error) {
-			logger.error(
-				{
-					error: error.message,
-					code: error.code,
-					id,
-					userId: user.id,
-				},
-				"お供え物の更新に失敗しました",
-			);
-			throw new Error("お供え物の更新に失敗しました。");
-		}
+		if (error) throw error;
 
 		// 既存の関連付けを削除してから新しい関連付けを追加
 		if (kouden_entry_ids !== undefined) {
@@ -177,17 +141,7 @@ export async function updateOffering(id: string, input: UpdateOfferingInput) {
 				.delete()
 				.eq("offering_id", id);
 
-			if (deleteError) {
-				logger.error(
-					{
-						error: deleteError.message,
-						code: deleteError.code,
-						offeringId: id,
-					},
-					"既存の香典エントリー関連付けの削除に失敗しました",
-				);
-				throw new Error("既存の香典エントリー関連付けの削除に失敗しました。");
-			}
+			if (deleteError) throw deleteError;
 
 			// 新しい関連付けを追加
 			if (kouden_entry_ids.length > 0) {
@@ -201,22 +155,11 @@ export async function updateOffering(id: string, input: UpdateOfferingInput) {
 					.from("offering_entries")
 					.insert(offeringEntries);
 
-				if (insertError) {
-					logger.error(
-						{
-							error: insertError.message,
-							code: insertError.code,
-							offeringId: id,
-							entryIds: kouden_entry_ids,
-						},
-						"香典エントリーの関連付けに失敗しました",
-					);
-					throw new Error("香典エントリーの関連付けに失敗しました。");
-				}
+				if (insertError) throw insertError;
 			}
 		}
 
-		// 香典の更新日時を更新
+		// 香典の更新日時を更新（更新エラーは致命的ではないのでログのみ）
 		const { error: updateError } = await supabase
 			.from("koudens")
 			.update({ updated_at: new Date().toISOString() })
@@ -233,216 +176,202 @@ export async function updateOffering(id: string, input: UpdateOfferingInput) {
 				},
 				"Failed to update kouden",
 			);
-			// 更新エラーは致命的ではないのでログのみ
 		}
 
 		revalidateOfferingsCaches(input.kouden_id as string);
 		return data;
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				id,
-			},
-			"お供え物の更新処理中にエラーが発生しました",
-		);
-		throw error;
-	}
+	}, "お供え物の更新");
 }
 
 // お供物情報を削除する
-export async function deleteOffering(id: string, koudenId: string) {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+export async function deleteOffering(id: string, koudenId: string): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 
-	if (!user) {
-		throw new Error("認証が必要です");
-	}
+		if (!user) {
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
+		}
 
-	const { error } = await supabase.from("offerings").delete().eq("id", id);
+		const { error } = await supabase.from("offerings").delete().eq("id", id);
 
-	if (error) {
-		logger.error(
-			{
-				error: error.message,
-				code: error.code,
-				id,
-				koudenId,
-			},
-			"[deleteOffering] Delete failed",
-		);
-		throw new Error(`お供え物の削除に失敗しました: ${error.message}`);
-	}
+		if (error) throw error;
 
-	// 香典の更新日時を更新
-	const { error: updateError } = await supabase
-		.from("koudens")
-		.update({ updated_at: new Date().toISOString() })
-		.eq("id", koudenId);
+		// 香典の更新日時を更新（更新エラーは致命的ではないのでログのみ）
+		const { error: updateError } = await supabase
+			.from("koudens")
+			.update({ updated_at: new Date().toISOString() })
+			.eq("id", koudenId);
 
-	if (updateError) {
-		logger.error(
-			{
-				error: updateError.message,
-				code: updateError.code,
-				koudenId,
-			},
-			"[deleteOffering] Failed to update kouden",
-		);
-		// 更新エラーは致命的ではないのでログのみ
-	}
+		if (updateError) {
+			logger.error(
+				{
+					error: updateError.message,
+					code: updateError.code,
+					koudenId,
+				},
+				"[deleteOffering] Failed to update kouden",
+			);
+		}
 
-	revalidateOfferingsCaches(koudenId);
+		revalidateOfferingsCaches(koudenId);
+		return null;
+	}, "お供え物の削除");
 }
 
 // お供物情報を取得する
-export async function getOfferings(koudenId: string) {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+export async function getOfferings(
+	koudenId: string,
+): Promise<ActionResult<OfferingWithKoudenEntries[]>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 
-	if (!user) {
-		throw new Error("認証が必要です");
-	}
+		if (!user) {
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
+		}
 
-	const { data, error } = await supabase
-		.from("offerings")
-		.select(`
-			*,
-			offering_photos (*),
-			offering_entries (
+		const { data, error } = await supabase
+			.from("offerings")
+			.select(`
 				*,
-				kouden_entry: kouden_entries (
-					id,
-					name,
-					organization,
-					amount
+				offering_photos (*),
+				offering_entries (
+					*,
+					kouden_entry: kouden_entries (
+						id,
+						name,
+						organization,
+						amount
+					)
 				)
-			)
-		`)
-		.eq("kouden_id", koudenId)
-		.order("created_at", { ascending: false });
+			`)
+			.eq("kouden_id", koudenId)
+			.order("created_at", { ascending: false });
 
-	if (error) {
-		throw new Error("お供え物の取得に失敗しました");
-	}
+		if (error) throw error;
 
-	// データをキャメルケースに変換
-	// 注: `snakeToCamel` の戻り値型は join 後のネストした型変換まで追跡できないため、
-	// `OfferingWithKoudenEntries` へ二段キャストで合わせる。実体はライブラリ側で
-	// snake_case→camelCase に再構築済み。
-	const convertedData =
-		data?.map((item) => {
-			const converted = snakeToCamel(item as Record<string, unknown>);
-			return converted as unknown as OfferingWithKoudenEntries;
-		}) || [];
+		// データをキャメルケースに変換
+		// 注: `snakeToCamel` の戻り値型は join 後のネストした型変換まで追跡できないため、
+		// `OfferingWithKoudenEntries` へ二段キャストで合わせる。実体はライブラリ側で
+		// snake_case→camelCase に再構築済み。
+		const convertedData =
+			data?.map((item) => {
+				const converted = snakeToCamel(item as Record<string, unknown>);
+				return converted as unknown as OfferingWithKoudenEntries;
+			}) || [];
 
-	return convertedData;
+		return convertedData;
+	}, "お供え物の取得");
 }
 
 // 写真関連の機能
 export async function addOfferingPhoto(
 	input: Omit<CreateOfferingPhotoInput, "created_by"> & { photos?: File[] },
-) {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+): Promise<ActionResult<OfferingPhotoRow[]>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 
-	if (!user) {
-		throw new Error("認証が必要です");
-	}
+		if (!user) {
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
+		}
 
-	const { data: offering } = await supabase
-		.from("offerings")
-		.select("kouden_id")
-		.eq("id", input.offering_id)
-		.single();
+		const { data: offering } = await supabase
+			.from("offerings")
+			.select("kouden_id")
+			.eq("id", input.offering_id)
+			.single();
 
-	if (!offering) {
-		throw new Error("お供え物が見つかりません");
-	}
+		if (!offering) {
+			throw new KoudenError("お供え物が見つかりません", ErrorCodes.NOT_FOUND);
+		}
 
-	const uploadedPhotos = await Promise.all(
-		input.photos?.map(async (photo) => {
-			const { data, error } = await supabase.storage
-				.from("offerings")
-				.upload(`${user.id}/${Date.now()}-${photo.name}`, photo, {
-					cacheControl: "3600",
-					upsert: false,
-				});
+		const uploadedPhotos = await Promise.all(
+			input.photos?.map(async (photo) => {
+				const { data, error } = await supabase.storage
+					.from("offerings")
+					.upload(`${user.id}/${Date.now()}-${photo.name}`, photo, {
+						cacheControl: "3600",
+						upsert: false,
+					});
 
-			if (error) {
-				throw new Error("写真の登録に失敗しました");
-			}
+				if (error) {
+					throw new KoudenError("写真の登録に失敗しました", ErrorCodes.DB_INSERT_ERROR);
+				}
 
-			return { storage_key: data.path, caption: input.caption ?? "" };
-		}) || [],
-	);
+				return { storage_key: data.path, caption: input.caption ?? "" };
+			}) || [],
+		);
 
-	// データベースに登録
-	const { data, error } = await supabase
-		.from("offering_photos")
-		.insert(
-			uploadedPhotos.map((photo) => ({
-				offering_id: input.offering_id,
-				storage_key: photo.storage_key,
-				caption: photo.caption,
-				created_by: user.id,
-			})),
-		)
-		.select();
+		// データベースに登録
+		const { data, error } = await supabase
+			.from("offering_photos")
+			.insert(
+				uploadedPhotos.map((photo) => ({
+					offering_id: input.offering_id,
+					storage_key: photo.storage_key,
+					caption: photo.caption,
+					created_by: user.id,
+				})),
+			)
+			.select();
 
-	if (error) {
-		throw new Error("写真の登録に失敗しました");
-	}
+		if (error) throw error;
 
-	revalidateOfferingsCaches(offering.kouden_id);
-	return data;
+		revalidateOfferingsCaches(offering.kouden_id);
+		return data ?? [];
+	}, "写真の登録");
 }
 
-export async function updateOfferingPhoto(id: string, input: UpdateOfferingPhotoInput) {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+export async function updateOfferingPhoto(
+	id: string,
+	input: UpdateOfferingPhotoInput,
+): Promise<ActionResult<OfferingPhotoRow>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 
-	if (!user) {
-		throw new Error("認証が必要です");
-	}
+		if (!user) {
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
+		}
 
-	const { data, error } = await supabase
-		.from("offering_photos")
-		.update(input)
-		.eq("id", id)
-		.select()
-		.single();
+		const { data, error } = await supabase
+			.from("offering_photos")
+			.update(input)
+			.eq("id", id)
+			.select()
+			.single();
 
-	if (error) {
-		throw new Error("写真の更新に失敗しました");
-	}
-
-	return data;
+		if (error) throw error;
+		return data;
+	}, "写真の更新");
 }
 
-export async function deleteOfferingPhoto(id: string) {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+export async function deleteOfferingPhoto(id: string): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 
-	if (!user) {
-		throw new Error("認証が必要です");
-	}
+		if (!user) {
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
+		}
 
-	const { error } = await supabase.from("offering_photos").delete().eq("id", id);
+		const { error } = await supabase.from("offering_photos").delete().eq("id", id);
 
-	if (error) {
-		throw new Error("写真の削除に失敗しました");
-	}
+		if (error) throw error;
+		return null;
+	}, "写真の削除");
 }
 
 // お供物の特定のフィールドを更新する
@@ -450,35 +379,26 @@ export async function updateOfferingField(
 	id: string,
 	field: keyof Omit<Offering, "offering_entries">,
 	value: string | number | boolean | null,
-) {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+): Promise<ActionResult<OfferingRow>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 
-	if (!user) {
-		throw new Error("認証が必要です");
-	}
+		if (!user) {
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
+		}
 
-	const { data, error } = await supabase
-		.from("offerings")
-		.update({ [field]: value })
-		.eq("id", id)
-		.select()
-		.single();
+		const { data, error } = await supabase
+			.from("offerings")
+			.update({ [field]: value })
+			.eq("id", id)
+			.select()
+			.single();
 
-	if (error) {
-		logger.error(
-			{
-				error: error.message,
-				code: error.code,
-				id,
-				field,
-			},
-			"[updateOfferingField] Update failed",
-		);
-		throw new Error(`お供え物の更新に失敗しました: ${error.message}`);
-	}
+		if (error) throw error;
 
-	return data;
+		return data;
+	}, "お供え物の更新");
 }

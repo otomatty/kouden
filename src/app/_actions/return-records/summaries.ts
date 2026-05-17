@@ -10,6 +10,7 @@
 "use server";
 
 import { calculateEntryTotalAmountBulk } from "@/app/_actions/offerings/queries";
+import { type ActionResult, KoudenError, withActionResult } from "@/lib/errors";
 import type { Entry } from "@/types/entries";
 import type { Relationship } from "@/types/relationships";
 import type {
@@ -23,27 +24,27 @@ export async function convertToReturnManagementSummaries(
 	entries: Entry[],
 	relationships: Relationship[],
 	koudenId: string,
-): Promise<ReturnManagementSummary[]> {
-	const entryIds = Array.from(
-		new Set(
-			returnRecords
-				.map((r) => r.kouden_entry_id)
-				.filter((id): id is string => typeof id === "string" && id.length > 0),
-		),
-	);
+): Promise<ActionResult<ReturnManagementSummary[]>> {
+	return withActionResult(async () => {
+		const entryIds = Array.from(
+			new Set(
+				returnRecords
+					.map((r) => r.kouden_entry_id)
+					.filter((id): id is string => typeof id === "string" && id.length > 0),
+			),
+		);
 
-	const bulk = await calculateEntryTotalAmountBulk(entryIds);
-	if (!(bulk.success && bulk.data)) {
-		// 失敗時は0埋めではなく明示的に例外を投げる（誤った返礼サマリー表示を防ぐ）。
-		// 技術詳細はサーバーログにのみ残し、UI には汎用メッセージを返す。
-		console.error("[convertToReturnManagementSummaries] bulk fetch failed:", bulk.error);
-		throw new Error("返礼情報の取得に失敗しました");
-	}
-	const amountsMap = bulk.data;
+		const bulk = await calculateEntryTotalAmountBulk(entryIds);
+		if (!bulk.ok) {
+			// 失敗時は明示的に例外を投げる（誤った返礼サマリー表示を防ぐ）。
+			throw new KoudenError(bulk.error.message, bulk.error.code);
+		}
+		const amountsMap = bulk.data;
 
-	return returnRecords
-		.map((record) =>
-			convertToReturnManagementSummary(record, entries, relationships, koudenId, amountsMap),
-		)
-		.filter((summary): summary is ReturnManagementSummary => summary !== null);
+		return returnRecords
+			.map((record) =>
+				convertToReturnManagementSummary(record, entries, relationships, koudenId, amountsMap),
+			)
+			.filter((summary): summary is ReturnManagementSummary => summary !== null);
+	}, "返礼サマリーの構築");
 }

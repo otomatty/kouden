@@ -1,35 +1,55 @@
 "use server";
 
-import { createShareInvitation } from "./invitations";
+import { type ActionResult, KoudenError, withActionResult } from "@/lib/errors";
 import { sendInvitationEmail } from "./email";
+import { createShareInvitation } from "./invitations";
 
 /**
  * Sends batch invitations by email. Up to 5 addresses.
  * Expects FormData fields: koudenId, role, emails (multiple), optional maxUses, expiresIn.
  */
-export async function sendBatchInvitationEmails(formData: FormData) {
-	const koudenId = formData.get("koudenId") as string;
-	const roleId = formData.get("role") as string;
-	const maxUsesRaw = formData.get("maxUses");
-	const maxUses = maxUsesRaw ? Number(maxUsesRaw) : null;
-	const expiresIn = (formData.get("expiresIn") as string) || "7d";
+export async function sendBatchInvitationEmails(formData: FormData): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
+		const koudenId = formData.get("koudenId") as string;
+		const roleId = formData.get("role") as string;
+		const maxUsesRaw = formData.get("maxUses");
+		const maxUses = maxUsesRaw ? Number(maxUsesRaw) : null;
+		const expiresIn = (formData.get("expiresIn") as string) || "7d";
 
-	const emails = formData.getAll("emails").map((e) => e as string);
-	const sanitizedEmails = emails.filter((email) => email).slice(0, 5);
+		const emails = formData.getAll("emails").map((e) => e as string);
+		const sanitizedEmails = emails.filter((email) => email).slice(0, 5);
 
-	for (const email of sanitizedEmails) {
-		// Create invitation record
-		const invitation = await createShareInvitation({
-			koudenId,
-			roleId,
-			maxUses,
-			expiresIn,
-		});
-		// Construct link using environment URL or fallback
-		const origin =
-			process.env.NEXT_PUBLIC_APP_URL ?? `http://localhost:${process.env.PORT ?? 3000}`;
-		const link = `${origin}/invitations/${invitation.invitation_token}`;
-		// Send email
-		await sendInvitationEmail(email, link, invitation.kouden_data?.title ?? "");
-	}
+		for (const email of sanitizedEmails) {
+			// Create invitation record
+			const invitationResult = await createShareInvitation({
+				koudenId,
+				roleId,
+				maxUses,
+				expiresIn,
+			});
+			if (!invitationResult.ok) {
+				throw new KoudenError(invitationResult.error.message, invitationResult.error.code, {
+					status: invitationResult.error.status,
+				});
+			}
+			const invitation = invitationResult.data;
+			// Construct link using environment URL or fallback
+			const origin =
+				process.env.NEXT_PUBLIC_APP_URL ?? `http://localhost:${process.env.PORT ?? 3000}`;
+			const link = `${origin}/invitations/${invitation.invitation_token}`;
+			// Send email
+			const emailResult = await sendInvitationEmail(
+				email,
+				link,
+				invitation.kouden_data?.title ?? "",
+			);
+			if (!emailResult.ok) {
+				throw new KoudenError(emailResult.error.message, emailResult.error.code, {
+					status: emailResult.error.status,
+				});
+			}
+		}
+
+		return null;
+	}, "招待メールの一括送信");
 }

@@ -5,31 +5,28 @@
  * @module return-method-types
  */
 
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
 import type {
-	ReturnMethodType,
 	CreateReturnMethodTypeInput,
+	ReturnMethodType,
 	UpdateReturnMethodTypeInput,
 } from "@/types/return-records/return-method-types";
-import logger from "@/lib/logger";
+import { revalidatePath } from "next/cache";
 
 /**
  * 返礼方法種別を作成する
- * @param {CreateReturnMethodTypeInput} input - 作成する返礼方法種別
- * @returns {Promise<ReturnMethodType>} 作成された返礼方法種別
- * @throws {Error} 認証エラーまたは作成失敗時のエラー
  */
 export async function createReturnMethodType(
 	input: CreateReturnMethodTypeInput,
-): Promise<ReturnMethodType> {
-	try {
+): Promise<ActionResult<ReturnMethodType>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 		const {
 			data: { user },
 		} = await supabase.auth.getUser();
 		if (!user) {
-			throw new Error("認証されていません");
+			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 		}
 
 		const { data, error } = await supabase
@@ -43,31 +40,20 @@ export async function createReturnMethodType(
 		}
 
 		if (!data) {
-			throw new Error("返礼方法種別の作成に失敗しました");
+			throw new KoudenError("返礼方法種別の作成に失敗しました", ErrorCodes.DB_INSERT_ERROR);
 		}
 
 		revalidatePath("/settings/return-method-types");
 
 		return data as ReturnMethodType;
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				input,
-			},
-			"返礼方法種別の作成エラー",
-		);
-		throw error;
-	}
+	}, "返礼方法種別の作成");
 }
 
 /**
  * 返礼方法種別一覧を取得する
- * @returns {Promise<ReturnMethodType[]>} 返礼方法種別一覧
- * @throws {Error} 取得失敗時のエラー
  */
-export async function getReturnMethodTypes(): Promise<ReturnMethodType[]> {
-	try {
+export async function getReturnMethodTypes(): Promise<ActionResult<ReturnMethodType[]>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 		const { data, error } = await supabase
 			.from("return_method_types")
@@ -79,25 +65,16 @@ export async function getReturnMethodTypes(): Promise<ReturnMethodType[]> {
 		}
 
 		return data as ReturnMethodType[];
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-			},
-			"返礼方法種別一覧の取得エラー",
-		);
-		throw error;
-	}
+	}, "返礼方法種別一覧の取得");
 }
 
 /**
  * 返礼方法種別を取得する
- * @param {string} id - 返礼方法種別ID
- * @returns {Promise<ReturnMethodType | null>} 返礼方法種別
- * @throws {Error} 取得失敗時のエラー
  */
-export async function getReturnMethodType(id: string): Promise<ReturnMethodType | null> {
-	try {
+export async function getReturnMethodType(
+	id: string,
+): Promise<ActionResult<ReturnMethodType | null>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 		const { data, error } = await supabase
 			.from("return_method_types")
@@ -110,28 +87,16 @@ export async function getReturnMethodType(id: string): Promise<ReturnMethodType 
 		}
 
 		return data as ReturnMethodType | null;
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				id,
-			},
-			"返礼方法種別の取得エラー",
-		);
-		throw error;
-	}
+	}, "返礼方法種別の取得");
 }
 
 /**
  * 返礼方法種別を更新する
- * @param {UpdateReturnMethodTypeInput} input - 更新する返礼方法種別
- * @returns {Promise<ReturnMethodType>} 更新された返礼方法種別
- * @throws {Error} 認証エラーまたは更新失敗時のエラー
  */
 export async function updateReturnMethodType(
 	input: UpdateReturnMethodTypeInput,
-): Promise<ReturnMethodType> {
-	try {
+): Promise<ActionResult<ReturnMethodType>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 		const { id, ...updateData } = input;
 		const { data, error } = await supabase
@@ -146,32 +111,20 @@ export async function updateReturnMethodType(
 		}
 
 		if (!data) {
-			throw new Error("返礼方法種別の更新に失敗しました");
+			throw new KoudenError("返礼方法種別の更新に失敗しました", ErrorCodes.DB_UPDATE_ERROR);
 		}
 
 		revalidatePath("/settings/return-method-types");
 
 		return data as ReturnMethodType;
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				id: input.id,
-			},
-			"返礼方法種別の更新エラー",
-		);
-		throw error;
-	}
+	}, "返礼方法種別の更新");
 }
 
 /**
  * 返礼方法種別を削除する
- * @param {string} id - 返礼方法種別ID
- * @returns {Promise<void>}
- * @throws {Error} 認証エラーまたは削除失敗時のエラー
  */
-export async function deleteReturnMethodType(id: string): Promise<void> {
-	try {
+export async function deleteReturnMethodType(id: string): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 		const { error } = await supabase.from("return_method_types").delete().eq("id", id);
 
@@ -180,14 +133,6 @@ export async function deleteReturnMethodType(id: string): Promise<void> {
 		}
 
 		revalidatePath("/settings/return-method-types");
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				id,
-			},
-			"返礼方法種別の削除エラー",
-		);
-		throw error;
-	}
+		return null;
+	}, "返礼方法種別の削除");
 }

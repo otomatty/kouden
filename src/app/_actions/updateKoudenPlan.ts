@@ -1,7 +1,7 @@
 "use server";
 
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
-import type { Database } from "@/types/supabase";
 
 /**
  * プランアップグレード後の処理
@@ -14,8 +14,8 @@ export async function updateKoudenPlan({
 	koudenId: string;
 	newPlanCode: string;
 	currentPlanCode?: string;
-}): Promise<{ error?: string }> {
-	try {
+}): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 		// 認証ユーザー取得
 		const {
@@ -23,7 +23,7 @@ export async function updateKoudenPlan({
 			error: authError,
 		} = await supabase.auth.getUser();
 		if (authError || !user) {
-			return { error: "認証が必要です" };
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
 		}
 		// 新プラン取得
 		const { data: newPlan, error: newPlanError } = await supabase
@@ -32,7 +32,7 @@ export async function updateKoudenPlan({
 			.eq("code", newPlanCode)
 			.single();
 		if (newPlanError || !newPlan) {
-			return { error: "新プランが見つかりません" };
+			throw new KoudenError("新プランが見つかりません", ErrorCodes.NOT_FOUND);
 		}
 		// 現行プラン価格取得
 		let currentPrice = 0;
@@ -50,9 +50,7 @@ export async function updateKoudenPlan({
 			.from("koudens")
 			.update({ plan_id: newPlan.id })
 			.eq("id", koudenId);
-		if (koudenError) {
-			throw koudenError;
-		}
+		if (koudenError) throw koudenError;
 		// 購入履歴挿入
 		const { error: purchaseError } = await supabase.from("kouden_purchases").insert({
 			kouden_id: koudenId,
@@ -60,12 +58,7 @@ export async function updateKoudenPlan({
 			plan_id: newPlan.id,
 			amount_paid: amount,
 		});
-		if (purchaseError) {
-			throw purchaseError;
-		}
-		return {};
-	} catch (error) {
-		console.error("[ERROR] Error updating plan:", error);
-		return { error: "プラン変更に失敗しました" };
-	}
+		if (purchaseError) throw purchaseError;
+		return null;
+	}, "プラン変更");
 }

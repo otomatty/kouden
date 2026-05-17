@@ -5,23 +5,20 @@
  * @module bulk-update-optimized
  */
 
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
 import type { AmountGroupData, BulkUpdateResult } from "@/types/return-records/bulk-update";
-import logger from "@/lib/logger";
+import { revalidatePath } from "next/cache";
 
 /**
  * PostgreSQL最適化版：超高速一括更新
  * 単一のSQLクエリで全ての更新を実行
- * @param koudenId - 香典帳ID
- * @param amountGroups - 金額グループデータ配列
- * @returns 更新結果
  */
 export async function executeBulkUpdateOptimized(
 	koudenId: string,
 	amountGroups: AmountGroupData[],
-): Promise<BulkUpdateResult> {
-	try {
+): Promise<ActionResult<BulkUpdateResult>> {
+	return withActionResult(async () => {
 		if (!amountGroups || amountGroups.length === 0) {
 			return { successCount: 0, failureCount: 0 };
 		}
@@ -34,7 +31,7 @@ export async function executeBulkUpdateOptimized(
 		} = await supabase.auth.getUser();
 
 		if (!user) {
-			throw new Error("認証されていません");
+			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 		}
 
 		// 全体の処理数を計算
@@ -53,7 +50,7 @@ export async function executeBulkUpdateOptimized(
 				.in("id", allReturnItemIds);
 
 			if (returnItemsError) {
-				throw new Error(`返礼品情報の取得に失敗: ${returnItemsError.message}`);
+				throw returnItemsError;
 			}
 
 			returnItemsMap = new Map(returnItems?.map((item) => [item.id, item]) || []);
@@ -68,7 +65,7 @@ export async function executeBulkUpdateOptimized(
 			.in("kouden_entry_id", allEntryIds);
 
 		if (selectError) {
-			throw new Error(`既存記録の取得に失敗: ${selectError.message}`);
+			throw selectError;
 		}
 
 		const existingRecordsMap = new Map(
@@ -85,7 +82,10 @@ export async function executeBulkUpdateOptimized(
 			const returnItemsWithDetails = group.selectedReturnItemIds.map((itemId) => {
 				const item = returnItemsMap.get(itemId);
 				if (!item) {
-					throw new Error(`返礼品ID ${itemId} の情報が見つかりません`);
+					throw new KoudenError(
+						`返礼品ID ${itemId} の情報が見つかりません`,
+						ErrorCodes.NOT_FOUND,
+					);
 				}
 				return {
 					id: itemId,
@@ -137,7 +137,7 @@ export async function executeBulkUpdateOptimized(
 					.eq("id", id);
 
 				if (error) {
-					throw new Error(`レコード更新に失敗 (ID: ${id}): ${error.message}`);
+					throw error;
 				}
 				successCount++;
 			}
@@ -151,7 +151,7 @@ export async function executeBulkUpdateOptimized(
 				.select("id");
 
 			if (insertError) {
-				throw new Error(`新規レコード作成に失敗: ${insertError.message}`);
+				throw insertError;
 			}
 			successCount += insertResults?.length || 0;
 		}
@@ -166,16 +166,5 @@ export async function executeBulkUpdateOptimized(
 			successCount,
 			failureCount: allEntryIds.length - successCount,
 		};
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				koudenId,
-				amountGroupsCount: amountGroups.length,
-			},
-			"PostgreSQL最適化版一括更新エラー",
-		);
-		const errorMessage = error instanceof Error ? error.message : "不明なエラー";
-		throw new Error(`最適化一括更新に失敗: ${errorMessage}`);
-	}
+	}, "PostgreSQL最適化版一括更新");
 }

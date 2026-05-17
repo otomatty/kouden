@@ -1,9 +1,13 @@
 "use server";
 
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
+import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/types/supabase";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import logger from "@/lib/logger";
+
+type HearingApplication = Database["public"]["Tables"]["campaign_hearing_applications"]["Row"];
 
 /**
  * ヒアリング申し込みフォームのバリデーションスキーマ
@@ -24,8 +28,10 @@ const hearingApplicationSchema = z.object({
 /**
  * ヒアリング申し込みを登録する
  */
-export async function submitHearingApplication(formData: FormData) {
-	try {
+export async function submitHearingApplication(
+	formData: FormData,
+): Promise<ActionResult<{ applicationId: string; message: string }>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		// ユーザー認証チェック
@@ -35,7 +41,7 @@ export async function submitHearingApplication(formData: FormData) {
 		} = await supabase.auth.getUser();
 
 		if (authError || !user) {
-			throw new Error("認証が必要です");
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
 		}
 
 		// フォームデータの取得と検証
@@ -60,7 +66,7 @@ export async function submitHearingApplication(formData: FormData) {
 			.maybeSingle();
 
 		if (existing) {
-			throw new Error("既に申し込み済みです");
+			throw new KoudenError("既に申し込み済みです", ErrorCodes.ALREADY_EXISTS);
 		}
 
 		// フォームデータにタイムスタンプを追加
@@ -81,17 +87,7 @@ export async function submitHearingApplication(formData: FormData) {
 			.select()
 			.single();
 
-		if (insertError) {
-			logger.error(
-				{
-					error: insertError.message,
-					code: insertError.code,
-					userId: user.id,
-				},
-				"Database insert error",
-			);
-			throw new Error("申し込み保存に失敗しました");
-		}
+		if (insertError) throw insertError;
 
 		// Googleカレンダー予約処理（既存の処理を流用）
 		if (validatedData.selectedSlot) {
@@ -107,7 +103,10 @@ export async function submitHearingApplication(formData: FormData) {
 				reservationData.append("startDateTime", validatedData.selectedSlot.start);
 				reservationData.append("endDateTime", validatedData.selectedSlot.end);
 
-				await reserveSlot(reservationData);
+				const reservationResult = await reserveSlot(reservationData);
+				if (!reservationResult.ok) {
+					throw new Error(reservationResult.error.message);
+				}
 
 				// Google Event IDを保存（カレンダー予約が成功した場合）
 				await supabase
@@ -131,38 +130,17 @@ export async function submitHearingApplication(formData: FormData) {
 		}
 
 		return {
-			success: true,
 			applicationId: application.id,
 			message: "ヒアリング申し込みが完了しました",
 		};
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-			},
-			"ヒアリング申し込みエラー",
-		);
-
-		if (error instanceof z.ZodError) {
-			return {
-				success: false,
-				error: "入力データが不正です",
-				details: error.errors,
-			};
-		}
-
-		return {
-			success: false,
-			error: error instanceof Error ? error.message : "申し込み処理に失敗しました",
-		};
-	}
+	}, "ヒアリング申し込みの登録");
 }
 
 /**
  * ユーザーのヒアリング申し込み履歴を取得
  */
-export async function getUserHearingApplications() {
-	try {
+export async function getUserHearingApplications(): Promise<ActionResult<HearingApplication[]>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		const {
@@ -171,7 +149,7 @@ export async function getUserHearingApplications() {
 		} = await supabase.auth.getUser();
 
 		if (authError || !user) {
-			throw new Error("認証が必要です");
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
 		}
 
 		const { data, error } = await supabase
@@ -180,41 +158,17 @@ export async function getUserHearingApplications() {
 			.eq("user_id", user.id)
 			.order("created_at", { ascending: false });
 
-		if (error) {
-			logger.error(
-				{
-					error: error.message,
-					code: error.code,
-					userId: user.id,
-				},
-				"申し込み履歴取得エラー",
-			);
-			throw new Error("申し込み履歴の取得に失敗しました");
-		}
+		if (error) throw error;
 
-		return {
-			success: true,
-			applications: data,
-		};
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-			},
-			"申し込み履歴取得エラー",
-		);
-		return {
-			success: false,
-			error: error instanceof Error ? error.message : "申し込み履歴の取得に失敗しました",
-		};
-	}
+		return data ?? [];
+	}, "申し込み履歴の取得");
 }
 
 /**
  * 管理者用：全てのヒアリング申し込みを取得
  */
-export async function getAllHearingApplications() {
-	try {
+export async function getAllHearingApplications(): Promise<ActionResult<HearingApplication[]>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		// 管理者権限チェック
@@ -224,7 +178,7 @@ export async function getAllHearingApplications() {
 		} = await supabase.auth.getUser();
 
 		if (authError || !user) {
-			throw new Error("認証が必要です");
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
 		}
 
 		const { data: adminUser } = await supabase
@@ -234,7 +188,7 @@ export async function getAllHearingApplications() {
 			.single();
 
 		if (!adminUser) {
-			throw new Error("管理者権限が必要です");
+			throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
 		}
 
 		const { data, error } = await supabase
@@ -242,34 +196,10 @@ export async function getAllHearingApplications() {
 			.select("*")
 			.order("created_at", { ascending: false });
 
-		if (error) {
-			logger.error(
-				{
-					error: error.message,
-					code: error.code,
-					userId: user.id,
-				},
-				"申し込み一覧取得エラー",
-			);
-			throw new Error("申し込み一覧の取得に失敗しました");
-		}
+		if (error) throw error;
 
-		return {
-			success: true,
-			applications: data,
-		};
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-			},
-			"申し込み一覧取得エラー",
-		);
-		return {
-			success: false,
-			error: error instanceof Error ? error.message : "申し込み一覧の取得に失敗しました",
-		};
-	}
+		return data ?? [];
+	}, "申し込み一覧の取得");
 }
 
 /**
@@ -278,8 +208,8 @@ export async function getAllHearingApplications() {
 export async function updateHearingApplicationStatus(
 	applicationId: string,
 	status: "submitted" | "confirmed" | "completed" | "cancelled",
-) {
-	try {
+): Promise<ActionResult<HearingApplication>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		const {
@@ -288,7 +218,7 @@ export async function updateHearingApplicationStatus(
 		} = await supabase.auth.getUser();
 
 		if (authError || !user) {
-			throw new Error("認証が必要です");
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
 		}
 
 		// 管理者権限チェック
@@ -299,7 +229,7 @@ export async function updateHearingApplicationStatus(
 			.single();
 
 		if (!adminUser) {
-			throw new Error("管理者権限が必要です");
+			throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
 		}
 
 		const { data, error } = await supabase
@@ -309,38 +239,10 @@ export async function updateHearingApplicationStatus(
 			.select()
 			.single();
 
-		if (error) {
-			logger.error(
-				{
-					error: error.message,
-					code: error.code,
-					applicationId,
-					status,
-					userId: user.id,
-				},
-				"ステータス更新エラー",
-			);
-			throw new Error("ステータスの更新に失敗しました");
-		}
+		if (error) throw error;
 
 		revalidatePath("/admin");
 
-		return {
-			success: true,
-			application: data,
-		};
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				applicationId,
-				status,
-			},
-			"ステータス更新エラー",
-		);
-		return {
-			success: false,
-			error: error instanceof Error ? error.message : "ステータスの更新に失敗しました",
-		};
-	}
+		return data;
+	}, "ステータスの更新");
 }

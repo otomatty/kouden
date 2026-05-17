@@ -5,21 +5,13 @@
  * @module return-records/pagination
  */
 
-import logger from "@/lib/logger";
+import { type ActionResult, withActionResult } from "@/lib/errors";
 import { buildOrIlikePattern } from "@/lib/security/search-sanitize";
 import { createClient } from "@/lib/supabase/server";
 import type { ReturnEntryRecordWithKoudenEntry } from "@/types/return-records/return-records";
 
 /**
  * 香典帳IDに紐づく返礼情報をページング付きで取得する（無限スクロール用）
- * @param {string} koudenId - 香典帳ID
- * @param {number} limit - 取得件数（デフォルト100件）
- * @param {string} [cursor] - カーソル（最後のレコードのID）
- * @param {Object} filters - フィルター条件
- * @param {string} [filters.search] - 検索キーワード
- * @param {string} [filters.status] - ステータスフィルター
- * @returns {Promise<{ data: ReturnEntryRecord[], hasMore: boolean, nextCursor?: string }>} ページング付き返礼情報
- * @throws {Error} 取得失敗時のエラー
  */
 export async function getReturnEntriesByKoudenPaginated(
 	koudenId: string,
@@ -29,8 +21,14 @@ export async function getReturnEntriesByKoudenPaginated(
 		search?: string;
 		status?: string;
 	},
-): Promise<{ data: ReturnEntryRecordWithKoudenEntry[]; hasMore: boolean; nextCursor?: string }> {
-	try {
+): Promise<
+	ActionResult<{
+		data: ReturnEntryRecordWithKoudenEntry[];
+		hasMore: boolean;
+		nextCursor?: string;
+	}>
+> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		// kouden_entries を INNER JOIN し、香典帳IDで絞り込む。
@@ -87,17 +85,5 @@ export async function getReturnEntriesByKoudenPaginated(
 			hasMore,
 			nextCursor,
 		};
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				koudenId,
-				limit,
-				cursor,
-				filters,
-			},
-			"返礼情報一覧の取得エラー（ページング）",
-		);
-		throw error;
-	}
+	}, "返礼情報一覧の取得（ページング）");
 }

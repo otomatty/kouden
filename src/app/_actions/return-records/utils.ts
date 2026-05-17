@@ -5,12 +5,17 @@
  * @module return-records/utils
  */
 
+import { ErrorCodes, KoudenError } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
 
 /**
  * ユーザー認証を確認し、認証済みのSupabaseクライアントとユーザー情報を返す
- * @returns {Promise<{ supabase: SupabaseClient, user: User }>} 認証済みのクライアントとユーザー情報
- * @throws {Error} 認証エラー
+ *
+ * 内部ヘルパー: `withActionResult` でラップされた Server Action 内から呼び出される想定。
+ * 失敗時は `KoudenError` を throw し、外側の `withActionResult` が `ActionResult` に変換する。
+ *
+ * @returns 認証済みのクライアントとユーザー情報
+ * @throws {KoudenError} 認証エラー
  */
 export async function getAuthenticatedClient() {
 	const supabase = await createClient();
@@ -20,7 +25,7 @@ export async function getAuthenticatedClient() {
 	} = await supabase.auth.getUser();
 
 	if (!user) {
-		throw new Error("認証されていません");
+		throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 	}
 
 	return { supabase, user };
@@ -28,9 +33,13 @@ export async function getAuthenticatedClient() {
 
 /**
  * 香典エントリーIDから香典帳IDを取得する
+ *
+ * 内部ヘルパー: `withActionResult` でラップされた Server Action 内から呼び出される想定。
+ * 失敗時は raw Supabase エラー、または `KoudenError` を throw する。
+ *
  * @param {string} koudenEntryId - 香典エントリーID
  * @returns {Promise<string>} 香典帳ID
- * @throws {Error} 取得失敗時のエラー
+ * @throws Supabase エラーまたは `KoudenError`
  */
 export async function getKoudenIdFromEntry(koudenEntryId: string): Promise<string> {
 	const { supabase } = await getAuthenticatedClient();
@@ -46,7 +55,7 @@ export async function getKoudenIdFromEntry(koudenEntryId: string): Promise<strin
 	}
 
 	if (!data) {
-		throw new Error("香典エントリーが見つかりません");
+		throw new KoudenError("香典エントリーが見つかりません", ErrorCodes.NOT_FOUND);
 	}
 
 	return data.kouden_id;

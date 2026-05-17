@@ -1,7 +1,7 @@
 "use server";
 
 import { cacheTags } from "@/lib/cache-tags";
-import logger from "@/lib/logger";
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import { buildOrIlikePattern, parseEntrySortValue } from "@/lib/security/search-sanitize";
 import { createClient } from "@/lib/supabase/server";
 import type { CellValue } from "@/types/data-table/table";
@@ -12,6 +12,7 @@ import type {
 	EntryResponse,
 	UpdateEntryInput,
 } from "@/types/entries";
+import type { Database } from "@/types/supabase";
 import { revalidatePath, revalidateTag } from "next/cache";
 
 /**
@@ -28,17 +29,17 @@ function revalidateEntriesCaches(koudenId: string) {
 	revalidateTag(cacheTags.returnRecords(koudenId));
 }
 
-export async function createEntry(input: CreateEntryInput): Promise<EntryResponse> {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+export async function createEntry(input: CreateEntryInput): Promise<ActionResult<EntryResponse>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 
-	if (!user) {
-		throw new Error("認証が必要です");
-	}
+		if (!user) {
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
+		}
 
-	try {
 		// トランザクションを開始して香典エントリと返礼情報を同時に作成
 		const { data, error } = await supabase.rpc("create_entry_with_return_record", {
 			p_kouden_id: input.koudenId,
@@ -57,32 +58,20 @@ export async function createEntry(input: CreateEntryInput): Promise<EntryRespons
 		});
 
 		if (error) {
-			// デバッグ: エラーの詳細情報をログ
-			logger.error(
-				{
-					errorCode: error.code,
-					errorMessage: error.message,
-					errorDetails: error.details,
-					input,
-					userId: user.id,
-				},
-				"Create Entry with Return Record Failed",
-			);
-
 			// エラーメッセージの改善
 			if (error.code === "42501") {
-				throw new Error("香典帳へのアクセス権限がありません");
+				throw new KoudenError("香典帳へのアクセス権限がありません", ErrorCodes.FORBIDDEN);
 			}
-			throw new Error("香典情報の作成に失敗しました");
+			throw error;
 		}
 
 		if (!data || data.length === 0) {
-			throw new Error("香典情報の作成に失敗しました");
+			throw new KoudenError("香典情報の作成に失敗しました", ErrorCodes.DB_INSERT_ERROR);
 		}
 
 		const entryData = data[0];
 		if (!entryData) {
-			throw new Error("香典情報の作成に失敗しました");
+			throw new KoudenError("香典情報の作成に失敗しました", ErrorCodes.DB_INSERT_ERROR);
 		}
 
 		revalidateEntriesCaches(input.koudenId);
@@ -95,17 +84,7 @@ export async function createEntry(input: CreateEntryInput): Promise<EntryRespons
 		};
 
 		return response;
-	} catch (error) {
-		logger.error(
-			{
-				input,
-				errorMessage: error instanceof Error ? error.message : "Unknown error",
-				userId: user.id,
-			},
-			"Unexpected error in createEntry",
-		);
-		throw error instanceof Error ? error : new Error("香典情報の作成に失敗しました");
-	}
+	}, "香典情報の作成");
 }
 
 /**
@@ -116,17 +95,17 @@ export async function createEntry(input: CreateEntryInput): Promise<EntryRespons
  */
 const ENTRIES_SELECTOR_MAX = 5000;
 
-export async function getEntriesForSelector(koudenId: string): Promise<Entry[]> {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+export async function getEntriesForSelector(koudenId: string): Promise<ActionResult<Entry[]>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 
-	if (!user) {
-		throw new Error("認証が必要です");
-	}
+		if (!user) {
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
+		}
 
-	try {
 		const { data, error } = await supabase
 			.from("kouden_entries")
 			.select("*")
@@ -134,36 +113,15 @@ export async function getEntriesForSelector(koudenId: string): Promise<Entry[]> 
 			.order("created_at", { ascending: false })
 			.limit(ENTRIES_SELECTOR_MAX);
 
-		if (error) {
-			logger.error(
-				{
-					message: error.message,
-					details: error.details,
-					hint: error.hint,
-					code: error.code,
-					koudenId,
-				},
-				"Failed to fetch entries for selector",
-			);
-			throw new Error("香典情報の取得に失敗しました");
-		}
+		if (error) throw error;
 
 		const rows = data ?? [];
 		return rows.map((entry) => ({
 			...entry,
 			attendanceType: entry.attendance_type as AttendanceType,
 			relationshipId: entry.relationship_id,
-		}));
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				koudenId,
-			},
-			"Unexpected error in getEntriesForSelector",
-		);
-		throw error;
-	}
+		})) as Entry[];
+	}, "香典情報の取得");
 }
 
 export async function getEntries(
@@ -176,17 +134,17 @@ export async function getEntries(
 	dateFrom?: string,
 	dateTo?: string,
 	showDuplicates?: boolean,
-): Promise<{ entries: Entry[]; count: number }> {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+): Promise<ActionResult<{ entries: Entry[]; count: number }>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 
-	if (!user) {
-		throw new Error("認証が必要です");
-	}
+		if (!user) {
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
+		}
 
-	try {
 		// エントリー情報の取得
 		const from = (page - 1) * pageSize;
 		const to = from + pageSize - 1;
@@ -231,19 +189,7 @@ export async function getEntries(
 		const { data: rawEntries, count, error: entriesError } = await query.range(from, to);
 		const entries = rawEntries ?? [];
 
-		if (entriesError) {
-			logger.error(
-				{
-					message: entriesError.message,
-					details: entriesError.details,
-					hint: entriesError.hint,
-					code: entriesError.code,
-					koudenId,
-				},
-				"Failed to fetch entries",
-			);
-			throw new Error("香典情報の取得に失敗しました");
-		}
+		if (entriesError) throw entriesError;
 
 		// 関係性情報の取得
 		const { data: relationships, error: relationshipsError } = await supabase
@@ -251,19 +197,7 @@ export async function getEntries(
 			.select("id, name, description")
 			.eq("kouden_id", koudenId);
 
-		if (relationshipsError) {
-			logger.error(
-				{
-					message: relationshipsError.message,
-					details: relationshipsError.details,
-					hint: relationshipsError.hint,
-					code: relationshipsError.code,
-					koudenId,
-				},
-				"Failed to fetch relationships",
-			);
-			throw new Error("関係性情報の取得に失敗しました");
-		}
+		if (relationshipsError) throw relationshipsError;
 
 		// 関係性情報をエントリーにマッピング
 		const entriesWithRelationships = entries.map((entry) => ({
@@ -277,16 +211,7 @@ export async function getEntries(
 		}));
 
 		return { entries: entriesWithRelationships as Entry[], count: count ?? 0 };
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				koudenId,
-			},
-			"Unexpected error in getEntries",
-		);
-		throw error;
-	}
+	}, "香典情報の取得");
 }
 
 /**
@@ -302,19 +227,19 @@ export async function getEntriesForAdmin(
 	dateFrom?: string,
 	dateTo?: string,
 	showDuplicates?: boolean,
-): Promise<{ entries: Entry[]; count: number }> {
-	// 管理者権限をチェック
-	const { isAdmin } = await import("@/app/_actions/admin/permissions");
-	const adminCheck = await isAdmin();
-	if (!adminCheck) {
-		throw new Error("管理者権限が必要です");
-	}
+): Promise<ActionResult<{ entries: Entry[]; count: number }>> {
+	return withActionResult(async () => {
+		// 管理者権限をチェック
+		const { isAdmin } = await import("@/app/_actions/admin/permissions");
+		const adminCheck = await isAdmin();
+		if (!adminCheck) {
+			throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
+		}
 
-	// 管理者用クライアント（RLSバイパス）を使用
-	const { createAdminClient } = await import("@/lib/supabase/admin");
-	const supabase = createAdminClient();
+		// 管理者用クライアント（RLSバイパス）を使用
+		const { createAdminClient } = await import("@/lib/supabase/admin");
+		const supabase = createAdminClient();
 
-	try {
 		// エントリー情報の取得
 		const from = (page - 1) * pageSize;
 		const to = from + pageSize - 1;
@@ -359,19 +284,7 @@ export async function getEntriesForAdmin(
 		const { data: rawEntries, count, error: entriesError } = await query.range(from, to);
 		const entries = rawEntries ?? [];
 
-		if (entriesError) {
-			logger.error(
-				{
-					message: entriesError.message,
-					details: entriesError.details,
-					hint: entriesError.hint,
-					code: entriesError.code,
-					koudenId,
-				},
-				"Failed to fetch entries for admin",
-			);
-			throw new Error("香典情報の取得に失敗しました");
-		}
+		if (entriesError) throw entriesError;
 
 		// 関係性情報の取得
 		const { data: relationships, error: relationshipsError } = await supabase
@@ -379,19 +292,7 @@ export async function getEntriesForAdmin(
 			.select("id, name, description")
 			.eq("kouden_id", koudenId);
 
-		if (relationshipsError) {
-			logger.error(
-				{
-					message: relationshipsError.message,
-					details: relationshipsError.details,
-					hint: relationshipsError.hint,
-					code: relationshipsError.code,
-					koudenId,
-				},
-				"Failed to fetch relationships for admin",
-			);
-			throw new Error("関係性情報の取得に失敗しました");
-		}
+		if (relationshipsError) throw relationshipsError;
 
 		// 関係性情報をエントリーにマッピング
 		const entriesWithRelationships = entries.map((entry) => ({
@@ -405,50 +306,46 @@ export async function getEntriesForAdmin(
 		}));
 
 		return { entries: entriesWithRelationships as Entry[], count: count ?? 0 };
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				koudenId,
-			},
-			"Unexpected error in getEntriesForAdmin",
-		);
-		throw error;
-	}
+	}, "香典情報の取得");
 }
 
-export async function getEntry(id: string) {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+export async function getEntry(
+	id: string,
+): Promise<ActionResult<Database["public"]["Tables"]["kouden_entries"]["Row"]>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 
-	if (!user) {
-		throw new Error("認証が必要です");
-	}
+		if (!user) {
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
+		}
 
-	const { data, error } = await supabase.from("kouden_entries").select("*").eq("id", id).single();
-	if (error) {
-		throw new Error("香典情報の取得に失敗しました");
-	}
+		const { data, error } = await supabase.from("kouden_entries").select("*").eq("id", id).single();
+		if (error) throw error;
 
-	return data;
+		return data;
+	}, "香典情報の取得");
 }
 
-export async function updateEntry(id: string, input: UpdateEntryInput): Promise<EntryResponse> {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+export async function updateEntry(
+	id: string,
+	input: UpdateEntryInput,
+): Promise<ActionResult<EntryResponse>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 
-	if (!user) {
-		throw new Error("認証が必要です");
-	}
+		if (!user) {
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
+		}
 
-	try {
 		// フロントエンドのキーをデータベースのカラム名に変換
 		const {
-			id: _id,
+			id: Id,
 			koudenId,
 			attendanceType,
 			hasOffering,
@@ -479,16 +376,9 @@ export async function updateEntry(id: string, input: UpdateEntryInput): Promise<
 			.select()
 			.single();
 
-		if (error || !updatedData) {
-			logger.error(
-				{
-					error: error?.message,
-					errorCode: error?.code,
-					id,
-				},
-				"Update failed",
-			);
-			throw new Error("香典情報の更新に失敗しました");
+		if (error) throw error;
+		if (!updatedData) {
+			throw new KoudenError("香典情報の更新に失敗しました", ErrorCodes.DB_UPDATE_ERROR);
 		}
 
 		revalidateEntriesCaches(updatedData.kouden_id);
@@ -498,55 +388,48 @@ export async function updateEntry(id: string, input: UpdateEntryInput): Promise<
 			attendanceType: updatedData.attendance_type as AttendanceType,
 			relationshipId: updatedData.relationship_id,
 		};
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				id,
-			},
-			"Failed to update entry",
-		);
-		throw new Error("香典情報の更新に失敗しました");
-	}
+	}, "香典情報の更新");
 }
 
-export async function deleteEntry(id: string, koudenId: string): Promise<void> {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+export async function deleteEntry(id: string, koudenId: string): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 
-	if (!user) {
-		throw new Error("認証が必要です");
-	}
+		if (!user) {
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
+		}
 
-	const { error } = await supabase.from("kouden_entries").delete().eq("id", id);
+		const { error } = await supabase.from("kouden_entries").delete().eq("id", id);
 
-	if (error) {
-		throw new Error("香典情報の削除に失敗しました");
-	}
+		if (error) throw error;
 
-	revalidateEntriesCaches(koudenId);
+		revalidateEntriesCaches(koudenId);
+		return null;
+	}, "香典情報の削除");
 }
 
 // 複数エントリーの一括削除機能
-export async function deleteEntries(ids: string[], koudenId: string): Promise<void> {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+export async function deleteEntries(ids: string[], koudenId: string): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 
-	if (!user) {
-		throw new Error("認証が必要です");
-	}
+		if (!user) {
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
+		}
 
-	const { error } = await supabase.from("kouden_entries").delete().in("id", ids);
+		const { error } = await supabase.from("kouden_entries").delete().in("id", ids);
 
-	if (error) {
-		throw new Error("香典情報の一括削除に失敗しました");
-	}
+		if (error) throw error;
 
-	revalidateEntriesCaches(koudenId);
+		revalidateEntriesCaches(koudenId);
+		return null;
+	}, "香典情報の一括削除");
 }
 
 // セル単位の更新用に最適化した関数
@@ -554,17 +437,17 @@ export async function updateEntryField(
 	id: string,
 	field: keyof EntryResponse,
 	value: CellValue,
-): Promise<EntryResponse> {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+): Promise<ActionResult<EntryResponse>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 
-	if (!user) {
-		throw new Error("認証が必要です");
-	}
+		if (!user) {
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
+		}
 
-	try {
 		// フロントエンドのキーをデータベースのカラム名に変換
 		const dbFieldMap: Record<string, string> = {
 			postalCode: "postal_code",
@@ -585,8 +468,9 @@ export async function updateEntryField(
 			.select()
 			.single();
 
-		if (error || !updatedData) {
-			throw new Error(`${field}の更新に失敗しました`);
+		if (error) throw error;
+		if (!updatedData) {
+			throw new KoudenError(`${field}の更新に失敗しました`, ErrorCodes.DB_UPDATE_ERROR);
 		}
 
 		revalidateEntriesCaches(updatedData.kouden_id);
@@ -596,15 +480,5 @@ export async function updateEntryField(
 			attendanceType: updatedData.attendance_type as AttendanceType,
 			relationshipId: updatedData.relationship_id,
 		};
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				id,
-				field,
-			},
-			"Failed to update entry",
-		);
-		throw new Error(`${field}の更新に失敗しました`);
-	}
+	}, "香典情報の更新");
 }

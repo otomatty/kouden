@@ -1,29 +1,25 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
-import logger from "@/lib/logger";
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 
 /**
  * アンケートデータをCSV形式でエクスポート
  * @returns CSV文字列
  */
-export async function exportSurveyDataToCsv() {
-	let user: { id: string } | null = null;
-	try {
+export async function exportSurveyDataToCsv(): Promise<
+	ActionResult<{ data: string; filename: string }>
+> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		// 認証確認
 		const {
-			data: { user: authUser },
+			data: { user },
 			error: authError,
 		} = await supabase.auth.getUser();
-		user = authUser;
 		if (authError || !user) {
-			return {
-				success: false,
-				error: "認証が必要です",
-			};
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
 		}
 
 		// 管理者権限チェック
@@ -34,50 +30,33 @@ export async function exportSurveyDataToCsv() {
 			.single();
 
 		if (adminError || !adminUser || !["super_admin", "admin"].includes(adminUser.role)) {
-			return {
-				success: false,
-				error: "管理者権限が必要です",
-			};
+			throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
 		}
 
 		// アンケートデータを取得
 		const { data: surveys, error: fetchError } = await supabase
 			.from("user_surveys")
 			.select(`
-				id,
-				user_id,
-				survey_trigger,
-				overall_satisfaction,
-				nps_score,
-				usability_easier_input,
-				usability_better_ui,
-				usability_faster_performance,
-				usability_other,
-				feature_voice_input,
-				feature_photo_attachment,
-				feature_excel_integration,
-				feature_print_layout,
-				feature_other,
-				additional_feedback,
-				created_at
-			`)
+					id,
+					user_id,
+					survey_trigger,
+					overall_satisfaction,
+					nps_score,
+					usability_easier_input,
+					usability_better_ui,
+					usability_faster_performance,
+					usability_other,
+					feature_voice_input,
+					feature_photo_attachment,
+					feature_excel_integration,
+					feature_print_layout,
+					feature_other,
+					additional_feedback,
+					created_at
+				`)
 			.order("created_at", { ascending: false });
 
-		if (fetchError) {
-			logger.error(
-				{
-					error: fetchError.message,
-					code: fetchError.code,
-					details: fetchError.details,
-					userId: user.id,
-				},
-				"アンケートデータ取得エラー",
-			);
-			return {
-				success: false,
-				error: "データ取得に失敗しました",
-			};
-		}
+		if (fetchError) throw fetchError;
 
 		// CSVヘッダー
 		const headers = [
@@ -125,45 +104,29 @@ export async function exportSurveyDataToCsv() {
 			.join("\n")}`;
 
 		return {
-			success: true,
 			data: csvContent,
 			filename: `survey_data_${new Date().toISOString().split("T")[0]}.csv`,
 		};
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				userId: user?.id,
-			},
-			"CSVエクスポートエラー",
-		);
-		return {
-			success: false,
-			error: "予期しないエラーが発生しました",
-		};
-	}
+	}, "アンケートデータのCSVエクスポート");
 }
 
 /**
  * アンケート統計サマリーをCSV形式でエクスポート
  * @returns CSV文字列
  */
-export async function exportSurveySummaryToCsv() {
-	let user: { id: string } | null = null;
-	try {
+export async function exportSurveySummaryToCsv(): Promise<
+	ActionResult<{ data: string; filename: string }>
+> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		// 認証確認
 		const {
-			data: { user: authUser },
+			data: { user },
 			error: authError,
 		} = await supabase.auth.getUser();
-		user = authUser;
 		if (authError || !user) {
-			return {
-				success: false,
-				error: "認証が必要です",
-			};
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
 		}
 
 		// 管理者権限チェック
@@ -174,10 +137,7 @@ export async function exportSurveySummaryToCsv() {
 			.single();
 
 		if (adminError || !adminUser || !["super_admin", "admin"].includes(adminUser.role)) {
-			return {
-				success: false,
-				error: "管理者権限が必要です",
-			};
+			throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
 		}
 
 		// アンケートデータを取得
@@ -186,21 +146,7 @@ export async function exportSurveySummaryToCsv() {
 			.select("*")
 			.order("created_at", { ascending: false });
 
-		if (fetchError) {
-			logger.error(
-				{
-					error: fetchError.message,
-					code: fetchError.code,
-					details: fetchError.details,
-					userId: user.id,
-				},
-				"アンケートデータ取得エラー",
-			);
-			return {
-				success: false,
-				error: "データ取得に失敗しました",
-			};
-		}
+		if (fetchError) throw fetchError;
 
 		// 統計を計算
 		const totalResponses = surveys.length;
@@ -288,21 +234,8 @@ export async function exportSurveySummaryToCsv() {
 			.join("\n")}`;
 
 		return {
-			success: true,
 			data: csvContent,
 			filename: `survey_summary_${new Date().toISOString().split("T")[0]}.csv`,
 		};
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				userId: user?.id,
-			},
-			"サマリーCSVエクスポートエラー",
-		);
-		return {
-			success: false,
-			error: "予期しないエラーが発生しました",
-		};
-	}
+	}, "アンケートサマリーのCSVエクスポート");
 }

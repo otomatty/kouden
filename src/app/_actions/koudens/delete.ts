@@ -1,51 +1,32 @@
 "use server";
 
-import logger from "@/lib/logger";
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { canDeleteKouden } from "../permissions";
 
-export type DeleteKoudenResult = { success: true } | { success: false; error: string };
-
 /**
- * 香典帳の削除
- * @param id - 削除対象の香典帳のID
- * @returns `{ success: true }` または `{ success: false, error }`
+ * 香典帳を削除する。
+ *
+ * @param id 削除対象の香典帳 ID
+ * @returns 成功時 `{ ok: true, data: null }` / 失敗時 `{ ok: false, error }`
  */
-export async function deleteKouden(id: string): Promise<DeleteKoudenResult> {
+export async function deleteKouden(id: string): Promise<ActionResult<null>> {
 	try {
-		const hasPermission = await canDeleteKouden(id);
-		if (!hasPermission) {
-			logger.error({ koudenId: id }, "[deleteKouden] permission denied");
-			return { success: false, error: "削除権限がありません" };
-		}
+		return await withActionResult(async () => {
+			const hasPermission = await canDeleteKouden(id);
+			if (!hasPermission) {
+				throw new KoudenError("削除権限がありません", ErrorCodes.FORBIDDEN);
+			}
 
-		const supabase = createAdminClient();
-		const { error } = await supabase.from("koudens").delete().eq("id", id);
-		if (error) {
-			logger.error(
-				{
-					error: error.message,
-					code: error.code,
-					koudenId: id,
-				},
-				"[deleteKouden] supabase delete error",
-			);
-			return { success: false, error: "削除に失敗しました" };
-		}
+			const supabase = createAdminClient();
+			const { error } = await supabase.from("koudens").delete().eq("id", id);
+			if (error) throw error;
 
-		return { success: true };
-	} catch (err) {
-		logger.error(
-			{
-				error: err instanceof Error ? err.message : String(err),
-				koudenId: id,
-			},
-			"[deleteKouden] suppressed error",
-		);
-		return { success: false, error: "削除に失敗しました" };
+			return null;
+		}, "香典帳の削除");
 	} finally {
-		// キャッシュ再検証は必ず行う
+		// 成否に関わらず、キャッシュ再検証は必ず行う
 		revalidatePath(`/koudens/${id}`);
 		revalidatePath("/koudens");
 	}

@@ -5,17 +5,18 @@
 
 "use server";
 
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { revalidatePath } from "next/cache";
 import type { OfferingAllocationRequest } from "@/types/entries";
+import { revalidatePath } from "next/cache";
 
 /**
  * お供物を複数の香典エントリーに配分する
  */
 export async function allocateOfferingToEntries(
 	request: OfferingAllocationRequest,
-): Promise<{ success: boolean; error?: string }> {
-	try {
+): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
 		const supabase = createAdminClient();
 
 		// お供物の価格を取得
@@ -26,7 +27,7 @@ export async function allocateOfferingToEntries(
 			.single();
 
 		if (offeringError || !offering) {
-			return { success: false, error: "お供物が見つかりません" };
+			throw new KoudenError("お供物が見つかりません", ErrorCodes.NOT_FOUND);
 		}
 
 		// 既存の配分があれば削除
@@ -55,12 +56,7 @@ export async function allocateOfferingToEntries(
 			.from("offering_allocations")
 			.insert(allocationData);
 
-		if (insertError) {
-			return {
-				success: false,
-				error: `配分データの保存に失敗しました: ${insertError.message}`,
-			};
-		}
+		if (insertError) throw insertError;
 
 		// 関連する香典エントリーの has_offering フラグを更新
 		await supabase
@@ -69,30 +65,15 @@ export async function allocateOfferingToEntries(
 			.in("id", request.kouden_entry_ids);
 
 		revalidatePath("/koudens");
-		return { success: true };
-	} catch (error) {
-		console.error("お供物配分エラー:", error);
-		// 配分計算のエラーの場合は具体的なメッセージを返す
-		if (error instanceof Error) {
-			return {
-				success: false,
-				error: error.message,
-			};
-		}
-		return {
-			success: false,
-			error: "お供物の配分に失敗しました",
-		};
-	}
+		return null;
+	}, "お供物の配分");
 }
 
 /**
  * 配分の削除
  */
-export async function removeOfferingAllocation(
-	offeringId: string,
-): Promise<{ success: boolean; error?: string }> {
-	try {
+export async function removeOfferingAllocation(offeringId: string): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
 		const supabase = createAdminClient();
 
 		// 配分対象の香典エントリーIDを取得
@@ -109,12 +90,7 @@ export async function removeOfferingAllocation(
 			.delete()
 			.eq("offering_id", offeringId);
 
-		if (deleteError) {
-			return {
-				success: false,
-				error: `配分の削除に失敗しました: ${deleteError.message}`,
-			};
-		}
+		if (deleteError) throw deleteError;
 
 		// 他にお供物がない香典エントリーの has_offering フラグを更新
 		for (const entryId of koudenEntryIds.filter((id): id is string => id !== null)) {
@@ -130,14 +106,8 @@ export async function removeOfferingAllocation(
 		}
 
 		revalidatePath("/koudens");
-		return { success: true };
-	} catch (error) {
-		console.error("お供物配分削除エラー:", error);
-		return {
-			success: false,
-			error: "お供物配分の削除に失敗しました",
-		};
-	}
+		return null;
+	}, "お供物配分の削除");
 }
 
 /**
@@ -147,8 +117,8 @@ export async function recalculateOfferingAllocation(
 	offeringId: string,
 	newAllocationMethod: "equal" | "weighted" | "manual",
 	manualAmounts?: number[],
-): Promise<{ success: boolean; error?: string }> {
-	try {
+): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
 		const supabase = createAdminClient();
 
 		// 現在の配分データを取得
@@ -159,7 +129,7 @@ export async function recalculateOfferingAllocation(
 			.order("created_at");
 
 		if (!currentAllocations || currentAllocations.length === 0) {
-			return { success: false, error: "配分データが見つかりません" };
+			throw new KoudenError("配分データが見つかりません", ErrorCodes.NOT_FOUND);
 		}
 
 		const koudenEntryIds = currentAllocations
@@ -169,24 +139,27 @@ export async function recalculateOfferingAllocation(
 			currentAllocations.find((a) => a.is_primary_contributor)?.kouden_entry_id ?? undefined;
 
 		// 新しい配分方法で再配分
-		return await allocateOfferingToEntries({
+		const result = await allocateOfferingToEntries({
 			offering_id: offeringId,
 			kouden_entry_ids: koudenEntryIds,
 			allocation_method: newAllocationMethod,
 			manual_amounts: manualAmounts,
 			primary_contributor_id: primaryContributorId,
 		});
-	} catch (error) {
-		console.error("お供物配分再計算エラー:", error);
-		return {
-			success: false,
-			error: "お供物配分の再計算に失敗しました",
-		};
-	}
+
+		if (!result.ok) {
+			// allocateOfferingToEntries 内で発生したエラーを上位に伝播させる
+			throw new KoudenError(result.error.message, result.error.code, {
+				status: result.error.status,
+			});
+		}
+
+		return null;
+	}, "お供物配分の再計算");
 }
 
 /**
- * 配分金額の計算ヘルパー関数
+ * 配分金額の計算ヘルパー関数（純粋関数）
  */
 function calculateAllocations(
 	totalPrice: number,
@@ -212,13 +185,17 @@ function calculateAllocations(
 
 		case "manual": {
 			if (!manualAmounts || manualAmounts.length !== entryCount) {
-				throw new Error("手動配分の場合、全てのエントリーに金額を指定してください");
+				throw new KoudenError(
+					"手動配分の場合、全てのエントリーに金額を指定してください",
+					ErrorCodes.VALIDATION_ERROR,
+				);
 			}
 
 			const manualTotal = manualAmounts.reduce((sum, amount) => sum + amount, 0);
 			if (manualTotal !== totalPrice) {
-				throw new Error(
+				throw new KoudenError(
 					`配分金額の合計（${manualTotal}円）がお供物価格（${totalPrice}円）と一致しません`,
+					ErrorCodes.VALIDATION_ERROR,
 				);
 			}
 
@@ -234,6 +211,6 @@ function calculateAllocations(
 			return calculateAllocations(totalPrice, entryIds, "equal");
 
 		default:
-			throw new Error(`未対応の配分方法: ${method}`);
+			throw new KoudenError(`未対応の配分方法: ${method}`, ErrorCodes.INVALID_OPERATION);
 	}
 }

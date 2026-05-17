@@ -1,21 +1,22 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import logger from "@/lib/logger";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * プロフィールの存在確認
  * @returns プロフィール
  */
-export async function ensureProfile() {
-	try {
+export async function ensureProfile(): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 		const {
 			data: { user },
 		} = await supabase.auth.getUser();
 
 		if (!user) {
-			return { error: "認証が必要です" };
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
 		}
 
 		// プロフィールの存在確認
@@ -38,20 +39,16 @@ export async function ensureProfile() {
 			}
 		}
 
-		return { success: true };
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-			},
-			"Error ensuring profile",
-		);
-		return { error: "プロフィールの確認に失敗しました" };
-	}
+		return null;
+	}, "プロフィールの確認");
 }
 
 /**
  * 現在のユーザー情報を取得
+ *
+ * 失敗時は `null` フォールバックを返すため `ActionResult` ではなく
+ * `User | null` を直接返す。
+ *
  * @returns ユーザー情報
  */
 export async function getCurrentUser() {

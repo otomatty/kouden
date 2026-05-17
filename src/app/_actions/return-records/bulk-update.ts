@@ -5,31 +5,32 @@
  * @module bulk-update
  */
 
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
+import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
 import type {
 	AmountGroupData,
-	ReturnItemMaster,
 	BulkUpdateExecutionData,
 	BulkUpdateResult,
+	ReturnItemMaster,
 } from "@/types/return-records/bulk-update";
-import logger from "@/lib/logger";
+import { revalidatePath } from "next/cache";
 
 // 返礼品マスタのキャッシュ（セッション内で再利用）
 const returnItemsCache = new Map<string, ReturnItemMaster[]>();
 
 /**
  * 香典帳の返礼品マスタを取得（一括更新用・キャッシュ対応）
- * @param koudenId - 香典帳ID
- * @returns 返礼品マスタ配列
  */
-export async function getReturnItemsForBulkUpdate(koudenId: string): Promise<ReturnItemMaster[]> {
-	// キャッシュから取得を試行
-	if (returnItemsCache.has(koudenId)) {
-		return returnItemsCache.get(koudenId) || [];
-	}
+export async function getReturnItemsForBulkUpdate(
+	koudenId: string,
+): Promise<ActionResult<ReturnItemMaster[]>> {
+	return withActionResult(async () => {
+		// キャッシュから取得を試行
+		if (returnItemsCache.has(koudenId)) {
+			return returnItemsCache.get(koudenId) || [];
+		}
 
-	try {
 		const supabase = await createClient();
 
 		// セッションの取得
@@ -38,7 +39,7 @@ export async function getReturnItemsForBulkUpdate(koudenId: string): Promise<Ret
 		} = await supabase.auth.getUser();
 
 		if (!user) {
-			throw new Error("認証されていません");
+			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 		}
 
 		const { data, error } = await supabase
@@ -48,16 +49,7 @@ export async function getReturnItemsForBulkUpdate(koudenId: string): Promise<Ret
 			.order("name", { ascending: true });
 
 		if (error) {
-			logger.error(
-				{
-					error: error.message,
-					code: error.code,
-					koudenId,
-					userId: user.id,
-				},
-				"返礼品マスタ取得エラー",
-			);
-			throw new Error(`返礼品マスタの取得に失敗しました: ${error.message}`);
+			throw error;
 		}
 
 		const result = data || [];
@@ -66,33 +58,16 @@ export async function getReturnItemsForBulkUpdate(koudenId: string): Promise<Ret
 		returnItemsCache.set(koudenId, result);
 
 		return result;
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				koudenId,
-			},
-			"返礼品マスタの取得エラー",
-		);
-		if (error instanceof Error) {
-			throw error;
-		}
-		throw new Error("返礼品マスタの取得に失敗しました");
-	}
+	}, "返礼品マスタの取得");
 }
 
 /**
  * 金額ベースの一括更新を実行（改良版：バッチ処理対応）
- * @param koudenId - 香典帳ID
- * @param executionData - 実行データ
- * @returns 更新結果
  */
 export async function executeBulkUpdateByAmount(
-	// koudenId: string,
-
 	executionData: BulkUpdateExecutionData,
-): Promise<BulkUpdateResult> {
-	try {
+): Promise<ActionResult<BulkUpdateResult>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		// セッションの取得
@@ -101,7 +76,7 @@ export async function executeBulkUpdateByAmount(
 		} = await supabase.auth.getUser();
 
 		if (!user) {
-			throw new Error("認証されていません");
+			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 		}
 
 		// 返礼品マスタを取得して、名前と価格の情報を取得
@@ -113,15 +88,7 @@ export async function executeBulkUpdateByAmount(
 				.in("id", executionData.returnItemIds);
 
 			if (returnItemsError) {
-				logger.error(
-					{
-						error: returnItemsError.message,
-						code: returnItemsError.code,
-						returnItemIds: executionData.returnItemIds,
-					},
-					"返礼品マスタ取得エラー",
-				);
-				throw new Error(`返礼品情報の取得に失敗しました: ${returnItemsError.message}`);
+				throw returnItemsError;
 			}
 
 			returnItemsMap = new Map(returnItems?.map((item) => [item.id, item]) || []);
@@ -131,7 +98,10 @@ export async function executeBulkUpdateByAmount(
 		const returnItemsWithDetails = executionData.returnItemIds.map((itemId) => {
 			const itemMaster = returnItemsMap.get(itemId);
 			if (!itemMaster) {
-				throw new Error(`返礼品ID ${itemId} の情報が見つかりません`);
+				throw new KoudenError(
+					`返礼品ID ${itemId} の情報が見つかりません`,
+					ErrorCodes.NOT_FOUND,
+				);
 			}
 			return {
 				id: itemId,
@@ -151,15 +121,7 @@ export async function executeBulkUpdateByAmount(
 			.in("kouden_entry_id", executionData.entryIds);
 
 		if (selectError) {
-			logger.error(
-				{
-					error: selectError.message,
-					code: selectError.code,
-					entryIds: executionData.entryIds,
-				},
-				"既存記録取得エラー",
-			);
-			throw new Error(`既存記録の取得に失敗しました: ${selectError.message}`);
+			throw selectError;
 		}
 
 		const existingRecordsMap = new Map(
@@ -281,30 +243,17 @@ export async function executeBulkUpdateByAmount(
 			failureCount,
 			errors: errors.length > 0 ? errors : undefined,
 		};
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				executionData,
-			},
-			"一括更新の実行エラー",
-		);
-		const errorMessage = error instanceof Error ? error.message : "不明なエラー";
-		throw new Error(`一括更新の実行に失敗しました: ${errorMessage}`);
-	}
+	}, "一括更新の実行");
 }
 
 /**
  * 複数の金額グループを一括更新（改良版：並列処理対応）
- * @param koudenId - 香典帳ID
- * @param amountGroups - 金額グループデータ配列
- * @returns 更新結果
  */
 export async function executeBulkUpdateMultipleGroups(
 	koudenId: string,
 	amountGroups: AmountGroupData[],
-): Promise<BulkUpdateResult> {
-	try {
+): Promise<ActionResult<BulkUpdateResult>> {
+	return withActionResult(async () => {
 		if (!amountGroups || amountGroups.length === 0) {
 			return {
 				successCount: 0,
@@ -313,7 +262,10 @@ export async function executeBulkUpdateMultipleGroups(
 		}
 
 		// 返礼品マスタを事前にキャッシュ（全グループで共有）
-		await getReturnItemsForBulkUpdate(koudenId);
+		const masterResult = await getReturnItemsForBulkUpdate(koudenId);
+		if (!masterResult.ok) {
+			throw new KoudenError(masterResult.error.message, masterResult.error.code);
+		}
 
 		// 並列処理で各グループを処理（ただし、同時実行数を制限）
 		const CONCURRENT_LIMIT = 5; // 同時実行数を少し増やす（キャッシュ効果で高速化）
@@ -329,12 +281,11 @@ export async function executeBulkUpdateMultipleGroups(
 					status: group.status,
 				};
 
-				try {
-					return await executeBulkUpdateByAmount(executionData);
-				} catch (error) {
+				const groupResult = await executeBulkUpdateByAmount(executionData);
+				if (!groupResult.ok) {
 					logger.error(
 						{
-							error: error instanceof Error ? error.message : String(error),
+							error: groupResult.error.message,
 							amount: group.amount,
 							entryIds: group.entryIds,
 						},
@@ -343,11 +294,10 @@ export async function executeBulkUpdateMultipleGroups(
 					return {
 						successCount: 0,
 						failureCount: group.count,
-						errors: [
-							`金額${group.amount}円グループ: ${error instanceof Error ? error.message : "不明なエラー"}`,
-						],
-					};
+						errors: [`金額${group.amount}円グループ: ${groupResult.error.message}`],
+					} as BulkUpdateResult;
 				}
+				return groupResult.data;
 			});
 
 			const batchResults = await Promise.all(batchPromises);
@@ -370,16 +320,5 @@ export async function executeBulkUpdateMultipleGroups(
 			failureCount: totalFailureCount,
 			errors: allErrors.length > 0 ? allErrors : undefined,
 		};
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				koudenId,
-				amountGroupsCount: amountGroups.length,
-			},
-			"複数グループ一括更新エラー",
-		);
-		const errorMessage = error instanceof Error ? error.message : "不明なエラー";
-		throw new Error(`複数グループの一括更新に失敗しました: ${errorMessage}`);
-	}
+	}, "複数グループ一括更新");
 }

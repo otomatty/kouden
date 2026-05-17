@@ -2,6 +2,7 @@
 
 import { HELP_CATEGORIES } from "@/config/help-categories";
 import { getAllDocs } from "@/lib/docs";
+import logger from "@/lib/logger";
 import type { HelpSearchParams, HelpSearchResult, QuickHelpItem } from "@/types/help";
 
 /**
@@ -119,7 +120,12 @@ async function getManualHelpItems(): Promise<QuickHelpItem[]> {
 			};
 		});
 	} catch (error) {
-		console.error("Failed to load manual help items:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+			},
+			"Failed to load manual help items",
+		);
 		return [];
 	}
 }
@@ -215,7 +221,12 @@ export async function searchHelpItems(params: HelpSearchParams = {}): Promise<He
 			categories,
 		};
 	} catch (error) {
-		console.error("Failed to search help items:", error);
+		logger.error(
+			{
+				error: error instanceof Error ? error.message : String(error),
+			},
+			"Failed to search help items",
+		);
 		return {
 			items: [],
 			totalCount: 0,

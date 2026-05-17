@@ -1,11 +1,10 @@
 "use server";
 
 import { cacheTags } from "@/lib/cache-tags";
-import logger from "@/lib/logger";
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
 import { toCamelCase, toSnakeCase } from "@/store/telegrams";
 import type { CellValue } from "@/types/data-table/table";
-import type { AttendanceType, EntryResponse } from "@/types/entries";
 import type {
 	CreateTelegramInput,
 	Telegram,
@@ -28,23 +27,22 @@ function revalidateTelegramsCaches(koudenId: string) {
 }
 
 // 弔電の取得（単一）
-export async function getTelegram(id: string) {
-	const supabase = await createClient();
+export async function getTelegram(id: string): Promise<ActionResult<TelegramRow>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
 
-	const { data, error } = await supabase.from("telegrams").select().eq("id", id).single();
+		const { data, error } = await supabase.from("telegrams").select().eq("id", id).single();
 
-	if (error) {
-		throw new Error("弔電の取得に失敗しました");
-	}
-
-	return data;
+		if (error) throw error;
+		return data;
+	}, "弔電の取得");
 }
 
 /**
  * 弔電一覧を取得
  */
-export async function getTelegrams(koudenId: string): Promise<Telegram[]> {
-	try {
+export async function getTelegrams(koudenId: string): Promise<ActionResult<Telegram[]>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 		const { data, error } = await supabase
 			.from("telegrams")
@@ -54,16 +52,7 @@ export async function getTelegrams(koudenId: string): Promise<Telegram[]> {
 
 		if (error) throw error;
 		return (data as TelegramRow[]).map(toCamelCase);
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				koudenId,
-			},
-			"Failed to fetch telegrams",
-		);
-		throw new Error("弔電の取得に失敗しました");
-	}
+	}, "弔電一覧の取得");
 }
 
 /**
@@ -71,13 +60,13 @@ export async function getTelegrams(koudenId: string): Promise<Telegram[]> {
  */
 export async function createTelegram(
 	input: CreateTelegramInput & { koudenId: string },
-): Promise<Telegram> {
-	try {
+): Promise<ActionResult<Telegram>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 		const {
 			data: { user },
 		} = await supabase.auth.getUser();
-		if (!user) throw new Error("認証が必要です");
+		if (!user) throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
 
 		const snakeCaseData = toSnakeCase(input);
 		const { data, error } = await supabase
@@ -94,23 +83,17 @@ export async function createTelegram(
 		if (error) throw error;
 		revalidateTelegramsCaches(input.koudenId);
 		return toCamelCase(data as TelegramRow);
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				koudenId: input.koudenId,
-			},
-			"Failed to create telegram",
-		);
-		throw new Error("弔電の作成に失敗しました");
-	}
+	}, "弔電の作成");
 }
 
 /**
  * 弔電を更新
  */
-export async function updateTelegram(id: string, input: UpdateTelegramInput): Promise<Telegram> {
-	try {
+export async function updateTelegram(
+	id: string,
+	input: UpdateTelegramInput,
+): Promise<ActionResult<Telegram>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 		const { data, error } = await supabase
 			.from("telegrams")
@@ -122,59 +105,45 @@ export async function updateTelegram(id: string, input: UpdateTelegramInput): Pr
 		if (error) throw error;
 		revalidateTelegramsCaches(data.kouden_id);
 		return toCamelCase(data as TelegramRow);
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				id,
-			},
-			"Failed to update telegram",
-		);
-		throw new Error("弔電の更新に失敗しました");
-	}
+	}, "弔電の更新");
 }
 
 /**
  * 弔電を削除
  */
-export async function deleteTelegram(id: string, koudenId: string): Promise<void> {
-	try {
+export async function deleteTelegram(id: string, koudenId: string): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 		const { error } = await supabase.from("telegrams").delete().eq("id", id);
 
 		if (error) throw error;
 		revalidateTelegramsCaches(koudenId);
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				id,
-				koudenId,
-			},
-			"Failed to delete telegram",
-		);
-		throw new Error("弔電の削除に失敗しました");
-	}
+		return null;
+	}, "弔電の削除");
 }
 
 /**
  * 複数の弔電を削除
  */
-export async function deleteTelegrams(ids: string[], koudenId: string): Promise<void> {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+export async function deleteTelegrams(
+	ids: string[],
+	koudenId: string,
+): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 
-	if (!user) throw new Error("認証が必要です");
+		if (!user) throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
 
-	const { error } = await supabase.from("telegrams").delete().in("id", ids);
+		const { error } = await supabase.from("telegrams").delete().in("id", ids);
 
-	if (error) {
-		throw new Error("弔電の一括削除に失敗しました");
-	}
+		if (error) throw error;
 
-	revalidateTelegramsCaches(koudenId);
+		revalidateTelegramsCaches(koudenId);
+		return null;
+	}, "弔電の一括削除");
 }
 
 // セル単位の更新用に最適化した関数
@@ -182,17 +151,17 @@ export async function updateTelegramField(
 	id: string,
 	field: keyof Telegram,
 	value: CellValue,
-): Promise<Telegram> {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+): Promise<ActionResult<Telegram>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 
-	if (!user) {
-		throw new Error("認証が必要です");
-	}
+		if (!user) {
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
+		}
 
-	try {
 		// フィールド名をスネークケースに変換
 		const fieldObject = { [field]: value };
 		const snakeCaseObject = toSnakeCase(fieldObject);
@@ -210,24 +179,10 @@ export async function updateTelegramField(
 			.select()
 			.single();
 
-		if (error) {
-			logger.error(
-				{
-					error: error.message,
-					code: error.code,
-					details: error.details,
-					hint: error.hint,
-					id,
-					field,
-				},
-				"Database update failed",
-			);
-			throw new Error(`${field}の更新に失敗しました`);
-		}
+		if (error) throw error;
 
 		if (!updatedData) {
-			logger.error({ id, field }, "No data returned after update");
-			throw new Error(`${field}の更新に失敗しました`);
+			throw new KoudenError(`${String(field)}の更新に失敗しました`, ErrorCodes.DB_UPDATE_ERROR);
 		}
 
 		const camelCaseResult = toCamelCase(updatedData as TelegramRow);
@@ -235,16 +190,5 @@ export async function updateTelegramField(
 		revalidateTelegramsCaches(updatedData.kouden_id);
 
 		return camelCaseResult;
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				id,
-				field,
-				value,
-			},
-			"Failed to update telegram field",
-		);
-		throw new Error(`${field}の更新に失敗しました`);
-	}
+	}, "弔電フィールドの更新");
 }

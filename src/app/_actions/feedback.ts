@@ -1,5 +1,6 @@
 "use server";
 
+import { type ActionResult, withActionResult } from "@/lib/errors";
 import nodemailer from "nodemailer";
 import { z } from "zod";
 
@@ -16,8 +17,8 @@ type FeedbackInput = z.infer<typeof feedbackSchema>;
  * @param input フィードバック情報
  * @returns フィードバック
  */
-export async function sendFeedback(input: FeedbackInput) {
-	try {
+export async function sendFeedback(input: FeedbackInput): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
 		const validatedData = feedbackSchema.parse(input);
 
 		const transporter = nodemailer.createTransport({
@@ -44,9 +45,6 @@ ${validatedData.description}
 		};
 
 		await transporter.sendMail(mailOptions);
-		return { success: true };
-	} catch (error) {
-		console.error("フィードバック送信エラー:", error);
-		return { success: false, error: "フィードバックの送信に失敗しました" };
-	}
+		return null;
+	}, "フィードバックの送信");
 }

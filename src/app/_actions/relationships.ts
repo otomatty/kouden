@@ -1,12 +1,15 @@
 "use server";
 
-import { ErrorCodes, KoudenError, withErrorHandling } from "@/lib/errors";
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/types/supabase";
 import { revalidatePath } from "next/cache";
+
+type Relationship = Database["public"]["Tables"]["relationships"]["Row"];
 
 // すべての関係性を取得
 export async function getAllRelationships() {
-	return withErrorHandling(async () => {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 		const { data, error } = await supabase
 			.from("relationships")
@@ -27,7 +30,7 @@ export async function getAllRelationships() {
 
 // 香典帳の関係性を取得
 export async function getRelationships(koudenId: string) {
-	return withErrorHandling(async () => {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		// 1. まず関係性の存在確認
@@ -71,7 +74,7 @@ export async function getRelationships(koudenId: string) {
  * 管理者用: 香典帳の関係性を取得
  */
 export async function getRelationshipsForAdmin(koudenId: string) {
-	return withErrorHandling(async () => {
+	return withActionResult(async () => {
 		// 管理者権限をチェック
 		const { isAdmin } = await import("@/app/_actions/admin/permissions");
 		const adminCheck = await isAdmin();
@@ -125,8 +128,8 @@ export async function createRelationship(input: {
 	koudenId: string;
 	name: string;
 	description?: string;
-}) {
-	return withErrorHandling(async () => {
+}): Promise<ActionResult<Relationship>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 		const {
 			data: { user },
@@ -155,8 +158,8 @@ export async function createRelationship(input: {
 export async function updateRelationship(
 	id: string,
 	input: { name?: string; description?: string; is_default?: boolean },
-) {
-	return withErrorHandling(async () => {
+): Promise<ActionResult<Relationship>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 		const { data, error } = await supabase
 			.from("relationships")
@@ -174,8 +177,8 @@ export async function updateRelationship(
 }
 
 // 関係性を削除
-export async function deleteRelationship(id: string) {
-	return withErrorHandling(async () => {
+export async function deleteRelationship(id: string): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 		// 削除は冪等にしたいため、対象が存在しない場合（PGRST116）は成功扱いとする。
 		// 以下では `.maybeSingle()` を使用し、null ↔ row 不在を区別する。
@@ -188,19 +191,22 @@ export async function deleteRelationship(id: string) {
 		if (fetchError) throw fetchError;
 
 		// 既に削除済み（または存在しない）：何もせず成功で終了
-		if (!relationship) return;
+		if (!relationship) return null;
 
 		const { error: deleteError } = await supabase.from("relationships").delete().eq("id", id);
 
 		if (deleteError) throw deleteError;
 		revalidatePath(`/koudens/${relationship.kouden_id}`);
+		return null;
 	}, "関係性の削除");
 }
 
 // 香典帳作成時にデフォルトの関係性を初期化
 // TODO: デフォルトの関係性作成はfunctionsの方で実装していた気がするので確認する
-export async function initializeDefaultRelationships(koudenId: string) {
-	return withErrorHandling(async () => {
+export async function initializeDefaultRelationships(
+	koudenId: string,
+): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 		const {
 			data: { user },
@@ -228,5 +234,6 @@ export async function initializeDefaultRelationships(koudenId: string) {
 
 		if (error) throw error;
 		revalidatePath(`/koudens/${koudenId}`);
+		return null;
 	}, "デフォルト関係性の初期化");
 }

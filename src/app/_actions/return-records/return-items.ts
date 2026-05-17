@@ -5,14 +5,15 @@
  * @module return-items
  */
 
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
+import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
 import type {
-	ReturnItem,
 	CreateReturnItemInput,
+	ReturnItem,
 	UpdateReturnItemInput,
 } from "@/types/return-records/return-items";
-import logger from "@/lib/logger";
+import { revalidatePath } from "next/cache";
 
 /**
  * 返礼品マスター情報作成用の入力型（香典帳IDが必要）
@@ -23,12 +24,11 @@ type CreateReturnItemWithKoudenInput = CreateReturnItemInput & {
 
 /**
  * 返礼品マスター情報を作成する
- * @param {CreateReturnItemInput} input - 作成する返礼品マスター情報
- * @returns {Promise<void>} 作成された返礼品マスター情報
- * @throws {Error} 認証エラーまたは作成失敗時のエラー
  */
-export async function createReturnItem(input: CreateReturnItemWithKoudenInput): Promise<void> {
-	try {
+export async function createReturnItem(
+	input: CreateReturnItemWithKoudenInput,
+): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		// より安全なユーザー認証の取得
@@ -37,12 +37,12 @@ export async function createReturnItem(input: CreateReturnItemWithKoudenInput): 
 			error: userError,
 		} = await supabase.auth.getUser();
 		if (userError || !user) {
-			throw new Error("認証されていません");
+			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 		}
 
 		// 入力データの検証
 		if (!input.name || input.price < 0) {
-			throw new Error("入力データが不正です");
+			throw new KoudenError("入力データが不正です", ErrorCodes.INVALID_INPUT);
 		}
 
 		// 必要なデータのみを抽出
@@ -73,74 +73,63 @@ export async function createReturnItem(input: CreateReturnItemWithKoudenInput): 
 			.single();
 
 		if (permissionError || !permission) {
-			throw new Error("この香典帳に対する権限がありません");
+			throw new KoudenError(
+				"この香典帳に対する権限がありません",
+				ErrorCodes.FORBIDDEN,
+			);
 		}
 
 		const roleName = permission.kouden_roles?.name;
 		const hasPermission = ["owner", "editor"].includes(roleName ?? "");
 		if (!hasPermission) {
-			throw new Error("返礼品の作成権限がありません");
+			throw new KoudenError("返礼品の作成権限がありません", ErrorCodes.FORBIDDEN);
 		}
 
 		const { error } = await supabase.from("return_items").insert(returnItemData);
 
 		if (error) {
-			// エラーメッセージを具体的に
+			// 一意制約違反は専用メッセージで返す（Supabase の生メッセージは UI に出さない）
 			if (error.code === "23505") {
-				throw new Error("同じ名前の返礼品が既に存在します");
+				throw new KoudenError(
+					"同じ名前の返礼品が既に存在します",
+					ErrorCodes.ALREADY_EXISTS,
+				);
 			}
-			throw new Error(error.message || "返礼品の作成に失敗しました");
+			throw error;
 		}
 
 		// キャッシュの再検証
 		revalidatePath(`/koudens/${input.kouden_id}/settings/return-items`);
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				koudenId: input.kouden_id,
-				input,
-			},
-			"[Server] Error in createReturnItem",
-		);
-		// エラーメッセージを適切に変換
-		if (error instanceof Error) {
-			throw new Error(error.message);
-		}
-		throw new Error("予期せぬエラーが発生しました");
-	}
+		return null;
+	}, "返礼品の作成");
 }
 
 /**
  * 香典帳IDに紐づく返礼品マスター情報一覧を取得する
- * @param {string} koudenId - 香典帳ID
- * @returns {Promise<ReturnItem[]>} 返礼品マスター情報一覧
- * @throws {Error} 取得失敗時のエラー
  */
-export async function getReturnItems(koudenId: string): Promise<ReturnItem[]> {
-	const supabase = await createClient();
+export async function getReturnItems(koudenId: string): Promise<ActionResult<ReturnItem[]>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
 
-	const { data, error } = await supabase
-		.from("return_items")
-		.select("*")
-		.eq("kouden_id", koudenId)
-		.order("created_at", { ascending: false });
+		const { data, error } = await supabase
+			.from("return_items")
+			.select("*")
+			.eq("kouden_id", koudenId)
+			.order("created_at", { ascending: false });
 
-	if (error) {
-		throw new Error("返礼品の取得に失敗しました");
-	}
+		if (error) {
+			throw error;
+		}
 
-	return data as ReturnItem[];
+		return data as ReturnItem[];
+	}, "返礼品の取得");
 }
 
 /**
  * 返礼品マスター情報を取得する
- * @param {string} id - 返礼品マスターID
- * @returns {Promise<ReturnItem | null>} 返礼品マスター情報
- * @throws {Error} 取得失敗時のエラー
  */
-export async function getReturnItem(id: string): Promise<ReturnItem | null> {
-	try {
+export async function getReturnItem(id: string): Promise<ActionResult<ReturnItem | null>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		const { data, error } = await supabase.from("return_items").select("*").eq("id", id).single();
@@ -150,28 +139,16 @@ export async function getReturnItem(id: string): Promise<ReturnItem | null> {
 		}
 
 		return data as ReturnItem;
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				id,
-			},
-			"返礼品マスター情報の取得エラー",
-		);
-		throw error;
-	}
+	}, "返礼品マスター情報の取得");
 }
 
 /**
  * 返礼品マスター情報を更新する
- * @param {UpdateReturnItemInput & { kouden_id: string }} input - 更新する返礼品マスター情報
- * @returns {Promise<ReturnItem>} 更新された返礼品マスター情報
- * @throws {Error} 認証エラーまたは更新失敗時のエラー
  */
 export async function updateReturnItem(
 	input: UpdateReturnItemInput & { kouden_id: string },
-): Promise<ReturnItem> {
-	try {
+): Promise<ActionResult<ReturnItem>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		// セッションの取得
@@ -180,7 +157,7 @@ export async function updateReturnItem(
 		} = await supabase.auth.getUser();
 
 		if (!user) {
-			throw new Error("認証されていません");
+			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 		}
 
 		const { id, kouden_id, ...updateData } = input;
@@ -197,35 +174,27 @@ export async function updateReturnItem(
 		}
 
 		if (!data) {
-			throw new Error("返礼品マスター情報の更新に失敗しました");
+			throw new KoudenError(
+				"返礼品マスター情報の更新に失敗しました",
+				ErrorCodes.DB_UPDATE_ERROR,
+			);
 		}
 
 		// キャッシュの再検証
 		revalidatePath(`/koudens/${kouden_id}`);
 
 		return data as ReturnItem;
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				id: input.id,
-				koudenId: input.kouden_id,
-			},
-			"返礼品マスター情報の更新エラー",
-		);
-		throw error;
-	}
+	}, "返礼品マスター情報の更新");
 }
 
 /**
  * 返礼品マスター情報を削除する
- * @param {string} id - 返礼品マスターID
- * @param {string} koudenId - 香典帳ID（キャッシュ再検証用）
- * @returns {Promise<void>}
- * @throws {Error} 認証エラーまたは削除失敗時のエラー
  */
-export async function deleteReturnItem(id: string, koudenId: string): Promise<void> {
-	try {
+export async function deleteReturnItem(
+	id: string,
+	koudenId: string,
+): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		// セッションの取得
@@ -234,7 +203,7 @@ export async function deleteReturnItem(id: string, koudenId: string): Promise<vo
 		} = await supabase.auth.getUser();
 
 		if (!user) {
-			throw new Error("認証されていません");
+			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 		}
 
 		const { error } = await supabase.from("return_items").delete().eq("id", id);
@@ -245,33 +214,27 @@ export async function deleteReturnItem(id: string, koudenId: string): Promise<vo
 
 		// キャッシュの再検証
 		revalidatePath(`/koudens/${koudenId}`);
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				id,
-				koudenId,
-			},
-			"返礼品情報の削除エラー",
-		);
-		throw error;
-	}
+		return null;
+	}, "返礼品情報の削除");
 }
 
 /**
  * 返礼品画像をSupabaseストレージにアップロード
  */
-export async function uploadReturnItemImage(imageBlob: Blob, koudenId: string): Promise<string> {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+export async function uploadReturnItemImage(
+	imageBlob: Blob,
+	koudenId: string,
+): Promise<ActionResult<string>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 
-	if (!user) {
-		throw new Error("認証が必要です");
-	}
+		if (!user) {
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
+		}
 
-	try {
 		// ファイル名を生成（タイムスタンプ + UUID）
 		const timestamp = Date.now();
 		const randomId = crypto.randomUUID();
@@ -288,81 +251,69 @@ export async function uploadReturnItemImage(imageBlob: Blob, koudenId: string): 
 			});
 
 		if (uploadError) {
-			logger.error(
-				{
-					error: uploadError.message,
-					koudenId,
-					userId: user.id,
-					fileName,
-				},
-				"Failed to upload return item image",
-			);
-			throw new Error("画像のアップロードに失敗しました");
+			throw uploadError;
 		}
 
 		// 公開URLを取得
 		const { data: publicUrl } = supabase.storage.from("return-items").getPublicUrl(data.path);
 
 		return publicUrl.publicUrl;
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				koudenId,
-			},
-			"Upload return item image failed",
-		);
-		throw error instanceof Error ? error : new Error("画像のアップロードに失敗しました");
-	}
+	}, "画像のアップロード");
 }
 
 /**
  * 返礼品画像をSupabaseストレージから削除
+ *
+ * 削除エラーは致命的ではないためログのみに留め、必ず成功を返す。
  */
-export async function deleteReturnItemImage(imageUrl: string): Promise<void> {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+export async function deleteReturnItemImage(imageUrl: string): Promise<ActionResult<null>> {
+	return withActionResult(async () => {
+		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 
-	if (!user) {
-		throw new Error("認証が必要です");
-	}
-
-	try {
-		// URLからパスを抽出
-		const url = new URL(imageUrl);
-		const pathSegments = url.pathname.split("/");
-		// パス例: /storage/v1/object/public/return-items/kouden_id/user_id/filename.webp
-		const bucketIndex = pathSegments.indexOf("return-items");
-		if (bucketIndex === -1) {
-			throw new Error("無効な画像URLです");
+		if (!user) {
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
 		}
 
-		const filePath = pathSegments.slice(bucketIndex + 1).join("/");
+		try {
+			// URLからパスを抽出
+			const url = new URL(imageUrl);
+			const pathSegments = url.pathname.split("/");
+			// パス例: /storage/v1/object/public/return-items/kouden_id/user_id/filename.webp
+			const bucketIndex = pathSegments.indexOf("return-items");
+			if (bucketIndex === -1) {
+				throw new KoudenError("無効な画像URLです", ErrorCodes.INVALID_INPUT);
+			}
 
-		// ストレージから削除
-		const { error } = await supabase.storage.from("return-items").remove([filePath]);
+			const filePath = pathSegments.slice(bucketIndex + 1).join("/");
 
-		if (error) {
+			// ストレージから削除
+			const { error } = await supabase.storage.from("return-items").remove([filePath]);
+
+			if (error) {
+				logger.error(
+					{
+						error: error.message,
+						imageUrl,
+						filePath,
+					},
+					"Failed to delete return item image",
+				);
+				// 削除エラーは致命的ではないのでログのみ
+			}
+		} catch (error) {
 			logger.error(
 				{
-					error: error.message,
+					error: error instanceof Error ? error.message : String(error),
 					imageUrl,
-					filePath,
 				},
-				"Failed to delete return item image",
+				"Delete return item image failed",
 			);
 			// 削除エラーは致命的ではないのでログのみ
 		}
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				imageUrl,
-			},
-			"Delete return item image failed",
-		);
-		// 削除エラーは致命的ではないのでログのみ
-	}
+
+		return null;
+	}, "画像の削除");
 }

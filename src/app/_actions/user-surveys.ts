@@ -1,14 +1,28 @@
 "use server";
 
+import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
+import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import {
-	userSurveySchema,
-	type UserSurveyFormInput,
 	type SurveyStatus,
 	type SurveyTrigger,
+	type UserSurveyFormInput,
+	userSurveySchema,
 } from "@/schemas/user-surveys";
+import type { Database } from "@/types/supabase";
 import { revalidatePath } from "next/cache";
-import logger from "@/lib/logger";
+
+type UserSurveyRow = Database["public"]["Tables"]["user_surveys"]["Row"];
+type UserSurveySkipRow = Database["public"]["Tables"]["user_survey_skips"]["Row"];
+
+interface SurveyAnalytics {
+	totalResponses: number;
+	averageSatisfaction: number;
+	averageNps: number;
+	npsValue: number;
+	npsBreakdown: { promoters: number; passives: number; detractors: number };
+	rawData: UserSurveyRow[];
+}
 
 /**
  * ユーザーアンケート回答を作成
@@ -16,8 +30,11 @@ import logger from "@/lib/logger";
  * @param trigger アンケート表示のトリガー（pdf_export | one_week_usage）
  * @returns 成功/エラー結果
  */
-export async function createUserSurvey(formData: UserSurveyFormInput, trigger: SurveyTrigger) {
-	try {
+export async function createUserSurvey(
+	formData: UserSurveyFormInput,
+	trigger: SurveyTrigger,
+): Promise<ActionResult<UserSurveyRow & { message: string }>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		// 認証確認
@@ -26,10 +43,10 @@ export async function createUserSurvey(formData: UserSurveyFormInput, trigger: S
 			error: authError,
 		} = await supabase.auth.getUser();
 		if (authError || !user) {
-			return {
-				success: false,
-				error: "認証が必要です。ログインしてからアンケートにお答えください。",
-			};
+			throw new KoudenError(
+				"認証が必要です。ログインしてからアンケートにお答えください。",
+				ErrorCodes.UNAUTHORIZED,
+			);
 		}
 
 		// 既存回答の確認（1ユーザー1回のみ）
@@ -40,25 +57,14 @@ export async function createUserSurvey(formData: UserSurveyFormInput, trigger: S
 			.single();
 
 		if (checkError && checkError.code !== "PGRST116") {
-			logger.error(
-				{
-					error: checkError.message,
-					code: checkError.code,
-					userId: user.id,
-				},
-				"既存アンケート確認エラー",
-			);
-			return {
-				success: false,
-				error: "アンケート状況の確認に失敗しました。時間を置いてお試しください。",
-			};
+			throw checkError;
 		}
 
 		if (existingSurvey) {
-			return {
-				success: false,
-				error: "既にアンケートにご回答いただいております。貴重なご意見をありがとうございました。",
-			};
+			throw new KoudenError(
+				"既にアンケートにご回答いただいております。貴重なご意見をありがとうございました。",
+				ErrorCodes.ALREADY_EXISTS,
+			);
 		}
 
 		// バリデーション
@@ -93,54 +99,18 @@ export async function createUserSurvey(formData: UserSurveyFormInput, trigger: S
 			.select()
 			.single();
 
-		if (insertError) {
-			logger.error(
-				{
-					error: insertError.message,
-					code: insertError.code,
-					userId: user.id,
-					trigger,
-				},
-				"アンケート保存エラー",
-			);
-			return {
-				success: false,
-				error: "アンケートの保存に失敗しました。時間を置いてお試しください。",
-			};
-		}
+		if (insertError) throw insertError;
 
 		// 関連ページのキャッシュを更新
 		revalidatePath("/");
 		revalidatePath("/(protected)", "layout");
 
 		return {
-			success: true,
-			data: newSurvey,
+			...newSurvey,
 			message:
 				"アンケートへのご回答、ありがとうございました。いただいたご意見は今後のサービス改善に活用させていただきます。",
 		};
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				trigger,
-			},
-			"アンケート作成エラー",
-		);
-
-		// Zodバリデーションエラーの場合
-		if (error instanceof Error && error.name === "ZodError") {
-			return {
-				success: false,
-				error: "入力内容に不備があります。各項目を確認してください。",
-			};
-		}
-
-		return {
-			success: false,
-			error: "予期しないエラーが発生しました。時間を置いてお試しください。",
-		};
-	}
+	}, "アンケートの作成");
 }
 
 /**
@@ -306,8 +276,8 @@ export async function checkOneWeekOwnershipSurvey(): Promise<boolean> {
  * 管理者用: アンケート集計データを取得
  * @returns アンケート集計結果
  */
-export async function getAdminSurveyAnalytics() {
-	try {
+export async function getAdminSurveyAnalytics(): Promise<ActionResult<SurveyAnalytics>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		// 認証確認
@@ -316,10 +286,7 @@ export async function getAdminSurveyAnalytics() {
 			error: authError,
 		} = await supabase.auth.getUser();
 		if (authError || !user) {
-			return {
-				success: false,
-				error: "認証が必要です",
-			};
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
 		}
 
 		// 管理者権限チェック
@@ -330,10 +297,7 @@ export async function getAdminSurveyAnalytics() {
 			.single();
 
 		if (adminError || !adminUser || !["super_admin", "admin"].includes(adminUser.role)) {
-			return {
-				success: false,
-				error: "管理者権限が必要です",
-			};
+			throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
 		}
 
 		// 全アンケートデータを取得
@@ -342,20 +306,7 @@ export async function getAdminSurveyAnalytics() {
 			.select("*")
 			.order("created_at", { ascending: false });
 
-		if (fetchError) {
-			logger.error(
-				{
-					error: fetchError.message,
-					code: fetchError.code,
-					userId: user.id,
-				},
-				"アンケートデータ取得エラー",
-			);
-			return {
-				success: false,
-				error: "データ取得に失敗しました",
-			};
-		}
+		if (fetchError) throw fetchError;
 
 		// 基本統計を計算
 		const totalResponses = surveys.length;
@@ -370,28 +321,14 @@ export async function getAdminSurveyAnalytics() {
 		const npsValue = ((promoters - detractors) / totalResponses) * 100;
 
 		return {
-			success: true,
-			data: {
-				totalResponses,
-				averageSatisfaction: Math.round(averageSatisfaction * 100) / 100,
-				averageNps: Math.round(averageNps * 100) / 100,
-				npsValue: Math.round(npsValue * 100) / 100,
-				npsBreakdown: { promoters, passives, detractors },
-				rawData: surveys,
-			},
+			totalResponses,
+			averageSatisfaction: Math.round(averageSatisfaction * 100) / 100,
+			averageNps: Math.round(averageNps * 100) / 100,
+			npsValue: Math.round(npsValue * 100) / 100,
+			npsBreakdown: { promoters, passives, detractors },
+			rawData: surveys,
 		};
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-			},
-			"管理者アナリティクスエラー",
-		);
-		return {
-			success: false,
-			error: "予期しないエラーが発生しました",
-		};
-	}
+	}, "アンケート集計データ取得");
 }
 
 /**
@@ -399,8 +336,10 @@ export async function getAdminSurveyAnalytics() {
  * @param trigger アンケートトリガー種別
  * @returns 成功/エラー結果
  */
-export async function createSurveySkip(trigger: SurveyTrigger) {
-	try {
+export async function createSurveySkip(
+	trigger: SurveyTrigger,
+): Promise<ActionResult<{ skip: UserSurveySkipRow | null; message: string }>> {
+	return withActionResult(async () => {
 		const supabase = await createClient();
 
 		// 認証確認
@@ -409,10 +348,10 @@ export async function createSurveySkip(trigger: SurveyTrigger) {
 			error: authError,
 		} = await supabase.auth.getUser();
 		if (authError || !user) {
-			return {
-				success: false,
-				error: "認証が必要です。ログインしてからお試しください。",
-			};
+			throw new KoudenError(
+				"認証が必要です。ログインしてからお試しください。",
+				ErrorCodes.UNAUTHORIZED,
+			);
 		}
 
 		// 有効期限内のスキップ記録があるかチェック
@@ -425,24 +364,12 @@ export async function createSurveySkip(trigger: SurveyTrigger) {
 			.single();
 
 		if (checkError && checkError.code !== "PGRST116") {
-			logger.error(
-				{
-					error: checkError.message,
-					code: checkError.code,
-					userId: user.id,
-					trigger,
-				},
-				"既存スキップ記録確認エラー",
-			);
-			return {
-				success: false,
-				error: "スキップ記録の確認に失敗しました。時間を置いてお試しください。",
-			};
+			throw checkError;
 		}
 
 		if (existingSkip) {
 			return {
-				success: true,
+				skip: null,
 				message: "既にスキップ記録が存在します。",
 			};
 		}
@@ -457,40 +384,13 @@ export async function createSurveySkip(trigger: SurveyTrigger) {
 			.select()
 			.single();
 
-		if (insertError) {
-			logger.error(
-				{
-					error: insertError.message,
-					code: insertError.code,
-					userId: user.id,
-					trigger,
-				},
-				"スキップ記録作成エラー",
-			);
-			return {
-				success: false,
-				error: "スキップ記録の作成に失敗しました。時間を置いてお試しください。",
-			};
-		}
+		if (insertError) throw insertError;
 
 		return {
-			success: true,
-			data: newSkip,
+			skip: newSkip,
 			message: "アンケートをスキップしました。1日後に再度表示される場合があります。",
 		};
-	} catch (error) {
-		logger.error(
-			{
-				error: error instanceof Error ? error.message : String(error),
-				trigger,
-			},
-			"アンケートスキップエラー",
-		);
-		return {
-			success: false,
-			error: "予期しないエラーが発生しました。時間を置いてお試しください。",
-		};
-	}
+	}, "アンケートスキップ");
 }
 
 /**
