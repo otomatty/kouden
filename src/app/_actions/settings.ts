@@ -36,6 +36,13 @@ async function assertOwnSettings(userId: string): Promise<void> {
 	}
 }
 
+/**
+ * ログイン中ユーザーの設定を取得する。
+ *
+ * @param userId 取得対象のユーザー ID。セッションの `auth.uid()` と一致しない場合は
+ *   `FORBIDDEN` で失敗する。
+ * @returns `ActionResult<UserSettings>`
+ */
 export async function getUserSettings(userId: string): Promise<ActionResult<UserSettings>> {
 	return withActionResult(async () => {
 		await assertOwnSettings(userId);
@@ -52,6 +59,14 @@ export async function getUserSettings(userId: string): Promise<ActionResult<User
 	}, "ユーザー設定の取得");
 }
 
+/**
+ * ログイン中ユーザーの設定を更新する。
+ *
+ * @param userId 更新対象のユーザー ID。セッションの `auth.uid()` と一致しない場合は
+ *   `FORBIDDEN` で失敗する。
+ * @param params 更新するフィールド（部分更新）。
+ * @returns 更新後の `UserSettings` を含む `ActionResult`
+ */
 export async function updateUserSettings(
 	userId: string,
 	params: UpdateSettingsParams,
@@ -148,7 +163,7 @@ export async function updateGuideVisibility(show: boolean): Promise<ActionResult
 		} = await supabase.auth.getUser();
 
 		if (userError || !user) {
-			throw new Error("認証が必要です");
+			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
 		}
 
 		const { error } = await supabase
