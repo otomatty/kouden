@@ -12,13 +12,17 @@ export function StructuredData({ type, data }: StructuredDataProps) {
 		...data,
 	};
 
+	// `<` を `<` にエスケープし、JSON 値に `</script>` 等が混入しても
+	// script タグから抜け出せないようにする (latent XSS 対策)。
+	const safeJson = JSON.stringify(structuredData).replace(/</g, "\\u003c");
+
 	return (
 		<Script
 			id={`structured-data-${type.toLowerCase()}`}
 			type="application/ld+json"
-			// biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
+			// biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD は HTML 文字列として埋め込む必要があるため。`<` は上で事前エスケープ済み。
 			dangerouslySetInnerHTML={{
-				__html: JSON.stringify(structuredData),
+				__html: safeJson,
 			}}
 		/>
 	);

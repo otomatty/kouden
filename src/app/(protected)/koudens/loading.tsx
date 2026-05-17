@@ -1,5 +1,5 @@
-import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function KoudensLoading() {
 	return (
@@ -12,8 +12,9 @@ export default function KoudensLoading() {
 
 			{/* リストのスケルトン */}
 			<div className="koudens-list grid gap-2 md:grid-cols-2 lg:grid-cols-3 md:gap-6">
-				{Array.from({ length: 6 }, () => (
-					<Card key={crypto.randomUUID()} className="kouden-card flex flex-col">
+				{Array.from({ length: 6 }, (_, index) => (
+					// biome-ignore lint/suspicious/noArrayIndexKey: 静的な長さ6のスケルトンで並び替えは発生しないため index を key に使う
+					<Card key={`skeleton-${index}`} className="kouden-card flex flex-col">
 						<div className="flex-1">
 							<CardHeader className="space-y-2">
 								<Skeleton className="h-6 w-[200px]" />

@@ -51,12 +51,23 @@ export async function recordLoginAttempt(
 	}
 
 	// 失敗時は試行回数を増加
-	const { data: existingAttempt } = await supabase
+	// `user_id` は uuid 型のため、空文字を `eq` に渡すと型変換エラーになる。
+	// 未認証ユーザーの試行は `user_id IS NULL` で一致させる。
+	// PostgreSQL の UNIQUE 制約は NULL 同士を別物として扱うため、未認証ユーザーの
+	// (ip_address, user_id=NULL) に対し複数行が累積する可能性がある。複数行で
+	// `.single()` を使うと例外で lockout が壊れるので、最新行を 1 件だけ取る
+	// 形 (`order + limit + maybeSingle`) で堅牢化する。
+	const existingAttemptQuery = supabase
 		.from("login_attempts")
 		.select("*")
-		.eq("ip_address", ipAddress)
-		.eq("user_id", userId || "")
-		.single();
+		.eq("ip_address", ipAddress);
+	const { data: existingAttempt } = await (userId
+		? existingAttemptQuery.eq("user_id", userId)
+		: existingAttemptQuery.is("user_id", null)
+	)
+		.order("last_attempt_at", { ascending: false })
+		.limit(1)
+		.maybeSingle();
 
 	if (existingAttempt) {
 		const newAttemptCount = existingAttempt.attempt_count + 1;
@@ -97,12 +108,15 @@ export async function isAccountLocked(
 		return { locked: false };
 	}
 
-	const { data: attempt } = await supabase
-		.from("login_attempts")
-		.select("*")
-		.eq("ip_address", ipAddress)
-		.eq("user_id", userId || "")
-		.single();
+	// 未認証ユーザーの NULL 行が複数並ぶ可能性に備え、最新行を 1 件だけ取得する。
+	const attemptQuery = supabase.from("login_attempts").select("*").eq("ip_address", ipAddress);
+	const { data: attempt } = await (userId
+		? attemptQuery.eq("user_id", userId)
+		: attemptQuery.is("user_id", null)
+	)
+		.order("last_attempt_at", { ascending: false })
+		.limit(1)
+		.maybeSingle();
 
 	if (!attempt?.locked_until) {
 		return { locked: false };
@@ -127,11 +141,8 @@ export async function isAccountLocked(
 async function clearLoginAttempts(ipAddress: string, userId?: string): Promise<void> {
 	const supabase = createAdminClient();
 
-	await supabase
-		.from("login_attempts")
-		.delete()
-		.eq("ip_address", ipAddress)
-		.eq("user_id", userId || "");
+	const deleteQuery = supabase.from("login_attempts").delete().eq("ip_address", ipAddress);
+	await (userId ? deleteQuery.eq("user_id", userId) : deleteQuery.is("user_id", null));
 }
 
 /**
