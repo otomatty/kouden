@@ -1,8 +1,8 @@
 import { zenOldMincho } from "@/app/fonts";
 import { Card } from "@/components/ui/card";
-import { FileSpreadsheet, Users2, Calculator, History } from "lucide-react";
-import { SectionTitle } from "@/components/ui/section-title";
 import { Section } from "@/components/ui/section";
+import { SectionTitle } from "@/components/ui/section-title";
+import { Calculator, FileSpreadsheet, History, Users2 } from "lucide-react";
 
 type Story = {
 	text: string;
@@ -99,12 +99,9 @@ const StoryText = ({ text, emphasizedWords }: Story) => {
 	const parts = text.split(new RegExp(`(${emphasizedWords.join("|")})`, "g"));
 	return (
 		<li className="text-lg font-medium">
-			{parts.map((part) =>
+			{parts.map((part, index) =>
 				emphasizedWords.includes(part) ? (
-					<span
-						key={crypto.randomUUID()}
-						className="text-gray-900 dark:text-gray-100 font-semibold"
-					>
+					<span key={`${index}-${part}`} className="text-gray-900 dark:text-gray-100 font-semibold">
 						{part}
 					</span>
 				) : (
