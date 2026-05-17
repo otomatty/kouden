@@ -143,11 +143,18 @@ export function DataTable({ koudenId, telegrams, entries, onDataChange }: DataTa
 				// relationship_idの場合はキーを変換
 				const fieldKey = columnId;
 
-				const updatedTelegram = await updateTelegramField(
+				const result = await updateTelegramField(
 					targetTelegram.id,
 					fieldKey as keyof Telegram,
 					value,
 				);
+				if (!result.ok) {
+					toast.error("エラーが発生しました", {
+						description: result.error.message,
+					});
+					return;
+				}
+				const updatedTelegram = result.data;
 
 				if (onDataChange) {
 					const newTelegrams = normalizedTelegrams.map((telegram) =>

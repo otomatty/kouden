@@ -125,11 +125,18 @@ export function DataTable({ koudenId, entries, offerings, onDataChange }: DataTa
 			}
 
 			try {
-				const updatedOffering = await updateOfferingField(
+				const result = await updateOfferingField(
 					targetOffering.id,
 					columnId as keyof Omit<Offering, "offering_entries">,
 					value,
 				);
+				if (!result.ok) {
+					toast.error("エラーが発生しました", {
+						description: result.error.message,
+					});
+					return;
+				}
+				const updatedOffering = result.data;
 
 				if (onDataChange) {
 					const newOfferings = offerings.map((offering) =>
