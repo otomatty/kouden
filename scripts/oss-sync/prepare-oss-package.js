@@ -105,7 +105,7 @@ function prepareEnvExample() {
 
 	const envExample = `# Supabase Configuration
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 
 # App Configuration
 NEXT_PUBLIC_APP_URL=http://localhost:3000

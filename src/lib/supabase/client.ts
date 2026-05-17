@@ -3,15 +3,15 @@ import type { Database } from "@/types/supabase";
 
 export function createClient() {
 	const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-	const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+	const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
 	if (!supabaseUrl) {
 		throw new Error("Missing Supabase environment variables");
 	}
 
-	if (!supabaseAnonKey) {
+	if (!supabasePublishableKey) {
 		throw new Error("Missing Supabase environment variables");
 	}
 
-	return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
+	return createBrowserClient<Database>(supabaseUrl, supabasePublishableKey);
 }

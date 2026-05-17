@@ -315,8 +315,8 @@ CREATE INDEX IF NOT EXISTS idx_koudens_plan ON koudens(plan_id);
 - RESEND_API_KEY       （Resend API キー）
 - STRIPE_SECRET_KEY    （Stripe シークレットキー）
 - STRIPE_WEBHOOK_SECRET（Stripe Webhook シグニチャ検証用シークレット）
-- SUPABASE_URL        
-- SUPABASE_SERVICE_ROLE_KEY （Supabase サービスロールキー）
+- NEXT_PUBLIC_SUPABASE_URL （SupabaseプロジェクトURL）
+- SUPABASE_SECRET_KEY （Supabase Secret Key）
 - STRIPE_PUBLISHABLE_KEY （Stripe公開可能キー）
 
 ### 11.5 冪等性・エラーハンドリング
