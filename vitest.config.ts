@@ -41,5 +41,22 @@ export default defineConfig({
 		restoreMocks: true,
 		// Enable vi global for all test environments
 		isolate: false,
+		coverage: {
+			provider: "v8",
+			reporter: ["text", "html", "lcov"],
+			reportOnFailure: true,
+			include: ["src/**/*.{ts,tsx}", "scripts/**/*.{js,mjs,ts}"],
+			exclude: [
+				"**/*.stories.*",
+				"**/*.d.ts",
+				"**/__tests__/**",
+				"**/*.{test,spec}.*",
+				"scripts/__tests__/test-output/**",
+			],
+			thresholds: {
+				lines: 5,
+				functions: 5,
+			},
+		},
 	},
 });
