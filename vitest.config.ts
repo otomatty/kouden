@@ -45,7 +45,10 @@ export default defineConfig({
 			provider: "v8",
 			reporter: ["text", "html", "lcov"],
 			reportOnFailure: true,
-			include: ["src/**/*.{ts,tsx}", "scripts/**/*.{js,mjs,ts}"],
+			include: [
+				"src/**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}",
+				"scripts/**/*.{js,mjs,cjs,ts,mts,cts}",
+			],
 			exclude: [
 				"**/*.stories.*",
 				"**/*.d.ts",
