@@ -3496,13 +3496,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      update_kouden_plan: {
-        Args: {
-          p_kouden_id: string
-          p_new_plan_code: string
-        }
-        Returns: string
-      }
       update_member_role: {
         Args: { p_kouden_id: string; p_user_id: string; p_role_id: string }
         Returns: undefined
