@@ -1,23 +1,13 @@
+import { ErrorCodes } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
 import PDFDocument from "pdfkit";
 import { Resend } from "resend";
 import { type Mock, beforeEach, describe, expect, it, vi } from "vitest";
 import { exportReceiptToPdf } from "../exportReceipt";
 
-// モック設定
 vi.mock("pdfkit", () => ({
 	__esModule: true,
-	default: vi.fn().mockImplementation(() => {
-		return {
-			fontSize: vi.fn().mockReturnThis(),
-			text: vi.fn().mockReturnThis(),
-			moveDown: vi.fn().mockReturnThis(),
-			end: vi.fn(),
-			on: vi.fn((event: string, cb: () => void) => {
-				if (event === "end") setImmediate(cb);
-			}),
-		};
-	}),
+	default: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/admin", () => ({
@@ -25,19 +15,17 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 
 vi.mock("resend", () => ({
-	Resend: vi.fn().mockImplementation(() => ({
-		emails: {
-			send: vi.fn().mockResolvedValue({}),
-		},
-	})),
+	Resend: vi.fn(),
 }));
 
-// Set RESEND_API_KEY for tests to prevent missing env errors
 vi.stubEnv("RESEND_API_KEY", "test_key");
 
 describe("exportReceiptToPdf", () => {
-	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+	// biome-ignore lint/suspicious/noExplicitAny: supabase mock
 	let supabaseMock: any;
+	let resendSendMock: ReturnType<typeof vi.fn>;
+	let storageUploadMock: ReturnType<typeof vi.fn>;
+
 	const mockPurchase = {
 		id: "1",
 		kouden_id: "k1",
@@ -52,67 +40,99 @@ describe("exportReceiptToPdf", () => {
 	const mockUser = { user: { email: "test@example.com" } };
 
 	beforeEach(() => {
-		vi.clearAllMocks();
-		// Supabase Admin Client のモックセットアップ
+		// vitest config has mockReset/restoreMocks: true, so implementations set inside
+		// vi.mock() factories are wiped between tests. Re-set them here.
+		(PDFDocument as unknown as Mock).mockImplementation(() => ({
+			fontSize: vi.fn().mockReturnThis(),
+			text: vi.fn().mockReturnThis(),
+			moveDown: vi.fn().mockReturnThis(),
+			end: vi.fn(),
+			on: vi.fn((event: string, cb: () => void) => {
+				if (event === "end") setImmediate(cb);
+			}),
+		}));
+
+		resendSendMock = vi.fn().mockResolvedValue({});
+		(Resend as unknown as Mock).mockImplementation(() => ({
+			emails: { send: resendSendMock },
+		}));
+
+		storageUploadMock = vi.fn().mockResolvedValue({ error: null });
 		supabaseMock = {
-			from: vi
-				.fn()
-				// purchase
-				.mockReturnValueOnce({
-					select: () => ({
-						eq: () => ({ single: () => Promise.resolve({ data: mockPurchase, error: null }) }),
-					}),
-				})
-				// plan
-				.mockReturnValueOnce({
-					select: () => ({
-						eq: () => ({ single: () => Promise.resolve({ data: mockPlan, error: null }) }),
-					}),
-				})
-				// kouden
-				.mockReturnValueOnce({
-					select: () => ({
-						eq: () => ({ single: () => Promise.resolve({ data: mockKouden, error: null }) }),
-					}),
-				})
-				// notification_types select
-				.mockReturnValueOnce({
-					select: () => ({
-						eq: () => ({ single: () => Promise.resolve({ data: { id: "nt1" }, error: null }) }),
-					}),
-				})
-				// notifications insert
-				.mockReturnValueOnce({
-					insert: () => ({ single: () => Promise.resolve({ error: null }) }),
-				}),
-			auth: { admin: { getUserById: vi.fn().mockResolvedValue({ data: mockUser, error: null }) } },
+			from: vi.fn((table: string) => {
+				switch (table) {
+					case "kouden_purchases":
+						return {
+							select: () => ({
+								eq: () => ({
+									single: () => Promise.resolve({ data: mockPurchase, error: null }),
+								}),
+							}),
+						};
+					case "plans":
+						return {
+							select: () => ({
+								eq: () => ({
+									single: () => Promise.resolve({ data: mockPlan, error: null }),
+								}),
+							}),
+						};
+					case "koudens":
+						return {
+							select: () => ({
+								eq: () => ({
+									single: () => Promise.resolve({ data: mockKouden, error: null }),
+								}),
+							}),
+						};
+					case "notification_types":
+						return {
+							select: () => ({
+								eq: () => ({
+									single: () => Promise.resolve({ data: { id: "nt1" }, error: null }),
+								}),
+							}),
+						};
+					case "notifications":
+						return {
+							insert: () => Promise.resolve({ error: null }),
+						};
+					default:
+						throw new Error(`Unexpected table: ${table}`);
+				}
+			}),
+			auth: {
+				admin: {
+					getUserById: vi.fn().mockResolvedValue({ data: mockUser, error: null }),
+				},
+			},
 			storage: {
-				from: vi.fn().mockReturnValue({ upload: vi.fn().mockResolvedValue({ error: null }) }),
+				from: vi.fn().mockReturnValue({ upload: storageUploadMock }),
 			},
 		};
 		(createAdminClient as unknown as Mock).mockReturnValue(supabaseMock);
 	});
 
 	it("should create PDFDocument with correct options", async () => {
-		await exportReceiptToPdf("1");
+		const result = await exportReceiptToPdf("1");
+		expect(result.ok).toBe(true);
 		expect(PDFDocument).toHaveBeenCalledWith({ size: "A4", margin: 50 });
 	});
 
 	it("should upload PDF to storage", async () => {
-		await exportReceiptToPdf("1");
+		const result = await exportReceiptToPdf("1");
+		expect(result.ok).toBe(true);
 		expect(supabaseMock.storage.from).toHaveBeenCalledWith("receipts");
-		expect(supabaseMock.storage.from().upload).toHaveBeenCalledWith(
-			"receipts/1.pdf",
-			expect.any(Buffer),
-			{ contentType: "application/pdf", upsert: false },
-		);
+		expect(storageUploadMock).toHaveBeenCalledWith("receipts/1.pdf", expect.any(Buffer), {
+			contentType: "application/pdf",
+			upsert: false,
+		});
 	});
 
 	it("should send email with attachment", async () => {
-		await exportReceiptToPdf("1");
-		// @ts-ignore: mock is guaranteed by vi.mock
-		const resendInstance = (Resend as unknown as Mock).mock.results[0].value;
-		expect(resendInstance.emails.send).toHaveBeenCalledWith(
+		const result = await exportReceiptToPdf("1");
+		expect(result.ok).toBe(true);
+		expect(resendSendMock).toHaveBeenCalledWith(
 			expect.objectContaining({
 				to: "test@example.com",
 				attachments: expect.any(Array),
@@ -120,15 +140,18 @@ describe("exportReceiptToPdf", () => {
 		);
 	});
 
-	it("should throw error when purchase not found", async () => {
-		// 購入情報取得失敗をシミュレート
+	it("should return NOT_FOUND when purchase not found", async () => {
 		(createAdminClient as unknown as Mock).mockReturnValue({
 			from: vi.fn().mockReturnValue({
 				select: () => ({
-					eq: () => ({ single: () => Promise.resolve({ data: null, error: {} }) }),
+					eq: () => ({ single: () => Promise.resolve({ data: null, error: null }) }),
 				}),
 			}),
 		});
-		await expect(exportReceiptToPdf("invalid")).rejects.toThrow("購入情報の取得に失敗しました");
+		const result = await exportReceiptToPdf("invalid");
+		expect(result.ok).toBe(false);
+		if (!result.ok) {
+			expect(result.error.code).toBe(ErrorCodes.NOT_FOUND);
+		}
 	});
 });
