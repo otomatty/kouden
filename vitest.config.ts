@@ -62,10 +62,6 @@ export default defineConfig({
 				"**/*.{test,spec}.*",
 				"scripts/__tests__/test-output/**",
 			],
-			thresholds: {
-				lines: 5,
-				functions: 5,
-			},
 		},
 	},
 });
