@@ -141,13 +141,11 @@ describe("exportReceiptToPdf", () => {
 	});
 
 	it("should return NOT_FOUND when purchase not found", async () => {
-		(createAdminClient as unknown as Mock).mockReturnValue({
-			from: vi.fn().mockReturnValue({
-				select: () => ({
-					eq: () => ({ single: () => Promise.resolve({ data: null, error: null }) }),
-				}),
+		supabaseMock.from.mockImplementationOnce(() => ({
+			select: () => ({
+				eq: () => ({ single: () => Promise.resolve({ data: null, error: null }) }),
 			}),
-		});
+		}));
 		const result = await exportReceiptToPdf("invalid");
 		expect(result.ok).toBe(false);
 		if (!result.ok) {
