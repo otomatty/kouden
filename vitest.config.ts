@@ -15,6 +15,11 @@ export default defineConfig({
 		setupFiles: ["./vitest.setup.ts"],
 		// Support for Node.js environment tests
 		pool: "forks",
+		poolOptions: {
+			forks: {
+				singleFork: true,
+			},
+		},
 		// Test configuration for different environments
 		env: {
 			NODE_ENV: "test",
@@ -39,8 +44,9 @@ export default defineConfig({
 		mockReset: true,
 		clearMocks: true,
 		restoreMocks: true,
-		// Enable vi global for all test environments
-		isolate: false,
+		// Isolate test modules to prevent state leakage between files
+		// (required when using poolOptions.forks.singleFork)
+		isolate: true,
 		coverage: {
 			provider: "v8",
 			reporter: ["text", "html", "lcov"],
