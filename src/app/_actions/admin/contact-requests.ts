@@ -54,7 +54,7 @@ export async function getContactRequests(params?: {
 
 		let query = supabase
 			.from("contact_requests")
-			.select("*")
+			.select("*", { count: "exact" })
 			.order("created_at", { ascending: false });
 
 		// フィルタリング

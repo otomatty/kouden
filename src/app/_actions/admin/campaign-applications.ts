@@ -53,7 +53,7 @@ export async function getCampaignApplications(params?: {
 
 		let query = supabase
 			.from("campaign_hearing_applications")
-			.select("*")
+			.select("*", { count: "exact" })
 			.order("created_at", { ascending: false });
 
 		// フィルタリング
