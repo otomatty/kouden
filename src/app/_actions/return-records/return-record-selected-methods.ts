@@ -5,6 +5,7 @@
  * @module return-record-selected-methods
  */
 
+import { checkKoudenPermission } from "@/app/_actions/permissions";
 import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
 import type {
@@ -28,6 +29,12 @@ export async function createReturnRecordSelectedMethod(
 		} = await supabase.auth.getUser();
 		if (!user) {
 			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
+		}
+
+		// 編集権限 (owner / editor) を確認
+		const permission = await checkKoudenPermission(koudenId);
+		if (!["owner", "editor"].includes(permission)) {
+			throw new KoudenError("返礼方法選択の作成権限がありません", ErrorCodes.FORBIDDEN);
 		}
 
 		const { data, error } = await supabase
@@ -102,6 +109,19 @@ export async function updateReturnRecordSelectedMethod(
 ): Promise<ActionResult<ReturnRecordSelectedMethod>> {
 	return withActionResult(async () => {
 		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
+		if (!user) {
+			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
+		}
+
+		// 編集権限 (owner / editor) を確認
+		const permission = await checkKoudenPermission(koudenId);
+		if (!["owner", "editor"].includes(permission)) {
+			throw new KoudenError("返礼方法選択の更新権限がありません", ErrorCodes.FORBIDDEN);
+		}
+
 		const { id, ...updateData } = input;
 		const { data, error } = await supabase
 			.from("return_record_selected_methods")
@@ -132,6 +152,19 @@ export async function deleteReturnRecordSelectedMethod(
 ): Promise<ActionResult<null>> {
 	return withActionResult(async () => {
 		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
+		if (!user) {
+			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
+		}
+
+		// 編集権限 (owner / editor) を確認
+		const permission = await checkKoudenPermission(koudenId);
+		if (!["owner", "editor"].includes(permission)) {
+			throw new KoudenError("返礼方法選択の削除権限がありません", ErrorCodes.FORBIDDEN);
+		}
+
 		const { error } = await supabase.from("return_record_selected_methods").delete().eq("id", id);
 
 		if (error) {

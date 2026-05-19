@@ -5,6 +5,7 @@
  * @module return-record-items
  */
 
+import { checkKoudenPermission } from "@/app/_actions/permissions";
 import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
@@ -32,6 +33,12 @@ export async function createReturnRecordItem(
 
 		if (!user) {
 			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
+		}
+
+		// 編集権限 (owner / editor) を確認
+		const permission = await checkKoudenPermission(koudenId);
+		if (!["owner", "editor"].includes(permission)) {
+			throw new KoudenError("返礼品詳細情報の作成権限がありません", ErrorCodes.FORBIDDEN);
 		}
 
 		const { data, error } = await supabase
@@ -132,6 +139,12 @@ export async function updateReturnRecordItem(
 			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 		}
 
+		// 編集権限 (owner / editor) を確認
+		const permission = await checkKoudenPermission(koudenId);
+		if (!["owner", "editor"].includes(permission)) {
+			throw new KoudenError("返礼品詳細情報の更新権限がありません", ErrorCodes.FORBIDDEN);
+		}
+
 		// 更新前の情報を取得して返礼情報IDを保持
 		const existingItem = await getReturnRecordItemInternal(input.id);
 		if (!existingItem) {
@@ -184,6 +197,12 @@ export async function deleteReturnRecordItem(
 			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 		}
 
+		// 編集権限 (owner / editor) を確認
+		const permission = await checkKoudenPermission(koudenId);
+		if (!["owner", "editor"].includes(permission)) {
+			throw new KoudenError("返礼品詳細情報の削除権限がありません", ErrorCodes.FORBIDDEN);
+		}
+
 		// 削除前の情報を取得して返礼情報IDを保持
 		const existingItem = await getReturnRecordItemInternal(id);
 		if (!existingItem) {
@@ -208,14 +227,14 @@ export async function deleteReturnRecordItem(
 /**
  * 返礼情報の合計金額を更新する（内部関数）
  *
- * 現在は select のみで実体の update はコメントアウトされている。
- * 失敗時は呼び出し元の `withActionResult` に伝播させる。
+ * `return_record_items` の `price * quantity` を集計し、親 `return_entry_records`
+ * の `total_amount` を更新する。失敗時は呼び出し元の `withActionResult` に伝播。
  */
 async function updateReturnRecordTotalAmount(returnRecordId: string): Promise<void> {
 	const supabase = await createClient();
 
 	// 返礼品詳細の合計金額を計算
-	const { error: itemsError } = await supabase
+	const { data: items, error: itemsError } = await supabase
 		.from("return_record_items")
 		.select("price, quantity")
 		.eq("return_record_id", returnRecordId);
@@ -231,15 +250,25 @@ async function updateReturnRecordTotalAmount(returnRecordId: string): Promise<vo
 		throw itemsError;
 	}
 
-	// const totalAmount = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+	const totalAmount = (items ?? []).reduce(
+		(sum, item) => sum + Number(item.price ?? 0) * Number(item.quantity ?? 0),
+		0,
+	);
 
-	// 返礼情報の合計金額を更新
-	// const { error: updateError } = await supabase
-	//     .from("return_records")
-	//     .update({ total_amount: totalAmount })
-	//     .eq("id", returnRecordId);
+	// 親レコード (return_entry_records) の total_amount を更新
+	const { error: updateError } = await supabase
+		.from("return_entry_records")
+		.update({ total_amount: totalAmount })
+		.eq("id", returnRecordId);
 
-	// if (updateError) {
-	//     throw updateError;
-	// }
+	if (updateError) {
+		logger.error(
+			{
+				error: updateError.message,
+				returnRecordId,
+			},
+			"返礼情報の合計金額更新エラー",
+		);
+		throw updateError;
+	}
 }

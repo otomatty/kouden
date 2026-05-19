@@ -5,6 +5,7 @@
  * @module return-items
  */
 
+import { checkKoudenPermission } from "@/app/_actions/permissions";
 import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
@@ -156,6 +157,12 @@ export async function updateReturnItem(
 			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 		}
 
+		// 編集権限 (owner / editor) を確認
+		const permission = await checkKoudenPermission(input.kouden_id);
+		if (!["owner", "editor"].includes(permission)) {
+			throw new KoudenError("返礼品マスター情報の更新権限がありません", ErrorCodes.FORBIDDEN);
+		}
+
 		const { id, kouden_id, ...updateData } = input;
 
 		const { data, error } = await supabase
@@ -194,6 +201,12 @@ export async function deleteReturnItem(id: string, koudenId: string): Promise<Ac
 
 		if (!user) {
 			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
+		}
+
+		// 編集権限 (owner / editor) を確認
+		const permission = await checkKoudenPermission(koudenId);
+		if (!["owner", "editor"].includes(permission)) {
+			throw new KoudenError("返礼品マスター情報の削除権限がありません", ErrorCodes.FORBIDDEN);
 		}
 
 		const { error } = await supabase.from("return_items").delete().eq("id", id);

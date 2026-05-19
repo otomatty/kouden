@@ -35,9 +35,13 @@ export async function setupTwoFactorAuth(
 		}
 
 		// 管理者かどうかを確認
-		const { data: isAdmin } = await supabase.rpc("is_admin", {
+		const { data: isAdmin, error: rpcError } = await supabase.rpc("is_admin", {
 			user_uid: user.id,
 		});
+
+		if (rpcError) {
+			throw new KoudenError("管理者権限の確認に失敗しました", ErrorCodes.DB_FETCH_ERROR);
+		}
 
 		if (!isAdmin) {
 			throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
@@ -96,9 +100,13 @@ export async function disableTwoFactorAuth(): Promise<ActionResult<null>> {
 		}
 
 		// 管理者かどうかを確認
-		const { data: isAdmin } = await supabase.rpc("is_admin", {
+		const { data: isAdmin, error: rpcError } = await supabase.rpc("is_admin", {
 			user_uid: user.id,
 		});
+
+		if (rpcError) {
+			throw new KoudenError("管理者権限の確認に失敗しました", ErrorCodes.DB_FETCH_ERROR);
+		}
 
 		if (!isAdmin) {
 			throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
@@ -146,9 +154,13 @@ export async function verifyTwoFactorLogin(verificationCode: string): Promise<Ac
 		}
 
 		// 管理者かどうかを確認
-		const { data: isAdmin } = await supabase.rpc("is_admin", {
+		const { data: isAdmin, error: rpcError } = await supabase.rpc("is_admin", {
 			user_uid: user.id,
 		});
+
+		if (rpcError) {
+			throw new KoudenError("管理者権限の確認に失敗しました", ErrorCodes.DB_FETCH_ERROR);
+		}
 
 		if (!isAdmin) {
 			throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);

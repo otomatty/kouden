@@ -225,6 +225,22 @@ export async function uploadContactAttachment(
 			.insert({ request_id: requestId, file_url: filePath, file_name: file.name })
 			.select();
 		if (dbError) {
+			// INSERT 失敗時はアップロード済みファイルを best-effort で削除して
+			// 孤児ファイルが Storage に残らないようにする
+			const { error: cleanupError } = await supabase.storage
+				.from("contact-attachments")
+				.remove([filePath]);
+			if (cleanupError) {
+				logger.warn(
+					{
+						userId: user.id,
+						requestId,
+						filePath,
+						error: cleanupError.message,
+					},
+					"Failed to cleanup orphaned contact attachment file",
+				);
+			}
 			throw dbError;
 		}
 		return data ?? [];
