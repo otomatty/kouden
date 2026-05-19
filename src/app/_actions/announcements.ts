@@ -1,6 +1,7 @@
 "use server";
 
-import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
+import { checkAdminPermission } from "@/app/_actions/admin/permissions";
+import { type ActionResult, withActionResult } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
 import type {
 	Announcement,
@@ -35,16 +36,8 @@ export async function getActiveAnnouncements(): Promise<ActionResult<Announcemen
  */
 export async function getAllAnnouncements(): Promise<ActionResult<Announcement[]>> {
 	return withActionResult(async () => {
-		const supabase = await createClient();
-		const {
-			data: { user },
-		} = await supabase.auth.getUser();
+		const { supabase } = await checkAdminPermission();
 
-		if (!user) {
-			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
-		}
-
-		// 管理者権限チェックは実装に応じて追加
 		const { data: announcements, error } = await supabase
 			.from("announcements")
 			.select("*")
@@ -64,14 +57,7 @@ export async function createAnnouncement(
 	input: CreateAnnouncementInput,
 ): Promise<ActionResult<Announcement>> {
 	return withActionResult(async () => {
-		const supabase = await createClient();
-		const {
-			data: { user },
-		} = await supabase.auth.getUser();
-
-		if (!user) {
-			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
-		}
+		const { supabase, user } = await checkAdminPermission();
 
 		const { data: announcement, error } = await supabase
 			.from("announcements")
@@ -96,14 +82,7 @@ export async function updateAnnouncement(
 	input: UpdateAnnouncementInput,
 ): Promise<ActionResult<Announcement>> {
 	return withActionResult(async () => {
-		const supabase = await createClient();
-		const {
-			data: { user },
-		} = await supabase.auth.getUser();
-
-		if (!user) {
-			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
-		}
+		const { supabase } = await checkAdminPermission();
 
 		const { id, ...updateData } = input;
 
@@ -128,14 +107,7 @@ export async function updateAnnouncement(
  */
 export async function deleteAnnouncement(id: string): Promise<ActionResult<null>> {
 	return withActionResult(async () => {
-		const supabase = await createClient();
-		const {
-			data: { user },
-		} = await supabase.auth.getUser();
-
-		if (!user) {
-			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
-		}
+		const { supabase } = await checkAdminPermission();
 
 		const { error } = await supabase.from("announcements").delete().eq("id", id);
 

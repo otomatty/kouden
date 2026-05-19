@@ -18,9 +18,14 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
 		redirect("/auth/login");
 	}
 
-	const { data: isAdmin } = await supabase.rpc("is_admin", {
+	const { data: isAdmin, error: rpcError } = await supabase.rpc("is_admin", {
 		user_uid: user.id,
 	});
+
+	// RPC エラーは権限不足ではなく DB エラーとして扱う (上位で 500 化)
+	if (rpcError) {
+		throw new Error(`管理者権限の確認に失敗しました: ${rpcError.message}`);
+	}
 
 	if (!isAdmin) {
 		redirect("/");
