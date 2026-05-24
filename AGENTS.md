@@ -935,3 +935,31 @@ src/
 - **開発プロセスの可視化**: Issue/Research/Plan/Logにより、開発プロセス全体が可視化され、後から振り返りや引き継ぎが容易
 
 このガイドラインに従うことで、AIと人間双方にとって可読性が高く、変更に強いソフトウェア構造を実現できます。
+
+---
+
+## Cursor Cloud specific instructions
+
+### Overview
+
+Kouden (香典帳) is a Next.js 15 web application for managing funeral condolence registries. It uses Bun as runtime/package manager, Supabase for backend, and Biome for linting.
+
+### Commands
+
+| Task | Command |
+|------|---------|
+| Install deps | `bun install` |
+| Dev server | `bun dev` (port 8788) |
+| Build | `bun run build` |
+| Lint | `bun run lint` (Biome) |
+| Unit tests | `bun run test -- --run` |
+| Storybook | `bun run storybook` (port 6006) |
+
+### Environment setup caveats
+
+- Bun must be on `$PATH`. The update script installs it to `~/.bun/bin/bun`. Source `~/.bashrc` or export `PATH="$HOME/.bun/bin:$PATH"` in your shell before running commands.
+- A `.env.local` file is required to start the dev server or run the build. Copy from `.env.example` and at minimum set `CSRF_SECRET` (generate with `openssl rand -hex 32`) and `STRIPE_SECRET_KEY` (even a placeholder like `sk_test_placeholder` suffices for local builds). The build will also fail if `GOOGLE_SERVICE_ACCOUNT_EMAIL` is unset.
+- The existing lint output has ~441 pre-existing errors (mostly `noConsoleLog` warnings in scripts and naming conventions). This is expected; do not attempt to fix them unless specifically asked.
+- Unit tests run via Vitest (`bun run test -- --run`). All 366 tests pass. The test for `survey-modal` is skipped by design.
+- The app connects to a remote Supabase instance. Most features (auth, data) require valid Supabase credentials. Without them, the landing page still renders but authenticated routes will fail.
+- Rate limiting falls back to in-memory `Map` when `UPSTASH_REDIS_REST_URL` is not set, which is fine for local dev.
