@@ -935,3 +935,31 @@ src/
 - **開発プロセスの可視化**: Issue/Research/Plan/Logにより、開発プロセス全体が可視化され、後から振り返りや引き継ぎが容易
 
 このガイドラインに従うことで、AIと人間双方にとって可読性が高く、変更に強いソフトウェア構造を実現できます。
+
+---
+
+## Cursor Cloud specific instructions
+
+### 概要
+
+香典帳（Kouden）は葬儀・法要における香典管理のための Next.js 15 Webアプリケーションです。ランタイム/パッケージマネージャーに Bun、バックエンドに Supabase、リンターに Biome を使用しています。
+
+### コマンド一覧
+
+| タスク | コマンド |
+|--------|---------|
+| 依存関係インストール | `bun install` |
+| 開発サーバー起動 | `bun dev`（ポート 8788） |
+| ビルド | `bun run build` |
+| リント | `bun run lint`（Biome） |
+| ユニットテスト | `bun run test -- --run` |
+| Storybook | `bun run storybook`（ポート 6006） |
+
+### 環境セットアップの注意点
+
+- Bun が `$PATH` に含まれている必要があります。アップデートスクリプトにより `~/.bun/bin/bun` にインストールされます。コマンド実行前に `export PATH="$HOME/.bun/bin:$PATH"` を実行してください。
+- `.env.local` ファイルが必要です。`.env.example` からコピーし、最低限 `CSRF_SECRET`（`openssl rand -hex 32` で生成）、`STRIPE_SECRET_KEY`（プレースホルダー `sk_test_placeholder` でもビルド可能）、`GOOGLE_SERVICE_ACCOUNT_EMAIL` を設定してください。また、README.md に記載の Supabase 認証情報（`NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`、`SUPABASE_SECRET_KEY`）も設定が必要です。
+- `bun run lint` はプロジェクト既存のリント違反（約441件）により終了コード 1 で終了します。内訳は `noConsoleLog` や命名規則に関する警告・エラーです。これらは既知の技術的負債であり、明示的に依頼されない限り修正不要です。終了コード 1 は想定通りの動作です。
+- ユニットテストは Vitest で実行します（`bun run test -- --run`）。全366テストがパスします。`survey-modal` テストは設計上スキップされています。
+- Supabase 環境変数は必須です。`NEXT_PUBLIC_SUPABASE_URL` と `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` が未設定の場合、`src/lib/supabase/middleware.ts` がモジュールロード時に throw するため、アプリが正しく起動・動作しません。プレースホルダー値でもビルドと起動は可能ですが、認証やデータ機能には有効な認証情報が必要です。
+- `UPSTASH_REDIS_REST_URL` または `UPSTASH_REDIS_REST_TOKEN` が未設定の場合、もしくは Upstash への通信が失敗した場合、レート制限はインメモリ `Map` にフォールバックします。ローカル開発では問題ありません。
