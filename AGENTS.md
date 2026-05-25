@@ -940,26 +940,26 @@ src/
 
 ## Cursor Cloud specific instructions
 
-### Overview
+### 概要
 
-Kouden (香典帳) is a Next.js 15 web application for managing funeral condolence registries. It uses Bun as runtime/package manager, Supabase for backend, and Biome for linting.
+香典帳（Kouden）は葬儀・法要における香典管理のための Next.js 15 Webアプリケーションです。ランタイム/パッケージマネージャーに Bun、バックエンドに Supabase、リンターに Biome を使用しています。
 
-### Commands
+### コマンド一覧
 
-| Task | Command |
-|------|---------|
-| Install deps | `bun install` |
-| Dev server | `bun dev` (port 8788) |
-| Build | `bun run build` |
-| Lint | `bun run lint` (Biome) |
-| Unit tests | `bun run test -- --run` |
-| Storybook | `bun run storybook` (port 6006) |
+| タスク | コマンド |
+|--------|---------|
+| 依存関係インストール | `bun install` |
+| 開発サーバー起動 | `bun dev`（ポート 8788） |
+| ビルド | `bun run build` |
+| リント | `bun run lint`（Biome） |
+| ユニットテスト | `bun run test -- --run` |
+| Storybook | `bun run storybook`（ポート 6006） |
 
-### Environment setup caveats
+### 環境セットアップの注意点
 
-- Bun must be on `$PATH`. The update script installs it to `~/.bun/bin/bun`. Source `~/.bashrc` or export `PATH="$HOME/.bun/bin:$PATH"` in your shell before running commands.
-- A `.env.local` file is required to start the dev server or run the build. Copy from `.env.example` and at minimum set `CSRF_SECRET` (generate with `openssl rand -hex 32`) and `STRIPE_SECRET_KEY` (even a placeholder like `sk_test_placeholder` suffices for local builds). The build will also fail if `GOOGLE_SERVICE_ACCOUNT_EMAIL` is unset.
-- The existing lint output has ~441 pre-existing errors (mostly `noConsoleLog` warnings in scripts and naming conventions). This is expected; do not attempt to fix them unless specifically asked.
-- Unit tests run via Vitest (`bun run test -- --run`). All 366 tests pass. The test for `survey-modal` is skipped by design.
-- The app connects to a remote Supabase instance. Most features (auth, data) require valid Supabase credentials. Without them, the landing page still renders but authenticated routes will fail.
-- Rate limiting falls back to in-memory `Map` when `UPSTASH_REDIS_REST_URL` is not set, which is fine for local dev.
+- Bun が `$PATH` に含まれている必要があります。アップデートスクリプトにより `~/.bun/bin/bun` にインストールされます。コマンド実行前に `export PATH="$HOME/.bun/bin:$PATH"` を実行してください。
+- `.env.local` ファイルが必要です。`.env.example` からコピーし、最低限 `CSRF_SECRET`（`openssl rand -hex 32` で生成）、`STRIPE_SECRET_KEY`（プレースホルダー `sk_test_placeholder` でもビルド可能）、`GOOGLE_SERVICE_ACCOUNT_EMAIL` を設定してください。また、README.md に記載の Supabase 認証情報（`NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`、`SUPABASE_SECRET_KEY`）も設定が必要です。
+- `bun run lint` はプロジェクト既存のリント違反（約441件）により終了コード 1 で終了します。内訳は `noConsoleLog` や命名規則に関する警告・エラーです。これらは既知の技術的負債であり、明示的に依頼されない限り修正不要です。終了コード 1 は想定通りの動作です。
+- ユニットテストは Vitest で実行します（`bun run test -- --run`）。全366テストがパスします。`survey-modal` テストは設計上スキップされています。
+- アプリはリモートの Supabase インスタンスに接続します。認証やデータ機能には有効な Supabase 認証情報が必要です。未設定でもランディングページは表示されますが、認証が必要なルートは動作しません。
+- `UPSTASH_REDIS_REST_URL` が未設定の場合、レート制限はインメモリ `Map` にフォールバックします。ローカル開発では問題ありません。
