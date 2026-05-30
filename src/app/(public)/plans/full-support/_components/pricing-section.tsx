@@ -4,18 +4,20 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Input } from "@/components/ui/input";
 import { Section } from "@/components/ui/section";
 import { SectionTitle } from "@/components/ui/section-title";
+import { FULL_SUPPORT_PRICING, PRICING_SLIDER } from "@/config/constants";
 import { DollarSign, Info } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-// これらの定数はコンポーネントの外に出すか、useMemoでメモ化することも検討できますが、
-// 今回はuseCallbackの依存配列から除外するだけでLinterエラーは解消されます。
-const PREMIUM_PLAN_PRICE = 7980;
-const BASE_SUPPORT_MIN = 7020;
-const BASE_SUPPORT_MAX = 17020;
-const ADDITIONAL_BLOCK_PRICE_MIN = 3000;
-const ADDITIONAL_BLOCK_PRICE_MAX = 5000;
-const MIN_SLIDER_VALUE = 0;
-const MAX_SLIDER_VALUE = 500;
+const {
+	PREMIUM_PLAN_PRICE,
+	BASE_SUPPORT_MIN,
+	BASE_SUPPORT_MAX,
+	ADDITIONAL_BLOCK_PRICE_MIN,
+	ADDITIONAL_BLOCK_PRICE_MAX,
+	BASE_SUPPORT_INCLUDED_COUNT,
+	ADDITIONAL_BLOCK_SIZE,
+} = FULL_SUPPORT_PRICING;
+const { MIN_VALUE: MIN_SLIDER_VALUE, MAX_VALUE: MAX_SLIDER_VALUE } = PRICING_SLIDER;
 
 export function PricingSection() {
 	const [kodenCount, setKodenCount] = useState<number | "">(50);
@@ -39,7 +41,7 @@ export function PricingSection() {
 				return;
 			}
 
-			if (count <= 100) {
+			if (count <= BASE_SUPPORT_INCLUDED_COUNT) {
 				const totalMin = PREMIUM_PLAN_PRICE + BASE_SUPPORT_MIN;
 				const totalMax = PREMIUM_PLAN_PRICE + BASE_SUPPORT_MAX;
 				setEstimatedPrice(
@@ -53,8 +55,8 @@ export function PricingSection() {
 					</p>,
 				);
 			} else {
-				const additionalCount = count - 100;
-				const additionalBlocks = Math.ceil(additionalCount / 50);
+				const additionalCount = count - BASE_SUPPORT_INCLUDED_COUNT;
+				const additionalBlocks = Math.ceil(additionalCount / ADDITIONAL_BLOCK_SIZE);
 				const additionalSupportMin = additionalBlocks * ADDITIONAL_BLOCK_PRICE_MIN;
 				const additionalSupportMax = additionalBlocks * ADDITIONAL_BLOCK_PRICE_MAX;
 
@@ -68,8 +70,8 @@ export function PricingSection() {
 					<div className="text-sm space-y-1">
 						<p>プレミアムプラン料金: {PREMIUM_PLAN_PRICE.toLocaleString()}円</p>
 						<p>
-							基本サポート料金 (100件分): {BASE_SUPPORT_MIN.toLocaleString()}円 〜{" "}
-							{BASE_SUPPORT_MAX.toLocaleString()}円
+							基本サポート料金 ({BASE_SUPPORT_INCLUDED_COUNT}件分):{" "}
+							{BASE_SUPPORT_MIN.toLocaleString()}円 〜 {BASE_SUPPORT_MAX.toLocaleString()}円
 						</p>
 						<p>
 							追加サポート料金 ({additionalCount}件、{additionalBlocks}ブロック分):
