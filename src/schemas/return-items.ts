@@ -19,12 +19,12 @@ const returnItemFormBaseSchema = z.object({
 	name: z
 		.string()
 		.min(1, "返礼品名は必須です")
-		.max(TEXT_MAX_LENGTH.SHORT, "返礼品名は100文字以内で入力してください"),
+		.max(TEXT_MAX_LENGTH.SHORT, `返礼品名は${TEXT_MAX_LENGTH.SHORT}文字以内で入力してください`),
 	description: z.string().max(500, "説明は500文字以内で入力してください").nullable().optional(),
 	price: z
 		.number()
 		.min(0, "価格は0円以上で入力してください")
-		.max(AMOUNT_MAX, "価格は10,000,000円以下で入力してください"),
+		.max(AMOUNT_MAX, `価格は${AMOUNT_MAX.toLocaleString()}円以下で入力してください`),
 	category: returnItemCategorySchema.nullable().optional(),
 	image_url: z.string().url("正しいURL形式で入力してください").optional().or(z.literal("")),
 	is_active: z.boolean(),
@@ -35,13 +35,13 @@ const returnItemFormBaseSchema = z.object({
 	recommended_amount_min: z
 		.number()
 		.min(0, "推奨金額（最小）は0円以上で入力してください")
-		.max(AMOUNT_MAX, "推奨金額（最小）は10,000,000円以下で入力してください")
+		.max(AMOUNT_MAX, `推奨金額（最小）は${AMOUNT_MAX.toLocaleString()}円以下で入力してください`)
 		.nullable()
 		.optional(),
 	recommended_amount_max: z
 		.number()
 		.min(0, "推奨金額（最大）は0円以上で入力してください")
-		.max(AMOUNT_MAX, "推奨金額（最大）は10,000,000円以下で入力してください")
+		.max(AMOUNT_MAX, `推奨金額（最大）は${AMOUNT_MAX.toLocaleString()}円以下で入力してください`)
 		.nullable()
 		.optional(),
 });
