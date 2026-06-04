@@ -74,6 +74,27 @@ describe("uploadContactAttachment", () => {
 		vi.mocked(validateFileUpload).mockResolvedValue({ isValid: true });
 	});
 
+	it("ファイル検証失敗時は VALIDATION_ERROR を返し upload/insert/remove を呼ばない", async () => {
+		vi.mocked(validateFileUpload).mockResolvedValue({
+			isValid: false,
+			error: "不正なファイルです",
+		});
+		const { supabase, uploadMock, insertMock, removeMock } = buildSupabaseMock();
+		// biome-ignore lint/suspicious/noExplicitAny: supabase mock shape
+		vi.mocked(createClient).mockResolvedValue(supabase as any);
+
+		const result = await uploadContactAttachment(REQUEST_ID, file);
+
+		expect(result.ok).toBe(false);
+		if (!result.ok) {
+			expect(result.error.code).toBe(ErrorCodes.VALIDATION_ERROR);
+		}
+		// 検証で弾かれるため Storage / DB 操作は一切行わない
+		expect(uploadMock).not.toHaveBeenCalled();
+		expect(insertMock).not.toHaveBeenCalled();
+		expect(removeMock).not.toHaveBeenCalled();
+	});
+
 	it("INSERT 失敗時にアップロード済みファイルを削除して孤児ファイルを残さない", async () => {
 		const { supabase, removeMock } = buildSupabaseMock({
 			insertError: { message: "insert boom", code: "23505" },
