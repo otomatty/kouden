@@ -1,4 +1,5 @@
 /// <reference types="vitest" />
+import { ErrorCodes } from "@/lib/errors";
 import { validateFileUpload } from "@/lib/security/file-upload-validation";
 import { createClient } from "@/lib/supabase/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -22,11 +23,13 @@ const REQUEST_ID = "request-1";
  * - from("contact_request_attachments"): INSERT (insert().select()) 用
  * - storage.from("contact-attachments"): upload / remove 用
  */
-function buildSupabaseMock(options: {
-	uploadError?: unknown;
-	insertError?: unknown;
-	removeError?: unknown;
-}) {
+function buildSupabaseMock(
+	options: {
+		uploadError?: unknown;
+		insertError?: unknown;
+		removeError?: unknown;
+	} = {},
+) {
 	const removeMock = vi.fn().mockResolvedValue({ error: options.removeError ?? null });
 	const uploadMock = vi.fn().mockResolvedValue({ error: options.uploadError ?? null });
 	const selectInsertMock = vi
@@ -68,16 +71,15 @@ describe("uploadContactAttachment", () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks();
-		// biome-ignore lint/suspicious/noExplicitAny: mock
-		(validateFileUpload as any).mockResolvedValue({ isValid: true });
+		vi.mocked(validateFileUpload).mockResolvedValue({ isValid: true });
 	});
 
 	it("INSERT 失敗時にアップロード済みファイルを削除して孤児ファイルを残さない", async () => {
 		const { supabase, removeMock } = buildSupabaseMock({
 			insertError: { message: "insert boom", code: "23505" },
 		});
-		// biome-ignore lint/suspicious/noExplicitAny: mock
-		(createClient as any).mockResolvedValue(supabase);
+		// biome-ignore lint/suspicious/noExplicitAny: supabase mock shape
+		vi.mocked(createClient).mockResolvedValue(supabase as any);
 
 		const result = await uploadContactAttachment(REQUEST_ID, file);
 
@@ -90,9 +92,9 @@ describe("uploadContactAttachment", () => {
 	});
 
 	it("INSERT 成功時はファイル削除を行わない", async () => {
-		const { supabase, removeMock } = buildSupabaseMock({});
-		// biome-ignore lint/suspicious/noExplicitAny: mock
-		(createClient as any).mockResolvedValue(supabase);
+		const { supabase, removeMock } = buildSupabaseMock();
+		// biome-ignore lint/suspicious/noExplicitAny: supabase mock shape
+		vi.mocked(createClient).mockResolvedValue(supabase as any);
 
 		const result = await uploadContactAttachment(REQUEST_ID, file);
 
@@ -104,8 +106,8 @@ describe("uploadContactAttachment", () => {
 		const { supabase, insertMock, removeMock } = buildSupabaseMock({
 			uploadError: { message: "upload boom" },
 		});
-		// biome-ignore lint/suspicious/noExplicitAny: mock
-		(createClient as any).mockResolvedValue(supabase);
+		// biome-ignore lint/suspicious/noExplicitAny: supabase mock shape
+		vi.mocked(createClient).mockResolvedValue(supabase as any);
 
 		const result = await uploadContactAttachment(REQUEST_ID, file);
 
@@ -119,12 +121,17 @@ describe("uploadContactAttachment", () => {
 			insertError: { message: "insert boom", code: "23505" },
 			removeError: { message: "remove boom" },
 		});
-		// biome-ignore lint/suspicious/noExplicitAny: mock
-		(createClient as any).mockResolvedValue(supabase);
+		// biome-ignore lint/suspicious/noExplicitAny: supabase mock shape
+		vi.mocked(createClient).mockResolvedValue(supabase as any);
 
 		const result = await uploadContactAttachment(REQUEST_ID, file);
 
 		expect(result.ok).toBe(false);
 		expect(removeMock).toHaveBeenCalledTimes(1);
+		// remove のエラー (code なし) ではなく、元の INSERT エラー (23505 → ALREADY_EXISTS)
+		// が返ることを検証してエラーの優先順位を保証する
+		if (!result.ok) {
+			expect(result.error.code).toBe(ErrorCodes.ALREADY_EXISTS);
+		}
 	});
 });
