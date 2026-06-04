@@ -23,13 +23,13 @@ const REQUEST_ID = "request-1";
  * - from("contact_request_attachments"): INSERT (insert().select()) 用
  * - storage.from("contact-attachments"): upload / remove 用
  */
-function buildSupabaseMock(
-	options: {
-		uploadError?: unknown;
-		insertError?: unknown;
-		removeError?: unknown;
-	} = {},
-) {
+interface SupabaseMockOptions {
+	uploadError?: unknown;
+	insertError?: unknown;
+	removeError?: unknown;
+}
+
+function buildSupabaseMock(options: SupabaseMockOptions = {}) {
 	const removeMock = vi.fn().mockResolvedValue({ error: options.removeError ?? null });
 	const uploadMock = vi.fn().mockResolvedValue({ error: options.uploadError ?? null });
 	const selectInsertMock = vi
