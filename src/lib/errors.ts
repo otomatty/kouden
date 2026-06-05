@@ -1,3 +1,4 @@
+import { unstable_rethrow } from "next/navigation";
 import logger from "./logger";
 
 /**
@@ -358,6 +359,9 @@ export const withErrorHandling = async <T>(
 	try {
 		return await action();
 	} catch (error) {
+		// Next.js のフレームワークエラー（redirect / notFound）は握りつぶさず再スローする。
+		// これらを KoudenError に変換するとリダイレクトが機能しなくなる。
+		unstable_rethrow(error);
 		const koudenError = KoudenError.fromSupabase(error, errorContext);
 		logKoudenError(koudenError, errorContext);
 		throw koudenError;
@@ -378,6 +382,9 @@ export const withActionResult = async <T>(
 		const data = await action();
 		return { ok: true, data };
 	} catch (error) {
+		// Next.js のフレームワークエラー（redirect / notFound）は握りつぶさず再スローする。
+		// ActionResult に変換するとリダイレクトが機能しなくなる。
+		unstable_rethrow(error);
 		const koudenError = KoudenError.fromSupabase(error, errorContext);
 		logKoudenError(koudenError, errorContext);
 		return toActionError<T>(koudenError, errorContext);
