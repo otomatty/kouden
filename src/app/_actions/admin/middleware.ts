@@ -84,11 +84,21 @@ export async function withSuperAdmin<T>(action: () => Promise<T>): Promise<T> {
 		redirect("/auth/login");
 	}
 
-	const { data: adminUser } = await supabase
+	const { data: adminUser, error: adminError } = await supabase
 		.from("admin_users")
 		.select("role")
 		.eq("user_id", user.id)
 		.single();
+
+	// PGRST116 (0 行) は「管理者未登録」= 権限不足。それ以外は DB エラーなので
+	// 権限不足 (redirect) ではなく DB エラーとして扱う (上位で 500 化)。
+	if (adminError && adminError.code !== "PGRST116") {
+		logger.error(
+			{ error: adminError.message, code: adminError.code, userId: user.id },
+			"admin_users lookup failed in withSuperAdmin",
+		);
+		throw new KoudenError("スーパー管理者権限の確認に失敗しました", ErrorCodes.DB_FETCH_ERROR);
+	}
 
 	if (!adminUser || adminUser.role !== "super_admin") {
 		redirect("/");
