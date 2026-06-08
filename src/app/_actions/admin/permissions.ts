@@ -74,11 +74,28 @@ export async function checkSuperAdminPermission() {
 		redirect("/auth/login");
 	}
 
-	const { data: adminUser } = await supabase
+	const { data: adminUser, error } = await supabase
 		.from("admin_users")
 		.select("role")
 		.eq("user_id", user.id)
 		.single();
+
+	// PGRST116 (0 行) は「管理者未登録」= 権限不足。それ以外は DB エラーなので
+	// 権限不足ではなく DB_FETCH_ERROR として扱う (DB 障害を FORBIDDEN と誤分類しない)。
+	if (error && error.code !== "PGRST116") {
+		logger.error(
+			{
+				error: error.message,
+				code: error.code,
+				details: error.details,
+				userId: user.id,
+			},
+			"Super admin permission check error",
+		);
+		throw new KoudenError("スーパー管理者権限の確認に失敗しました", ErrorCodes.DB_FETCH_ERROR, {
+			cause: error,
+		});
+	}
 
 	if (!adminUser || adminUser.role !== "super_admin") {
 		throw new KoudenError("スーパー管理者権限が必要です", ErrorCodes.FORBIDDEN);
