@@ -119,17 +119,20 @@ export async function getAllUsers(params: GetUsersParams = {}): Promise<
 				);
 			}
 
+			// RPC は全件数を常に返す（ページが空でも id = NULL のセンチネル行で total_count
+			// を返す）。total はページ行に依存せず先頭行の total_count から読み、順序付き ID は
+			// id = NULL を除外して組み立てる。
 			const orderedRows = (orderedResult.data ?? []) as Array<{
-				id: string;
+				id: string | null;
 				total_count: number | string;
 			}>;
 			count = orderedRows.length > 0 ? Number(orderedRows[0].total_count) : 0;
 
-			if (orderedRows.length === 0) {
+			const orderedIds = orderedRows.map((row) => row.id).filter((id): id is string => id !== null);
+
+			if (orderedIds.length === 0) {
 				return { users: [], total: count, hasMore: false };
 			}
-
-			const orderedIds = orderedRows.map((row) => row.id);
 			const { data: fetchedProfiles, error: profilesError } = await supabase
 				.from("profiles")
 				.select("id, display_name, avatar_url, created_at, updated_at")
@@ -727,17 +730,20 @@ export async function getAllKoudens(params: GetAdminKoudensParams = {}): Promise
 				);
 			}
 
+			// RPC は全件数を常に返す（ページが空でも id = NULL のセンチネル行で total_count
+			// を返す）。total はページ行に依存せず先頭行の total_count から読み、順序付き ID は
+			// id = NULL を除外して組み立てる。
 			const orderedRows = (orderedResult.data ?? []) as Array<{
-				id: string;
+				id: string | null;
 				total_count: number | string;
 			}>;
 			count = orderedRows.length > 0 ? Number(orderedRows[0].total_count) : 0;
 
-			if (orderedRows.length === 0) {
+			const orderedIds = orderedRows.map((row) => row.id).filter((id): id is string => id !== null);
+
+			if (orderedIds.length === 0) {
 				return { koudens: [], total: count, hasMore: false };
 			}
-
-			const orderedIds = orderedRows.map((row) => row.id);
 			const { data: fetchedKoudens, error: koudensError } = await supabase
 				.from("koudens")
 				.select(KOUDEN_BASE_SELECT)

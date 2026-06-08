@@ -15,6 +15,11 @@
 --   詳細情報（profiles / 統計 / owner / plan 等）は既存 RPC を再利用して取得し、
 --   呼び出し側で本関数の順序に並べ直す。
 --
+--   total_count は「ページ行に依存せず」常に返す。範囲外オフセット等でページ行が
+--   空になっても全件数を失わないよう、件数 CTE を起点に LEFT JOIN し、ページが空の
+--   場合は id = NULL のセンチネル 1 行（total_count のみ有効）を返す。呼び出し側は
+--   id = NULL を除外して順序付き ID を組み立て、total_count は先頭行から読む。
+--
 -- セキュリティ:
 --   auth.users / 集計対象テーブルを RLS バイパスで参照するため SECURITY DEFINER とし、
 --   関数内で is_admin(auth.uid()) をチェックして管理者以外からの呼び出しを拒否する。
@@ -53,7 +58,7 @@ BEGIN
         SELECT
             p.id AS uid,
             u.last_sign_in_at AS lsa,
-            p.created_at AS created_at
+            p.created_at AS cat
         FROM profiles p
         JOIN auth.users u ON u.id = p.id
         WHERE
@@ -68,18 +73,32 @@ BEGIN
     ),
     counted AS (
         SELECT COUNT(*)::bigint AS total FROM filtered
-    )
+    ),
     -- 未ログイン (last_sign_in_at IS NULL) は「最も古い」として扱う JS 実装に合わせ、
-    -- desc は NULLS LAST、asc は NULLS FIRST。created_at / uid は安定ソート用の tiebreaker。
-    SELECT f.uid, c.total
-    FROM filtered f
-    CROSS JOIN counted c
-    ORDER BY
-        CASE WHEN p_sort_order = 'asc' THEN f.lsa END ASC NULLS FIRST,
-        CASE WHEN p_sort_order = 'desc' THEN f.lsa END DESC NULLS LAST,
-        f.created_at DESC,
-        f.uid
-    LIMIT p_limit OFFSET p_offset;
+    -- desc は NULLS LAST、asc は NULLS FIRST。cat / uid は安定ソート用の tiebreaker。
+    ranked AS (
+        SELECT
+            f.uid,
+            ROW_NUMBER() OVER (
+                ORDER BY
+                    CASE WHEN p_sort_order = 'asc' THEN f.lsa END ASC NULLS FIRST,
+                    CASE WHEN p_sort_order = 'desc' THEN f.lsa END DESC NULLS LAST,
+                    f.cat DESC,
+                    f.uid
+            ) AS rn
+        FROM filtered f
+    ),
+    page AS (
+        SELECT r.uid, r.rn
+        FROM ranked r
+        ORDER BY r.rn
+        OFFSET p_offset
+        LIMIT p_limit
+    )
+    SELECT pg.uid AS id, c.total AS total_count
+    FROM counted c
+    LEFT JOIN page pg ON true
+    ORDER BY pg.rn NULLS LAST;
 END;
 $$;
 
@@ -87,7 +106,7 @@ REVOKE ALL ON FUNCTION public.get_admin_user_ids_by_last_sign_in(text, text, tex
 GRANT EXECUTE ON FUNCTION public.get_admin_user_ids_by_last_sign_in(text, text, text, int, int) TO authenticated;
 
 COMMENT ON FUNCTION public.get_admin_user_ids_by_last_sign_in(text, text, text, int, int) IS
-    '管理者ユーザー一覧用: last_sign_in_at で全件ソート + ページネーションした user_id と全件数を返す。関数内で is_admin(auth.uid()) を強制。';
+    '管理者ユーザー一覧用: last_sign_in_at で全件ソート + ページネーションした user_id と全件数を返す。ページが空でも total_count をセンチネル行で返す。関数内で is_admin(auth.uid()) を強制。';
 
 -- ============================================================================
 -- 2. 香典帳一覧: entries_count で全件ソート + ページネーション
@@ -122,23 +141,39 @@ BEGIN
             (p_search IS NULL OR k.title ILIKE '%' || p_search || '%' ESCAPE '\')
             AND (p_status = 'all' OR k.status::text = p_status)
     ),
-    filtered AS (
+    -- 全件数は base の行数に等しいため、entries 集計を含む with_counts ではなく
+    -- base から直接数えて集計のオーバーヘッドを避ける。
+    counted AS (
+        SELECT COUNT(*)::bigint AS total FROM base
+    ),
+    with_counts AS (
         SELECT
             b.kid,
             (SELECT COUNT(*)::bigint FROM kouden_entries ke WHERE ke.kouden_id = b.kid) AS ecount
         FROM base b
     ),
-    counted AS (
-        SELECT COUNT(*)::bigint AS total FROM filtered
+    ranked AS (
+        SELECT
+            w.kid,
+            ROW_NUMBER() OVER (
+                ORDER BY
+                    CASE WHEN p_sort_order = 'asc' THEN w.ecount END ASC,
+                    CASE WHEN p_sort_order = 'desc' THEN w.ecount END DESC,
+                    w.kid
+            ) AS rn
+        FROM with_counts w
+    ),
+    page AS (
+        SELECT r.kid, r.rn
+        FROM ranked r
+        ORDER BY r.rn
+        OFFSET p_offset
+        LIMIT p_limit
     )
-    SELECT f.kid, c.total
-    FROM filtered f
-    CROSS JOIN counted c
-    ORDER BY
-        CASE WHEN p_sort_order = 'asc' THEN f.ecount END ASC,
-        CASE WHEN p_sort_order = 'desc' THEN f.ecount END DESC,
-        f.kid
-    LIMIT p_limit OFFSET p_offset;
+    SELECT pg.kid AS id, c.total AS total_count
+    FROM counted c
+    LEFT JOIN page pg ON true
+    ORDER BY pg.rn NULLS LAST;
 END;
 $$;
 
@@ -146,4 +181,4 @@ REVOKE ALL ON FUNCTION public.get_admin_kouden_ids_by_entries_count(text, text, 
 GRANT EXECUTE ON FUNCTION public.get_admin_kouden_ids_by_entries_count(text, text, text, int, int) TO authenticated;
 
 COMMENT ON FUNCTION public.get_admin_kouden_ids_by_entries_count(text, text, text, int, int) IS
-    '管理者香典帳一覧用: entries_count で全件ソート + ページネーションした kouden_id と全件数を返す。関数内で is_admin(auth.uid()) を強制。';
+    '管理者香典帳一覧用: entries_count で全件ソート + ページネーションした kouden_id と全件数を返す。ページが空でも total_count をセンチネル行で返す。関数内で is_admin(auth.uid()) を強制。';
