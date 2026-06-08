@@ -3231,8 +3231,8 @@ export type Database = {
       }
     }
     Functions: {
-      accept_invitation: {
-        Args: { p_invitation_token: string; p_user_id: string }
+      accept_invitation_atomic: {
+        Args: { p_token: string; p_user_id: string }
         Returns: undefined
       }
       bulk_mark_funeral_gift_returned: {

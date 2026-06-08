@@ -180,6 +180,31 @@ export async function getInvitation(token: string): Promise<ActionResult<Invitat
 	}, "招待情報の取得");
 }
 
+/**
+ * `accept_invitation_atomic` RPC が raise するメッセージトークンを
+ * `KoudenError` にマップする。RPC 内で `select ... for update` により
+ * 検証〜INSERT〜used_count 更新を 1 トランザクションで実行するため、
+ * 既存のエラーコード (NOT_FOUND / ALREADY_EXISTS / INVALID_OPERATION) は
+ * ここで再現する。マップに無いエラーは withActionResult 側で
+ * KoudenError.fromSupabase により変換させる (null を返す)。
+ */
+function mapAcceptInvitationRpcError(rpcError: PostgrestError): KoudenError | null {
+	switch (rpcError.message) {
+		case "invitation_not_found":
+			return new KoudenError("招待が見つかりません", ErrorCodes.NOT_FOUND);
+		case "invitation_not_pending":
+			return new KoudenError("この招待は既に使用されています", ErrorCodes.INVALID_OPERATION);
+		case "invitation_expired":
+			return new KoudenError("招待の有効期限が切れています", ErrorCodes.INVALID_OPERATION);
+		case "invitation_max_uses_reached":
+			return new KoudenError("招待の使用回数が上限に達しました", ErrorCodes.INVALID_OPERATION);
+		case "already_member":
+			return new KoudenError("すでにメンバーとして参加しています", ErrorCodes.ALREADY_EXISTS);
+		default:
+			return null;
+	}
+}
+
 export async function acceptInvitation(token: string): Promise<ActionResult<null>> {
 	return withActionResult(async () => {
 		// 入力検証: UUID 以外は弾く
@@ -198,102 +223,39 @@ export async function acceptInvitation(token: string): Promise<ActionResult<null
 			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
 		}
 
-		// 以降は service-role で操作する:
-		// - kouden_invitations は RLS で匿名/他人からのSELECTを禁止しているため admin で参照
-		// - kouden_members への INSERT は所有者のみ許可するポリシーに変更したため
-		//   招待経由の自分自身の追加もサーバー側で検証してから admin で実施する
+		// 招待の検証・メンバー追加・used_count 更新は RPC でアトミックに行う。
+		// 非アトミックに展開すると、max_uses 制限のある招待が並列受諾で上限超過
+		// する競合が成立するため (issue #113)。
+		//
+		// service-role で呼び出す:
+		// - kouden_invitations は RLS で匿名/他人からの SELECT を禁止している
+		// - kouden_members への INSERT は所有者のみ許可するポリシーのため、招待
+		//   経由の自分自身の追加もサーバー側で検証してから admin で実施する
+		// RPC 内では auth.uid() が取れない (service-role セッション) ため、
+		// 通常クライアントで検証した user.id を渡す。
 		const supabase = createAdminClient();
 
-		// 1. 招待情報を取得
-		const { data: invitation, error: invitationError } = await supabase
-			.from("kouden_invitations")
-			.select("*")
-			.eq("invitation_token", parsedToken.data)
-			.single();
-
-		if (invitationError) {
-			if (invitationError.code === "PGRST116") {
-				throw new KoudenError("招待が見つかりません", ErrorCodes.NOT_FOUND);
-			}
-			throw invitationError;
-		}
-
-		if (!invitation) {
-			throw new KoudenError("招待が見つかりません", ErrorCodes.NOT_FOUND);
-		}
-
-		// 2. 招待の有効性チェック
-		if (invitation.status !== "pending") {
-			throw new KoudenError("この招待は既に使用されています", ErrorCodes.INVALID_OPERATION);
-		}
-
-		const now = new Date();
-		const expiresAt = new Date(invitation.expires_at);
-		if (expiresAt < now) {
-			throw new KoudenError("招待の有効期限が切れています", ErrorCodes.INVALID_OPERATION);
-		}
-
-		if (invitation.max_uses && invitation.used_count >= invitation.max_uses) {
-			throw new KoudenError("招待の使用回数が上限に達しました", ErrorCodes.INVALID_OPERATION);
-		}
-
-		// 3. 既存メンバーチェック
-		const { data: existingMember, error: memberCheckError } = await supabase
-			.from("kouden_members")
-			.select("id")
-			.eq("kouden_id", invitation.kouden_id)
-			.eq("user_id", user.id)
-			.single();
-
-		if (memberCheckError && memberCheckError.code !== "PGRST116") {
-			throw memberCheckError;
-		}
-
-		if (existingMember) {
-			throw new KoudenError("すでにメンバーとして参加しています", ErrorCodes.ALREADY_EXISTS);
-		}
-
-		// 4. メンバー追加（招待の created_by を added_by として記録する）
-		const { error: memberError } = await supabase.from("kouden_members").insert({
-			kouden_id: invitation.kouden_id,
-			user_id: user.id,
-			role_id: invitation.role_id,
-			invitation_id: invitation.id,
-			added_by: invitation.created_by,
+		const { error: rpcError } = await supabase.rpc("accept_invitation_atomic", {
+			p_token: parsedToken.data,
+			p_user_id: user.id,
 		});
 
-		if (memberError) throw memberError;
-
-		// 5. 招待のステータスと使用回数を更新
-		// マルチユーズ招待 (max_uses > 1 もしくは max_uses IS NULL) は、まだ枠が
-		// 残っている間 status='pending' のままにする。`getInvitation` は
-		// status='pending' のレコードのみを返すため、初回受諾で 'accepted' に
-		// すると 2 人目以降がトークンを使えなくなる。
-		const newUsedCount = invitation.used_count + 1;
-		const isExhausted = invitation.max_uses !== null && newUsedCount >= invitation.max_uses;
-		const invitationUpdate: { used_count: number; status?: "accepted" } = {
-			used_count: newUsedCount,
-		};
-		if (isExhausted) {
-			invitationUpdate.status = "accepted";
-		}
-
-		const { error: updateError } = await supabase
-			.from("kouden_invitations")
-			.update(invitationUpdate)
-			.eq("id", invitation.id);
-
-		if (updateError) {
-			// メンバー追加は成功しているので、招待の更新失敗は警告レベル
-			logger.warn(
+		if (rpcError) {
+			const mapped = mapAcceptInvitationRpcError(rpcError);
+			if (mapped) {
+				throw mapped;
+			}
+			// 想定外の DB エラー。詳細はログに残し、withActionResult で変換させる。
+			logger.error(
 				{
-					error: updateError.message,
-					code: updateError.code,
-					invitationId: invitation.id,
+					error: rpcError.message,
+					code: rpcError.code,
+					token: parsedToken.data,
 					userId: user.id,
 				},
-				"Member was added but invitation update failed",
+				"accept_invitation_atomic RPC failed",
 			);
+			throw rpcError;
 		}
 
 		return null;
