@@ -17,11 +17,17 @@ const { RedirectError } = vi.hoisted(() => {
 vi.mock("@/lib/supabase/server", () => ({
 	createClient: vi.fn(),
 }));
-vi.mock("next/navigation", () => ({
-	redirect: vi.fn((url: string) => {
-		throw new RedirectError(url);
-	}),
-}));
+// 部分モック: redirect だけ差し替え、unstable_rethrow など他の実エクスポートは残す。
+// (@/lib/errors が unstable_rethrow を import/呼び出しするため全置換すると壊れる)
+vi.mock("next/navigation", async (importActual) => {
+	const actual = await importActual<typeof import("next/navigation")>();
+	return {
+		...actual,
+		redirect: vi.fn((url: string) => {
+			throw new RedirectError(url);
+		}),
+	};
+});
 vi.mock("../audit-logs", () => ({
 	createAuditLog: vi.fn().mockResolvedValue({ ok: true, data: null }),
 }));
