@@ -1,15 +1,20 @@
-import logger from "@/lib/logger";
+import { ErrorCodes, KoudenError } from "@/lib/errors";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * 管理画面向け: Auth ユーザーの一括解決ヘルパー
  *
- * `supabase.auth.admin.getUserById` を 1 件ずつ呼ぶと N+1 になるため、
- * `listUsers()` で全ユーザーを一括取得し、必要な id だけ Map から引く。
+ * `supabase.auth.admin.getUserById` を 1 件ずつ呼ぶと N+1 になる。
+ * また `listUsers()` の全ページ走査は全ユーザー数 N に比例（O(N)）し、
+ * 指定 id が後方ページにある場合に無駄なページングが発生する。
+ *
+ * そこで専用 RPC `get_auth_users_by_ids` で `auth.users` を id で絞り込み、
+ * 対象 id 数 M に比例（O(M)）した 1 クエリで email を一括取得する。
  *
  * 注意:
- *   - サービスロール (`createAdminClient`) を使うため、呼び出し元で
- *     管理者権限をチェックしてから利用すること。
- *   - listUsers はページングされる（既定 perPage=50）。全ページを走査する。
+ *   - RPC は SECURITY DEFINER + 内部で `is_admin(auth.uid())` を強制するため、
+ *     呼び出し元はユーザーセッションのクライアント経由で利用すること
+ *     （呼び出し元で別途管理者権限を担保していること）。
  */
 export interface AuthUserInfo {
 	id: string;
@@ -18,7 +23,8 @@ export interface AuthUserInfo {
 
 /**
  * 指定した user_id 群に対応する Auth ユーザー情報を一括取得して Map で返す。
- * 見つからなかった id はマップに含まれない。
+ * 見つからなかった id（削除済みユーザー等）はマップに含まれない。
+ * RPC 自体が失敗した場合は、ブランクで握りつぶさず例外を送出する。
  */
 export async function getAuthUsersByIds(
 	userIds: Array<string | null | undefined>,
@@ -26,43 +32,34 @@ export async function getAuthUsersByIds(
 	const map = new Map<string, AuthUserInfo>();
 
 	// 解決が必要な一意な id 集合
-	const targetIds = new Set(userIds.filter((id): id is string => Boolean(id)));
-	if (targetIds.size === 0) {
+	const targetIds = Array.from(new Set(userIds.filter((id): id is string => Boolean(id))));
+	if (targetIds.length === 0) {
 		return map;
 	}
 
-	const { createAdminClient } = await import("@/lib/supabase/admin");
-	const supabase = createAdminClient();
+	const supabase = await createClient();
 
-	const perPage = 1000;
-	let page = 1;
+	// 注: get_auth_users_by_ids は 20260608000001_add_get_auth_users_by_ids_rpc.sql で追加。
+	// マイグレーション適用後に `bun run db:types` を実行すれば、ここのキャストは不要になる。
+	const { data, error } = await (
+		supabase.rpc as unknown as (
+			fn: string,
+			args: unknown,
+		) => PromiseLike<{
+			data: Array<{ id: string; email: string | null }> | null;
+			error: { message: string } | null;
+		}>
+	)("get_auth_users_by_ids", { p_user_ids: targetIds });
 
-	try {
-		while (true) {
-			const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
-			if (error) {
-				logger.error({ error: error.message, code: error.code, page }, "Failed to list auth users");
-				break;
-			}
-
-			const users = data?.users ?? [];
-			for (const user of users) {
-				if (targetIds.has(user.id)) {
-					map.set(user.id, { id: user.id, email: user.email ?? "" });
-				}
-			}
-
-			// 必要な id が全て揃った、または最終ページに達したら終了
-			if (map.size >= targetIds.size || users.length < perPage) {
-				break;
-			}
-			page += 1;
-		}
-	} catch (error) {
-		logger.error(
-			{ error: error instanceof Error ? error.message : String(error) },
-			"Error listing auth users",
+	if (error) {
+		throw new KoudenError(
+			`Failed to fetch auth users: ${error.message}`,
+			ErrorCodes.DB_FETCH_ERROR,
 		);
+	}
+
+	for (const row of data ?? []) {
+		map.set(row.id, { id: row.id, email: row.email ?? "" });
 	}
 
 	return map;

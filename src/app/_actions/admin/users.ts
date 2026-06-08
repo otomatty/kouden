@@ -682,6 +682,20 @@ export async function getAllKoudens(params: GetAdminKoudensParams = {}): Promise
 			)("get_admin_kouden_stats", { p_kouden_ids: koudenIds }),
 		]);
 
+		// 取得エラーはサイレントに「不明」化せず、明示的に例外を投げる
+		if (ownersResult.error) {
+			throw new KoudenError(
+				`Failed to fetch kouden owners: ${ownersResult.error.message}`,
+				ErrorCodes.DB_FETCH_ERROR,
+			);
+		}
+		if (plansResult.error) {
+			throw new KoudenError(
+				`Failed to fetch kouden plans: ${plansResult.error.message}`,
+				ErrorCodes.DB_FETCH_ERROR,
+			);
+		}
+
 		const ownerMap = new Map((ownersResult.data ?? []).map((owner) => [owner.id, owner] as const));
 		const planMap = new Map((plansResult.data ?? []).map((plan) => [plan.id, plan] as const));
 
