@@ -5,6 +5,10 @@ import logger from "@/lib/logger";
 import { escapeIlikePattern } from "@/lib/security/search-sanitize";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import {
+	resolveSortedPageTotalCount,
+	type SortedPageRpcRow,
+} from "@/app/_actions/admin/sorted-page-rpc";
 
 /**
  * 全ユーザー管理用の型定義
@@ -81,60 +85,143 @@ export async function getAllUsers(params: GetUsersParams = {}): Promise<
 		} = params;
 		const offset = (page - 1) * limit;
 
-		// 1. まずprofilesテーブルから基本情報を取得
-		let query = supabase.from("profiles").select(
-			`
+		// profilesの基本情報とページ全体の総件数。
+		// last_sign_in_at ソートのみ DB 側で全件ソート + ページネーションするため別経路。
+		type ProfileRow = {
+			id: string;
+			display_name: string;
+			avatar_url: string | null;
+			created_at: string;
+			updated_at: string;
+		};
+		let profiles: ProfileRow[];
+		let count: number;
+
+		if (sortBy === "last_sign_in_at") {
+			// last_sign_in_at は auth.users 由来の計算列のため、JS側で現ページ内だけを
+			// 並べ替えると全件ソートにならない。DB 側 (RPC) で auth.users を結合して
+			// 全件ソート + ページネーションし、正しい順序の user_id と全件数を取得する。
+			// 注: get_admin_user_ids_by_last_sign_in は
+			//   20260608000003_add_admin_sorted_page_rpcs.sql で追加。
+			const orderedResult = await (
+				supabase.rpc as unknown as (
+					fn: string,
+					args: unknown,
+				) => PromiseLike<{ data: unknown; error: { message: string } | null }>
+			)("get_admin_user_ids_by_last_sign_in", {
+				p_search: search ? escapeIlikePattern(search) : null,
+				p_filter: filter ?? "all",
+				p_sort_order: sortOrder,
+				p_limit: limit,
+				p_offset: offset,
+			});
+
+			if (orderedResult.error) {
+				throw new KoudenError(
+					`Failed to fetch sorted user ids: ${orderedResult.error.message}`,
+					ErrorCodes.DB_FETCH_ERROR,
+				);
+			}
+
+			const orderedRows = (orderedResult.data ?? []) as SortedPageRpcRow[];
+			count = await resolveSortedPageTotalCount(orderedRows, offset, async () => {
+				const probeResult = await (
+					supabase.rpc as unknown as (
+						fn: string,
+						args: unknown,
+					) => PromiseLike<{ data: unknown; error: { message: string } | null }>
+				)("get_admin_user_ids_by_last_sign_in", {
+					p_search: search ? escapeIlikePattern(search) : null,
+					p_filter: filter ?? "all",
+					p_sort_order: sortOrder,
+					p_limit: 1,
+					p_offset: 0,
+				});
+
+				if (probeResult.error) {
+					throw new KoudenError(
+						`Failed to fetch sorted user ids total: ${probeResult.error.message}`,
+						ErrorCodes.DB_FETCH_ERROR,
+					);
+				}
+
+				return (probeResult.data ?? []) as SortedPageRpcRow[];
+			});
+
+			if (orderedRows.length === 0) {
+				return { users: [], total: count, hasMore: false };
+			}
+
+			const orderedIds = orderedRows.map((row) => row.id);
+			const { data: fetchedProfiles, error: profilesError } = await supabase
+				.from("profiles")
+				.select("id, display_name, avatar_url, created_at, updated_at")
+				.in("id", orderedIds);
+			if (profilesError) throw profilesError;
+
+			// RPC が返したソート順を保持して並べ直す（.in() は順序を保証しないため）
+			const profileMap = new Map((fetchedProfiles ?? []).map((p) => [p.id, p]));
+			profiles = orderedIds
+				.map((id) => profileMap.get(id))
+				.filter((p): p is ProfileRow => p !== undefined);
+		} else {
+			// 1. まずprofilesテーブルから基本情報を取得
+			let query = supabase.from("profiles").select(
+				`
         id,
         display_name,
         avatar_url,
         created_at,
         updated_at
       `,
-			{ count: "exact" },
-		);
+				{ count: "exact" },
+			);
 
-		// 検索条件 (ILIKE のワイルドカード % _ は意図しない一致を生むためエスケープ)
-		if (search) {
-			query = query.ilike("display_name", `%${escapeIlikePattern(search)}%`);
-		}
-
-		// フィルタリング
-		if (filter === "admin") {
-			const { data: adminUserIds } = await supabase.from("admin_users").select("user_id");
-
-			if (adminUserIds && adminUserIds.length > 0) {
-				query = query.in(
-					"id",
-					adminUserIds.map((admin) => admin.user_id),
-				);
-			} else {
-				// 管理者が存在しない場合は空の結果を返す
-				return { users: [], total: 0, hasMore: false };
+			// 検索条件 (ILIKE のワイルドカード % _ は意図しない一致を生むためエスケープ)
+			if (search) {
+				query = query.ilike("display_name", `%${escapeIlikePattern(search)}%`);
 			}
-		} else if (filter === "regular") {
-			const { data: adminUserIds } = await supabase.from("admin_users").select("user_id");
 
-			if (adminUserIds && adminUserIds.length > 0) {
-				query = query.not(
-					"id",
-					"in",
-					adminUserIds.map((admin) => admin.user_id),
-				);
+			// フィルタリング
+			if (filter === "admin") {
+				const { data: adminUserIds } = await supabase.from("admin_users").select("user_id");
+
+				if (adminUserIds && adminUserIds.length > 0) {
+					query = query.in(
+						"id",
+						adminUserIds.map((admin) => admin.user_id),
+					);
+				} else {
+					// 管理者が存在しない場合は空の結果を返す
+					return { users: [], total: 0, hasMore: false };
+				}
+			} else if (filter === "regular") {
+				const { data: adminUserIds } = await supabase.from("admin_users").select("user_id");
+
+				if (adminUserIds && adminUserIds.length > 0) {
+					query = query.not(
+						"id",
+						"in",
+						adminUserIds.map((admin) => admin.user_id),
+					);
+				}
 			}
-		}
 
-		// ソート（last_sign_in_atは後でソートするため、ここではcreated_atでソート）
-		const orderBy = sortBy === "last_sign_in_at" ? "created_at" : sortBy;
-		query = query.order(orderBy, { ascending: sortOrder === "asc" });
+			// ソート
+			query = query.order(sortBy, { ascending: sortOrder === "asc" });
 
-		// ページネーション
-		query = query.range(offset, offset + limit - 1);
+			// ページネーション
+			query = query.range(offset, offset + limit - 1);
 
-		const { data: profiles, error: profilesError, count } = await query;
-		if (profilesError) throw profilesError;
+			const { data: fetchedProfiles, error: profilesError, count: fetchedCount } = await query;
+			if (profilesError) throw profilesError;
 
-		if (!profiles || profiles.length === 0) {
-			return { users: [], total: count || 0, hasMore: false };
+			if (!fetchedProfiles || fetchedProfiles.length === 0) {
+				return { users: [], total: fetchedCount || 0, hasMore: false };
+			}
+
+			profiles = fetchedProfiles;
+			count = fetchedCount || 0;
 		}
 
 		// 2. 認証情報と集計統計をそれぞれ1クエリで一括取得（N+1解消）
@@ -189,26 +276,17 @@ export async function getAllUsers(params: GetUsersParams = {}): Promise<
 		});
 
 		// 認証情報をマージ
+		// 並び順は profiles の順序（通常パスはクエリ、last_sign_in_at パスは RPC で
+		// 全件ソート済み）をそのまま保持するため、ここでの再ソートは不要。
 		const finalUsersWithDetails = usersWithDetails.map((user) => ({
 			...user,
 			...authInfoMap[user.id],
 		}));
 
-		// last_sign_in_atでソートが指定されている場合はここでソート
-		if (sortBy === "last_sign_in_at") {
-			finalUsersWithDetails.sort((a, b) => {
-				const aLastSignIn = (a as UserListItem).last_sign_in_at;
-				const bLastSignIn = (b as UserListItem).last_sign_in_at;
-				const aDate = aLastSignIn ? new Date(aLastSignIn).getTime() : 0;
-				const bDate = bLastSignIn ? new Date(bLastSignIn).getTime() : 0;
-				return sortOrder === "asc" ? aDate - bDate : bDate - aDate;
-			});
-		}
-
 		return {
 			users: finalUsersWithDetails,
-			total: count || 0,
-			hasMore: (count || 0) > offset + limit,
+			total: count,
+			hasMore: count > offset + limit,
 		};
 	}, "ユーザー一覧の取得");
 }
@@ -616,9 +694,11 @@ export async function getAllKoudens(params: GetAdminKoudensParams = {}): Promise
 			throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
 		}
 
-		// 1. 香典帳の基本情報を取得
-		let query = supabase.from("koudens").select(
-			`
+		// 統計やソート RPC は内部で is_admin(auth.uid()) を検証するため、
+		// サービスロールではなくユーザーセッションのクライアントで呼び出す。
+		const sessionClient = await createClient();
+
+		const KOUDEN_BASE_SELECT = `
         id,
         title,
         description,
@@ -627,47 +707,124 @@ export async function getAllKoudens(params: GetAdminKoudensParams = {}): Promise
         updated_at,
         owner_id,
         plan_id
-      `,
-			{ count: "exact" },
-		);
+      `;
+		type KoudenBaseRow = {
+			id: string;
+			title: string;
+			description: string | null;
+			status: string;
+			created_at: string;
+			updated_at: string;
+			owner_id: string;
+			plan_id: string;
+		};
 
-		// 検索条件 (ILIKE のワイルドカード % _ は意図しない一致を生むためエスケープ)
-		if (search) {
-			query = query.ilike("title", `%${escapeIlikePattern(search)}%`);
-		}
+		// 1. 香典帳の基本情報とページ全体の総件数を取得。
+		// entries_count ソートのみ DB 側で全件ソート + ページネーションするため別経路。
+		let koudens: KoudenBaseRow[];
+		let count: number;
 
-		// ステータスフィルタリング
-		if (status !== "all") {
-			query = query.eq("status", status);
-		}
+		if (sortBy === "entries_count") {
+			// entries_count は kouden_entries の集計値（計算列）のため、JS側で現ページ内
+			// だけを並べ替えると全件ソートにならない。DB 側 (RPC) で集計を含めて全件ソート +
+			// ページネーションし、正しい順序の kouden_id と全件数を取得する。
+			// 注: get_admin_kouden_ids_by_entries_count は
+			//   20260608000003_add_admin_sorted_page_rpcs.sql で追加。
+			const orderedResult = await (
+				sessionClient.rpc as unknown as (
+					fn: string,
+					args: unknown,
+				) => PromiseLike<{ data: unknown; error: { message: string } | null }>
+			)("get_admin_kouden_ids_by_entries_count", {
+				p_search: search ? escapeIlikePattern(search) : null,
+				p_status: status,
+				p_sort_order: sortOrder,
+				p_limit: limit,
+				p_offset: offset,
+			});
 
-		// ソート（entries_count以外）
-		if (sortBy !== "entries_count") {
-			query = query.order(sortBy, { ascending: sortOrder === "asc" });
+			if (orderedResult.error) {
+				throw new KoudenError(
+					`Failed to fetch sorted kouden ids: ${orderedResult.error.message}`,
+					ErrorCodes.DB_FETCH_ERROR,
+				);
+			}
+
+			const orderedRows = (orderedResult.data ?? []) as SortedPageRpcRow[];
+			count = await resolveSortedPageTotalCount(orderedRows, offset, async () => {
+				const probeResult = await (
+					sessionClient.rpc as unknown as (
+						fn: string,
+						args: unknown,
+					) => PromiseLike<{ data: unknown; error: { message: string } | null }>
+				)("get_admin_kouden_ids_by_entries_count", {
+					p_search: search ? escapeIlikePattern(search) : null,
+					p_status: status,
+					p_sort_order: sortOrder,
+					p_limit: 1,
+					p_offset: 0,
+				});
+
+				if (probeResult.error) {
+					throw new KoudenError(
+						`Failed to fetch sorted kouden ids total: ${probeResult.error.message}`,
+						ErrorCodes.DB_FETCH_ERROR,
+					);
+				}
+
+				return (probeResult.data ?? []) as SortedPageRpcRow[];
+			});
+
+			if (orderedRows.length === 0) {
+				return { koudens: [], total: count, hasMore: false };
+			}
+
+			const orderedIds = orderedRows.map((row) => row.id);
+			const { data: fetchedKoudens, error: koudensError } = await supabase
+				.from("koudens")
+				.select(KOUDEN_BASE_SELECT)
+				.in("id", orderedIds);
+			if (koudensError) throw koudensError;
+
+			// RPC が返したソート順を保持して並べ直す（.in() は順序を保証しないため）
+			const koudenMap = new Map((fetchedKoudens ?? []).map((k) => [k.id, k as KoudenBaseRow]));
+			koudens = orderedIds
+				.map((id) => koudenMap.get(id))
+				.filter((k): k is KoudenBaseRow => k !== undefined);
 		} else {
-			// entries_countでソートする場合は後でソート
-			query = query.order("created_at", { ascending: false });
-		}
+			let query = supabase.from("koudens").select(KOUDEN_BASE_SELECT, { count: "exact" });
 
-		// ページネーション
-		query = query.range(offset, offset + limit - 1);
+			// 検索条件 (ILIKE のワイルドカード % _ は意図しない一致を生むためエスケープ)
+			if (search) {
+				query = query.ilike("title", `%${escapeIlikePattern(search)}%`);
+			}
 
-		const { data: koudens, error: koudensError, count } = await query;
+			// ステータスフィルタリング
+			if (status !== "all") {
+				query = query.eq("status", status);
+			}
 
-		if (koudensError) throw koudensError;
+			// ソート
+			query = query.order(sortBy, { ascending: sortOrder === "asc" });
 
-		if (!koudens || koudens.length === 0) {
-			return { koudens: [], total: count || 0, hasMore: false };
+			// ページネーション
+			query = query.range(offset, offset + limit - 1);
+
+			const { data: fetchedKoudens, error: koudensError, count: fetchedCount } = await query;
+			if (koudensError) throw koudensError;
+
+			if (!fetchedKoudens || fetchedKoudens.length === 0) {
+				return { koudens: [], total: fetchedCount || 0, hasMore: false };
+			}
+
+			koudens = fetchedKoudens as KoudenBaseRow[];
+			count = fetchedCount || 0;
 		}
 
 		// 2. オーナー / プラン / 統計を ID 群でまとめて一括取得（N+1解消）
 		const ownerIds = Array.from(new Set(koudens.map((k) => k.owner_id)));
 		const planIds = Array.from(new Set(koudens.map((k) => k.plan_id)));
 		const koudenIds = koudens.map((k) => k.id);
-
-		// 統計は専用 RPC で 1 クエリ集計。RPC は内部で is_admin(auth.uid()) を検証するため、
-		// サービスロールではなくユーザーセッションのクライアントで呼び出す。
-		const sessionClient = await createClient();
 
 		// 注: get_admin_kouden_stats は 20260608000000_add_get_admin_kouden_stats_rpc.sql で追加。
 		// マイグレーション適用後に `bun run db:types` を実行すれば、ここのキャストは不要になる。
@@ -763,19 +920,12 @@ export async function getAllKoudens(params: GetAdminKoudensParams = {}): Promise
 			};
 		});
 
-		// entries_countでソートが指定されている場合はここでソート
-		if (sortBy === "entries_count") {
-			koudensWithDetails.sort((a, b) => {
-				const aCount = a.stats.entries_count;
-				const bCount = b.stats.entries_count;
-				return sortOrder === "asc" ? aCount - bCount : bCount - aCount;
-			});
-		}
-
+		// 並び順は koudens の順序（通常パスはクエリ、entries_count パスは RPC で
+		// 全件ソート済み）をそのまま保持するため、ここでの再ソートは不要。
 		return {
 			koudens: koudensWithDetails,
-			total: count || 0,
-			hasMore: (count || 0) > offset + limit,
+			total: count,
+			hasMore: count > offset + limit,
 		};
 	}, "香典帳一覧の取得");
 }
