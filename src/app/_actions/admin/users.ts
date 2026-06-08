@@ -5,6 +5,10 @@ import logger from "@/lib/logger";
 import { escapeIlikePattern } from "@/lib/security/search-sanitize";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import {
+	resolveSortedPageTotalCount,
+	type SortedPageRpcRow,
+} from "@/app/_actions/admin/sorted-page-rpc";
 
 /**
  * 全ユーザー管理用の型定義
@@ -119,11 +123,30 @@ export async function getAllUsers(params: GetUsersParams = {}): Promise<
 				);
 			}
 
-			const orderedRows = (orderedResult.data ?? []) as Array<{
-				id: string;
-				total_count: number | string;
-			}>;
-			count = orderedRows.length > 0 ? Number(orderedRows[0].total_count) : 0;
+			const orderedRows = (orderedResult.data ?? []) as SortedPageRpcRow[];
+			count = await resolveSortedPageTotalCount(orderedRows, offset, async () => {
+				const probeResult = await (
+					supabase.rpc as unknown as (
+						fn: string,
+						args: unknown,
+					) => PromiseLike<{ data: unknown; error: { message: string } | null }>
+				)("get_admin_user_ids_by_last_sign_in", {
+					p_search: search ? escapeIlikePattern(search) : null,
+					p_filter: filter ?? "all",
+					p_sort_order: sortOrder,
+					p_limit: 1,
+					p_offset: 0,
+				});
+
+				if (probeResult.error) {
+					throw new KoudenError(
+						`Failed to fetch sorted user ids total: ${probeResult.error.message}`,
+						ErrorCodes.DB_FETCH_ERROR,
+					);
+				}
+
+				return (probeResult.data ?? []) as SortedPageRpcRow[];
+			});
 
 			if (orderedRows.length === 0) {
 				return { users: [], total: count, hasMore: false };
@@ -727,11 +750,30 @@ export async function getAllKoudens(params: GetAdminKoudensParams = {}): Promise
 				);
 			}
 
-			const orderedRows = (orderedResult.data ?? []) as Array<{
-				id: string;
-				total_count: number | string;
-			}>;
-			count = orderedRows.length > 0 ? Number(orderedRows[0].total_count) : 0;
+			const orderedRows = (orderedResult.data ?? []) as SortedPageRpcRow[];
+			count = await resolveSortedPageTotalCount(orderedRows, offset, async () => {
+				const probeResult = await (
+					sessionClient.rpc as unknown as (
+						fn: string,
+						args: unknown,
+					) => PromiseLike<{ data: unknown; error: { message: string } | null }>
+				)("get_admin_kouden_ids_by_entries_count", {
+					p_search: search ? escapeIlikePattern(search) : null,
+					p_status: status,
+					p_sort_order: sortOrder,
+					p_limit: 1,
+					p_offset: 0,
+				});
+
+				if (probeResult.error) {
+					throw new KoudenError(
+						`Failed to fetch sorted kouden ids total: ${probeResult.error.message}`,
+						ErrorCodes.DB_FETCH_ERROR,
+					);
+				}
+
+				return (probeResult.data ?? []) as SortedPageRpcRow[];
+			});
 
 			if (orderedRows.length === 0) {
 				return { koudens: [], total: count, hasMore: false };
