@@ -92,7 +92,9 @@ export async function checkSuperAdminPermission() {
 			},
 			"Super admin permission check error",
 		);
-		throw new KoudenError("スーパー管理者権限の確認に失敗しました", ErrorCodes.DB_FETCH_ERROR);
+		throw new KoudenError("スーパー管理者権限の確認に失敗しました", ErrorCodes.DB_FETCH_ERROR, {
+			cause: error,
+		});
 	}
 
 	if (!adminUser || adminUser.role !== "super_admin") {

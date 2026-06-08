@@ -94,10 +94,17 @@ export async function withSuperAdmin<T>(action: () => Promise<T>): Promise<T> {
 	// 権限不足 (redirect) ではなく DB エラーとして扱う (上位で 500 化)。
 	if (adminError && adminError.code !== "PGRST116") {
 		logger.error(
-			{ error: adminError.message, code: adminError.code, userId: user.id },
+			{
+				error: adminError.message,
+				code: adminError.code,
+				details: adminError.details,
+				userId: user.id,
+			},
 			"admin_users lookup failed in withSuperAdmin",
 		);
-		throw new KoudenError("スーパー管理者権限の確認に失敗しました", ErrorCodes.DB_FETCH_ERROR);
+		throw new KoudenError("スーパー管理者権限の確認に失敗しました", ErrorCodes.DB_FETCH_ERROR, {
+			cause: adminError,
+		});
 	}
 
 	if (!adminUser || adminUser.role !== "super_admin") {
