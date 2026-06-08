@@ -3,11 +3,16 @@ import { createClient } from "@/lib/supabase/server";
 import { type Mock, beforeEach, describe, expect, it, vi } from "vitest";
 import { withSuperAdmin } from "../middleware";
 
-class RedirectError extends Error {
-	constructor(public readonly url: string) {
-		super(`NEXT_REDIRECT:${url}`);
+// vi.mock ファクトリはモジュール先頭にホイストされるため、ファクトリから参照する
+// RedirectError は vi.hoisted で同様に巻き上げて TDZ 参照を防ぐ。
+const { RedirectError } = vi.hoisted(() => {
+	class RedirectError extends Error {
+		constructor(public readonly url: string) {
+			super(`NEXT_REDIRECT:${url}`);
+		}
 	}
-}
+	return { RedirectError };
+});
 
 vi.mock("@/lib/supabase/server", () => ({
 	createClient: vi.fn(),

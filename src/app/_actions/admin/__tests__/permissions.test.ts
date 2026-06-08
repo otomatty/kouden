@@ -4,11 +4,15 @@ import { type Mock, beforeEach, describe, expect, it, vi } from "vitest";
 import { checkSuperAdminPermission } from "../permissions";
 
 // next/navigation の redirect は呼ばれたら専用エラーを投げてフローを中断する挙動を再現する。
-class RedirectError extends Error {
-	constructor(public readonly url: string) {
-		super(`NEXT_REDIRECT:${url}`);
+// vi.mock ファクトリはホイストされるため、参照する RedirectError も vi.hoisted で巻き上げる。
+const { RedirectError } = vi.hoisted(() => {
+	class RedirectError extends Error {
+		constructor(public readonly url: string) {
+			super(`NEXT_REDIRECT:${url}`);
+		}
 	}
-}
+	return { RedirectError };
+});
 
 vi.mock("@/lib/supabase/server", () => ({
 	createClient: vi.fn(),
