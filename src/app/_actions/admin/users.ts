@@ -660,60 +660,108 @@ export async function getAllKoudens(params: GetAdminKoudensParams = {}): Promise
 			return { koudens: [], total: count || 0, hasMore: false };
 		}
 
-		// 2. 各香典帳の詳細情報を並列取得
-		const koudensWithDetails = await Promise.all(
-			koudens.map(async (kouden) => {
-				try {
-					// オーナー情報、プラン情報、統計情報を並列取得
-					const [owner, plan, stats] = await Promise.all([
-						getKoudenOwner(kouden.owner_id),
-						getKoudenPlan(kouden.plan_id),
-						getKoudenStats(kouden.id),
-					]);
+		// 2. オーナー / プラン / 統計を ID 群でまとめて一括取得（N+1解消）
+		const ownerIds = Array.from(new Set(koudens.map((k) => k.owner_id)));
+		const planIds = Array.from(new Set(koudens.map((k) => k.plan_id)));
+		const koudenIds = koudens.map((k) => k.id);
 
-					// 無料プランの期限切れ判定
-					let expired = false;
-					let remainingDays: number | undefined;
-					if (plan.code === "free") {
-						const ageMs = Date.now() - new Date(kouden.created_at).getTime();
-						const ageDays = ageMs / (1000 * 60 * 60 * 24);
-						if (ageDays >= 14) {
-							expired = true;
-							remainingDays = 0;
-						} else {
-							remainingDays = Math.ceil(14 - ageDays);
-						}
-					}
+		// 統計は専用 RPC で 1 クエリ集計。RPC は内部で is_admin(auth.uid()) を検証するため、
+		// サービスロールではなくユーザーセッションのクライアントで呼び出す。
+		const sessionClient = await createClient();
 
-					return {
-						...kouden,
-						status: kouden.status as "active" | "archived" | "inactive",
-						owner,
-						plan,
-						stats,
-						expired,
-						remainingDays,
-					};
-				} catch (error) {
-					logger.error(
-						{
-							koudenId: kouden.id,
-							error: error instanceof Error ? error.message : String(error),
-						},
-						"Failed to get details for kouden",
-					);
-					// エラーが発生した場合は基本情報のみ返す
-					return {
-						...kouden,
-						status: kouden.status as "active" | "archived" | "inactive",
-						owner: { id: kouden.owner_id, display_name: "不明", avatar_url: null },
-						plan: { id: kouden.plan_id, code: "unknown", name: "不明" },
-						stats: { entries_count: 0, members_count: 0, total_amount: 0 },
-						expired: false,
-					};
+		// 注: get_admin_kouden_stats は 20260608000000_add_get_admin_kouden_stats_rpc.sql で追加。
+		// マイグレーション適用後に `bun run db:types` を実行すれば、ここのキャストは不要になる。
+		const [ownersResult, plansResult, statsResult] = await Promise.all([
+			supabase.from("profiles").select("id, display_name, avatar_url").in("id", ownerIds),
+			supabase.from("plans").select("id, code, name").in("id", planIds),
+			(
+				sessionClient.rpc as unknown as (
+					fn: string,
+					args: unknown,
+				) => PromiseLike<{ data: unknown; error: { message: string } | null }>
+			)("get_admin_kouden_stats", { p_kouden_ids: koudenIds }),
+		]);
+
+		// 取得エラーはサイレントに「不明」化せず、明示的に例外を投げる
+		if (ownersResult.error) {
+			throw new KoudenError(
+				`Failed to fetch kouden owners: ${ownersResult.error.message}`,
+				ErrorCodes.DB_FETCH_ERROR,
+			);
+		}
+		if (plansResult.error) {
+			throw new KoudenError(
+				`Failed to fetch kouden plans: ${plansResult.error.message}`,
+				ErrorCodes.DB_FETCH_ERROR,
+			);
+		}
+
+		const ownerMap = new Map((ownersResult.data ?? []).map((owner) => [owner.id, owner] as const));
+		const planMap = new Map((plansResult.data ?? []).map((plan) => [plan.id, plan] as const));
+
+		if (statsResult.error) {
+			// 失敗時は0埋めで継続せず、明示的に例外を投げる（admin UIで誤った0統計を出さないため）
+			throw new KoudenError(
+				`Failed to fetch kouden aggregate stats: ${statsResult.error.message}`,
+				ErrorCodes.DB_FETCH_ERROR,
+			);
+		}
+
+		type KoudenStatsRow = {
+			kouden_id: string;
+			entries_count: number | string;
+			members_count: number | string;
+			total_amount: number | string;
+		};
+		const statsRows = (statsResult.data ?? []) as KoudenStatsRow[];
+		const statsMap = new Map(statsRows.map((row) => [row.kouden_id, row] as const));
+
+		// 取得「全体」の失敗（ownersResult/plansResult/statsResult の error）は上で例外化済み。
+		// 以降の ownerMap/planMap/statsMap.get に対するフォールバックは「個別レコードの欠損」
+		// （削除済み owner、未登録 plan、エントリー0件の kouden 等）を正常系として扱うもので、
+		// owner/plan は「不明」プレースホルダ、stats は 0 埋めで継続する。
+		const koudensWithDetails = koudens.map((kouden) => {
+			const owner = ownerMap.get(kouden.owner_id) ?? {
+				id: kouden.owner_id,
+				display_name: "不明",
+				avatar_url: null,
+			};
+			const plan = planMap.get(kouden.plan_id) ?? {
+				id: kouden.plan_id,
+				code: "unknown",
+				name: "不明",
+			};
+			const statsRow = statsMap.get(kouden.id);
+			const stats = {
+				entries_count: Number(statsRow?.entries_count ?? 0),
+				members_count: Number(statsRow?.members_count ?? 0),
+				total_amount: Number(statsRow?.total_amount ?? 0),
+			};
+
+			// 無料プランの期限切れ判定
+			let expired = false;
+			let remainingDays: number | undefined;
+			if (plan.code === "free") {
+				const ageMs = Date.now() - new Date(kouden.created_at).getTime();
+				const ageDays = ageMs / (1000 * 60 * 60 * 24);
+				if (ageDays >= 14) {
+					expired = true;
+					remainingDays = 0;
+				} else {
+					remainingDays = Math.ceil(14 - ageDays);
 				}
-			}),
-		);
+			}
+
+			return {
+				...kouden,
+				status: kouden.status as "active" | "archived" | "inactive",
+				owner,
+				plan,
+				stats,
+				expired,
+				remainingDays,
+			};
+		});
 
 		// entries_countでソートが指定されている場合はここでソート
 		if (sortBy === "entries_count") {
@@ -730,102 +778,4 @@ export async function getAllKoudens(params: GetAdminKoudensParams = {}): Promise
 			hasMore: (count || 0) > offset + limit,
 		};
 	}, "香典帳一覧の取得");
-}
-
-/**
- * 香典帳のオーナー情報を取得
- */
-async function getKoudenOwner(ownerId: string): Promise<{
-	id: string;
-	display_name: string;
-	avatar_url: string | null;
-}> {
-	const { createAdminClient } = await import("@/lib/supabase/admin");
-	const supabase = createAdminClient();
-
-	const { data: owner, error } = await supabase
-		.from("profiles")
-		.select("id, display_name, avatar_url")
-		.eq("id", ownerId)
-		.single();
-
-	if (error || !owner) {
-		return { id: ownerId, display_name: "不明", avatar_url: null };
-	}
-
-	return owner;
-}
-
-/**
- * 香典帳のプラン情報を取得
- */
-async function getKoudenPlan(planId: string): Promise<{
-	id: string;
-	code: string;
-	name: string;
-}> {
-	const { createAdminClient } = await import("@/lib/supabase/admin");
-	const supabase = createAdminClient();
-
-	const { data: plan, error } = await supabase
-		.from("plans")
-		.select("id, code, name")
-		.eq("id", planId)
-		.single();
-
-	if (error || !plan) {
-		return { id: planId, code: "unknown", name: "不明" };
-	}
-
-	return plan;
-}
-
-/**
- * 香典帳の統計情報を取得
- */
-async function getKoudenStats(koudenId: string): Promise<{
-	entries_count: number;
-	members_count: number;
-	total_amount: number;
-}> {
-	const { createAdminClient } = await import("@/lib/supabase/admin");
-	const supabase = createAdminClient();
-
-	try {
-		// 並列でクエリ実行
-		const [entriesResult, membersResult, totalAmountResult] = await Promise.all([
-			supabase
-				.from("kouden_entries")
-				.select("id", { count: "exact", head: true })
-				.eq("kouden_id", koudenId),
-			supabase
-				.from("kouden_members")
-				.select("id", { count: "exact", head: true })
-				.eq("kouden_id", koudenId),
-			supabase.from("kouden_entries").select("amount").eq("kouden_id", koudenId),
-		]);
-
-		// 合計金額を計算
-		const totalAmount =
-			totalAmountResult.data?.reduce((sum, entry) => sum + (entry.amount || 0), 0) || 0;
-
-		return {
-			entries_count: entriesResult.count || 0,
-			members_count: membersResult.count || 0,
-			total_amount: totalAmount,
-		};
-	} catch (error) {
-		logger.error(
-			{
-				koudenId,
-				error: error instanceof Error ? error.message : String(error),
-			},
-			"Error getting stats for kouden",
-		);
-		return {
-			entries_count: 0,
-			members_count: 0,
-			total_amount: 0,
-		};
-	}
 }

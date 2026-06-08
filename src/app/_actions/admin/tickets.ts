@@ -2,6 +2,7 @@ import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/
 import { createClient } from "@/lib/supabase/server";
 import type { Ticket, TicketMessage } from "@/types/admin";
 import { revalidatePath } from "next/cache";
+import { getAuthUsersByIds } from "./auth-users";
 
 /**
  * 管理者権限チェック
@@ -45,41 +46,23 @@ export async function getTickets(): Promise<ActionResult<Ticket[]>> {
 
 		if (ticketsError) throw ticketsError;
 
-		// チケットごとのユーザー情報を取得
-		const ticketsWithUsers = await Promise.all(
-			tickets.map(async (ticket) => {
-				const { data: userData, error: userError } = await supabase.auth.admin.getUserById(
-					ticket.user_id,
-				);
-
-				if (userError) throw userError;
-
-				// 担当管理者の情報を取得
-				let assignedAdmin = null;
-				if (ticket.assigned_to) {
-					const { data: adminData, error: adminError } = await supabase.auth.admin.getUserById(
-						ticket.assigned_to,
-					);
-
-					if (adminError) throw adminError;
-					assignedAdmin = adminData?.user;
-				}
-
-				return {
-					...ticket,
-					user: {
-						id: userData.user.id,
-						email: userData.user.email ?? "",
-					},
-					assigned_admin: assignedAdmin
-						? {
-								id: assignedAdmin.id,
-								email: assignedAdmin.email ?? "",
-							}
-						: null,
-				};
-			}),
+		// チケットの起票者・担当管理者の Auth 情報を 1 回の listUsers で一括解決（N+1解消）
+		const authUsers = await getAuthUsersByIds(
+			tickets.flatMap((ticket) => [ticket.user_id, ticket.assigned_to]),
 		);
+
+		const ticketsWithUsers = tickets.map((ticket) => {
+			const assignedAdmin = ticket.assigned_to ? authUsers.get(ticket.assigned_to) : undefined;
+
+			return {
+				...ticket,
+				user: {
+					id: ticket.user_id,
+					email: authUsers.get(ticket.user_id)?.email ?? "",
+				},
+				assigned_admin: assignedAdmin ? { id: assignedAdmin.id, email: assignedAdmin.email } : null,
+			};
+		});
 
 		return ticketsWithUsers as Ticket[];
 	}, "チケット一覧の取得");
@@ -152,36 +135,17 @@ export async function getTicketById(ticketId: string): Promise<ActionResult<Tick
 
 		if (ticketError) throw ticketError;
 
-		// ユーザー情報を取得
-		const { data: userData, error: userError } = await supabase.auth.admin.getUserById(
-			ticket.user_id,
-		);
-
-		if (userError) throw userError;
-
-		// 担当管理者の情報を取得
-		let assignedAdmin = null;
-		if (ticket.assigned_to) {
-			const { data: adminData, error: adminError } = await supabase.auth.admin.getUserById(
-				ticket.assigned_to,
-			);
-
-			if (adminError) throw adminError;
-			assignedAdmin = adminData?.user;
-		}
+		// 起票者・担当管理者の Auth 情報を一括解決
+		const authUsers = await getAuthUsersByIds([ticket.user_id, ticket.assigned_to]);
+		const assignedAdmin = ticket.assigned_to ? authUsers.get(ticket.assigned_to) : undefined;
 
 		return {
 			...ticket,
 			user: {
-				id: userData.user.id,
-				email: userData.user.email ?? "",
+				id: ticket.user_id,
+				email: authUsers.get(ticket.user_id)?.email ?? "",
 			},
-			assigned_admin: assignedAdmin
-				? {
-						id: assignedAdmin.id,
-						email: assignedAdmin.email ?? "",
-					}
-				: null,
+			assigned_admin: assignedAdmin ? { id: assignedAdmin.id, email: assignedAdmin.email } : null,
 		} as Ticket;
 	}, "チケット詳細の取得");
 }
@@ -199,24 +163,16 @@ export async function getTicketMessages(ticketId: string): Promise<ActionResult<
 
 		if (messagesError) throw messagesError;
 
-		// メッセージごとのユーザー情報を取得
-		const messagesWithUsers = await Promise.all(
-			messages.map(async (message) => {
-				const { data: userData, error: userError } = await supabase.auth.admin.getUserById(
-					message.created_by,
-				);
+		// メッセージ投稿者の Auth 情報を 1 回の listUsers で一括解決（N+1解消）
+		const authUsers = await getAuthUsersByIds(messages.map((message) => message.created_by));
 
-				if (userError) throw userError;
-
-				return {
-					...message,
-					user: {
-						id: userData.user.id,
-						email: userData.user.email ?? "",
-					},
-				};
-			}),
-		);
+		const messagesWithUsers = messages.map((message) => ({
+			...message,
+			user: {
+				id: message.created_by,
+				email: authUsers.get(message.created_by)?.email ?? "",
+			},
+		}));
 
 		return messagesWithUsers as TicketMessage[];
 	}, "チケットメッセージの取得");
