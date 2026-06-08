@@ -716,6 +716,10 @@ export async function getAllKoudens(params: GetAdminKoudensParams = {}): Promise
 		const statsRows = (statsResult.data ?? []) as KoudenStatsRow[];
 		const statsMap = new Map(statsRows.map((row) => [row.kouden_id, row] as const));
 
+		// 取得「全体」の失敗（ownersResult/plansResult/statsResult の error）は上で例外化済み。
+		// 以降の ownerMap/planMap/statsMap.get に対するフォールバックは「個別レコードの欠損」
+		// （削除済み owner、未登録 plan、エントリー0件の kouden 等）を正常系として扱うもので、
+		// owner/plan は「不明」プレースホルダ、stats は 0 埋めで継続する。
 		const koudensWithDetails = koudens.map((kouden) => {
 			const owner = ownerMap.get(kouden.owner_id) ?? {
 				id: kouden.owner_id,

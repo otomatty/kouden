@@ -51,11 +51,12 @@ BEGIN
         WHERE km.kouden_id = ANY(p_kouden_ids)
         GROUP BY km.kouden_id
     )
+    -- RETURNS TABLE の列名と明示的に揃えておく（可読性・保守性のため）
     SELECT
-        i.kid,
-        COALESCE(e.cnt, 0),
-        COALESCE(m.cnt, 0),
-        COALESCE(e.amount_sum, 0)
+        i.kid AS kouden_id,
+        COALESCE(e.cnt, 0) AS entries_count,
+        COALESCE(m.cnt, 0) AS members_count,
+        COALESCE(e.amount_sum, 0) AS total_amount
     FROM input_ids i
     LEFT JOIN entries e ON e.kid = i.kid
     LEFT JOIN members m ON m.kid = i.kid;

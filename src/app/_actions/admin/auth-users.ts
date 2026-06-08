@@ -1,4 +1,4 @@
-import { ErrorCodes, KoudenError } from "@/lib/errors";
+import { KoudenError } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -52,10 +52,8 @@ export async function getAuthUsersByIds(
 	)("get_auth_users_by_ids", { p_user_ids: targetIds });
 
 	if (error) {
-		throw new KoudenError(
-			`Failed to fetch auth users: ${error.message}`,
-			ErrorCodes.DB_FETCH_ERROR,
-		);
+		// 生の Supabase メッセージを UI に露出させないよう fromSupabase でラップする
+		throw KoudenError.fromSupabase(error, "Auth ユーザー情報の取得");
 	}
 
 	for (const row of data ?? []) {
