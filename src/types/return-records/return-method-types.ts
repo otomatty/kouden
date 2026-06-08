@@ -30,23 +30,3 @@ export interface ReturnMethodType extends ReturnMethodTypeBase {
 	updated_at: string;
 }
 
-/**
- * 返礼方法種別作成時の入力型
- */
-export type CreateReturnMethodTypeInput = ReturnMethodTypeBase;
-
-/**
- * 返礼方法種別更新時の入力型
- */
-export interface UpdateReturnMethodTypeInput {
-	/** 返礼方法種別ID */
-	id: string;
-	/** 返礼方法名 */
-	name?: string;
-	/** 返礼方法の説明 */
-	description?: string | null;
-	/** 項目必須フラグ */
-	is_item_required?: boolean;
-	/** 表示順 */
-	sort_order?: number | null;
-}
