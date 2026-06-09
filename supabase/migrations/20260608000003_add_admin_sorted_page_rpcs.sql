@@ -182,3 +182,56 @@ GRANT EXECUTE ON FUNCTION public.get_admin_kouden_ids_by_entries_count(text, tex
 
 COMMENT ON FUNCTION public.get_admin_kouden_ids_by_entries_count(text, text, text, int, int) IS
     '管理者香典帳一覧用: entries_count で全件ソート + ページネーションした kouden_id と全件数を返す。ページが空でも total_count をセンチネル行で返す。関数内で is_admin(auth.uid()) を強制。';
+
+-- ============================================================================
+-- 3. ユーザー一覧: 指定 user_id 群の auth 情報（email / last_sign_in_at /
+--    email_confirmed_at）を一括取得
+-- ============================================================================
+-- 背景:
+--   getAllUsers は従来 supabase.auth.admin.listUsers() で auth 情報を取得していたが、
+--   listUsers() は既定で「先頭ページのみ」を返すため、auth ユーザーが1ページを超える
+--   テナントでは対象ユーザーが先頭ページ外だと email / last_sign_in_at が空欄になる。
+--   特に last_sign_in_at ソート経路（上記RPC）では全 auth.users から並べた任意の
+--   ユーザーが選ばれ得るため、並べ替えキーである last_sign_in_at 自体が表示で欠落し得る。
+--   さらに admin API はサービスロールJWTを要するため、ユーザーセッションのクライアントでは
+--   そもそも失敗し得る。
+--
+--   本RPCは id で絞り込んで auth.users を直接参照するため、auth のページングに依存せず
+--   対象 id 数に比例した1クエリで正確に解決できる（get_auth_users_by_ids と同じ方針。
+--   こちらは email に加え last_sign_in_at / email_confirmed_at も返す）。
+--
+-- セキュリティ:
+--   auth.users を参照するため SECURITY DEFINER とし、関数内で is_admin(auth.uid()) を
+--   チェックして管理者以外からの呼び出しを拒否する。
+CREATE OR REPLACE FUNCTION public.get_admin_auth_user_details_by_ids(
+    p_user_ids uuid[]
+)
+RETURNS TABLE (
+    id uuid,
+    email text,
+    last_sign_in_at timestamptz,
+    email_confirmed_at timestamptz
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    -- 呼び出し元が管理者であることを必須化（SECURITY DEFINER の保護）
+    IF NOT public.is_admin(auth.uid()) THEN
+        RAISE EXCEPTION 'permission denied: admin role required for get_admin_auth_user_details_by_ids'
+            USING ERRCODE = '42501';
+    END IF;
+
+    RETURN QUERY
+    SELECT u.id, u.email::text, u.last_sign_in_at, u.email_confirmed_at
+    FROM auth.users u
+    WHERE u.id = ANY(p_user_ids);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_admin_auth_user_details_by_ids(uuid[]) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_admin_auth_user_details_by_ids(uuid[]) TO authenticated;
+
+COMMENT ON FUNCTION public.get_admin_auth_user_details_by_ids(uuid[]) IS
+    '管理画面ユーザー一覧用: 指定 user_id 群の auth.users.email / last_sign_in_at / email_confirmed_at を1クエリで一括取得 (auth ページング非依存)。関数内で is_admin(auth.uid()) を強制。';

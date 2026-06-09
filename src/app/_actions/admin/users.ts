@@ -391,40 +391,51 @@ async function getAllUsersAuthInfo(userIds: string[]): Promise<
 		}
 	> = {};
 
+	// 既定では各ユーザーを空情報で埋めておき、取得できたものだけ上書きする。
+	for (const id of userIds) {
+		result[id] = {};
+	}
+	if (userIds.length === 0) {
+		return result;
+	}
+
 	try {
-		// Admin APIで全ユーザーを一括取得
-		const { data: users, error } = await supabase.auth.admin.listUsers();
+		// id で絞り込む SECURITY DEFINER RPC で auth 情報を一括取得。
+		// listUsers() は先頭ページのみを返し、かつ admin API はサービスロールを要するため
+		// ユーザーセッションでは取得漏れ/失敗し得る。本RPCは auth ページングに依存しない。
+		// 注: get_admin_auth_user_details_by_ids は
+		//   20260608000003_add_admin_sorted_page_rpcs.sql で追加。
+		const { data, error } = await (
+			supabase.rpc as unknown as (
+				fn: string,
+				args: unknown,
+			) => PromiseLike<{ data: unknown; error: { message: string } | null }>
+		)("get_admin_auth_user_details_by_ids", { p_user_ids: userIds });
 
 		if (error) {
 			logger.error(
 				{
 					error: error.message,
-					code: error.code,
 					userIdsCount: userIds.length,
 				},
 				"Failed to get all users auth info",
 			);
-			// エラーの場合は空のオブジェクトを各ユーザーに設定
-			for (const id of userIds) {
-				result[id] = {};
-			}
 			return result;
 		}
 
-		// 必要なユーザーのみフィルタリングしてマップに変換
-		const userMap = new Map(users.users.map((user) => [user.id, user]));
+		const rows = (data ?? []) as Array<{
+			id: string;
+			email: string | null;
+			last_sign_in_at: string | null;
+			email_confirmed_at: string | null;
+		}>;
 
-		for (const userId of userIds) {
-			const user = userMap.get(userId);
-			if (user) {
-				result[userId] = {
-					email: user.email,
-					last_sign_in_at: user.last_sign_in_at,
-					email_confirmed_at: user.email_confirmed_at,
-				};
-			} else {
-				result[userId] = {};
-			}
+		for (const row of rows) {
+			result[row.id] = {
+				email: row.email ?? undefined,
+				last_sign_in_at: row.last_sign_in_at ?? undefined,
+				email_confirmed_at: row.email_confirmed_at ?? undefined,
+			};
 		}
 
 		return result;
@@ -436,10 +447,6 @@ async function getAllUsersAuthInfo(userIds: string[]): Promise<
 			},
 			"Error getting all users auth info",
 		);
-		// エラーの場合は空のオブジェクトを各ユーザーに設定
-		for (const id of userIds) {
-			result[id] = {};
-		}
 		return result;
 	}
 }
