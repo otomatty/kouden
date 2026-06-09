@@ -126,7 +126,7 @@ export async function getAllUsers(params: GetUsersParams = {}): Promise<
 				id: string | null;
 				total_count: number | string;
 			}>;
-			count = orderedRows.length > 0 ? Number(orderedRows[0].total_count) : 0;
+			count = Number(orderedRows[0]?.total_count ?? 0);
 
 			const orderedIds = orderedRows.map((row) => row.id).filter((id): id is string => id !== null);
 
@@ -744,7 +744,7 @@ export async function getAllKoudens(params: GetAdminKoudensParams = {}): Promise
 				id: string | null;
 				total_count: number | string;
 			}>;
-			count = orderedRows.length > 0 ? Number(orderedRows[0].total_count) : 0;
+			count = Number(orderedRows[0]?.total_count ?? 0);
 
 			const orderedIds = orderedRows.map((row) => row.id).filter((id): id is string => id !== null);
 
