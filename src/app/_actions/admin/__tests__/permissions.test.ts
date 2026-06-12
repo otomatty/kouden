@@ -129,6 +129,19 @@ describe("requireAdmin", () => {
 		expect(result.adminRole).toBe("admin");
 	});
 
+	it("未認証の場合は /auth/login にリダイレクトする", async () => {
+		supabaseMock = {
+			auth: {
+				getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }),
+			},
+		};
+		(createClient as unknown as Mock).mockResolvedValue(supabaseMock);
+
+		const error = await requireAdmin().catch((e) => e);
+		expect(error).toBeInstanceOf(RedirectError);
+		expect((error as RedirectError).url).toBe("/auth/login");
+	});
+
 	it("非管理者の場合は / にリダイレクトする", async () => {
 		supabaseMock = buildSupabase({ data: null, error: { code: "PGRST116" } });
 		(createClient as unknown as Mock).mockResolvedValue(supabaseMock);

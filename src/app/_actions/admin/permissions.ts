@@ -235,6 +235,9 @@ export async function isAdmin() {
 	if (!user) return false;
 
 	const membership = await fetchAdminMembership(supabase, user.id);
-	if (membership.status === "db_error") return false;
+	if (membership.status === "db_error") {
+		logAdminMembershipDbError(user.id, membership.error, "isAdmin check error");
+		return false;
+	}
 	return membership.status === "ok";
 }

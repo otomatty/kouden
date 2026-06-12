@@ -1,3 +1,5 @@
+"use server";
+
 import { assertAdminForAction } from "@/app/_actions/admin/permissions";
 import { type ActionResult, withActionResult } from "@/lib/errors";
 import type { Ticket, TicketMessage } from "@/types/admin";
