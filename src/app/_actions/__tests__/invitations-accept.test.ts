@@ -30,6 +30,7 @@ describe("acceptInvitation", () => {
 	let adminClientMock: MockAdminClient;
 
 	beforeEach(() => {
+		vi.clearAllMocks();
 		userClientMock = {
 			auth: {
 				getUser: vi.fn().mockResolvedValue({
@@ -64,6 +65,7 @@ describe("acceptInvitation", () => {
 			ok: false,
 			error: { code: ErrorCodes.NOT_FOUND },
 		});
+		expect(createClient).not.toHaveBeenCalled();
 		expect(adminClientMock.rpc).not.toHaveBeenCalled();
 	});
 
