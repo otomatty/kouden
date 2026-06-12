@@ -1,8 +1,10 @@
 "use server";
 
+import { persistContactAttachment } from "@/app/_actions/contact-attachment-internal";
 import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import logger from "@/lib/logger";
 import { validateFileUpload } from "@/lib/security/file-upload-validation";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { contactRequestSchema } from "@/schemas/contact";
 import type { Database } from "@/types/supabase";
@@ -18,6 +20,28 @@ type ContactRequestDetail = ContactRequestRow & {
 		"id" | "request_id" | "responder_id" | "response_message" | "created_at"
 	>[];
 };
+
+/**
+ * 添付保存失敗時に作成済みの問い合わせ行を best-effort で削除する。
+ * RLS 上ユーザー DELETE が許可されていないため admin クライアントを使用する。
+ */
+async function rollbackCreatedContactRequest(
+	requestId: string,
+	userId?: string,
+): Promise<void> {
+	const admin = createAdminClient();
+	const { error } = await admin.from("contact_requests").delete().eq("id", requestId);
+	if (error) {
+		logger.warn(
+			{
+				userId,
+				requestId,
+				error: error.message,
+			},
+			"Failed to rollback contact request after attachment persistence failure",
+		);
+	}
+}
 
 /**
  * Create a new contact request (support unauthenticated and authenticated users).
@@ -62,9 +86,53 @@ export async function createContactRequest(formData: FormData): Promise<ActionRe
 			user_id: user?.id ?? null,
 		};
 
-		const { error } = await supabase.from("contact_requests").insert(insertData);
+		const attachmentEntry = formData.get("attachment");
+		const attachmentFile =
+			attachmentEntry instanceof File && attachmentEntry.size > 0 ? attachmentEntry : null;
 
-		if (error) throw error;
+		if (attachmentFile) {
+			const validation = await validateFileUpload(attachmentFile, user?.id);
+			if (!validation.isValid) {
+				logger.warn(
+					{
+						userId: user?.id,
+						fileName: attachmentFile.name,
+						reason: validation.details?.reason,
+					},
+					"Contact attachment validation failed during request creation",
+				);
+				throw new KoudenError(
+					validation.error ?? "ファイルの検証に失敗しました",
+					ErrorCodes.VALIDATION_ERROR,
+				);
+			}
+		}
+
+		if (attachmentFile) {
+			const requestId = crypto.randomUUID();
+			const { error } = await supabase
+				.from("contact_requests")
+				.insert({ ...insertData, id: requestId });
+
+			if (error) throw error;
+
+			// 匿名ユーザーは attachment INSERT / Storage の RLS 制約があるため admin を使用
+			const attachmentSupabase = user ? supabase : createAdminClient();
+			try {
+				await persistContactAttachment({
+					supabase: attachmentSupabase,
+					requestId,
+					file: attachmentFile,
+					userId: user?.id,
+				});
+			} catch (attachmentError) {
+				await rollbackCreatedContactRequest(requestId, user?.id);
+				throw attachmentError;
+			}
+		} else {
+			const { error } = await supabase.from("contact_requests").insert(insertData);
+			if (error) throw error;
+		}
 
 		return null;
 	}, "お問い合わせの送信");
@@ -201,48 +269,11 @@ export async function uploadContactAttachment(
 			);
 		}
 
-		// ファイル名をサニタイズ（path traversal 対策）
-		// 拡張子は維持しつつベース名から不正文字を除去し、結果が空/記号だけなら "file" にフォールバック
-		const timestamp = Date.now();
-		const lastDot = file.name.lastIndexOf(".");
-		const rawBase = lastDot > 0 ? file.name.slice(0, lastDot) : file.name;
-		const rawExt = lastDot > 0 ? file.name.slice(lastDot) : "";
-		const sanitizedBase = rawBase.replace(/[^a-zA-Z0-9._-]/g, "_");
-		const safeBase = /[a-zA-Z0-9]/.test(sanitizedBase) ? sanitizedBase : "file";
-		const safeExt = rawExt.replace(/[^a-zA-Z0-9.]/g, "");
-		const safeFileName = `${safeBase}${safeExt}`;
-		const filePath = `requests/${requestId}/${timestamp}_${safeFileName}`;
-		// ストレージにアップロード
-		const { error: uploadError } = await supabase.storage
-			.from("contact-attachments")
-			.upload(filePath, file, { cacheControl: "3600", upsert: false });
-		if (uploadError) {
-			throw uploadError;
-		}
-		// データベースにメタ情報を保存
-		const { data, error: dbError } = await supabase
-			.from("contact_request_attachments")
-			.insert({ request_id: requestId, file_url: filePath, file_name: file.name })
-			.select();
-		if (dbError) {
-			// INSERT 失敗時はアップロード済みファイルを best-effort で削除して
-			// 孤児ファイルが Storage に残らないようにする
-			const { error: cleanupError } = await supabase.storage
-				.from("contact-attachments")
-				.remove([filePath]);
-			if (cleanupError) {
-				logger.warn(
-					{
-						userId: user.id,
-						requestId,
-						filePath,
-						error: cleanupError.message,
-					},
-					"Failed to cleanup orphaned contact attachment file",
-				);
-			}
-			throw dbError;
-		}
-		return data ?? [];
+		return persistContactAttachment({
+			supabase,
+			requestId,
+			file,
+			userId: user.id,
+		});
 	}, "添付ファイルのアップロード");
 }
