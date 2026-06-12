@@ -5,7 +5,7 @@
  * @module return-record-selected-methods
  */
 
-import { checkKoudenPermission } from "@/app/_actions/permissions";
+import { requireKoudenEditor } from "@/app/_actions/permissions";
 import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
 import type {
@@ -31,11 +31,7 @@ export async function createReturnRecordSelectedMethod(
 			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 		}
 
-		// 編集権限 (owner / editor) を確認
-		const permission = await checkKoudenPermission(koudenId);
-		if (!["owner", "editor"].includes(permission)) {
-			throw new KoudenError("返礼方法選択の作成権限がありません", ErrorCodes.FORBIDDEN);
-		}
+		await requireKoudenEditor(koudenId, "返礼方法選択の作成権限がありません");
 
 		const { data, error } = await supabase
 			.from("return_record_selected_methods")
@@ -116,11 +112,7 @@ export async function updateReturnRecordSelectedMethod(
 			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 		}
 
-		// 編集権限 (owner / editor) を確認
-		const permission = await checkKoudenPermission(koudenId);
-		if (!["owner", "editor"].includes(permission)) {
-			throw new KoudenError("返礼方法選択の更新権限がありません", ErrorCodes.FORBIDDEN);
-		}
+		await requireKoudenEditor(koudenId, "返礼方法選択の更新権限がありません");
 
 		const { id, ...updateData } = input;
 		const { data, error } = await supabase
@@ -159,11 +151,7 @@ export async function deleteReturnRecordSelectedMethod(
 			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 		}
 
-		// 編集権限 (owner / editor) を確認
-		const permission = await checkKoudenPermission(koudenId);
-		if (!["owner", "editor"].includes(permission)) {
-			throw new KoudenError("返礼方法選択の削除権限がありません", ErrorCodes.FORBIDDEN);
-		}
+		await requireKoudenEditor(koudenId, "返礼方法選択の削除権限がありません");
 
 		const { error } = await supabase.from("return_record_selected_methods").delete().eq("id", id);
 

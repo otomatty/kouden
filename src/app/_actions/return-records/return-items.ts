@@ -5,7 +5,7 @@
  * @module return-items
  */
 
-import { checkKoudenPermission } from "@/app/_actions/permissions";
+import { requireKoudenEditor } from "@/app/_actions/permissions";
 import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
@@ -61,27 +61,7 @@ export async function createReturnItem(
 			created_by: user.id,
 		};
 
-		// 権限の確認
-		const { data: permission, error: permissionError } = await supabase
-			.from("kouden_members")
-			.select(`
-				kouden_roles (
-					name
-				)
-			`)
-			.eq("kouden_id", input.kouden_id)
-			.eq("user_id", user.id)
-			.single();
-
-		if (permissionError || !permission) {
-			throw new KoudenError("この香典帳に対する権限がありません", ErrorCodes.FORBIDDEN);
-		}
-
-		const roleName = permission.kouden_roles?.name;
-		const hasPermission = ["owner", "editor"].includes(roleName ?? "");
-		if (!hasPermission) {
-			throw new KoudenError("返礼品の作成権限がありません", ErrorCodes.FORBIDDEN);
-		}
+		await requireKoudenEditor(input.kouden_id, "返礼品の作成権限がありません");
 
 		const { error } = await supabase.from("return_items").insert(returnItemData);
 
@@ -157,11 +137,7 @@ export async function updateReturnItem(
 			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 		}
 
-		// 編集権限 (owner / editor) を確認
-		const permission = await checkKoudenPermission(input.kouden_id);
-		if (!["owner", "editor"].includes(permission)) {
-			throw new KoudenError("返礼品マスター情報の更新権限がありません", ErrorCodes.FORBIDDEN);
-		}
+		await requireKoudenEditor(input.kouden_id, "返礼品マスター情報の更新権限がありません");
 
 		const { id, kouden_id, ...updateData } = input;
 
@@ -203,11 +179,7 @@ export async function deleteReturnItem(id: string, koudenId: string): Promise<Ac
 			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 		}
 
-		// 編集権限 (owner / editor) を確認
-		const permission = await checkKoudenPermission(koudenId);
-		if (!["owner", "editor"].includes(permission)) {
-			throw new KoudenError("返礼品マスター情報の削除権限がありません", ErrorCodes.FORBIDDEN);
-		}
+		await requireKoudenEditor(koudenId, "返礼品マスター情報の削除権限がありません");
 
 		const { error } = await supabase.from("return_items").delete().eq("id", id);
 

@@ -1,27 +1,9 @@
 "use server";
 
-import { KoudenError } from "@/lib/errors";
+import { ErrorCodes, KoudenError } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
-import type { KoudenPermission, KoudenRole } from "@/types/role";
+import type { KoudenPermission } from "@/types/role";
 import { cache } from "react";
-
-// 権限チェックのユーティリティ関数
-export const withPermissionCheck = async <T>(
-	koudenId: string,
-	requiredPermission: KoudenPermission,
-	action: () => Promise<T>,
-): Promise<T> => {
-	const permission = await checkKoudenPermission(koudenId);
-	const hasPermission =
-		permission === requiredPermission ||
-		permission === "owner" ||
-		(permission === "editor" && requiredPermission === "viewer");
-
-	if (!hasPermission) {
-		throw new KoudenError("権限がありません", "INSUFFICIENT_PERMISSION");
-	}
-	return action();
-};
 
 // 権限チェック関数（キャッシュ対応）
 export const checkKoudenPermission = cache(async (koudenId: string): Promise<KoudenPermission> => {
@@ -71,6 +53,21 @@ export const checkKoudenPermission = cache(async (koudenId: string): Promise<Kou
 
 	throw new KoudenError("不明な権限です", "UNKNOWN_PERMISSION");
 });
+
+/**
+ * 香典帳の編集権限（owner / editor）を要求する
+ * @param koudenId 香典帳ID
+ * @param message 権限不足時のエラーメッセージ
+ */
+export async function requireKoudenEditor(
+	koudenId: string,
+	message = "編集権限がありません",
+): Promise<void> {
+	const permission = await checkKoudenPermission(koudenId);
+	if (permission !== "owner" && permission !== "editor") {
+		throw new KoudenError(message, ErrorCodes.FORBIDDEN);
+	}
+}
 
 // 管理者権限チェック関数（キャッシュ対応）
 export const isKoudenOwner = cache(async (koudenId: string): Promise<boolean> => {
