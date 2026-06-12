@@ -1,4 +1,4 @@
-import { checkAdminPermission } from "@/app/_actions/admin/permissions";
+import { requireAdmin } from "@/app/_actions/admin/permissions";
 import { TelegramsView } from "@/app/(protected)/koudens/[id]/telegrams/_components";
 import { getTelegrams } from "@/app/_actions/telegrams";
 import { getEntriesForAdmin } from "@/app/_actions/entries";
@@ -17,7 +17,7 @@ export default async function AdminTelegramsPage({ params }: AdminTelegramsPageP
 	const { id: koudenId } = await params;
 
 	// 管理者権限チェック
-	await checkAdminPermission();
+	await requireAdmin();
 
 	// 弔電情報とエントリー情報を取得
 	const [telegramsResult, entriesResult] = await Promise.all([

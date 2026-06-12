@@ -1,6 +1,6 @@
 import { KoudenHeader } from "@/app/(protected)/koudens/[id]/_components/_common/kouden-header";
 import { TabNavigation } from "@/app/(protected)/koudens/[id]/_components/_common/tab-navigation";
-import { checkAdminPermission } from "@/app/_actions/admin/permissions";
+import { requireAdmin } from "@/app/_actions/admin/permissions";
 import { getKoudenForAdmin, getKoudenWithPlanForAdmin } from "@/app/_actions/koudens/read";
 import { Button } from "@/components/ui/button";
 import type { Kouden } from "@/types/kouden";
@@ -50,7 +50,7 @@ export default async function AdminKoudenLayout({ params, children }: AdminKoude
 
 	try {
 		// 管理者権限チェック
-		const { adminRole } = await checkAdminPermission();
+		const { adminRole } = await requireAdmin();
 
 		// 香典帳データとプラン情報を取得（管理者用関数を使用）
 		const [koudenResult, planInfoResult] = await Promise.all([

@@ -1,4 +1,4 @@
-import { checkAdminPermission } from "@/app/_actions/admin/permissions";
+import { requireAdmin } from "@/app/_actions/admin/permissions";
 import { getKoudenForAdmin } from "@/app/_actions/koudens/read";
 import { notFound, redirect, unstable_rethrow } from "next/navigation";
 
@@ -7,7 +7,7 @@ export default async function AdminKoudenPage({ params }: { params: Promise<{ id
 
 	try {
 		// 管理者権限チェック
-		await checkAdminPermission();
+		await requireAdmin();
 
 		// 香典帳取得（管理者用関数を使用）
 		const result = await getKoudenForAdmin(koudenId);

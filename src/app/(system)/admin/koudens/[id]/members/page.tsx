@@ -1,4 +1,4 @@
-import { checkAdminPermission } from "@/app/_actions/admin/permissions";
+import { requireAdmin } from "@/app/_actions/admin/permissions";
 import { MemberView } from "@/app/(protected)/koudens/[id]/members/_components/member-view";
 import { getMembersForAdmin } from "@/app/_actions/members";
 import { getKoudenRolesForAdmin } from "@/app/_actions/roles";
@@ -11,7 +11,7 @@ export default async function AdminMembersPage({ params }: AdminMembersPageProps
 	const { id: koudenId } = await params;
 
 	// 管理者権限チェック
-	await checkAdminPermission();
+	await requireAdmin();
 
 	// 管理者用の権限オブジェクト（閲覧権限のみ）
 	const adminPermission = "viewer" as const;

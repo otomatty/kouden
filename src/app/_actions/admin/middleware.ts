@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/app/_actions/admin/permissions";
 import { ErrorCodes, KoudenError } from "@/lib/errors";
 import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
@@ -5,31 +6,7 @@ import { redirect } from "next/navigation";
 import { createAuditLog } from "./audit-logs";
 
 export async function withAdmin<T>(action: () => Promise<T>): Promise<T> {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-
-	if (!user?.id) {
-		redirect("/auth/login");
-	}
-
-	const { data: isAdmin, error: rpcError } = await supabase.rpc("is_admin", {
-		user_uid: user.id,
-	});
-
-	// RPC 自体が失敗した場合は権限不足ではなく DB エラーとして扱う
-	if (rpcError) {
-		logger.error(
-			{ error: rpcError.message, code: rpcError.code, userId: user.id },
-			"is_admin RPC failed in withAdmin",
-		);
-		throw new KoudenError("管理者権限の確認に失敗しました", ErrorCodes.DB_FETCH_ERROR);
-	}
-
-	if (!isAdmin) {
-		redirect("/");
-	}
+	const { user } = await requireAdmin();
 
 	try {
 		const result = await action();

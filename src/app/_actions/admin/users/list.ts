@@ -1,8 +1,8 @@
 "use server";
 
+import { assertAdminForAction } from "@/app/_actions/admin/permissions";
 import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import { escapeIlikePattern } from "@/lib/security/search-sanitize";
-import { createClient } from "@/lib/supabase/server";
 import { getAllUsersAuthInfo } from "./auth-info";
 import type { GetUsersParams, UserListItem } from "./types";
 
@@ -17,14 +17,7 @@ export async function getAllUsers(params: GetUsersParams = {}): Promise<
 	}>
 > {
 	return withActionResult(async () => {
-		// 管理者権限をチェック（入り口で1回だけ）
-		const { isAdmin: isAdminUser } = await import("@/app/_actions/admin/permissions");
-		const adminCheck = await isAdminUser();
-		if (!adminCheck) {
-			throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
-		}
-
-		const supabase = await createClient();
+		const { supabase } = await assertAdminForAction();
 		const {
 			page = 1,
 			limit = 20,

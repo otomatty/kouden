@@ -1,5 +1,5 @@
 import { ReturnRecordsPageClient } from "@/app/(protected)/koudens/[id]/return_records/return-records-page-client";
-import { checkAdminPermission } from "@/app/_actions/admin/permissions";
+import { requireAdmin } from "@/app/_actions/admin/permissions";
 import { getEntriesForAdmin } from "@/app/_actions/entries";
 import { getKoudenForAdmin } from "@/app/_actions/koudens/read";
 import { getRelationshipsForAdmin } from "@/app/_actions/relationships";
@@ -35,7 +35,7 @@ export default async function AdminReturnRecordsPage({
 	const { search, status } = await searchParams;
 
 	// 管理者権限チェック
-	await checkAdminPermission();
+	await requireAdmin();
 
 	// 香典帳の存在確認
 	const koudenResult = await getKoudenForAdmin(koudenId);

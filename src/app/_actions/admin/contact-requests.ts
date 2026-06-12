@@ -1,40 +1,10 @@
 "use server";
 
-import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
-import { createClient } from "@/lib/supabase/server";
+import { assertAdminForAction } from "@/app/_actions/admin/permissions";
+import { type ActionResult, withActionResult } from "@/lib/errors";
 import type { Database } from "@/types/supabase";
 
 type ContactRequestRow = Database["public"]["Tables"]["contact_requests"]["Row"];
-
-/**
- * 管理者権限チェック
- * `withActionResult` がエラーをクライアント向けの ActionResult に変換するため、
- * リダイレクトではなく KoudenError を throw する。
- */
-async function assertAdmin() {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-
-	if (!user) {
-		throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
-	}
-
-	const { data: isAdmin, error: rpcError } = await supabase.rpc("is_admin", {
-		user_uid: user.id,
-	});
-
-	if (rpcError) {
-		throw new KoudenError("管理者権限の確認に失敗しました", ErrorCodes.DB_FETCH_ERROR);
-	}
-
-	if (!isAdmin) {
-		throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
-	}
-
-	return { supabase, user };
-}
 
 /**
  * お問い合わせ一覧を取得
@@ -54,7 +24,7 @@ export async function getContactRequests(params?: {
 	}>
 > {
 	return withActionResult(async () => {
-		const { supabase } = await assertAdmin();
+		const { supabase } = await assertAdminForAction();
 
 		let query = supabase
 			.from("contact_requests")
@@ -98,7 +68,7 @@ export async function getContactRequestDetail(
 	requestId: string,
 ): Promise<ActionResult<ContactRequestRow & { contact_request_attachments: unknown[] }>> {
 	return withActionResult(async () => {
-		const { supabase } = await assertAdmin();
+		const { supabase } = await assertAdminForAction();
 
 		const { data, error } = await supabase
 			.from("contact_requests")
@@ -127,7 +97,7 @@ export async function updateContactRequestStatus(
 	status: "new" | "in_progress" | "closed",
 ): Promise<ActionResult<ContactRequestRow>> {
 	return withActionResult(async () => {
-		const { supabase } = await assertAdmin();
+		const { supabase } = await assertAdminForAction();
 
 		const { data, error } = await supabase
 			.from("contact_requests")
@@ -155,7 +125,7 @@ export async function getContactRequestStats(): Promise<
 	}>
 > {
 	return withActionResult(async () => {
-		const { supabase } = await assertAdmin();
+		const { supabase } = await assertAdminForAction();
 
 		// 全体の統計
 		const { data: totalData, error: totalError } = await supabase

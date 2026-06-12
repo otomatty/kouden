@@ -1,4 +1,4 @@
-import { checkAdminPermission } from "@/app/_actions/admin/permissions";
+import { requireAdmin } from "@/app/_actions/admin/permissions";
 import { OfferingView } from "@/app/(protected)/koudens/[id]/offerings/_components";
 import { getOfferings } from "@/app/_actions/offerings";
 import { getEntriesForAdmin } from "@/app/_actions/entries";
@@ -17,7 +17,7 @@ export default async function AdminOfferingsPage({ params }: AdminOfferingsPageP
 	const { id: koudenId } = await params;
 
 	// 管理者権限チェック
-	await checkAdminPermission();
+	await requireAdmin();
 
 	// 供物情報とエントリー情報を取得
 	const [offeringsResult, entriesResult] = await Promise.all([
