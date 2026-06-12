@@ -1,12 +1,12 @@
 /// <reference types="vitest" />
-import { requireKoudenOwner } from "@/app/_actions/permissions";
+import { requireKoudenRecordOwner } from "@/app/_actions/permissions";
 import { ErrorCodes, KoudenError } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { deleteKouden } from "../koudens/delete";
 
 vi.mock("@/app/_actions/permissions", () => ({
-	requireKoudenOwner: vi.fn(),
+	requireKoudenRecordOwner: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/admin", () => ({
@@ -33,7 +33,7 @@ describe("deleteKouden", () => {
 
 	it("権限不足時に ok:false / FORBIDDEN を返す", async () => {
 		// biome-ignore lint/suspicious/noExplicitAny: mock
-		(requireKoudenOwner as any).mockRejectedValue(
+		(requireKoudenRecordOwner as any).mockRejectedValue(
 			new KoudenError("削除権限がありません", ErrorCodes.FORBIDDEN),
 		);
 
@@ -49,7 +49,7 @@ describe("deleteKouden", () => {
 
 	it("DB エラー時に ok:false を返す", async () => {
 		// biome-ignore lint/suspicious/noExplicitAny: mock
-		(requireKoudenOwner as any).mockResolvedValue(undefined);
+		(requireKoudenRecordOwner as any).mockResolvedValue(undefined);
 		supabaseMock.eq.mockResolvedValue({ error: { message: "boom", code: "23503" } });
 
 		const result = await deleteKouden("kouden-1");
@@ -62,7 +62,7 @@ describe("deleteKouden", () => {
 
 	it("成功時に ok:true を返す", async () => {
 		// biome-ignore lint/suspicious/noExplicitAny: mock
-		(requireKoudenOwner as any).mockResolvedValue(undefined);
+		(requireKoudenRecordOwner as any).mockResolvedValue(undefined);
 		supabaseMock.eq.mockResolvedValue({ error: null });
 
 		const result = await deleteKouden("kouden-1");
@@ -78,7 +78,7 @@ describe("deleteKouden", () => {
 
 	it("予期せぬ例外時にも ok:false を返す", async () => {
 		// biome-ignore lint/suspicious/noExplicitAny: mock
-		(requireKoudenOwner as any).mockRejectedValue(new Error("unexpected"));
+		(requireKoudenRecordOwner as any).mockRejectedValue(new Error("unexpected"));
 
 		const result = await deleteKouden("kouden-1");
 

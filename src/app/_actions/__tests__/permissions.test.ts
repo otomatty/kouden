@@ -177,6 +177,15 @@ describe("permissions", () => {
 	});
 
 	describe("requireKoudenEditor", () => {
+		it("未認証の場合は UNAUTHORIZED を投げる", async () => {
+			// biome-ignore lint/suspicious/noExplicitAny: mock
+			(createClient as any).mockResolvedValue(buildSupabase({ userId: null }));
+
+			await expect(requireKoudenEditor("kouden-1")).rejects.toMatchObject({
+				code: ErrorCodes.UNAUTHORIZED,
+			});
+		});
+
 		it("viewer は FORBIDDEN を投げる", async () => {
 			// biome-ignore lint/suspicious/noExplicitAny: mock
 			(createClient as any).mockResolvedValue(
@@ -196,6 +205,23 @@ describe("permissions", () => {
 			);
 
 			await expect(requireKoudenEditor("kouden-1")).rejects.toBeInstanceOf(KoudenError);
+		});
+	});
+
+	describe("canDeleteKouden", () => {
+		it("created_by のみのユーザーは削除不可", async () => {
+			// biome-ignore lint/suspicious/noExplicitAny: mock
+			(createClient as any).mockResolvedValue(
+				buildSupabase({
+					koudenRow: {
+						owner_id: "other-owner",
+						created_by: "user-1",
+						kouden_members: null,
+					},
+				}),
+			);
+
+			await expect(canDeleteKouden("kouden-1")).resolves.toBe(false);
 		});
 	});
 

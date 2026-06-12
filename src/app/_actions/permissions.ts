@@ -9,8 +9,8 @@
  * - `getKoudenPermission` — ロール取得。アクセス不可は `null`
  * - `hasKoudenAccess` — アクセス可能か
  * - `hasEditPermission` — 編集可能か（owner / editor）
- * - `isKoudenOwner` — オーナーか
- * - `canDeleteKouden` — 削除可能か（オーナーのみ）
+ * - `isKoudenOwner` — オーナー相当か（`owner_id` または `created_by`）
+ * - `canDeleteKouden` — 削除可能か（`owner_id` のみ。admin client 利用のため厳格化）
  *
  * ### 書き込み用（throw）
  * - `requireKoudenAccess` — アクセス権必須（ロールを返す）
@@ -85,6 +85,10 @@ const fetchKoudenAccess = cache(async (koudenId: string): Promise<KoudenAccessCo
 
 	return { userId: user.id, row: data };
 });
+
+function isRecordOwner(userId: string, row: KoudenAccessRow): boolean {
+	return row.owner_id === userId;
+}
 
 function resolveKoudenPermission(
 	userId: string,
@@ -163,21 +167,37 @@ export async function requireKoudenEditor(
 	koudenId: string,
 	message = "編集権限がありません",
 ): Promise<void> {
-	const permission = await getKoudenPermission(koudenId);
-	if (!permission || (permission !== "owner" && permission !== "editor")) {
+	const permission = await requireKoudenAccess(koudenId, message);
+	if (permission !== "owner" && permission !== "editor") {
 		throw new KoudenError(message, ErrorCodes.FORBIDDEN);
 	}
 }
 
 /**
  * 香典帳のオーナー権限を要求する（書き込み用）
+ * `owner_id` または `created_by` をオーナー相当として扱う。
  */
 export async function requireKoudenOwner(
 	koudenId: string,
 	message = "オーナー権限がありません",
 ): Promise<void> {
-	const permission = await getKoudenPermission(koudenId);
+	const permission = await requireKoudenAccess(koudenId, message);
 	if (permission !== "owner") {
+		throw new KoudenError(message, ErrorCodes.FORBIDDEN);
+	}
+}
+
+/**
+ * 香典帳レコードの `owner_id` を要求する（書き込み用）
+ * admin client 等 RLS をバイパスする削除では `created_by` を許可しない。
+ */
+export async function requireKoudenRecordOwner(
+	koudenId: string,
+	message = "オーナー権限がありません",
+): Promise<void> {
+	await requireKoudenAccess(koudenId, message);
+	const access = await fetchKoudenAccess(koudenId);
+	if (!access || !isRecordOwner(access.userId, access.row)) {
 		throw new KoudenError(message, ErrorCodes.FORBIDDEN);
 	}
 }
@@ -202,5 +222,9 @@ export const hasEditPermission = cache(async (koudenId: string): Promise<boolean
  * 削除権限があるか（読み取り用、オーナーのみ）
  */
 export const canDeleteKouden = cache(async (koudenId: string): Promise<boolean> => {
-	return isKoudenOwner(koudenId);
+	const access = await fetchKoudenAccess(koudenId);
+	if (!access) {
+		return false;
+	}
+	return isRecordOwner(access.userId, access.row);
 });

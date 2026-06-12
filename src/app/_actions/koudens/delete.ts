@@ -3,7 +3,7 @@
 import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
-import { requireKoudenOwner } from "../permissions";
+import { requireKoudenRecordOwner } from "../permissions";
 
 /**
  * 香典帳を削除する。
@@ -14,7 +14,7 @@ import { requireKoudenOwner } from "../permissions";
 export async function deleteKouden(id: string): Promise<ActionResult<null>> {
 	try {
 		return await withActionResult(async () => {
-			await requireKoudenOwner(id, "削除権限がありません");
+			await requireKoudenRecordOwner(id, "削除権限がありません");
 
 			const supabase = createAdminClient();
 			const { error } = await supabase.from("koudens").delete().eq("id", id);
