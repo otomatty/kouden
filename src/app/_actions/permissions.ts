@@ -110,7 +110,7 @@ export async function canEditKouden(koudenId: string): Promise<boolean> {
 
 	// 1回のクエリで所有者チェックとメンバーロールチェックを実行
 	// RLS無限再帰を避けるため、直接JOINして権限を確認
-	const { data } = await supabase
+	const { data, error } = await supabase
 		.from("koudens")
 		.select(`
 			owner_id,
@@ -125,6 +125,14 @@ export async function canEditKouden(koudenId: string): Promise<boolean> {
 		`)
 		.eq("id", koudenId)
 		.single();
+
+	// PGRST116 (0 行) は香典帳未存在またはアクセス不可。それ以外は DB エラーとして扱う。
+	if (error) {
+		if (error.code === "PGRST116") {
+			return false;
+		}
+		throw new KoudenError("権限の取得に失敗しました", ErrorCodes.DB_FETCH_ERROR);
+	}
 
 	if (!data) return false;
 
