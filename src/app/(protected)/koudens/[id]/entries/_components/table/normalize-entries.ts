@@ -46,8 +46,8 @@ export function normalizeEntries(entries: Entry[]): NormalizedEntry[] {
 				createdAt: entry.created_at,
 				updatedAt: entry.updated_at,
 				createdBy: entry.created_by,
-				lastModifiedAt: entry.last_modified_at,
-				lastModifiedBy: entry.last_modified_by,
+				lastModifiedAt: entry.last_modified_at ?? null,
+				lastModifiedBy: entry.last_modified_by ?? null,
 				postalCode: entry.postal_code ?? null,
 				phoneNumber: entry.phone_number ?? null,
 			};

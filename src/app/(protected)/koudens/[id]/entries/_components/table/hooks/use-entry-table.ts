@@ -118,8 +118,6 @@ export function useEntryTable({
 
 	useEffect(() => {
 		try {
-			setIsLoading(true);
-
 			if (!Array.isArray(normalizedEntries)) {
 				throw new Error("Invalid entries data in DataTable");
 			}
@@ -162,6 +160,7 @@ export function useEntryTable({
 	}, [relationships]);
 
 	useEffect(() => {
+		let isMounted = true;
 		(async () => {
 			try {
 				let memsResult: Awaited<ReturnType<typeof getMembers>>;
@@ -171,6 +170,7 @@ export function useEntryTable({
 				} else {
 					memsResult = await getMembers(koudenId);
 				}
+				if (!isMounted) return;
 				if (!memsResult.ok) {
 					console.error("[ERROR] Failed to fetch members:", memsResult.error);
 					return;
@@ -183,9 +183,14 @@ export function useEntryTable({
 					})),
 				);
 			} catch (fetchError) {
-				console.error("[ERROR] Failed to fetch members:", fetchError);
+				if (isMounted) {
+					console.error("[ERROR] Failed to fetch members:", fetchError);
+				}
 			}
 		})();
+		return () => {
+			isMounted = false;
+		};
 	}, [koudenId, isAdminMode]);
 
 	const handleCellEdit = useCallback(
@@ -265,7 +270,7 @@ export function useEntryTable({
 				permission,
 				koudenId,
 			}),
-		[handleDeleteRows, selectedRowsIds, relationships, permission, koudenId],
+		[handleDeleteRows, relationships, permission, koudenId],
 	);
 
 	const filteredEntries = useMemo(() => {
