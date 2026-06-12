@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Kouden } from "@/types/kouden";
 import { KOUDEN_ROLES } from "@/types/role";
 import { revalidatePath } from "next/cache";
-import { canEditKouden, checkKoudenPermission } from "../permissions";
+import { requireKoudenEditor, requireKoudenOwner } from "../permissions";
 
 /**
  * 香典帳の更新
@@ -28,11 +28,7 @@ export async function updateKouden(
 			throw new KoudenError("説明は500文字以内で入力してください", ErrorCodes.VALIDATION_ERROR);
 		}
 
-		// 権限チェック（最適化版を使用）
-		const canEdit = await canEditKouden(id);
-		if (!canEdit) {
-			throw new KoudenError("この香典帳を編集する権限がありません", ErrorCodes.FORBIDDEN);
-		}
+		await requireKoudenEditor(id, "この香典帳を編集する権限がありません");
 
 		const supabase = await createClient();
 
@@ -57,11 +53,7 @@ export async function updateKouden(
 export async function shareKouden(id: string, userIds: string[]): Promise<ActionResult<null>> {
 	return withActionResult(async () => {
 		const supabase = await createClient();
-		const role = await checkKoudenPermission(id);
-
-		if (role !== "owner") {
-			throw new KoudenError("共有権限がありません", ErrorCodes.FORBIDDEN);
-		}
+		await requireKoudenOwner(id, "共有権限がありません");
 
 		const {
 			data: { user },
@@ -107,11 +99,7 @@ export async function shareKouden(id: string, userIds: string[]): Promise<Action
 export async function archiveKouden(id: string): Promise<ActionResult<Kouden>> {
 	return withActionResult(async () => {
 		const supabase = await createClient();
-		const role = await checkKoudenPermission(id);
-
-		if (role !== "owner") {
-			throw new KoudenError("アーカイブ権限がありません", ErrorCodes.FORBIDDEN);
-		}
+		await requireKoudenOwner(id, "アーカイブ権限がありません");
 
 		const { data, error } = await supabase
 			.from("koudens")
