@@ -5,7 +5,7 @@
  * @module return-record-items
  */
 
-import { checkKoudenPermission } from "@/app/_actions/permissions";
+import { requireKoudenEditor } from "@/app/_actions/permissions";
 import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
@@ -35,11 +35,7 @@ export async function createReturnRecordItem(
 			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 		}
 
-		// 編集権限 (owner / editor) を確認
-		const permission = await checkKoudenPermission(koudenId);
-		if (!["owner", "editor"].includes(permission)) {
-			throw new KoudenError("返礼品詳細情報の作成権限がありません", ErrorCodes.FORBIDDEN);
-		}
+		await requireKoudenEditor(koudenId, "返礼品詳細情報の作成権限がありません");
 
 		const { data, error } = await supabase
 			.from("return_record_items")
@@ -139,11 +135,7 @@ export async function updateReturnRecordItem(
 			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 		}
 
-		// 編集権限 (owner / editor) を確認
-		const permission = await checkKoudenPermission(koudenId);
-		if (!["owner", "editor"].includes(permission)) {
-			throw new KoudenError("返礼品詳細情報の更新権限がありません", ErrorCodes.FORBIDDEN);
-		}
+		await requireKoudenEditor(koudenId, "返礼品詳細情報の更新権限がありません");
 
 		// 更新前の情報を取得して返礼情報IDを保持
 		const existingItem = await getReturnRecordItemInternal(input.id);
@@ -197,11 +189,7 @@ export async function deleteReturnRecordItem(
 			throw new KoudenError("認証されていません", ErrorCodes.UNAUTHORIZED);
 		}
 
-		// 編集権限 (owner / editor) を確認
-		const permission = await checkKoudenPermission(koudenId);
-		if (!["owner", "editor"].includes(permission)) {
-			throw new KoudenError("返礼品詳細情報の削除権限がありません", ErrorCodes.FORBIDDEN);
-		}
+		await requireKoudenEditor(koudenId, "返礼品詳細情報の削除権限がありません");
 
 		// 削除前の情報を取得して返礼情報IDを保持
 		const existingItem = await getReturnRecordItemInternal(id);

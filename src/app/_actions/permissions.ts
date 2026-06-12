@@ -1,27 +1,9 @@
 "use server";
 
-import { KoudenError } from "@/lib/errors";
+import { ErrorCodes, KoudenError } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
-import type { KoudenPermission, KoudenRole } from "@/types/role";
+import type { KoudenPermission } from "@/types/role";
 import { cache } from "react";
-
-// 権限チェックのユーティリティ関数
-export const withPermissionCheck = async <T>(
-	koudenId: string,
-	requiredPermission: KoudenPermission,
-	action: () => Promise<T>,
-): Promise<T> => {
-	const permission = await checkKoudenPermission(koudenId);
-	const hasPermission =
-		permission === requiredPermission ||
-		permission === "owner" ||
-		(permission === "editor" && requiredPermission === "viewer");
-
-	if (!hasPermission) {
-		throw new KoudenError("権限がありません", "INSUFFICIENT_PERMISSION");
-	}
-	return action();
-};
 
 // 権限チェック関数（キャッシュ対応）
 export const checkKoudenPermission = cache(async (koudenId: string): Promise<KoudenPermission> => {
@@ -72,6 +54,23 @@ export const checkKoudenPermission = cache(async (koudenId: string): Promise<Kou
 	throw new KoudenError("不明な権限です", "UNKNOWN_PERMISSION");
 });
 
+/**
+ * 香典帳の編集権限（owner / editor）を要求する
+ * @param koudenId 香典帳ID
+ * @param message 権限不足時のエラーメッセージ
+ */
+export async function requireKoudenEditor(
+	koudenId: string,
+	message = "編集権限がありません",
+): Promise<void> {
+	// canEditKouden は left join で owner/created_by を考慮し、
+	// 非メンバーは false を返す（checkKoudenPermission の inner join は FETCH_PERMISSION_ERROR になる）
+	const canEdit = await canEditKouden(koudenId);
+	if (!canEdit) {
+		throw new KoudenError(message, ErrorCodes.FORBIDDEN);
+	}
+}
+
 // 管理者権限チェック関数（キャッシュ対応）
 export const isKoudenOwner = cache(async (koudenId: string): Promise<boolean> => {
 	try {
@@ -111,7 +110,7 @@ export async function canEditKouden(koudenId: string): Promise<boolean> {
 
 	// 1回のクエリで所有者チェックとメンバーロールチェックを実行
 	// RLS無限再帰を避けるため、直接JOINして権限を確認
-	const { data } = await supabase
+	const { data, error } = await supabase
 		.from("koudens")
 		.select(`
 			owner_id,
@@ -126,6 +125,14 @@ export async function canEditKouden(koudenId: string): Promise<boolean> {
 		`)
 		.eq("id", koudenId)
 		.single();
+
+	// PGRST116 (0 行) は香典帳未存在またはアクセス不可。それ以外は DB エラーとして扱う。
+	if (error) {
+		if (error.code === "PGRST116") {
+			return false;
+		}
+		throw new KoudenError("権限の取得に失敗しました", ErrorCodes.DB_FETCH_ERROR);
+	}
 
 	if (!data) return false;
 
