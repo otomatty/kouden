@@ -11,6 +11,10 @@ interface PersistContactAttachmentParams {
 	requestId: string;
 	file: File;
 	userId?: string;
+	/**
+	 * RLS を通過できない匿名問い合わせなど、Storage/DB 操作に service-role が必要な場合に指定する。
+	 */
+	elevatedClient?: SupabaseServerClient;
 }
 
 /**
@@ -37,22 +41,25 @@ export async function persistContactAttachment({
 	requestId,
 	file,
 	userId,
+	elevatedClient,
 }: PersistContactAttachmentParams): Promise<ContactRequestAttachmentRow[]> {
+	const storageClient = elevatedClient ?? supabase;
+	const dbClient = elevatedClient ?? supabase;
 	const filePath = buildContactAttachmentPath(requestId, file.name);
 
-	const { error: uploadError } = await supabase.storage
+	const { error: uploadError } = await storageClient.storage
 		.from("contact-attachments")
 		.upload(filePath, file, { cacheControl: "3600", upsert: false });
 	if (uploadError) {
 		throw uploadError;
 	}
 
-	const { data, error: dbError } = await supabase
+	const { data, error: dbError } = await dbClient
 		.from("contact_request_attachments")
 		.insert({ request_id: requestId, file_url: filePath, file_name: file.name })
 		.select();
 	if (dbError) {
-		const { error: cleanupError } = await supabase.storage
+		const { error: cleanupError } = await storageClient.storage
 			.from("contact-attachments")
 			.remove([filePath]);
 		if (cleanupError) {

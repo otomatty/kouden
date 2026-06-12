@@ -4,6 +4,7 @@ import { persistContactAttachment } from "@/app/_actions/contact-attachment-inte
 import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import logger from "@/lib/logger";
 import { validateFileUpload } from "@/lib/security/file-upload-validation";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { contactRequestSchema } from "@/schemas/contact";
 import type { Database } from "@/types/supabase";
@@ -94,12 +95,32 @@ export async function createContactRequest(formData: FormData): Promise<ActionRe
 		if (error) throw error;
 
 		if (attachmentFile) {
-			await persistContactAttachment({
-				supabase,
-				requestId: insertedRequest.id,
-				file: attachmentFile,
-				userId: user?.id,
-			});
+			const elevatedClient = user ? undefined : createAdminClient();
+			try {
+				await persistContactAttachment({
+					supabase,
+					elevatedClient,
+					requestId: insertedRequest.id,
+					file: attachmentFile,
+					userId: user?.id,
+				});
+			} catch (attachmentError) {
+				const { error: rollbackError } = await createAdminClient()
+					.from("contact_requests")
+					.delete()
+					.eq("id", insertedRequest.id);
+				if (rollbackError) {
+					logger.error(
+						{
+							userId: user?.id,
+							requestId: insertedRequest.id,
+							error: rollbackError.message,
+						},
+						"Failed to rollback contact request after attachment failure",
+					);
+				}
+				throw attachmentError;
+			}
 		}
 
 		return null;
