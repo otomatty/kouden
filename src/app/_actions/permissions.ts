@@ -1,115 +1,61 @@
 "use server";
 
+/**
+ * 香典帳の権限チェック API
+ *
+ * ## 使い分け
+ *
+ * ### 読み取り用（boolean / role）
+ * - `getKoudenPermission` — ロール取得。アクセス不可は `null`
+ * - `hasKoudenAccess` — アクセス可能か
+ * - `hasEditPermission` — 編集可能か（owner / editor）
+ * - `isKoudenOwner` — オーナーか
+ * - `canDeleteKouden` — 削除可能か（オーナーのみ）
+ *
+ * ### 書き込み用（throw）
+ * - `requireKoudenAccess` — アクセス権必須（ロールを返す）
+ * - `requireKoudenEditor` — 編集権限必須
+ * - `requireKoudenOwner` — オーナー権限必須
+ *
+ * ### 後方互換
+ * - `checkKoudenPermission` — `requireKoudenAccess` のエイリアス
+ *
+ * すべての判定は `fetchKoudenAccess`（left join 1 クエリ）を共有する。
+ * RLS 無限再帰を避けるため、inner join は使用しない。
+ */
+
 import { ErrorCodes, KoudenError } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
 import type { KoudenPermission } from "@/types/role";
 import { cache } from "react";
 
-// 権限チェック関数（キャッシュ対応）
-export const checkKoudenPermission = cache(async (koudenId: string): Promise<KoudenPermission> => {
+type KoudenMemberRow = {
+	role_id: string;
+	user_id: string;
+	kouden_roles: { name: string } | null;
+};
+
+type KoudenAccessRow = {
+	owner_id: string;
+	created_by: string;
+	kouden_members: KoudenMemberRow[] | null;
+};
+
+type KoudenAccessContext = {
+	userId: string;
+	row: KoudenAccessRow;
+};
+
+const fetchKoudenAccess = cache(async (koudenId: string): Promise<KoudenAccessContext | null> => {
 	const supabase = await createClient();
 	const {
 		data: { user },
 	} = await supabase.auth.getUser();
 
 	if (!user) {
-		throw new KoudenError("認証が必要です", "UNAUTHORIZED");
+		return null;
 	}
 
-	// オーナーチェックとメンバーロールチェックを1回のクエリで実行
-	const { data, error } = await supabase
-		.from("koudens")
-		.select(`
-			owner_id,
-			created_by,
-			members:kouden_members!inner(
-				role_id,
-				roles:kouden_roles!inner(
-					name
-				)
-			)
-		`)
-		.eq("id", koudenId)
-		.eq("kouden_members.user_id", user.id)
-		.single();
-
-	if (error) {
-		throw new KoudenError("権限の取得に失敗しました", "FETCH_PERMISSION_ERROR");
-	}
-
-	if (!data) {
-		throw new KoudenError("アクセス権限がありません", "FORBIDDEN");
-	}
-
-	// オーナーチェック
-	if (data.owner_id === user.id || data.created_by === user.id) {
-		return "owner";
-	}
-
-	// ロール名の変換
-	const roleName = data.members[0]?.roles?.name;
-	if (roleName === "editor") return "editor";
-	if (roleName === "viewer") return "viewer";
-
-	throw new KoudenError("不明な権限です", "UNKNOWN_PERMISSION");
-});
-
-/**
- * 香典帳の編集権限（owner / editor）を要求する
- * @param koudenId 香典帳ID
- * @param message 権限不足時のエラーメッセージ
- */
-export async function requireKoudenEditor(
-	koudenId: string,
-	message = "編集権限がありません",
-): Promise<void> {
-	// canEditKouden は left join で owner/created_by を考慮し、
-	// 非メンバーは false を返す（checkKoudenPermission の inner join は FETCH_PERMISSION_ERROR になる）
-	const canEdit = await canEditKouden(koudenId);
-	if (!canEdit) {
-		throw new KoudenError(message, ErrorCodes.FORBIDDEN);
-	}
-}
-
-// 管理者権限チェック関数（キャッシュ対応）
-export const isKoudenOwner = cache(async (koudenId: string): Promise<boolean> => {
-	try {
-		const permission = await checkKoudenPermission(koudenId);
-		return permission === "owner";
-	} catch {
-		return false;
-	}
-});
-
-/**
- * 編集権限チェック関数（キャッシュ対応）
- * @param koudenId 香典帳ID
- * @returns 編集権限がある場合はtrue
- */
-export const hasEditPermission = cache(async (koudenId: string): Promise<boolean> => {
-	try {
-		const permission = await checkKoudenPermission(koudenId);
-		return permission === "owner" || permission === "editor";
-	} catch {
-		return false;
-	}
-});
-
-/**
- * ユーザーが香典帳を編集できるか確認（最適化版）
- * @param koudenId 香典帳ID
- * @returns 編集可能な場合はtrue
- */
-export async function canEditKouden(koudenId: string): Promise<boolean> {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-
-	if (!user) return false;
-
-	// 1回のクエリで所有者チェックとメンバーロールチェックを実行
-	// RLS無限再帰を避けるため、直接JOINして権限を確認
 	const { data, error } = await supabase
 		.from("koudens")
 		.select(`
@@ -126,126 +72,135 @@ export async function canEditKouden(koudenId: string): Promise<boolean> {
 		.eq("id", koudenId)
 		.single();
 
-	// PGRST116 (0 行) は香典帳未存在またはアクセス不可。それ以外は DB エラーとして扱う。
 	if (error) {
 		if (error.code === "PGRST116") {
-			return false;
+			return null;
 		}
 		throw new KoudenError("権限の取得に失敗しました", ErrorCodes.DB_FETCH_ERROR);
 	}
 
-	if (!data) return false;
-
-	// 所有者または作成者の場合は編集可能
-	if (data.owner_id === user.id || data.created_by === user.id) {
-		return true;
+	if (!data) {
+		return null;
 	}
 
-	// メンバーロールをチェック
-	const userMember = data.kouden_members?.find((member) => member.user_id === user.id);
+	return { userId: user.id, row: data };
+});
 
-	if (!userMember?.kouden_roles) {
-		return false;
+function resolveKoudenPermission(
+	userId: string,
+	row: KoudenAccessRow,
+): KoudenPermission | null {
+	if (row.owner_id === userId || row.created_by === userId) {
+		return "owner";
 	}
 
-	// editorロールの場合は編集可能
-	return userMember.kouden_roles.name === "editor";
+	const userMember = row.kouden_members?.find((member) => member.user_id === userId);
+	const roleName = userMember?.kouden_roles?.name;
+
+	if (roleName === "editor") return "editor";
+	if (roleName === "viewer") return "viewer";
+
+	return null;
 }
 
 /**
- * ユーザーが香典帳にアクセスできるか確認（最適化版）
- * @param koudenId 香典帳ID
- * @returns アクセス可能な場合はtrue
+ * ユーザーの香典帳に対するロールを取得する（読み取り用）
+ * @returns アクセス可能な場合はロール、それ以外は null
  */
-export async function canAccessKouden(koudenId: string): Promise<boolean> {
+export const getKoudenPermission = cache(
+	async (koudenId: string): Promise<KoudenPermission | null> => {
+		const access = await fetchKoudenAccess(koudenId);
+		if (!access) {
+			return null;
+		}
+
+		return resolveKoudenPermission(access.userId, access.row);
+	},
+);
+
+/**
+ * 香典帳へのアクセス権を要求する（書き込み用）
+ * @returns ユーザーのロール
+ */
+export async function requireKoudenAccess(
+	koudenId: string,
+	message = "アクセス権限がありません",
+): Promise<KoudenPermission> {
 	const supabase = await createClient();
 	const {
 		data: { user },
 	} = await supabase.auth.getUser();
 
-	if (!user) return false;
-
-	// 1回のクエリで所有者チェックとメンバーチェックを実行
-	const { data } = await supabase
-		.from("koudens")
-		.select(`
-			owner_id,
-			created_by,
-			kouden_members!left (
-				user_id
-			)
-		`)
-		.eq("id", koudenId)
-		.single();
-
-	if (!data) return false;
-
-	// 所有者または作成者の場合はアクセス可能
-	if (data.owner_id === user.id || data.created_by === user.id) {
-		return true;
+	if (!user) {
+		throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
 	}
 
-	// メンバーかどうかチェック
-	return !!data.kouden_members?.some((member) => member.user_id === user.id);
+	const permission = await getKoudenPermission(koudenId);
+	if (!permission) {
+		throw new KoudenError(message, ErrorCodes.FORBIDDEN);
+	}
+
+	return permission;
 }
 
 /**
- * ユーザーが香典帳を削除できるか確認
- * @param koudenId 香典帳ID
- * @returns 削除可能な場合はtrue
+ * 香典帳へのアクセス権を要求する（後方互換エイリアス）
  */
-export async function canDeleteKouden(koudenId: string): Promise<boolean> {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+export const checkKoudenPermission = cache(requireKoudenAccess);
 
-	if (!user) return false;
+/**
+ * 香典帳にアクセスできるか（読み取り用）
+ */
+export const hasKoudenAccess = cache(async (koudenId: string): Promise<boolean> => {
+	const permission = await getKoudenPermission(koudenId);
+	return permission !== null;
+});
 
-	const { data: kouden } = await supabase
-		.from("koudens")
-		.select("owner_id")
-		.eq("id", koudenId)
-		.single();
-
-	return kouden?.owner_id === user.id;
+/**
+ * 香典帳の編集権限（owner / editor）を要求する（書き込み用）
+ */
+export async function requireKoudenEditor(
+	koudenId: string,
+	message = "編集権限がありません",
+): Promise<void> {
+	const permission = await getKoudenPermission(koudenId);
+	if (!permission || (permission !== "owner" && permission !== "editor")) {
+		throw new KoudenError(message, ErrorCodes.FORBIDDEN);
+	}
 }
 
 /**
- * ユーザーの香典帳に対するロールを取得
- * @param koudenId 香典帳ID
- * @returns ロール名
+ * 香典帳のオーナー権限を要求する（書き込み用）
  */
-export async function getKoudenRole(koudenId: string): Promise<KoudenPermission | null> {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-
-	if (!user) return null;
-
-	const { data: kouden } = await supabase
-		.from("koudens")
-		.select("owner_id")
-		.eq("id", koudenId)
-		.single();
-
-	if (kouden?.owner_id === user.id) return "owner" as KoudenPermission;
-
-	const { data: member } = await supabase
-		.from("kouden_members")
-		.select("role_id")
-		.eq("kouden_id", koudenId)
-		.eq("user_id", user.id)
-		.single();
-
-	if (!member) return null;
-
-	const { data: role } = await supabase
-		.from("kouden_roles")
-		.select("name")
-		.eq("id", member.role_id)
-		.single();
-
-	return (role?.name as KoudenPermission) || null;
+export async function requireKoudenOwner(
+	koudenId: string,
+	message = "オーナー権限がありません",
+): Promise<void> {
+	const permission = await getKoudenPermission(koudenId);
+	if (permission !== "owner") {
+		throw new KoudenError(message, ErrorCodes.FORBIDDEN);
+	}
 }
+
+/**
+ * オーナー権限があるか（読み取り用）
+ */
+export const isKoudenOwner = cache(async (koudenId: string): Promise<boolean> => {
+	const permission = await getKoudenPermission(koudenId);
+	return permission === "owner";
+});
+
+/**
+ * 編集権限があるか（読み取り用）
+ */
+export const hasEditPermission = cache(async (koudenId: string): Promise<boolean> => {
+	const permission = await getKoudenPermission(koudenId);
+	return permission === "owner" || permission === "editor";
+});
+
+/**
+ * 削除権限があるか（読み取り用、オーナーのみ）
+ */
+export const canDeleteKouden = cache(async (koudenId: string): Promise<boolean> => {
+	return isKoudenOwner(koudenId);
+});

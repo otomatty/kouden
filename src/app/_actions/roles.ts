@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { KoudenRole } from "@/types/role";
 import { revalidatePath } from "next/cache";
 import { cache } from "react";
-import { isKoudenOwner } from "./permissions";
+import { requireKoudenOwner } from "./permissions";
 
 /**
  * 香典帳のロールを取得（キャッシュ対応）
@@ -77,11 +77,7 @@ export async function updateMemberRole(
 	return withActionResult(async () => {
 		const supabase = await createClient();
 
-		// 管理者権限のチェック
-		const isOwner = await isKoudenOwner(koudenId);
-		if (!isOwner) {
-			throw new KoudenError("権限がありません", ErrorCodes.FORBIDDEN);
-		}
+		await requireKoudenOwner(koudenId);
 
 		// オーナーのロールを変更しようとしていないかチェック
 		const { data: kouden } = await supabase
@@ -119,11 +115,7 @@ export async function removeMember(koudenId: string, userId: string): Promise<Ac
 	return withActionResult(async () => {
 		const supabase = await createClient();
 
-		// 管理者権限のチェック
-		const isOwner = await isKoudenOwner(koudenId);
-		if (!isOwner) {
-			throw new KoudenError("権限がありません", ErrorCodes.FORBIDDEN);
-		}
+		await requireKoudenOwner(koudenId);
 
 		// オーナーが自身を削除しようとしていないかチェック
 		const { data: kouden } = await supabase

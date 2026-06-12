@@ -1,12 +1,12 @@
 /// <reference types="vitest" />
-import { canDeleteKouden } from "@/app/_actions/permissions";
-import { ErrorCodes } from "@/lib/errors";
+import { requireKoudenOwner } from "@/app/_actions/permissions";
+import { ErrorCodes, KoudenError } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { deleteKouden } from "../koudens/delete";
 
 vi.mock("@/app/_actions/permissions", () => ({
-	canDeleteKouden: vi.fn(),
+	requireKoudenOwner: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/admin", () => ({
@@ -33,13 +33,14 @@ describe("deleteKouden", () => {
 
 	it("権限不足時に ok:false / FORBIDDEN を返す", async () => {
 		// biome-ignore lint/suspicious/noExplicitAny: mock
-		(canDeleteKouden as any).mockResolvedValue(false);
+		(requireKoudenOwner as any).mockRejectedValue(
+			new KoudenError("削除権限がありません", ErrorCodes.FORBIDDEN),
+		);
 
 		const result = await deleteKouden("kouden-1");
 
 		expect(result.ok).toBe(false);
 		if (!result.ok) {
-			// FORBIDDEN は KoudenError の既定 userMessage（権限不足）にマップされる
 			expect(result.error.code).toBe(ErrorCodes.FORBIDDEN);
 			expect(result.error.message).toContain("権限");
 		}
@@ -48,21 +49,20 @@ describe("deleteKouden", () => {
 
 	it("DB エラー時に ok:false を返す", async () => {
 		// biome-ignore lint/suspicious/noExplicitAny: mock
-		(canDeleteKouden as any).mockResolvedValue(true);
+		(requireKoudenOwner as any).mockResolvedValue(undefined);
 		supabaseMock.eq.mockResolvedValue({ error: { message: "boom", code: "23503" } });
 
 		const result = await deleteKouden("kouden-1");
 
 		expect(result.ok).toBe(false);
 		if (!result.ok) {
-			// 外部キー制約 (23503) は DB_CONSTRAINT_ERROR にマップされる
 			expect(result.error.code).toBe(ErrorCodes.DB_CONSTRAINT_ERROR);
 		}
 	});
 
 	it("成功時に ok:true を返す", async () => {
 		// biome-ignore lint/suspicious/noExplicitAny: mock
-		(canDeleteKouden as any).mockResolvedValue(true);
+		(requireKoudenOwner as any).mockResolvedValue(undefined);
 		supabaseMock.eq.mockResolvedValue({ error: null });
 
 		const result = await deleteKouden("kouden-1");
@@ -78,7 +78,7 @@ describe("deleteKouden", () => {
 
 	it("予期せぬ例外時にも ok:false を返す", async () => {
 		// biome-ignore lint/suspicious/noExplicitAny: mock
-		(canDeleteKouden as any).mockRejectedValue(new Error("unexpected"));
+		(requireKoudenOwner as any).mockRejectedValue(new Error("unexpected"));
 
 		const result = await deleteKouden("kouden-1");
 
