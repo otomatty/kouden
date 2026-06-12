@@ -4,6 +4,7 @@ import { persistContactAttachment } from "@/app/_actions/contact-attachment-inte
 import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import logger from "@/lib/logger";
 import { validateFileUpload } from "@/lib/security/file-upload-validation";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { contactRequestSchema } from "@/schemas/contact";
 import type { Database } from "@/types/supabase";
@@ -19,6 +20,28 @@ type ContactRequestDetail = ContactRequestRow & {
 		"id" | "request_id" | "responder_id" | "response_message" | "created_at"
 	>[];
 };
+
+/**
+ * 添付保存失敗時に作成済みの問い合わせ行を best-effort で削除する。
+ * RLS 上ユーザー DELETE が許可されていないため admin クライアントを使用する。
+ */
+async function rollbackCreatedContactRequest(
+	requestId: string,
+	userId?: string,
+): Promise<void> {
+	const admin = createAdminClient();
+	const { error } = await admin.from("contact_requests").delete().eq("id", requestId);
+	if (error) {
+		logger.warn(
+			{
+				userId,
+				requestId,
+				error: error.message,
+			},
+			"Failed to rollback contact request after attachment persistence failure",
+		);
+	}
+}
 
 /**
  * Create a new contact request (support unauthenticated and authenticated users).
@@ -85,21 +108,30 @@ export async function createContactRequest(formData: FormData): Promise<ActionRe
 			}
 		}
 
-		const { data: insertedRequest, error } = await supabase
-			.from("contact_requests")
-			.insert(insertData)
-			.select("id")
-			.single();
-
-		if (error) throw error;
-
 		if (attachmentFile) {
-			await persistContactAttachment({
-				supabase,
-				requestId: insertedRequest.id,
-				file: attachmentFile,
-				userId: user?.id,
-			});
+			const requestId = crypto.randomUUID();
+			const { error } = await supabase
+				.from("contact_requests")
+				.insert({ ...insertData, id: requestId });
+
+			if (error) throw error;
+
+			// 匿名ユーザーは attachment INSERT / Storage の RLS 制約があるため admin を使用
+			const attachmentSupabase = user ? supabase : createAdminClient();
+			try {
+				await persistContactAttachment({
+					supabase: attachmentSupabase,
+					requestId,
+					file: attachmentFile,
+					userId: user?.id,
+				});
+			} catch (attachmentError) {
+				await rollbackCreatedContactRequest(requestId, user?.id);
+				throw attachmentError;
+			}
+		} else {
+			const { error } = await supabase.from("contact_requests").insert(insertData);
+			if (error) throw error;
 		}
 
 		return null;

@@ -18,6 +18,7 @@ interface PersistContactAttachmentParams {
  */
 export function buildContactAttachmentPath(requestId: string, fileName: string): string {
 	const timestamp = Date.now();
+	const uniqueSuffix = crypto.randomUUID();
 	const lastDot = fileName.lastIndexOf(".");
 	const rawBase = lastDot > 0 ? fileName.slice(0, lastDot) : fileName;
 	const rawExt = lastDot > 0 ? fileName.slice(lastDot) : "";
@@ -25,7 +26,7 @@ export function buildContactAttachmentPath(requestId: string, fileName: string):
 	const safeBase = /[a-zA-Z0-9]/.test(sanitizedBase) ? sanitizedBase : "file";
 	const safeExt = rawExt.replace(/[^a-zA-Z0-9.]/g, "");
 	const safeFileName = `${safeBase}${safeExt}`;
-	return `requests/${requestId}/${timestamp}_${safeFileName}`;
+	return `requests/${requestId}/${timestamp}_${uniqueSuffix}_${safeFileName}`;
 }
 
 /**
