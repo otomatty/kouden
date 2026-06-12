@@ -4,7 +4,7 @@ import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/
 import { createClient } from "@/lib/supabase/server";
 import type { KoudenWithOwner } from "@/types/kouden";
 import { KOUDEN_ROLES } from "@/types/role";
-import { checkKoudenPermission } from "../permissions";
+import { requireKoudenEditor } from "../permissions";
 
 /**
  * 香典帳の複製（デフォルトで free プラン適用）
@@ -14,10 +14,7 @@ import { checkKoudenPermission } from "../permissions";
 export async function duplicateKouden(id: string): Promise<ActionResult<KoudenWithOwner>> {
 	return withActionResult(async () => {
 		const supabase = await createClient();
-		const role = await checkKoudenPermission(id);
-		if (!role || (role !== "owner" && role !== "editor")) {
-			throw new KoudenError("複製権限がありません", ErrorCodes.FORBIDDEN);
-		}
+		await requireKoudenEditor(id, "複製権限がありません");
 
 		const { data: authData, error: authError } = await supabase.auth.getUser();
 		const user = authData.user;
