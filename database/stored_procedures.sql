@@ -5,6 +5,8 @@
 -- Server Action (acceptInvitation) は service-role 経由で本 RPC のみを呼び出す。
 -- select ... for update により同一トークンの並列受諾を直列化し、
 -- kouden_members INSERT と used_count 更新を 1 トランザクションで実行する。
+DROP FUNCTION IF EXISTS public.accept_invitation(uuid, uuid);
+
 CREATE OR REPLACE FUNCTION public.accept_invitation_atomic(
     p_token UUID,
     p_user_id UUID
