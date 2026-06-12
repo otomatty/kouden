@@ -63,8 +63,10 @@ export async function requireKoudenEditor(
 	koudenId: string,
 	message = "編集権限がありません",
 ): Promise<void> {
-	const permission = await checkKoudenPermission(koudenId);
-	if (permission !== "owner" && permission !== "editor") {
+	// canEditKouden は left join で owner/created_by を考慮し、
+	// 非メンバーは false を返す（checkKoudenPermission の inner join は FETCH_PERMISSION_ERROR になる）
+	const canEdit = await canEditKouden(koudenId);
+	if (!canEdit) {
 		throw new KoudenError(message, ErrorCodes.FORBIDDEN);
 	}
 }
