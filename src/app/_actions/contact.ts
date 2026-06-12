@@ -1,8 +1,10 @@
 "use server";
 
+import { persistContactAttachment } from "@/app/_actions/contact-attachment-internal";
 import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import logger from "@/lib/logger";
 import { validateFileUpload } from "@/lib/security/file-upload-validation";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { contactRequestSchema } from "@/schemas/contact";
 import type { Database } from "@/types/supabase";
@@ -62,9 +64,64 @@ export async function createContactRequest(formData: FormData): Promise<ActionRe
 			user_id: user?.id ?? null,
 		};
 
-		const { error } = await supabase.from("contact_requests").insert(insertData);
+		const attachmentEntry = formData.get("attachment");
+		const attachmentFile =
+			attachmentEntry instanceof File && attachmentEntry.size > 0 ? attachmentEntry : null;
+
+		if (attachmentFile) {
+			const validation = await validateFileUpload(attachmentFile, user?.id);
+			if (!validation.isValid) {
+				logger.warn(
+					{
+						userId: user?.id,
+						fileName: attachmentFile.name,
+						reason: validation.details?.reason,
+					},
+					"Contact attachment validation failed during request creation",
+				);
+				throw new KoudenError(
+					validation.error ?? "ファイルの検証に失敗しました",
+					ErrorCodes.VALIDATION_ERROR,
+				);
+			}
+		}
+
+		const { data: insertedRequest, error } = await supabase
+			.from("contact_requests")
+			.insert(insertData)
+			.select("id")
+			.single();
 
 		if (error) throw error;
+
+		if (attachmentFile) {
+			const elevatedClient = user ? undefined : createAdminClient();
+			try {
+				await persistContactAttachment({
+					supabase,
+					elevatedClient,
+					requestId: insertedRequest.id,
+					file: attachmentFile,
+					userId: user?.id,
+				});
+			} catch (attachmentError) {
+				const { error: rollbackError } = await createAdminClient()
+					.from("contact_requests")
+					.delete()
+					.eq("id", insertedRequest.id);
+				if (rollbackError) {
+					logger.error(
+						{
+							userId: user?.id,
+							requestId: insertedRequest.id,
+							error: rollbackError.message,
+						},
+						"Failed to rollback contact request after attachment failure",
+					);
+				}
+				throw attachmentError;
+			}
+		}
 
 		return null;
 	}, "お問い合わせの送信");
@@ -201,48 +258,11 @@ export async function uploadContactAttachment(
 			);
 		}
 
-		// ファイル名をサニタイズ（path traversal 対策）
-		// 拡張子は維持しつつベース名から不正文字を除去し、結果が空/記号だけなら "file" にフォールバック
-		const timestamp = Date.now();
-		const lastDot = file.name.lastIndexOf(".");
-		const rawBase = lastDot > 0 ? file.name.slice(0, lastDot) : file.name;
-		const rawExt = lastDot > 0 ? file.name.slice(lastDot) : "";
-		const sanitizedBase = rawBase.replace(/[^a-zA-Z0-9._-]/g, "_");
-		const safeBase = /[a-zA-Z0-9]/.test(sanitizedBase) ? sanitizedBase : "file";
-		const safeExt = rawExt.replace(/[^a-zA-Z0-9.]/g, "");
-		const safeFileName = `${safeBase}${safeExt}`;
-		const filePath = `requests/${requestId}/${timestamp}_${safeFileName}`;
-		// ストレージにアップロード
-		const { error: uploadError } = await supabase.storage
-			.from("contact-attachments")
-			.upload(filePath, file, { cacheControl: "3600", upsert: false });
-		if (uploadError) {
-			throw uploadError;
-		}
-		// データベースにメタ情報を保存
-		const { data, error: dbError } = await supabase
-			.from("contact_request_attachments")
-			.insert({ request_id: requestId, file_url: filePath, file_name: file.name })
-			.select();
-		if (dbError) {
-			// INSERT 失敗時はアップロード済みファイルを best-effort で削除して
-			// 孤児ファイルが Storage に残らないようにする
-			const { error: cleanupError } = await supabase.storage
-				.from("contact-attachments")
-				.remove([filePath]);
-			if (cleanupError) {
-				logger.warn(
-					{
-						userId: user.id,
-						requestId,
-						filePath,
-						error: cleanupError.message,
-					},
-					"Failed to cleanup orphaned contact attachment file",
-				);
-			}
-			throw dbError;
-		}
-		return data ?? [];
+		return persistContactAttachment({
+			supabase,
+			requestId,
+			file,
+			userId: user.id,
+		});
 	}, "添付ファイルのアップロード");
 }
