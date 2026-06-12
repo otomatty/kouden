@@ -1,4 +1,4 @@
-import { checkAdminPermission } from "@/app/_actions/admin/permissions";
+import { requireAdmin } from "@/app/_actions/admin/permissions";
 
 import { KoudenStatistics } from "@/app/(protected)/koudens/[id]/statistics/_components";
 import { getEntriesForAdmin } from "@/app/_actions/entries";
@@ -117,7 +117,7 @@ export default async function AdminStatisticsPage({ params }: AdminStatisticsPag
 	const { id: koudenId } = await params;
 
 	// 管理者権限チェック
-	await checkAdminPermission();
+	await requireAdmin();
 
 	// 統計情報の計算のため、全エントリーを取得
 	const entriesResult = await getEntriesForAdmin(koudenId, 1, Number.MAX_SAFE_INTEGER);

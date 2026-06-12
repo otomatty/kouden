@@ -1,6 +1,6 @@
 "use server";
 
-import { checkAdminPermission } from "@/app/_actions/admin/permissions";
+import { assertAdminForAction } from "@/app/_actions/admin/permissions";
 import { type ActionResult, withActionResult } from "@/lib/errors";
 import { revalidatePath } from "next/cache";
 
@@ -20,7 +20,7 @@ export type Announcement = {
 
 export async function getAnnouncements(): Promise<ActionResult<Announcement[]>> {
 	return withActionResult(async () => {
-		const { supabase } = await checkAdminPermission();
+		const { supabase } = await assertAdminForAction();
 		const { data, error } = await supabase
 			.from("system_announcements")
 			.select("*")
@@ -62,7 +62,7 @@ export async function createAnnouncement({
 	expiresAt?: string;
 }): Promise<ActionResult<null>> {
 	return withActionResult(async () => {
-		const { supabase, user } = await checkAdminPermission();
+		const { supabase, user } = await assertAdminForAction();
 
 		const requestData = {
 			title,
@@ -109,7 +109,7 @@ export async function updateAnnouncement(
 	},
 ): Promise<ActionResult<null>> {
 	return withActionResult(async () => {
-		const { supabase } = await checkAdminPermission();
+		const { supabase } = await assertAdminForAction();
 		const { error } = await supabase
 			.from("system_announcements")
 			.update({
@@ -131,7 +131,7 @@ export async function updateAnnouncement(
 
 export async function deleteAnnouncement(id: string): Promise<ActionResult<null>> {
 	return withActionResult(async () => {
-		const { supabase } = await checkAdminPermission();
+		const { supabase } = await assertAdminForAction();
 		const { error } = await supabase.from("system_announcements").delete().eq("id", id);
 
 		if (error) throw error;

@@ -5,6 +5,7 @@
 
 "use server";
 
+import { assertAdminForAction } from "@/app/_actions/admin/permissions";
 import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import logger from "@/lib/logger";
 import { logTwoFactorEventServerAction } from "@/lib/security/security-logger";
@@ -14,7 +15,6 @@ import {
 	saveTwoFactorSecret,
 	verifyTwoFactorToken,
 } from "@/lib/security/two-factor-auth";
-import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -25,27 +25,7 @@ export async function setupTwoFactorAuth(
 	verificationCode: string,
 ): Promise<ActionResult<null>> {
 	return withActionResult(async () => {
-		const supabase = await createClient();
-		const {
-			data: { user },
-		} = await supabase.auth.getUser();
-
-		if (!user) {
-			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
-		}
-
-		// 管理者かどうかを確認
-		const { data: isAdmin, error: rpcError } = await supabase.rpc("is_admin", {
-			user_uid: user.id,
-		});
-
-		if (rpcError) {
-			throw new KoudenError("管理者権限の確認に失敗しました", ErrorCodes.DB_FETCH_ERROR);
-		}
-
-		if (!isAdmin) {
-			throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
-		}
+		const { user } = await assertAdminForAction();
 
 		// 既に2FAが設定済みかチェック
 		const isAlreadyEnabled = await isTwoFactorEnabled(user.id);
@@ -90,27 +70,7 @@ export async function setupTwoFactorAuth(
  */
 export async function disableTwoFactorAuth(): Promise<ActionResult<null>> {
 	return withActionResult(async () => {
-		const supabase = await createClient();
-		const {
-			data: { user },
-		} = await supabase.auth.getUser();
-
-		if (!user) {
-			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
-		}
-
-		// 管理者かどうかを確認
-		const { data: isAdmin, error: rpcError } = await supabase.rpc("is_admin", {
-			user_uid: user.id,
-		});
-
-		if (rpcError) {
-			throw new KoudenError("管理者権限の確認に失敗しました", ErrorCodes.DB_FETCH_ERROR);
-		}
-
-		if (!isAdmin) {
-			throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
-		}
+		const { user } = await assertAdminForAction();
 
 		// 本番環境では2FA無効化を制限
 		if (process.env.NODE_ENV === "production") {
@@ -144,27 +104,7 @@ export async function disableTwoFactorAuth(): Promise<ActionResult<null>> {
  */
 export async function verifyTwoFactorLogin(verificationCode: string): Promise<ActionResult<null>> {
 	return withActionResult(async () => {
-		const supabase = await createClient();
-		const {
-			data: { user },
-		} = await supabase.auth.getUser();
-
-		if (!user) {
-			throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
-		}
-
-		// 管理者かどうかを確認
-		const { data: isAdmin, error: rpcError } = await supabase.rpc("is_admin", {
-			user_uid: user.id,
-		});
-
-		if (rpcError) {
-			throw new KoudenError("管理者権限の確認に失敗しました", ErrorCodes.DB_FETCH_ERROR);
-		}
-
-		if (!isAdmin) {
-			throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
-		}
+		const { supabase, user } = await assertAdminForAction();
 
 		// 2FAシークレットを取得 (PGRST116 = 0 行 → 未設定、それ以外 = DB エラーとして上位へ)
 		const { data: adminUser, error: adminError } = await supabase

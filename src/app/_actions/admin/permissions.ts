@@ -5,59 +5,162 @@ import logger from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
+type AdminMembership = { role: string };
+
+type FetchAdminMembershipResult =
+	| { status: "ok"; adminUser: AdminMembership }
+	| { status: "not_found" }
+	| { status: "db_error"; error: { message: string; code?: string; details?: string } };
+
+export type AdminContext = {
+	supabase: Awaited<ReturnType<typeof createClient>>;
+	user: NonNullable<Awaited<ReturnType<typeof getAuthenticatedUser>>["user"]>;
+	adminRole: string;
+};
+
 /**
- * 管理者権限をチェックする
- * 権限がない場合はエラーを投げる
+ * admin_users テーブルから管理者登録を取得する（単一実装経路）
  */
-export async function checkAdminPermission() {
+async function fetchAdminMembership(
+	supabase: Awaited<ReturnType<typeof createClient>>,
+	userId: string,
+): Promise<FetchAdminMembershipResult> {
+	const { data: adminUser, error } = await supabase
+		.from("admin_users")
+		.select("role")
+		.eq("user_id", userId)
+		.single();
+
+	if (error && error.code !== "PGRST116") {
+		return {
+			status: "db_error",
+			error: { message: error.message, code: error.code, details: error.details ?? undefined },
+		};
+	}
+
+	if (!adminUser) {
+		return { status: "not_found" };
+	}
+
+	return { status: "ok", adminUser };
+}
+
+async function getAuthenticatedUser() {
 	const supabase = await createClient();
 	const {
 		data: { user },
 	} = await supabase.auth.getUser();
+	return { supabase, user };
+}
+
+function logAdminMembershipDbError(
+	userId: string,
+	error: { message: string; code?: string; details?: string },
+	context: string,
+) {
+	logger.error(
+		{
+			error: error.message,
+			code: error.code,
+			details: error.details,
+			userId,
+		},
+		context,
+	);
+}
+
+function resolveAdminContext(
+	supabase: Awaited<ReturnType<typeof createClient>>,
+	user: NonNullable<Awaited<ReturnType<typeof getAuthenticatedUser>>["user"]>,
+	membership: FetchAdminMembershipResult,
+): AdminContext {
+	if (membership.status === "db_error") {
+		logAdminMembershipDbError(user.id, membership.error, "Admin permission check error");
+		throw new KoudenError("管理者権限の確認に失敗しました", ErrorCodes.DB_FETCH_ERROR);
+	}
+
+	if (membership.status === "not_found") {
+		throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
+	}
+
+	return { supabase, user, adminRole: membership.adminUser.role };
+}
+
+/**
+ * Server Component / redirect 向けの管理者ゲート
+ * 未認証はログインへ、非管理者はトップへリダイレクトする
+ */
+export async function requireAdmin(): Promise<AdminContext> {
+	const { supabase, user } = await getAuthenticatedUser();
 
 	if (!user) {
 		redirect("/auth/login");
 	}
 
-	// admin_usersテーブルを直接チェック
-	const { data: adminUser, error } = await supabase
-		.from("admin_users")
-		.select("role")
-		.eq("user_id", user.id)
-		.single();
+	const membership = await fetchAdminMembership(supabase, user.id);
 
-	if (error && error.code !== "PGRST116") {
-		logger.error(
-			{
-				error: error.message,
-				code: error.code,
-				details: error.details,
-				userId: user.id,
-			},
-			"Admin permission check error",
-		);
+	if (membership.status === "db_error") {
+		logAdminMembershipDbError(user.id, membership.error, "Admin permission check error");
 		throw new KoudenError("管理者権限の確認に失敗しました", ErrorCodes.DB_FETCH_ERROR);
 	}
 
-	if (!adminUser) {
-		logger.warn(
-			{
-				userId: user.id,
-			},
-			`User ${user.id} is not registered as admin in admin_users table`,
-		);
+	if (membership.status === "not_found") {
+		logger.warn({ userId: user.id }, `User ${user.id} is not registered as admin in admin_users table`);
+		redirect("/");
+	}
+
+	logger.info(
+		{ userId: user.id, role: membership.adminUser.role },
+		`Admin access granted for user ${user.id} with role: ${membership.adminUser.role}`,
+	);
+
+	return { supabase, user, adminRole: membership.adminUser.role };
+}
+
+/**
+ * Server Action / ActionResult 向けの管理者ゲート
+ * リダイレクトではなく KoudenError を throw する
+ */
+export async function assertAdminForAction(): Promise<AdminContext> {
+	const { supabase, user } = await getAuthenticatedUser();
+
+	if (!user) {
+		throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
+	}
+
+	const membership = await fetchAdminMembership(supabase, user.id);
+	return resolveAdminContext(supabase, user, membership);
+}
+
+/**
+ * 管理者権限をチェックする
+ * @deprecated {@link requireAdmin} または {@link assertAdminForAction} を使用してください
+ */
+export async function checkAdminPermission(): Promise<AdminContext> {
+	const { supabase, user } = await getAuthenticatedUser();
+
+	if (!user) {
+		redirect("/auth/login");
+	}
+
+	const membership = await fetchAdminMembership(supabase, user.id);
+
+	if (membership.status === "db_error") {
+		logAdminMembershipDbError(user.id, membership.error, "Admin permission check error");
+		throw new KoudenError("管理者権限の確認に失敗しました", ErrorCodes.DB_FETCH_ERROR);
+	}
+
+	if (membership.status === "not_found") {
+		logger.warn({ userId: user.id }, `User ${user.id} is not registered as admin in admin_users table`);
 		throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
 	}
 
 	logger.info(
-		{
-			userId: user.id,
-			role: adminUser.role,
-		},
-		`Admin access granted for user ${user.id} with role: ${adminUser.role}`,
+		{ userId: user.id, role: membership.adminUser.role },
+		`Admin access granted for user ${user.id} with role: ${membership.adminUser.role}`,
 	);
 
-	return { supabase, user, adminRole: adminUser.role };
+	return { supabase, user, adminRole: membership.adminUser.role };
 }
 
 /**
@@ -74,30 +177,16 @@ export async function checkSuperAdminPermission() {
 		redirect("/auth/login");
 	}
 
-	const { data: adminUser, error } = await supabase
-		.from("admin_users")
-		.select("role")
-		.eq("user_id", user.id)
-		.single();
+	const membership = await fetchAdminMembership(supabase, user.id);
 
-	// PGRST116 (0 行) は「管理者未登録」= 権限不足。それ以外は DB エラーなので
-	// 権限不足ではなく DB_FETCH_ERROR として扱う (DB 障害を FORBIDDEN と誤分類しない)。
-	if (error && error.code !== "PGRST116") {
-		logger.error(
-			{
-				error: error.message,
-				code: error.code,
-				details: error.details,
-				userId: user.id,
-			},
-			"Super admin permission check error",
-		);
+	if (membership.status === "db_error") {
+		logAdminMembershipDbError(user.id, membership.error, "Super admin permission check error");
 		throw new KoudenError("スーパー管理者権限の確認に失敗しました", ErrorCodes.DB_FETCH_ERROR, {
-			cause: error,
+			cause: membership.error,
 		});
 	}
 
-	if (!adminUser || adminUser.role !== "super_admin") {
+	if (membership.status === "not_found" || membership.adminUser.role !== "super_admin") {
 		throw new KoudenError("スーパー管理者権限が必要です", ErrorCodes.FORBIDDEN);
 	}
 
@@ -117,14 +206,12 @@ export async function debugAdminStatus() {
 		return { error: "ユーザーが認証されていません" };
 	}
 
-	// admin_usersテーブルの状態を確認
 	const { data: adminUser, error } = await supabase
 		.from("admin_users")
 		.select("*")
 		.eq("user_id", user.id)
 		.single();
 
-	// 全ての管理者ユーザーも取得
 	const { data: allAdmins, error: allAdminsError } = await supabase.from("admin_users").select("*");
 
 	return {
@@ -141,22 +228,16 @@ export async function debugAdminStatus() {
 
 /**
  * 現在のユーザーが管理者かどうかをチェックする
- * 統一された管理者権限チェック関数
  */
 export async function isAdmin() {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+	const { supabase, user } = await getAuthenticatedUser();
 
 	if (!user) return false;
 
-	const { data: adminUser, error } = await supabase
-		.from("admin_users")
-		.select("role")
-		.eq("user_id", user.id)
-		.single();
-
-	if (error && error.code !== "PGRST116") return false;
-	return !!adminUser;
+	const membership = await fetchAdminMembership(supabase, user.id);
+	if (membership.status === "db_error") {
+		logAdminMembershipDbError(user.id, membership.error, "isAdmin check error");
+		return false;
+	}
+	return membership.status === "ok";
 }

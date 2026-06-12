@@ -1,6 +1,6 @@
 "use server";
 
-import { checkAdminPermission } from "@/app/_actions/admin/permissions";
+import { assertAdminForAction } from "@/app/_actions/admin/permissions";
 import { type ActionResult, withActionResult } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
 import type {
@@ -36,7 +36,7 @@ export async function getActiveAnnouncements(): Promise<ActionResult<Announcemen
  */
 export async function getAllAnnouncements(): Promise<ActionResult<Announcement[]>> {
 	return withActionResult(async () => {
-		const { supabase } = await checkAdminPermission();
+		const { supabase } = await assertAdminForAction();
 
 		const { data: announcements, error } = await supabase
 			.from("announcements")
@@ -57,7 +57,7 @@ export async function createAnnouncement(
 	input: CreateAnnouncementInput,
 ): Promise<ActionResult<Announcement>> {
 	return withActionResult(async () => {
-		const { supabase, user } = await checkAdminPermission();
+		const { supabase, user } = await assertAdminForAction();
 
 		const { data: announcement, error } = await supabase
 			.from("announcements")
@@ -82,7 +82,7 @@ export async function updateAnnouncement(
 	input: UpdateAnnouncementInput,
 ): Promise<ActionResult<Announcement>> {
 	return withActionResult(async () => {
-		const { supabase } = await checkAdminPermission();
+		const { supabase } = await assertAdminForAction();
 
 		const { id, ...updateData } = input;
 
@@ -107,7 +107,7 @@ export async function updateAnnouncement(
  */
 export async function deleteAnnouncement(id: string): Promise<ActionResult<null>> {
 	return withActionResult(async () => {
-		const { supabase } = await checkAdminPermission();
+		const { supabase } = await assertAdminForAction();
 
 		const { error } = await supabase.from("announcements").delete().eq("id", id);
 

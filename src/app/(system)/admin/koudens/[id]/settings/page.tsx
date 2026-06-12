@@ -1,4 +1,4 @@
-import { checkAdminPermission } from "@/app/_actions/admin/permissions";
+import { requireAdmin } from "@/app/_actions/admin/permissions";
 import { getKoudenForAdmin } from "@/app/_actions/koudens/read";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,7 @@ interface AdminSettingsPageProps {
 
 export default async function AdminSettingsPage({ params }: AdminSettingsPageProps) {
 	// 管理者権限チェック
-	await checkAdminPermission();
+	await requireAdmin();
 
 	const { id: koudenId } = await params;
 	const koudenResult = await getKoudenForAdmin(koudenId);

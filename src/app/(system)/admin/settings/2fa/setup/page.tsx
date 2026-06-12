@@ -9,8 +9,8 @@ import {
 	getTwoFactorSetupMessage,
 	isTwoFactorRequired,
 } from "@/lib/security/admin-2fa-enforcement";
+import { requireAdmin } from "@/app/_actions/admin/permissions";
 import { generateTwoFactorSetup, isTwoFactorEnabled } from "@/lib/security/two-factor-auth";
-import { createClient } from "@/lib/supabase/server";
 import { ShieldCheck, Smartphone } from "lucide-react";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -22,28 +22,7 @@ interface PageProps {
 
 export default async function TwoFactorSetupPage({ searchParams }: PageProps) {
 	const resolvedSearchParams = await searchParams;
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-
-	if (!user) {
-		redirect("/auth/login");
-	}
-
-	// 管理者かどうかを確認
-	const { data: isAdmin, error: rpcError } = await supabase.rpc("is_admin", {
-		user_uid: user.id,
-	});
-
-	// RPC エラーは権限不足ではなく DB エラーとして扱う
-	if (rpcError) {
-		throw new Error(`管理者権限の確認に失敗しました: ${rpcError.message}`);
-	}
-
-	if (!isAdmin) {
-		redirect("/");
-	}
+	const { user } = await requireAdmin();
 
 	// 既に2FAが設定済みの場合
 	const twoFactorEnabled = await isTwoFactorEnabled(user.id);

@@ -1,5 +1,5 @@
 import { EntriesPageClient } from "@/app/(protected)/koudens/[id]/entries/entries-page-client";
-import { checkAdminPermission } from "@/app/_actions/admin/permissions";
+import { requireAdmin } from "@/app/_actions/admin/permissions";
 import { getEntriesForAdmin } from "@/app/_actions/entries";
 import { getRelationshipsForAdmin } from "@/app/_actions/relationships";
 
@@ -28,7 +28,7 @@ export default async function AdminEntriesPage({
 	const { id: koudenId } = await params;
 
 	// 管理者権限チェック
-	await checkAdminPermission();
+	await requireAdmin();
 
 	const rawSearchParams = await searchParams;
 	const {

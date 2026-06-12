@@ -1,4 +1,4 @@
-import { checkAdminPermission } from "@/app/_actions/admin/permissions";
+import { requireAdmin } from "@/app/_actions/admin/permissions";
 import { type AdminKoudenListItem, getAllKoudens } from "@/app/_actions/admin/users";
 import { AdminKoudensClient } from "./_components/admin-koudens-client";
 
@@ -17,7 +17,7 @@ export default async function AdminKoudensPage({
 	}>;
 }) {
 	// 管理者権限チェック
-	await checkAdminPermission();
+	await requireAdmin();
 
 	const params = await searchParams;
 	const page = params.page ? Number.parseInt(params.page, 10) : 1;

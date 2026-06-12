@@ -1,7 +1,7 @@
 import { ErrorCodes, KoudenError } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
 import { type Mock, beforeEach, describe, expect, it, vi } from "vitest";
-import { checkSuperAdminPermission } from "../permissions";
+import { assertAdminForAction, checkSuperAdminPermission, requireAdmin } from "../permissions";
 
 // next/navigation の redirect は呼ばれたら専用エラーを投げてフローを中断する挙動を再現する。
 // vi.mock ファクトリはホイストされるため、参照する RedirectError も vi.hoisted で巻き上げる。
@@ -27,6 +27,141 @@ vi.mock("next/navigation", async (importActual) => {
 			throw new RedirectError(url);
 		}),
 	};
+});
+
+describe("assertAdminForAction", () => {
+	// biome-ignore lint/suspicious/noExplicitAny: テスト用モック
+	let supabaseMock: any;
+
+	const buildSupabase = (adminUserResult: { data: unknown; error: unknown }) => ({
+		auth: {
+			getUser: vi.fn().mockResolvedValue({
+				data: { user: { id: "user-1" } },
+				error: null,
+			}),
+		},
+		from: vi.fn().mockReturnValue({
+			select: () => ({
+				eq: () => ({
+					single: () => Promise.resolve(adminUserResult),
+				}),
+			}),
+		}),
+	});
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("管理者の場合は supabase/user/adminRole を返す", async () => {
+		supabaseMock = buildSupabase({ data: { role: "admin" }, error: null });
+		(createClient as unknown as Mock).mockResolvedValue(supabaseMock);
+
+		const result = await assertAdminForAction();
+		expect(result.user).toEqual({ id: "user-1" });
+		expect(result.adminRole).toBe("admin");
+	});
+
+	it("未認証の場合は UNAUTHORIZED を投げる", async () => {
+		supabaseMock = {
+			auth: {
+				getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }),
+			},
+		};
+		(createClient as unknown as Mock).mockResolvedValue(supabaseMock);
+
+		await expect(assertAdminForAction()).rejects.toMatchObject({
+			code: ErrorCodes.UNAUTHORIZED,
+		});
+	});
+
+	it("管理者未登録の場合は FORBIDDEN を投げる", async () => {
+		supabaseMock = buildSupabase({ data: null, error: { code: "PGRST116" } });
+		(createClient as unknown as Mock).mockResolvedValue(supabaseMock);
+
+		await expect(assertAdminForAction()).rejects.toMatchObject({
+			code: ErrorCodes.FORBIDDEN,
+		});
+	});
+
+	it("DB エラーの場合は DB_FETCH_ERROR を投げる", async () => {
+		supabaseMock = buildSupabase({
+			data: null,
+			error: { code: "57P01", message: "database connection lost" },
+		});
+		(createClient as unknown as Mock).mockResolvedValue(supabaseMock);
+
+		const error = await assertAdminForAction().catch((e) => e);
+		expect(error).toBeInstanceOf(KoudenError);
+		expect((error as KoudenError).code).toBe(ErrorCodes.DB_FETCH_ERROR);
+	});
+});
+
+describe("requireAdmin", () => {
+	// biome-ignore lint/suspicious/noExplicitAny: テスト用モック
+	let supabaseMock: any;
+
+	const buildSupabase = (adminUserResult: { data: unknown; error: unknown }) => ({
+		auth: {
+			getUser: vi.fn().mockResolvedValue({
+				data: { user: { id: "user-1" } },
+				error: null,
+			}),
+		},
+		from: vi.fn().mockReturnValue({
+			select: () => ({
+				eq: () => ({
+					single: () => Promise.resolve(adminUserResult),
+				}),
+			}),
+		}),
+	});
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("管理者の場合は supabase/user/adminRole を返す", async () => {
+		supabaseMock = buildSupabase({ data: { role: "admin" }, error: null });
+		(createClient as unknown as Mock).mockResolvedValue(supabaseMock);
+
+		const result = await requireAdmin();
+		expect(result.adminRole).toBe("admin");
+	});
+
+	it("未認証の場合は /auth/login にリダイレクトする", async () => {
+		supabaseMock = {
+			auth: {
+				getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }),
+			},
+		};
+		(createClient as unknown as Mock).mockResolvedValue(supabaseMock);
+
+		const error = await requireAdmin().catch((e) => e);
+		expect(error).toBeInstanceOf(RedirectError);
+		expect((error as RedirectError).url).toBe("/auth/login");
+	});
+
+	it("非管理者の場合は / にリダイレクトする", async () => {
+		supabaseMock = buildSupabase({ data: null, error: { code: "PGRST116" } });
+		(createClient as unknown as Mock).mockResolvedValue(supabaseMock);
+
+		const error = await requireAdmin().catch((e) => e);
+		expect(error).toBeInstanceOf(RedirectError);
+		expect((error as RedirectError).url).toBe("/");
+	});
+
+	it("DB エラーの場合は DB_FETCH_ERROR を投げる", async () => {
+		supabaseMock = buildSupabase({
+			data: null,
+			error: { code: "57P01", message: "database connection lost" },
+		});
+		(createClient as unknown as Mock).mockResolvedValue(supabaseMock);
+
+		const error = await requireAdmin().catch((e) => e);
+		expect(error).toBeInstanceOf(KoudenError);
+		expect((error as KoudenError).code).toBe(ErrorCodes.DB_FETCH_ERROR);
+	});
 });
 
 describe("checkSuperAdminPermission", () => {

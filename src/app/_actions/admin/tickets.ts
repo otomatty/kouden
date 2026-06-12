@@ -1,42 +1,14 @@
-import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
-import { createClient } from "@/lib/supabase/server";
+"use server";
+
+import { assertAdminForAction } from "@/app/_actions/admin/permissions";
+import { type ActionResult, withActionResult } from "@/lib/errors";
 import type { Ticket, TicketMessage } from "@/types/admin";
 import { revalidatePath } from "next/cache";
 import { getAuthUsersByIds } from "./auth-users";
 
-/**
- * 管理者権限チェック
- * `withActionResult` がエラーをクライアント向けの ActionResult に変換するため、
- * `withAdmin` HOF（redirect使用）の代わりに KoudenError を throw する。
- */
-async function assertAdmin() {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-
-	if (!user?.id) {
-		throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
-	}
-
-	const { data: isAdmin, error: rpcError } = await supabase.rpc("is_admin", {
-		user_uid: user.id,
-	});
-
-	if (rpcError) {
-		throw new KoudenError("管理者権限の確認に失敗しました", ErrorCodes.DB_FETCH_ERROR);
-	}
-
-	if (!isAdmin) {
-		throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
-	}
-
-	return { supabase, user };
-}
-
 export async function getTickets(): Promise<ActionResult<Ticket[]>> {
 	return withActionResult(async () => {
-		const { supabase } = await assertAdmin();
+		const { supabase } = await assertAdminForAction();
 
 		// チケット基本情報を取得
 		const { data: tickets, error: ticketsError } = await supabase
@@ -73,7 +45,7 @@ export async function updateTicketStatus(
 	status: Ticket["status"],
 ): Promise<ActionResult<null>> {
 	return withActionResult(async () => {
-		const { supabase } = await assertAdmin();
+		const { supabase } = await assertAdminForAction();
 		const { error } = await supabase
 			.from("support_tickets")
 			.update({
@@ -93,7 +65,7 @@ export async function assignTicket(
 	adminId: string | null,
 ): Promise<ActionResult<null>> {
 	return withActionResult(async () => {
-		const { supabase } = await assertAdmin();
+		const { supabase } = await assertAdminForAction();
 		const { error } = await supabase
 			.from("support_tickets")
 			.update({ assigned_to: adminId })
@@ -110,7 +82,7 @@ export async function updateTicketPriority(
 	priority: Ticket["priority"],
 ): Promise<ActionResult<null>> {
 	return withActionResult(async () => {
-		const { supabase } = await assertAdmin();
+		const { supabase } = await assertAdminForAction();
 		const { error } = await supabase
 			.from("support_tickets")
 			.update({ priority })
@@ -124,7 +96,7 @@ export async function updateTicketPriority(
 
 export async function getTicketById(ticketId: string): Promise<ActionResult<Ticket>> {
 	return withActionResult(async () => {
-		const { supabase } = await assertAdmin();
+		const { supabase } = await assertAdminForAction();
 
 		// チケット基本情報を取得
 		const { data: ticket, error: ticketError } = await supabase
@@ -152,7 +124,7 @@ export async function getTicketById(ticketId: string): Promise<ActionResult<Tick
 
 export async function getTicketMessages(ticketId: string): Promise<ActionResult<TicketMessage[]>> {
 	return withActionResult(async () => {
-		const { supabase } = await assertAdmin();
+		const { supabase } = await assertAdminForAction();
 
 		// メッセージを取得
 		const { data: messages, error: messagesError } = await supabase
@@ -183,7 +155,7 @@ export async function addTicketMessage(
 	content: string,
 ): Promise<ActionResult<null>> {
 	return withActionResult(async () => {
-		const { supabase, user } = await assertAdmin();
+		const { supabase, user } = await assertAdminForAction();
 
 		const { error } = await supabase.from("ticket_messages").insert({
 			ticket_id: ticketId,

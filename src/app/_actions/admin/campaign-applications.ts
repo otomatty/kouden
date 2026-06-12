@@ -1,40 +1,10 @@
 "use server";
 
-import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
-import { createClient } from "@/lib/supabase/server";
+import { assertAdminForAction } from "@/app/_actions/admin/permissions";
+import { type ActionResult, withActionResult } from "@/lib/errors";
 import type { Database } from "@/types/supabase";
 
 type CampaignApplicationRow = Database["public"]["Tables"]["campaign_hearing_applications"]["Row"];
-
-/**
- * 管理者権限チェック
- * `withActionResult` がエラーをクライアント向けの ActionResult に変換するため、
- * リダイレクトではなく KoudenError を throw する。
- */
-async function assertAdmin() {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-
-	if (!user) {
-		throw new KoudenError("認証が必要です", ErrorCodes.UNAUTHORIZED);
-	}
-
-	const { data: isAdmin, error: rpcError } = await supabase.rpc("is_admin", {
-		user_uid: user.id,
-	});
-
-	if (rpcError) {
-		throw new KoudenError("管理者権限の確認に失敗しました", ErrorCodes.DB_FETCH_ERROR);
-	}
-
-	if (!isAdmin) {
-		throw new KoudenError("管理者権限が必要です", ErrorCodes.FORBIDDEN);
-	}
-
-	return { supabase, user };
-}
 
 /**
  * キャンペーン申し込み一覧を取得
@@ -53,7 +23,7 @@ export async function getCampaignApplications(params?: {
 	}>
 > {
 	return withActionResult(async () => {
-		const { supabase } = await assertAdmin();
+		const { supabase } = await assertAdminForAction();
 
 		let query = supabase
 			.from("campaign_hearing_applications")
@@ -94,7 +64,7 @@ export async function getCampaignApplication(
 	id: string,
 ): Promise<ActionResult<CampaignApplicationRow>> {
 	return withActionResult(async () => {
-		const { supabase } = await assertAdmin();
+		const { supabase } = await assertAdminForAction();
 
 		const { data, error } = await supabase
 			.from("campaign_hearing_applications")
@@ -115,7 +85,7 @@ export async function updateCampaignApplicationStatus(
 	status: "submitted" | "confirmed" | "completed" | "cancelled",
 ): Promise<ActionResult<CampaignApplicationRow>> {
 	return withActionResult(async () => {
-		const { supabase } = await assertAdmin();
+		const { supabase } = await assertAdminForAction();
 
 		const { data, error } = await supabase
 			.from("campaign_hearing_applications")
@@ -144,7 +114,7 @@ export async function getCampaignApplicationStats(): Promise<
 	}>
 > {
 	return withActionResult(async () => {
-		const { supabase } = await assertAdmin();
+		const { supabase } = await assertAdminForAction();
 
 		// 全体の統計
 		const { data: totalData, error: totalError } = await supabase
