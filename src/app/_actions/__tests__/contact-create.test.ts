@@ -179,4 +179,25 @@ describe("createContactRequest", () => {
 		expect(removedPaths[0]).toContain(`requests/${insertedPayload.id}/`);
 		expect(requestDeleteEqMock).toHaveBeenCalledWith("id", insertedPayload.id);
 	});
+
+	it("添付の DB INSERT 失敗時にロールバックも失敗しても元のエラーを返す", async () => {
+		const { supabase, adminSupabase, removeMock, requestDeleteEqMock } =
+			buildCreateContactSupabaseMock({
+				insertAttachmentError: { message: "insert boom", code: "23505" },
+				rollbackDeleteError: { message: "delete failed" },
+			});
+		// biome-ignore lint/suspicious/noExplicitAny: supabase mock shape
+		vi.mocked(createClient).mockResolvedValue(supabase as any);
+		// biome-ignore lint/suspicious/noExplicitAny: supabase mock shape
+		vi.mocked(createAdminClient).mockReturnValue(adminSupabase as any);
+
+		const result = await createContactRequest(buildFormData(true));
+
+		expect(result.ok).toBe(false);
+		if (!result.ok) {
+			expect(result.error.code).toBe(ErrorCodes.ALREADY_EXISTS);
+		}
+		expect(removeMock).toHaveBeenCalledTimes(1);
+		expect(requestDeleteEqMock).toHaveBeenCalledTimes(1);
+	});
 });
