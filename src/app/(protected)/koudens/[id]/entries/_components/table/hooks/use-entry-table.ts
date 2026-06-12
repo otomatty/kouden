@@ -152,10 +152,6 @@ export function useEntryTable({
 	}, [isMobile]);
 
 	useEffect(() => {
-		setDupPage(1);
-	}, []);
-
-	useEffect(() => {
 		setRelationshipOptions(relationships);
 	}, [relationships]);
 
