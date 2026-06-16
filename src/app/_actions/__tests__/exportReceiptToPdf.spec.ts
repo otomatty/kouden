@@ -42,20 +42,26 @@ describe("exportReceiptToPdf", () => {
 	beforeEach(() => {
 		// vitest config has mockReset/restoreMocks: true, so implementations set inside
 		// vi.mock() factories are wiped between tests. Re-set them here.
-		(PDFDocument as unknown as Mock).mockImplementation(() => ({
-			fontSize: vi.fn().mockReturnThis(),
-			text: vi.fn().mockReturnThis(),
-			moveDown: vi.fn().mockReturnThis(),
-			end: vi.fn(),
-			on: vi.fn((event: string, cb: () => void) => {
-				if (event === "end") setImmediate(cb);
-			}),
-		}));
+		// Vitest 4 invokes a mock with `new` as a real constructor, so the
+		// implementation must be a constructable (non-arrow) function.
+		// biome-ignore lint/complexity/useArrowFunction: must stay constructable for `new`
+		(PDFDocument as unknown as Mock).mockImplementation(function () {
+			return {
+				fontSize: vi.fn().mockReturnThis(),
+				text: vi.fn().mockReturnThis(),
+				moveDown: vi.fn().mockReturnThis(),
+				end: vi.fn(),
+				on: vi.fn((event: string, cb: () => void) => {
+					if (event === "end") setImmediate(cb);
+				}),
+			};
+		});
 
 		resendSendMock = vi.fn().mockResolvedValue({});
-		(Resend as unknown as Mock).mockImplementation(() => ({
-			emails: { send: resendSendMock },
-		}));
+		// biome-ignore lint/complexity/useArrowFunction: must stay constructable for `new`
+		(Resend as unknown as Mock).mockImplementation(function () {
+			return { emails: { send: resendSendMock } };
+		});
 
 		storageUploadMock = vi.fn().mockResolvedValue({ error: null });
 		supabaseMock = {

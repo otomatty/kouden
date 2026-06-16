@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import fs from "node:fs";
 import readline from "node:readline";
@@ -5,9 +6,24 @@ import readline from "node:readline";
 // Import functions to test
 import { createMilestoneFile, showTemplate, showHelp } from "../milestone-manager.js";
 
-// Mock external dependencies
-vi.mock("node:fs");
-vi.mock("node:readline");
+// Mock external dependencies.
+// Vitest 4 no longer turns automocked node builtins into spies, so provide
+// explicit vi.fn() factories for the methods these tests exercise.
+vi.mock("node:fs", () => {
+	const mock = {
+		existsSync: vi.fn(),
+		mkdirSync: vi.fn(),
+		readFileSync: vi.fn(),
+		writeFileSync: vi.fn(),
+		rmSync: vi.fn(),
+		statSync: vi.fn(),
+	};
+	return { ...mock, default: mock };
+});
+vi.mock("node:readline", () => {
+	const mock = { createInterface: vi.fn() };
+	return { ...mock, default: mock };
+});
 
 // Mock console methods
 

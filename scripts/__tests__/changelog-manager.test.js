@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
@@ -11,9 +12,24 @@ import {
 	showHelp,
 } from "../changelog-manager.js";
 
-// Mock external dependencies
-vi.mock("node:fs");
-vi.mock("node:child_process");
+// Mock external dependencies.
+// Vitest 4 no longer turns automocked node builtins into spies, so provide
+// explicit vi.fn() factories for the methods these tests exercise.
+vi.mock("node:fs", () => {
+	const mock = {
+		existsSync: vi.fn(),
+		mkdirSync: vi.fn(),
+		readFileSync: vi.fn(),
+		writeFileSync: vi.fn(),
+		rmSync: vi.fn(),
+		statSync: vi.fn(),
+	};
+	return { ...mock, default: mock };
+});
+vi.mock("node:child_process", () => {
+	const execSync = vi.fn();
+	return { execSync, default: { execSync } };
+});
 
 describe("changelog-manager", () => {
 	const mockPackageJson = {
