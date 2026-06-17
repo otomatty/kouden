@@ -13,13 +13,11 @@ export default defineConfig({
 		globals: true,
 		environment: "jsdom",
 		setupFiles: ["./vitest.setup.ts"],
-		// Support for Node.js environment tests
+		// Run all test files in a single fork. Vitest 4 removed
+		// poolOptions.forks.singleFork; the top-level fileParallelism: false
+		// forces a single worker (maxWorkers = 1) for the forks pool.
 		pool: "forks",
-		poolOptions: {
-			forks: {
-				singleFork: true,
-			},
-		},
+		fileParallelism: false,
 		// Test configuration for different environments
 		env: {
 			NODE_ENV: "test",
@@ -31,13 +29,9 @@ export default defineConfig({
 		],
 		// Exclude integration test output
 		exclude: ["node_modules", "dist", ".git", "scripts/__tests__/test-output"],
-		// Separate test environments
-		environmentMatchGlobs: [
-			// React components use jsdom
-			["src/**/*.{test,spec}.{js,ts,jsx,tsx}", "jsdom"],
-			// CLI scripts use node environment
-			["scripts/**/*.{test,spec}.{js,ts}", "node"],
-		],
+		// Default environment is jsdom (React components). Vitest 4 removed
+		// environmentMatchGlobs; CLI script tests under scripts/ opt into the
+		// node environment via a `// @vitest-environment node` docblock.
 		// Timeout for long-running tests
 		testTimeout: 10000,
 		// Mock configuration
@@ -45,7 +39,7 @@ export default defineConfig({
 		clearMocks: true,
 		restoreMocks: true,
 		// Isolate test modules to prevent state leakage between files
-		// (required when using poolOptions.forks.singleFork)
+		// (required when running in a single fork)
 		isolate: true,
 		coverage: {
 			provider: "v8",
