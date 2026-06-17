@@ -13,10 +13,13 @@ import {
 } from "../changelog-manager.js";
 
 // Mock external dependencies.
-// Vitest 4 no longer turns automocked node builtins into spies, so provide
-// explicit vi.fn() factories for the methods these tests exercise.
-vi.mock("node:fs", () => {
+// Vitest 4 no longer turns automocked node builtins into spies, so spread the
+// real module via vi.importActual and override only the methods these tests
+// exercise (keeps other real exports intact if the source starts using them).
+vi.mock("node:fs", async () => {
+	const actual = await vi.importActual("node:fs");
 	const mock = {
+		...actual,
 		existsSync: vi.fn(),
 		mkdirSync: vi.fn(),
 		readFileSync: vi.fn(),
@@ -24,11 +27,12 @@ vi.mock("node:fs", () => {
 		rmSync: vi.fn(),
 		statSync: vi.fn(),
 	};
+	// Source uses `import fs from "node:fs"` (default import).
 	return { ...mock, default: mock };
 });
-vi.mock("node:child_process", () => {
-	const execSync = vi.fn();
-	return { execSync, default: { execSync } };
+vi.mock("node:child_process", async () => {
+	const actual = await vi.importActual("node:child_process");
+	return { ...actual, execSync: vi.fn() };
 });
 
 describe("changelog-manager", () => {

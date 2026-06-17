@@ -6,11 +6,11 @@ import { execSync } from "node:child_process";
 import { runChangelogManager, runMilestoneManager, showHelp } from "../docs-manager.js";
 
 // Mock external dependencies.
-// Vitest 4 no longer turns automocked node builtins into spies, so provide
-// an explicit vi.fn() factory for execSync.
-vi.mock("node:child_process", () => {
-	const execSync = vi.fn();
-	return { execSync, default: { execSync } };
+// Vitest 4 no longer turns automocked node builtins into spies, so spread the
+// real module via vi.importActual and override only execSync.
+vi.mock("node:child_process", async () => {
+	const actual = await vi.importActual("node:child_process");
+	return { ...actual, execSync: vi.fn() };
 });
 
 describe("docs-manager", () => {
