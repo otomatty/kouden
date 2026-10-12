@@ -300,6 +300,17 @@ describe("期限のお知らせ（E6-5）", () => {
 		unwrap(await ctx.ledger.deleteEvent(ctx.caller, early.id));
 		expect(await eventsOf()).toEqual([late.id]);
 		expect(await reminders(ctx.ledger)).toHaveLength(2);
+
+		// 同じ日付なら並び順が先の行事。並べ替えると期限の行事も変わる
+		const same = unwrap(
+			await ctx.ledger.createEvent(
+				ctx.caller,
+				eventSchema.parse({ kind: "memorial_49", date: day(60) }),
+			),
+		);
+		expect(await eventsOf()).toEqual([late.id]);
+		unwrap(await ctx.ledger.moveEvent(ctx.caller, same.id, "up"));
+		expect(await eventsOf()).toEqual([same.id]);
 	});
 
 	it("期限が来たら、オーナーと希望した編集者に未対応の件数を知らせる", async () => {

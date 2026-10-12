@@ -754,6 +754,8 @@ export class KoudenLedger extends DurableObject<Env> {
 	): Promise<LedgerResult<null>> {
 		return this.mutate(caller, "settings.write", (now) => {
 			this.swapSortOrder(caller, now, "events", "event", eventId, direction, "deleted_at IS NULL");
+			// 同じ日付の四十九日が並んでいると、並び順で期限の行事が変わる
+			this.syncReminders(now);
 			return null;
 		});
 	}
