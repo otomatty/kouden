@@ -88,11 +88,12 @@ export async function fulfillCheckout(
 		db
 			.prepare(
 				`INSERT INTO purchases (id, kouden_id, user_id, amount, currency, stripe_checkout_session_id,
-                                stripe_payment_intent_id, source, status, created_at)
+                                stripe_payment_intent_id, source, status, created_at, refunded_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, 'stripe',
                  CASE WHEN EXISTS (SELECT 1 FROM stripe_refunds WHERE payment_intent_id = ?7)
                       THEN 'refunded' ELSE 'paid' END,
-                 ?8)
+                 ?8,
+                 (SELECT refunded_at FROM stripe_refunds WHERE payment_intent_id = ?7))
          ON CONFLICT DO NOTHING`,
 			)
 			.bind(

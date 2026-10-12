@@ -339,6 +339,11 @@ describe("有料版の購入（E9-2）", () => {
 		await webhook({ type: "checkout.session.completed", object: sessionJson(session) });
 		expect(await plan(koudenId)).toBe("free");
 		expect(await purchases(koudenId)).toMatchObject([{ status: "refunded" }]);
+		// 返金日は先に届いた返金のものを記録する
+		const row = await env.DB.prepare("SELECT refunded_at FROM purchases WHERE kouden_id = ?")
+			.bind(koudenId)
+			.first<{ refunded_at: string | null }>();
+		expect(row?.refunded_at).toEqual(expect.any(String));
 	});
 
 	it("二重決済では購入を記録するが、プランの変更は 1 回だけ知らせる", async () => {
