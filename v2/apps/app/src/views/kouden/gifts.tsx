@@ -5,6 +5,7 @@ import type { GiftView, LedgerEvent, LedgerRelationship } from "../../ledger/typ
 import { Field, Input, Select } from "../components/form.tsx";
 import { yen } from "../format.ts";
 import { ui } from "../ui.ts";
+import { LiveRegion } from "./shell.tsx";
 
 /** いただきもの一覧（E4-6 の絞り込み・検索） */
 export const GiftsPage: FC<{
@@ -25,7 +26,6 @@ export const GiftsPage: FC<{
 		max: filter.maxAmount?.toString(),
 	};
 	const filtered = Object.values(values).some((v) => v !== undefined);
-	const kodenTotal = gifts.reduce((sum, g) => sum + (g.kind === "koden" ? (g.amount ?? 0) : 0), 0);
 	return (
 		<div class="space-y-6">
 			{notice && (
@@ -89,6 +89,35 @@ export const GiftsPage: FC<{
 				</div>
 			</form>
 
+			<GiftResults kouden={kouden} gifts={gifts} filter={filter} />
+		</div>
+	);
+};
+
+/** 一覧の結果部分。他の人の変更を受けると、同じ条件で取り直す */
+export const GiftResults: FC<{ kouden: KoudenContext; gifts: GiftView[]; filter: GiftFilter }> = ({
+	kouden,
+	gifts,
+	filter,
+}) => {
+	const base = `/k/${kouden.id}`;
+	const query = new URLSearchParams();
+	if (filter.eventId) query.set("event", filter.eventId);
+	if (filter.kind) query.set("kind", filter.kind);
+	if (filter.relationshipId) query.set("relationship", filter.relationshipId);
+	if (filter.q) query.set("q", filter.q);
+	if (filter.minAmount !== undefined) query.set("min", String(filter.minAmount));
+	if (filter.maxAmount !== undefined) query.set("max", String(filter.maxAmount));
+	const filtered = query.size > 0;
+	query.set("partial", "results");
+	const kodenTotal = gifts.reduce((sum, g) => sum + (g.kind === "koden" ? (g.amount ?? 0) : 0), 0);
+	return (
+		<LiveRegion
+			id="gift-results"
+			entities={["gift", "person", "event", "relationship"]}
+			url={`${base}/gifts?${query.toString()}`}
+			class="space-y-3"
+		>
 			<p class="text-sm text-muted" role="status">
 				{gifts.length} 件・香典 {formatYen(kodenTotal)}
 			</p>
@@ -138,6 +167,10 @@ export const GiftsPage: FC<{
 											{g.contributors.length > 1 && (
 												<span class="ml-1 text-muted">ほか {g.contributors.length - 1} 名</span>
 											)}
+											<span
+												data-editing-target={`gift:${g.id}`}
+												class="block text-xs text-danger"
+											></span>
 										</td>
 										<td class={`${ui.td} hidden sm:table-cell`}>
 											{primary?.relationshipName ?? ""}
@@ -158,6 +191,6 @@ export const GiftsPage: FC<{
 					</table>
 				</div>
 			)}
-		</div>
+		</LiveRegion>
 	);
 };

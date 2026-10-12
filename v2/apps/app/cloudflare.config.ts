@@ -44,6 +44,11 @@ export default defineConfig(({ mode }) => {
 					namespace: s.rateLimitNamespaces.write,
 					simple: { limit: 120, period: 60 },
 				}),
+				// 招待の受諾: IP ごと 10 回/分（04 §11）
+				INVITE_RATE_LIMITER: bindings.rateLimit({
+					namespace: s.rateLimitNamespaces.invite,
+					simple: { limit: 10, period: 60 },
+				}),
 			},
 		},
 	};

@@ -229,8 +229,20 @@ describe("いただきもの・差出人の編集", () => {
 		);
 		expect(conflict.status).toBe(409);
 		const html = await conflict.text();
-		expect(html).toContain("他の人が更新しました");
-		expect(html).toContain('value="5000"');
+		// 自分の入力と最新の内容の違いを示し、フォームには自分の入力と最新の version を入れる（E8-3）
+		expect(html).toContain("他の人がこの記録を更新しました");
+		expect(html).toMatch(/<td[^>]*>7000<\/td><td[^>]*>5000<\/td>/);
+		expect(html).toContain('name="amount" type="text" value="7000"');
+		expect(html).toContain('name="version" value="2"');
+		// そのまま保存すれば上書きになる
+		const overwrite = await taro.request(
+			path,
+			formPost({ version: "2", eventId, kind: "koden", amount: "7000" }),
+		);
+		expect(overwrite.status).toBe(303);
+		const page = await (await taro.request(path)).text();
+		expect(page).toContain('value="7000"');
+		expect(page).toContain("金額: ¥5,000 → ¥7,000");
 	});
 
 	it("連名の差出人を追加し、外せる", async () => {
@@ -270,7 +282,7 @@ describe("いただきもの・差出人の編集", () => {
 			formPost({ eventId, kind: "koden", name: "渡辺 六郎", amount: "1000" }),
 		);
 		const list = await (await taro.request(`/k/${koudenId}/persons`)).text();
-		const ids = [...list.matchAll(/id="person-([^"]+)"/g)].map((m) => m[1] ?? "");
+		const ids = [...list.matchAll(/id="person-([0-9a-f-]{36})"/g)].map((m) => m[1] ?? "");
 		expect(ids).toHaveLength(2);
 		const [first, second] = ids;
 
@@ -304,7 +316,7 @@ describe("いただきもの・差出人の編集", () => {
 		);
 		const q = encodeURIComponent("高橋");
 		const list = await (await taro.request(`/k/${koudenId}/persons?q=${q}`)).text();
-		const ids = [...list.matchAll(/id="person-([^"]+)"/g)].map((m) => m[1] ?? "");
+		const ids = [...list.matchAll(/id="person-([0-9a-f-]{36})"/g)].map((m) => m[1] ?? "");
 		expect(ids).toHaveLength(2);
 		const res = await taro.request(
 			`/k/${koudenId}/persons/${ids[0]}`,
@@ -319,10 +331,41 @@ describe("いただきもの・差出人の編集", () => {
 		expect(html).toMatch(new RegExp(`id="person-${ids[1]}"[^>]*hx-swap-oob="outerHTML"`));
 	});
 
+	it("差出人の保存が競合したら、違いを示して上書きできる（行内・詳細）", async () => {
+		const { taro, koudenId } = await withGift();
+		const list = await (await taro.request(`/k/${koudenId}/persons`)).text();
+		const id = /id="person-([0-9a-f-]{36})"/.exec(list)?.[1] ?? "";
+		const path = `/k/${koudenId}/persons/${id}`;
+		expect(
+			(await taro.request(path, formPost({ version: "1", name: "高橋 四郎", address: "東京都" })))
+				.status,
+		).toBe(303);
+
+		const row = await taro.request(
+			path,
+			formPost({ version: "1", mode: "row", name: "高橋 四郎", address: "大阪府" }, { htmx: true }),
+		);
+		expect(row.status).toBe(409);
+		const rowHtml = await row.text();
+		expect(rowHtml.startsWith(`<tr id="person-${id}"`)).toBe(true);
+		expect(rowHtml).toMatch(/<td[^>]*>大阪府<\/td><td[^>]*>東京都<\/td>/);
+		expect(rowHtml).toContain('name="version" value="2"');
+
+		const page = await taro.request(
+			path,
+			formPost({ version: "1", name: "高橋 四郎", address: "大阪府" }),
+		);
+		expect(page.status).toBe(409);
+		expect(await page.text()).toContain("他の人がこの記録を更新しました");
+
+		const detail = await (await taro.request(path)).text();
+		expect(detail).toContain("住所: （なし） → 東京都");
+	});
+
 	it("差出人の入力エラーは行の中に表示する", async () => {
 		const { taro, koudenId } = await withGift();
 		const list = await (await taro.request(`/k/${koudenId}/persons`)).text();
-		const id = /id="person-([^"]+)"/.exec(list)?.[1];
+		const id = /id="person-([0-9a-f-]{36})"/.exec(list)?.[1];
 		const res = await taro.request(
 			`/k/${koudenId}/persons/${id}`,
 			formPost(

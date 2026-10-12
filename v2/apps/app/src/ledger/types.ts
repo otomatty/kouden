@@ -123,3 +123,32 @@ export interface ReceptionResult {
 	personId: string;
 	personLabel: string;
 }
+
+/** WebSocket の接続要求で、Worker が確認済みの呼び出し元を DO に渡すヘッダー（JSON を URL エンコード） */
+export const CALLER_HEADER = "X-Kouden-Caller";
+
+/** 変更の通知（04 §5）。HTML は送らず、何が変わったかだけを知らせる */
+export interface ChangeNotice {
+	seq: number;
+	entity: string;
+	id: string;
+	op: string;
+	/** 変更したユーザー（自分の変更は画面側で無視する） */
+	actor: string;
+}
+
+/** 記録ごとの変更履歴（E8-4） */
+export interface HistoryEntry {
+	seq: number;
+	at: string;
+	actorName: string;
+	op: string;
+	/** 変更前後の JSON（{"amount":[5000,10000]}）。RPC の型を単純に保つため文字列のまま渡す */
+	diff: string | null;
+}
+
+export interface History {
+	entries: HistoryEntry[];
+	/** 差分の中の ID（行事・関係・差出人）→ 表示名 */
+	names: Record<string, string>;
+}

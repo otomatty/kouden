@@ -1,0 +1,188 @@
+// 香典帳のリアルタイム同期（docs/rebuild/04-architecture.md §5）
+// - DO から「何が変わったか」だけを受け取り、該当する [data-live] 部分を htmx で取り直す
+// - 閲覧中のメンバーと「○○さんが編集中」を表示する
+// - 通信が切れたら警告を出し、[data-requires-online] のボタンを無効にする
+// CSP のため eval・インラインのイベントハンドラは使わない。
+(() => {
+	const script = document.currentScript;
+	const koudenId = script?.dataset.koudenId;
+	const userId = script?.dataset.userId;
+	if (!koudenId || !("WebSocket" in window)) return;
+
+	const base = `/k/${koudenId}`;
+	let ws = null;
+	let lastSeq = 0;
+	let retry = 0;
+	let pingTimer = 0;
+	let connected = false;
+	let editingSent = "";
+	let lastUsers = [];
+	const timers = new Map();
+
+	// ---- 接続状態 ----
+	function updateOnline() {
+		const online = connected && navigator.onLine;
+		const banner = document.querySelector("[data-connection]");
+		if (banner) banner.hidden = online;
+		for (const el of document.querySelectorAll("[data-requires-online]")) el.disabled = !online;
+	}
+	window.addEventListener("online", updateOnline);
+	window.addEventListener("offline", updateOnline);
+
+	function connect() {
+		const proto = location.protocol === "https:" ? "wss:" : "ws:";
+		ws = new WebSocket(`${proto}//${location.host}${base}/ws`);
+		ws.addEventListener("open", () => {
+			retry = 0;
+			connected = true;
+			updateOnline();
+			editingSent = "";
+			sendEditing();
+			clearInterval(pingTimer);
+			pingTimer = setInterval(() => {
+				if (ws.readyState === WebSocket.OPEN) ws.send("ping");
+			}, 30000);
+		});
+		ws.addEventListener("message", (e) => {
+			if (e.data === "pong") return;
+			let message;
+			try {
+				message = JSON.parse(e.data);
+			} catch {
+				return;
+			}
+			handle(message);
+		});
+		ws.addEventListener("close", (e) => {
+			clearInterval(pingTimer);
+			connected = false;
+			updateOnline();
+			if (e.code === 4001) return; // 権限がなくなった
+			const delay = Math.min(30000, 1000 * 2 ** retry++) + Math.random() * 500;
+			setTimeout(connect, delay);
+		});
+	}
+
+	function handle(m) {
+		if (m.type === "hello") {
+			const previous = lastSeq;
+			lastSeq = m.seq;
+			// 再接続: 切れている間の変更を取り直す
+			if (previous && m.seq > previous) catchUp(previous);
+		} else if (m.type === "changed") {
+			lastSeq = Math.max(lastSeq, m.seq);
+			applyChange(m);
+		} else if (m.type === "presence") {
+			lastUsers = m.users;
+			renderPresence();
+		} else if (m.type === "revoked") {
+			location.href = "/";
+		}
+	}
+
+	async function catchUp(since) {
+		try {
+			const res = await fetch(`${base}/changes?since=${since}`, {
+				headers: { Accept: "application/json" },
+			});
+			if (!res.ok) return;
+			const data = await res.json();
+			if (data.reset) {
+				for (const el of document.querySelectorAll("[data-live]")) refreshRegion(el);
+				return;
+			}
+			for (const change of data.changes) applyChange(change);
+		} catch {
+			// 次の再接続で取り直す
+		}
+	}
+
+	// ---- 変更の反映 ----
+	function applyChange(m) {
+		// 権限・アーカイブ状態の変更は画面全体に影響するので読み込み直す
+		if (m.entity === "kouden" || (m.entity === "member" && m.id === userId && m.actor !== userId)) {
+			location.reload();
+			return;
+		}
+		// 自分の変更は、操作した画面に反映済み
+		if (m.actor === userId) return;
+		for (const el of document.querySelectorAll("[data-live-watch]")) {
+			if (el.dataset.liveWatch === `${m.entity}:${m.id}`) el.hidden = false;
+		}
+		for (const el of document.querySelectorAll("[data-live]")) {
+			if (el.dataset.live.split(",").includes(m.entity)) refreshRegion(el);
+		}
+	}
+
+	function refreshRegion(el) {
+		clearTimeout(timers.get(el.id));
+		timers.set(
+			el.id,
+			setTimeout(() => {
+				const active = document.activeElement;
+				const busy =
+					el.querySelector("form[data-editing-entity]") ||
+					(active && el.contains(active) && active.matches("input, select, textarea"));
+				const url = el.dataset.liveUrl;
+				if (busy || !url || !window.htmx) {
+					// 入力中は差し替えない
+					const notice = el.querySelector("[data-stale-notice]");
+					if (notice) notice.hidden = false;
+					return;
+				}
+				window.htmx.ajax("GET", url, { target: `#${el.id}`, swap: "outerHTML" });
+			}, 300),
+		);
+	}
+
+	// ---- 閲覧中・編集中 ----
+	function renderPresence() {
+		const others = lastUsers.filter((u) => u.userId !== userId);
+		const el = document.querySelector("[data-presence]");
+		if (el)
+			el.textContent = others.length > 0 ? `閲覧中: ${others.map((u) => u.name).join("、")}` : "";
+		for (const target of document.querySelectorAll("[data-editing-target]")) {
+			const editors = others.filter(
+				(u) => u.editing && `${u.editing.entity}:${u.editing.id}` === target.dataset.editingTarget,
+			);
+			target.textContent =
+				editors.length > 0 ? `${editors.map((u) => u.name).join("、")}さんが編集中` : "";
+		}
+	}
+
+	function sendEditing() {
+		const form = document.querySelector("[data-editing-entity]");
+		const editing = form
+			? { entity: form.dataset.editingEntity, id: form.dataset.editingId }
+			: null;
+		const key = JSON.stringify(editing);
+		if (key === editingSent || !ws || ws.readyState !== WebSocket.OPEN) return;
+		editingSent = key;
+		ws.send(
+			JSON.stringify({ type: "editing", entity: editing?.entity ?? null, id: editing?.id ?? null }),
+		);
+	}
+
+	document.addEventListener("htmx:afterSettle", () => {
+		sendEditing();
+		renderPresence();
+		updateOnline();
+	});
+
+	// ---- コピーボタン（招待リンク） ----
+	document.addEventListener("click", (e) => {
+		const button = e.target instanceof Element ? e.target.closest("[data-copy]") : null;
+		if (!button) return;
+		const input = document.querySelector(button.dataset.copy);
+		if (!input || !navigator.clipboard) return;
+		navigator.clipboard
+			.writeText(input.value)
+			.then(() => {
+				button.textContent = "コピーしました";
+				return undefined;
+			})
+			.catch(() => undefined);
+	});
+
+	connect();
+})();

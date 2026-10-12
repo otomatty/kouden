@@ -14,23 +14,23 @@ import {
 	toFieldErrors,
 	versionSchema,
 } from "@kouden/domain";
-import { type Context, Hono } from "hono";
-import type { Child } from "hono/jsx";
-import { createKouden, deleteKouden, setKoudenStatus, updateKoudenInfo } from "../kouden/store.ts";
+import { Hono } from "hono";
+import { createKouden, deleteKouden, updateKoudenInfo } from "../kouden/store.ts";
 import { ledgerFor } from "../ledger/client.ts";
-import type { LedgerError, LedgerResult, PersonView } from "../ledger/types.ts";
+import { CALLER_HEADER, type LedgerResult, type PersonView } from "../ledger/types.ts";
 import { koudenAccess, writeRateLimit } from "../middleware/kouden-access.tsx";
 import { requireUser } from "../middleware/session.ts";
 import type { AppEnv } from "../types.ts";
 import type { FormValues } from "../views/components/form.tsx";
 import { GiftEditPage, giftFormValues } from "../views/kouden/gift-edit.tsx";
-import { GiftsPage } from "../views/kouden/gifts.tsx";
+import { GiftResults, GiftsPage } from "../views/kouden/gifts.tsx";
 import { PersonCandidates } from "../views/kouden/person-candidates.tsx";
 import {
 	PersonEditRow,
 	PersonPage,
 	PersonRow,
 	PersonsPage,
+	PersonsTable,
 	personFormValues,
 } from "../views/kouden/persons.tsx";
 import {
@@ -40,92 +40,25 @@ import {
 	type ReceptionProps,
 } from "../views/kouden/reception.tsx";
 import { SettingsPage } from "../views/kouden/settings.tsx";
-import { type KoudenTab, KoudenShell } from "../views/kouden/shell.tsx";
 import { KoudenTopPage } from "../views/kouden/top.tsx";
 import { Layout } from "../views/layout.tsx";
 import { NewKoudenPage } from "../views/pages/dashboard.tsx";
-import { ErrorPage } from "../views/pages/error.tsx";
 
-type Ctx = Context<AppEnv>;
-
-/** リダイレクト後に表示するお知らせ（URL には既知のキーだけを載せる） */
-const NOTICES = {
-	saved: "保存しました。",
-	deleted: "削除しました。",
-	archived: "アーカイブしました。",
-	unarchived: "アーカイブを解除しました。",
-} as const;
-
-const CONFLICT_MESSAGE =
-	"開いている間に他の人が更新しました。最新の内容を表示しています。もう一度入力してから保存してください。";
-
-function noticeOf(c: Ctx): string | undefined {
-	const key = c.req.query("notice");
-	return key && key in NOTICES ? NOTICES[key as keyof typeof NOTICES] : undefined;
-}
-
-async function formValues(c: Ctx): Promise<FormValues> {
-	const body = await c.req.parseBody();
-	const values: FormValues = {};
-	for (const [key, value] of Object.entries(body)) {
-		if (typeof value === "string") values[key] = value;
-	}
-	return values;
-}
-
-const isHtmx = (c: Ctx) => c.req.header("HX-Request") === "true";
-const ledger = (c: Ctx) => ledgerFor(c.env, c.get("kouden").id);
-const basePath = (c: Ctx) => `/k/${c.get("kouden").id}`;
-
-function errorResponse(c: Ctx, status: 403 | 404) {
-	if (isHtmx(c)) return c.body(null, status);
-	return c.html(
-		<Layout
-			title={status === 403 ? "この操作はできません" : "ページが見つかりません"}
-			user={c.get("user")}
-		>
-			<ErrorPage status={status} />
-		</Layout>,
-		status,
-	);
-}
-
-/** 画面で個別に扱わない失敗（権限なし・見つからない） */
-function commonFailure(c: Ctx, error: LedgerError) {
-	return errorResponse(c, error.code === "forbidden" ? 403 : 404);
-}
-
-/** DO の読み取り結果を取り出す。失敗ならエラー画面のレスポンスを返す */
-function unwrap<T>(
-	c: Ctx,
-	result: LedgerResult<T>,
-): { value: T } | { response: Response | Promise<Response> } {
-	return result.ok ? { value: result.value } : { response: commonFailure(c, result.error) };
-}
-
-function koudenPage(
-	c: Ctx,
-	title: string,
-	tab: KoudenTab,
-	body: Child,
-	options: { status?: 200 | 409 | 422; wide?: boolean } = {},
-) {
-	const kouden = c.get("kouden");
-	return c.html(
-		<Layout title={`${title} - ${kouden.title}`} user={c.get("user")}>
-			<KoudenShell kouden={kouden} tab={tab} wide={options.wide}>
-				{body}
-			</KoudenShell>
-		</Layout>,
-		options.status ?? 200,
-	);
-}
-
-function limitMessage(c: Ctx, limit: number): string {
-	return c.get("kouden").memberRole === "owner"
-		? `無料版で登録できる ${limit} 件に達しました。有料版（購入）の受付は準備中です。`
-		: `無料版で登録できる ${limit} 件に達しました。オーナーに有料版の購入を依頼してください。`;
-}
+import {
+	basePath,
+	commonFailure,
+	CONFLICT_MESSAGE,
+	type Ctx,
+	errorResponse,
+	formValues,
+	isHtmx,
+	koudenPage,
+	ledger,
+	limitMessage,
+	noticeOf,
+	unwrap,
+} from "./helpers.tsx";
+import { registerMemberRoutes, setStatusAndNotify } from "./members.tsx";
 
 // ---- 香典帳の作成 -------------------------------------------------------------
 
@@ -164,6 +97,11 @@ k.use(requireUser, koudenAccess, writeRateLimit);
 k.get("/", async (c) => {
 	const r = unwrap(c, await ledger(c).overview(c.get("caller")));
 	if ("response" in r) return r.response;
+	const page = (
+		<KoudenTopPage kouden={c.get("kouden")} caller={c.get("caller")} overview={r.value} />
+	);
+	// 他の人の変更を受けて取り直す場合（ledger-live.js）は部分だけを返す
+	if (c.req.query("partial") === "overview") return c.html(page);
 	return koudenPage(
 		c,
 		"トップ",
@@ -320,6 +258,11 @@ k.get("/persons/candidates", async (c) => {
 k.get("/gifts", async (c) => {
 	const caller = c.get("caller");
 	const filter = parseGiftFilter(c.req.query());
+	if (c.req.query("partial") === "results") {
+		const gifts = await ledger(c).listGifts(caller, filter);
+		if (!gifts.ok) return commonFailure(c, gifts.error);
+		return c.html(<GiftResults kouden={c.get("kouden")} gifts={gifts.value} filter={filter} />);
+	}
 	const [gifts, events, relationships] = await Promise.all([
 		ledger(c).listGifts(caller, filter),
 		ledger(c).listEvents(caller),
@@ -351,18 +294,22 @@ type GiftPageOptions = {
 	contributorValues?: FormValues;
 	contributorErrors?: FieldErrors;
 	contributorCandidates?: PersonView[];
+	/** 競合した保存の、自分の入力（最新の内容と並べて表示し、上書きできるようにする） */
+	conflictMine?: FormValues;
 	status?: 200 | 409 | 422;
 };
 
 /** いただきものの画面を描画する。values を省略すると保存済みの内容をフォームに入れる */
 async function renderGift(c: Ctx, giftId: string, options: GiftPageOptions = {}) {
 	const caller = c.get("caller");
-	const [gift, events] = await Promise.all([
+	const [gift, events, history] = await Promise.all([
 		ledger(c).getGift(caller, giftId),
 		ledger(c).listEvents(caller),
+		ledger(c).history(caller, "gift", giftId),
 	]);
 	if (!gift.ok) return commonFailure(c, gift.error);
 	if (!events.ok) return commonFailure(c, events.error);
+	const latest = giftFormValues(gift.value);
 	return koudenPage(
 		c,
 		"いただきもの",
@@ -372,13 +319,15 @@ async function renderGift(c: Ctx, giftId: string, options: GiftPageOptions = {})
 			gift={gift.value}
 			events={events.value}
 			canWrite={can(caller.role, "ledger.write")}
-			values={options.values ?? giftFormValues(gift.value)}
+			values={options.conflictMine ?? options.values ?? latest}
 			errors={options.errors}
 			message={options.message}
 			notice={noticeOf(c)}
 			contributorValues={options.contributorValues}
 			contributorErrors={options.contributorErrors}
 			contributorCandidates={options.contributorCandidates}
+			conflictLatest={options.conflictMine ? latest : undefined}
+			history={history.ok ? history.value : undefined}
 		/>,
 		{ status: options.status },
 	);
@@ -390,11 +339,17 @@ async function afterGiftWrite(
 	giftId: string,
 	result: LedgerResult<unknown>,
 	onInvalid: (field: string, message: string) => GiftPageOptions,
+	conflictMine?: FormValues,
 ) {
 	if (result.ok) return c.redirect(`${basePath(c)}/gifts/${giftId}?notice=saved`, 303);
 	const { error } = result;
-	if (error.code === "conflict")
-		return renderGift(c, giftId, { message: CONFLICT_MESSAGE, status: 409 });
+	if (error.code === "conflict") {
+		return renderGift(
+			c,
+			giftId,
+			conflictMine ? { conflictMine, status: 409 } : { message: CONFLICT_MESSAGE, status: 409 },
+		);
+	}
 	if (error.code === "invalid")
 		return renderGift(c, giftId, { ...onInvalid(error.field, error.message), status: 422 });
 	return commonFailure(c, error);
@@ -413,10 +368,13 @@ k.post("/gifts/:giftId", async (c) => {
 		return renderGift(c, giftId, { values, errors, status: 422 });
 	}
 	const result = await ledger(c).updateGift(c.get("caller"), giftId, version.data, parsed.data);
-	return afterGiftWrite(c, giftId, result, (field, message) => ({
+	return afterGiftWrite(
+		c,
+		giftId,
+		result,
+		(field, message) => ({ values, errors: { [field]: message } }),
 		values,
-		errors: { [field]: message },
-	}));
+	);
 });
 
 k.post("/gifts/:giftId/delete", async (c) => {
@@ -502,6 +460,16 @@ k.get("/persons", async (c) => {
 	const q = c.req.query("q")?.trim() || undefined;
 	const persons = await ledger(c).listPersons(caller, q ? { q } : {});
 	if (!persons.ok) return commonFailure(c, persons.error);
+	if (c.req.query("partial") === "table") {
+		return c.html(
+			<PersonsTable
+				kouden={c.get("kouden")}
+				persons={persons.value}
+				canWrite={can(caller.role, "ledger.write")}
+				q={q}
+			/>,
+		);
+	}
 	return koudenPage(
 		c,
 		"差出人",
@@ -558,16 +526,20 @@ async function renderPerson(
 		values?: FormValues;
 		errors?: FieldErrors;
 		message?: string;
+		/** 競合した保存の、自分の入力 */
+		conflictMine?: FormValues;
 		status?: 200 | 409 | 422;
 	} = {},
 ) {
 	const caller = c.get("caller");
-	const [person, relationships] = await Promise.all([
+	const [person, relationships, history] = await Promise.all([
 		ledger(c).getPerson(caller, personId),
 		ledger(c).listRelationships(caller),
+		ledger(c).history(caller, "person", personId),
 	]);
 	if (!person.ok) return commonFailure(c, person.error);
 	if (!relationships.ok) return commonFailure(c, relationships.error);
+	const latest = personFormValues(person.value);
 	return koudenPage(
 		c,
 		personLabel(person.value),
@@ -577,10 +549,12 @@ async function renderPerson(
 			person={person.value}
 			relationships={relationships.value}
 			canWrite={can(caller.role, "ledger.write")}
-			values={options.values ?? personFormValues(person.value)}
+			values={options.conflictMine ?? options.values ?? latest}
 			errors={options.errors}
 			message={options.message}
 			notice={noticeOf(c)}
+			conflictLatest={options.conflictMine ? latest : undefined}
+			history={history.ok ? history.value : undefined}
 		/>,
 		{ status: options.status },
 	);
@@ -600,6 +574,7 @@ k.post("/persons/:personId", async (c) => {
 		errors: FieldErrors,
 		message: string | undefined,
 		status: 409 | 422,
+		conflict = false,
 	) => {
 		const ctx = await personRowContext(c, personId, q);
 		if (!ctx) return errorResponse(c, 404);
@@ -613,6 +588,7 @@ k.post("/persons/:personId", async (c) => {
 				message={message}
 				q={q}
 				hasNext={ctx.next !== undefined}
+				conflictLatest={conflict ? personFormValues(ctx.person) : undefined}
 			/>,
 			status,
 		);
@@ -634,9 +610,10 @@ k.post("/persons/:personId", async (c) => {
 	if (!result.ok) {
 		const { error } = result;
 		if (error.code === "conflict") {
+			// 自分の入力と最新の version でフォームを出し、違いを示す（そのまま保存すれば上書き）
 			return inline
-				? editRow(personFormValues, {}, CONFLICT_MESSAGE, 409)
-				: renderPerson(c, personId, { message: CONFLICT_MESSAGE, status: 409 });
+				? editRow(values, {}, undefined, 409, true)
+				: renderPerson(c, personId, { conflictMine: values, status: 409 });
 		}
 		if (error.code === "invalid") {
 			const errors = { [error.field]: error.message };
@@ -847,7 +824,7 @@ k.post("/archive", async (c) => {
 	const kouden = c.get("kouden");
 	if (!can(kouden.memberRole, "kouden.manage")) return errorResponse(c, 403);
 	const archived = (await formValues(c)).archived === "1";
-	await setKoudenStatus(c.env.DB, kouden.id, archived ? "archived" : "active", c.get("now"));
+	await setStatusAndNotify(c, archived);
 	return c.redirect(
 		`${basePath(c)}/settings?notice=${archived ? "archived" : "unarchived"}#archive`,
 		303,
@@ -863,6 +840,40 @@ k.post("/delete", async (c) => {
 	}
 	await deleteKouden(c.env, kouden.id, c.get("now"), (id) => ledgerFor(c.env, id).deleteAll());
 	return c.redirect("/?notice=deleted", 303);
+});
+
+registerMemberRoutes(k);
+
+// ---- リアルタイム（04 §5） ------------------------------------------------------
+
+/** WebSocket の接続。権限を確認してから、呼び出し元を付けて DO へ渡す */
+k.get("/ws", async (c) => {
+	if (c.req.header("Upgrade") !== "websocket") return c.text("expected websocket", 426);
+	// 他のサイトからの WebSocket 接続（Cross-Site WebSocket Hijacking）を拒否する
+	if (c.req.header("Origin") !== c.env.APP_ORIGIN) return c.text("forbidden", 403);
+	const res = await ledger(c).fetch(
+		new Request(c.req.url, {
+			headers: {
+				Upgrade: "websocket",
+				[CALLER_HEADER]: encodeURIComponent(JSON.stringify(c.get("caller"))),
+			},
+		}),
+	);
+	if (!res.webSocket) return c.body(null, res.status === 404 ? 404 : 500);
+	// DO の応答のヘッダーは変更できないので、作り直す（セキュリティヘッダーを付けられるように）
+	return new Response(null, { status: 101, webSocket: res.webSocket });
+});
+
+/** 再接続時に、取りこぼした変更を返す */
+k.get("/changes", async (c) => {
+	const since = Number(c.req.query("since"));
+	const result = await ledger(c).changesSince(
+		c.get("caller"),
+		Number.isInteger(since) && since >= 0 ? since : 0,
+	);
+	if (!result.ok)
+		return c.json({ error: result.error.code }, result.error.code === "forbidden" ? 403 : 404);
+	return c.json(result.value);
 });
 
 koudenRoutes.route("/k/:koudenId", k);

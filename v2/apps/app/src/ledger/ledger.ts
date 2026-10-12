@@ -21,20 +21,34 @@ import {
 } from "@kouden/domain";
 import { DurableObject } from "cloudflare:workers";
 import { log } from "../lib/logger.ts";
+import { parseDiff } from "./diff.ts";
 import { MIGRATIONS, migrate } from "./schema.ts";
-import type {
-	Caller,
-	ContributorView,
-	GiftView,
-	LedgerError,
-	LedgerEvent,
-	LedgerRelationship,
-	LedgerResult,
-	Overview,
-	PersonDetail,
-	PersonView,
-	ReceptionResult,
+import {
+	CALLER_HEADER,
+	type Caller,
+	type ChangeNotice,
+	type History,
+	type ContributorView,
+	type GiftView,
+	type LedgerError,
+	type LedgerEvent,
+	type LedgerRelationship,
+	type LedgerResult,
+	type Overview,
+	type PersonDetail,
+	type PersonView,
+	type ReceptionResult,
 } from "./types.ts";
+
+/** WebSocket ごとに保存する情報（Hibernation 中も保持される） */
+interface Attachment {
+	userId: string;
+	name: string;
+	editing: { entity: string; id: string } | null;
+}
+
+/** 「編集中」として受け付ける対象 */
+const EDITABLE_ENTITIES = new Set(["gift", "person"]);
 
 /** 書き込みから統計の投影（D1 kouden_stats）までの待ち時間（03 §7） */
 export const PROJECTION_DELAY_MS = 5_000;
@@ -65,6 +79,29 @@ function diffOf(before: Row | null, after: Row): Diff {
 }
 
 const orNull = <T>(v: T | undefined): T | null => (v === undefined ? null : v);
+
+const asArray = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
+
+/** 値（または値の配列）のうち文字列を集合に加える */
+function addAll(set: Set<string>, v: unknown): void {
+	for (const x of Array.isArray(v) ? v : [v]) if (typeof x === "string") set.add(x);
+}
+
+function toNotice(row: {
+	seq: number;
+	entity: string;
+	entity_id: string;
+	op: string;
+	actor_user_id: string;
+}): ChangeNotice {
+	return {
+		seq: row.seq,
+		entity: row.entity,
+		id: row.entity_id,
+		op: row.op,
+		actor: row.actor_user_id,
+	};
+}
 
 type GiftRow = {
 	id: string;
@@ -125,6 +162,12 @@ const PERSON_COLUMNS = `p.id, p.name, p.name_kana, p.organization, p.position, p
 export class KoudenLedger extends DurableObject<Env> {
 	/** unknown: まだ確認していない / ready: スキーマ適用済み / deleted: 香典帳が削除済み */
 	private state: "unknown" | "ready" | "deleted" = "unknown";
+
+	constructor(ctx: DurableObjectState, env: Env) {
+		super(ctx, env);
+		// 接続の生存確認（ブラウザが定期的に ping を送る）。DO を起こさずに応答する
+		ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
+	}
 
 	private get sql(): SqlStorage {
 		return this.ctx.storage.sql;
@@ -754,6 +797,261 @@ export class KoudenLedger extends DurableObject<Env> {
 		});
 	}
 
+	// ---- 変更履歴（E8-4） -------------------------------------------------------
+
+	async history(
+		caller: Caller,
+		entity: "gift" | "person",
+		entityId: string,
+	): Promise<LedgerResult<History>> {
+		return this.read(caller, () => {
+			const rows = this.all<{
+				seq: number;
+				at: string;
+				actor_name: string;
+				op: string;
+				diff: string | null;
+			}>(
+				`SELECT seq, at, actor_name, op, diff FROM change_log
+          WHERE entity = ? AND entity_id = ? ORDER BY seq DESC LIMIT 200`,
+				entity,
+				entityId,
+			);
+			const entries = rows.map((r) => ({
+				seq: r.seq,
+				at: r.at,
+				actorName: r.actor_name,
+				op: r.op,
+				diff: r.diff,
+			}));
+
+			// 差分に出てくる ID を表示名に変える
+			const ids = {
+				event: new Set<string>(),
+				relationship: new Set<string>(),
+				person: new Set<string>(),
+			};
+			for (const e of entries) {
+				for (const [key, [before, after]] of Object.entries(parseDiff(e.diff))) {
+					if (key === "event_id") addAll(ids.event, [before, after]);
+					else if (key === "relationship_id") addAll(ids.relationship, [before, after]);
+					else if (key === "contributors")
+						addAll(ids.person, [...asArray(before), ...asArray(after)]);
+					else if (key.startsWith("contributor:")) ids.person.add(key.slice("contributor:".length));
+				}
+			}
+			const names: Record<string, string> = {};
+			const lookup = (table: string, set: Set<string>, label: (r: Row) => string) => {
+				const list = [...set];
+				for (let i = 0; i < list.length; i += 100) {
+					const chunk = list.slice(i, i + 100);
+					for (const r of this.all<Row & { id: string }>(
+						`SELECT * FROM ${table} WHERE id IN (${chunk.map(() => "?").join(",")})`,
+						...chunk,
+					)) {
+						names[r.id] = label(r);
+					}
+				}
+			};
+			lookup("events", ids.event, (r) => String(r.name));
+			lookup("relationships", ids.relationship, (r) => String(r.name));
+			lookup("persons", ids.person, (r) =>
+				personLabel({
+					name: (r.name as string | null) ?? null,
+					organization: (r.organization as string | null) ?? null,
+				}),
+			);
+			return { entries, names };
+		});
+	}
+
+	// ---- リアルタイム（04 §5） ---------------------------------------------------
+
+	/** WebSocket の接続（Worker が権限を確認し、呼び出し元をヘッダーで渡す） */
+	override async fetch(request: Request): Promise<Response> {
+		if (request.headers.get("Upgrade") !== "websocket") {
+			return new Response("expected websocket", { status: 426 });
+		}
+		// ヘッダーは ASCII に限られるので、Worker が URL エンコードして渡す
+		const caller = JSON.parse(
+			decodeURIComponent(request.headers.get(CALLER_HEADER) ?? "null"),
+		) as Caller | null;
+		if (!caller) return new Response("missing caller", { status: 400 });
+		try {
+			this.prepare(caller);
+		} catch (err) {
+			if (err instanceof LedgerFailure) return new Response("not found", { status: 404 });
+			throw err;
+		}
+		const pair = new WebSocketPair();
+		const [client, server] = [pair[0], pair[1]];
+		this.ctx.acceptWebSocket(server, [caller.userId]);
+		const attachment: Attachment = {
+			userId: caller.userId,
+			name: caller.displayName,
+			editing: null,
+		};
+		server.serializeAttachment(attachment);
+		server.send(JSON.stringify({ type: "hello", seq: this.lastSeq() }));
+		this.broadcastPresence();
+		return new Response(null, { status: 101, webSocket: client });
+	}
+
+	override async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
+		if (typeof message !== "string" || message.length > 500) return;
+		let data: unknown;
+		try {
+			data = JSON.parse(message);
+		} catch {
+			return;
+		}
+		if (!data || typeof data !== "object" || (data as { type?: unknown }).type !== "editing")
+			return;
+		const { entity, id } = data as { entity?: unknown; id?: unknown };
+		const editing =
+			typeof entity === "string" &&
+			EDITABLE_ENTITIES.has(entity) &&
+			typeof id === "string" &&
+			id.length <= 64
+				? { entity, id }
+				: null;
+		const attachment = ws.deserializeAttachment() as Attachment;
+		attachment.editing = editing;
+		ws.serializeAttachment(attachment);
+		this.broadcastPresence();
+	}
+
+	override async webSocketClose(ws: WebSocket): Promise<void> {
+		this.broadcastPresence(ws);
+	}
+
+	override async webSocketError(ws: WebSocket): Promise<void> {
+		this.broadcastPresence(ws);
+	}
+
+	/** 取りこぼした変更（再接続時）。多すぎる場合は reset を返し、画面側で全体を取り直す */
+	async changesSince(
+		caller: Caller,
+		seq: number,
+	): Promise<LedgerResult<{ reset: boolean; changes: ChangeNotice[] }>> {
+		return this.read(caller, () => {
+			const rows = this.all<{
+				seq: number;
+				entity: string;
+				entity_id: string;
+				op: string;
+				actor_user_id: string;
+			}>(
+				"SELECT seq, entity, entity_id, op, actor_user_id FROM change_log WHERE seq > ? ORDER BY seq LIMIT 201",
+				seq,
+			);
+			if (rows.length > 200) return { reset: true, changes: [] };
+			return { reset: false, changes: rows.map(toNotice) };
+		});
+	}
+
+	/**
+	 * D1 側で変わったメンバーシップ・香典帳の状態を記録し、接続中の画面に知らせる（04 §5 権限の変更と接続の失効）。
+	 * 権限の確認は Worker が済ませている。revoke を指定したユーザーの接続は閉じる。
+	 */
+	async recordExternalChange(
+		actor: Caller,
+		change: {
+			entity: "member" | "kouden";
+			entityId: string;
+			op: "create" | "update" | "delete";
+			diff: Diff | null;
+		},
+		options: { revokeUserId?: string } = {},
+	): Promise<void> {
+		try {
+			this.prepare(actor);
+		} catch (err) {
+			if (err instanceof LedgerFailure) return;
+			throw err;
+		}
+		const before = this.lastSeq();
+		this.ctx.storage.transactionSync(() => {
+			this.log(
+				actor,
+				new Date().toISOString(),
+				change.entity,
+				change.entityId,
+				change.op,
+				change.diff,
+			);
+		});
+		if (options.revokeUserId) {
+			for (const ws of this.ctx.getWebSockets(options.revokeUserId)) this.revokeSocket(ws);
+		}
+		this.broadcastChanges(before);
+		this.broadcastPresence();
+	}
+
+	private revokeSocket(ws: WebSocket): void {
+		try {
+			ws.send(JSON.stringify({ type: "revoked" }));
+			ws.close(4001, "revoked");
+		} catch {
+			// すでに閉じている
+		}
+	}
+
+	private openSockets(exclude?: WebSocket): WebSocket[] {
+		return this.ctx
+			.getWebSockets()
+			.filter((ws) => ws !== exclude && ws.readyState === WebSocket.OPEN);
+	}
+
+	private send(sockets: WebSocket[], message: unknown): void {
+		const text = JSON.stringify(message);
+		for (const ws of sockets) {
+			try {
+				ws.send(text);
+			} catch {
+				// 切断済みの接続は webSocketClose で片付く
+			}
+		}
+	}
+
+	/** seq より後の変更ログを、接続中の全員に通知する */
+	private broadcastChanges(after: number): void {
+		const sockets = this.openSockets();
+		if (sockets.length === 0) return;
+		const rows = this.all<{
+			seq: number;
+			entity: string;
+			entity_id: string;
+			op: string;
+			actor_user_id: string;
+		}>(
+			"SELECT seq, entity, entity_id, op, actor_user_id FROM change_log WHERE seq > ? ORDER BY seq LIMIT 50",
+			after,
+		);
+		for (const row of rows) this.send(sockets, { type: "changed", ...toNotice(row) });
+	}
+
+	/** 閲覧中のメンバーと編集中の対象（同じ人の複数の接続はまとめる） */
+	private broadcastPresence(exclude?: WebSocket): void {
+		const sockets = this.openSockets(exclude);
+		if (sockets.length === 0) return;
+		const users = new Map<string, Attachment>();
+		for (const ws of sockets) {
+			const a = ws.deserializeAttachment() as Attachment | null;
+			if (!a) continue;
+			const seen = users.get(a.userId);
+			if (!seen || (!seen.editing && a.editing)) users.set(a.userId, a);
+		}
+		this.send(sockets, {
+			type: "presence",
+			users: [...users.values()].map((a) => ({
+				userId: a.userId,
+				name: a.name,
+				editing: a.editing,
+			})),
+		});
+	}
+
 	// ---- 香典帳の削除・投影 --------------------------------------------------
 
 	/**
@@ -762,6 +1060,7 @@ export class KoudenLedger extends DurableObject<Env> {
 	 * 台帳を作り直さずに not_found を返す。
 	 */
 	async deleteAll(): Promise<void> {
+		for (const ws of this.ctx.getWebSockets()) this.revokeSocket(ws);
 		await this.ctx.storage.deleteAlarm();
 		await this.ctx.storage.deleteAll();
 		this.sql.exec("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)");
@@ -877,10 +1176,11 @@ export class KoudenLedger extends DurableObject<Env> {
 		fn: (now: string) => T,
 	): Promise<LedgerResult<T>> {
 		let value: T;
+		let before = 0;
 		try {
 			this.prepare(caller);
 			if (!can(caller.role, action)) return { ok: false, error: { code: "forbidden" } };
-			const before = this.lastSeq();
+			before = this.lastSeq();
 			value = this.ctx.storage.transactionSync(() => {
 				const result = fn(new Date().toISOString());
 				if (this.lastSeq() === before) throw new Error("ledger write without change_log");
@@ -890,6 +1190,7 @@ export class KoudenLedger extends DurableObject<Env> {
 			if (err instanceof LedgerFailure) return { ok: false, error: err.error };
 			throw err;
 		}
+		this.broadcastChanges(before);
 		if ((await this.ctx.storage.getAlarm()) === null) {
 			await this.ctx.storage.setAlarm(Date.now() + PROJECTION_DELAY_MS);
 		}

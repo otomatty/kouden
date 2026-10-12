@@ -1,7 +1,7 @@
 import { type FieldErrors, formatYen, GIFT_KINDS, personLabel } from "@kouden/domain";
 import type { FC } from "hono/jsx";
 import type { KoudenContext } from "../../kouden/store.ts";
-import type { LedgerRelationship, PersonDetail, PersonView } from "../../ledger/types.ts";
+import type { History, LedgerRelationship, PersonDetail, PersonView } from "../../ledger/types.ts";
 import {
 	Field,
 	FormAlert,
@@ -13,8 +13,29 @@ import {
 } from "../components/form.tsx";
 import { yen } from "../format.ts";
 import { ui } from "../ui.ts";
+import { LiveRegion } from "./shell.tsx";
+import { type ConflictField, ConflictDiff } from "../components/conflict.tsx";
+import { HistoryList } from "../components/history.tsx";
 
 const COLUMNS = 8;
+
+function personConflictFields(relationships: LedgerRelationship[]): ConflictField[] {
+	return [
+		{ name: "name", label: "氏名" },
+		{ name: "nameKana", label: "ふりがな" },
+		{ name: "organization", label: "団体名" },
+		{ name: "position", label: "役職" },
+		{
+			name: "relationshipId",
+			label: "関係",
+			options: Object.fromEntries(relationships.map((r) => [r.id, r.name])),
+		},
+		{ name: "postalCode", label: "郵便番号" },
+		{ name: "address", label: "住所" },
+		{ name: "phone", label: "電話番号" },
+		{ name: "notes", label: "備考" },
+	];
+}
 
 export function personFormValues(p: PersonView): FormValues {
 	return {
@@ -68,49 +89,66 @@ export const PersonsPage: FC<{
 					「編集」で行を開き、Enter で保存すると次の人の編集に進みます。
 				</p>
 			)}
-			<p class="text-sm text-muted" role="status">
-				{persons.length} 人
-			</p>
-			<div class="overflow-x-auto rounded-xl border border-line bg-surface">
-				<table class={ui.table}>
-					<thead>
-						<tr>
-							<th class={ui.th} scope="col">
-								氏名
-							</th>
-							<th class={ui.th} scope="col">
-								団体・役職
-							</th>
-							<th class={ui.th} scope="col">
-								関係
-							</th>
-							<th class={ui.th} scope="col">
-								住所
-							</th>
-							<th class={ui.th} scope="col">
-								電話
-							</th>
-							<th class={`${ui.th} text-right`} scope="col">
-								件数
-							</th>
-							<th class={`${ui.th} text-right`} scope="col">
-								香典
-							</th>
-							<th class={ui.th} scope="col">
-								<span class="sr-only">操作</span>
-							</th>
-						</tr>
-					</thead>
-					<tbody>
-						{persons.map((p) => (
-							<PersonRow kouden={kouden} person={p} canWrite={canWrite} q={q} />
-						))}
-					</tbody>
-				</table>
-			</div>
+			<PersonsTable kouden={kouden} persons={persons} canWrite={canWrite} q={q} />
 		</div>
 	);
 };
+
+/** 一覧の表。他の人の変更を受けると取り直す（行を編集中なら取り直さずにお知らせを出す） */
+export const PersonsTable: FC<{
+	kouden: KoudenContext;
+	persons: PersonView[];
+	canWrite: boolean;
+	q: string | undefined;
+}> = ({ kouden, persons, canWrite, q }) => (
+	<LiveRegion
+		id="person-table"
+		entities={["person", "gift", "relationship"]}
+		url={`/k/${kouden.id}/persons?partial=table${q ? `&q=${encodeURIComponent(q)}` : ""}`}
+		class="space-y-3"
+	>
+		<p class="text-sm text-muted" role="status">
+			{persons.length} 人
+		</p>
+		<div class="overflow-x-auto rounded-xl border border-line bg-surface">
+			<table class={ui.table}>
+				<thead>
+					<tr>
+						<th class={ui.th} scope="col">
+							氏名
+						</th>
+						<th class={ui.th} scope="col">
+							団体・役職
+						</th>
+						<th class={ui.th} scope="col">
+							関係
+						</th>
+						<th class={ui.th} scope="col">
+							住所
+						</th>
+						<th class={ui.th} scope="col">
+							電話
+						</th>
+						<th class={`${ui.th} text-right`} scope="col">
+							件数
+						</th>
+						<th class={`${ui.th} text-right`} scope="col">
+							香典
+						</th>
+						<th class={ui.th} scope="col">
+							<span class="sr-only">操作</span>
+						</th>
+					</tr>
+				</thead>
+				<tbody>
+					{persons.map((p) => (
+						<PersonRow kouden={kouden} person={p} canWrite={canWrite} q={q} />
+					))}
+				</tbody>
+			</table>
+		</div>
+	</LiveRegion>
+);
 
 export const PersonRow: FC<{
 	kouden: KoudenContext;
@@ -129,6 +167,7 @@ export const PersonRow: FC<{
 					{p.name ?? p.organization}
 				</a>
 				{p.nameKana && <div class="text-xs text-muted">{p.nameKana}</div>}
+				<span data-editing-target={`person:${p.id}`} class="block text-xs text-danger"></span>
 			</td>
 			<td class={ui.td}>
 				{p.name ? p.organization : ""}
@@ -171,7 +210,19 @@ export const PersonEditRow: FC<{
 	q: string | undefined;
 	hasNext: boolean;
 	oob?: boolean;
-}> = ({ kouden, person, relationships, values, errors = {}, message, q, hasNext, oob }) => {
+	conflictLatest?: FormValues | undefined;
+}> = ({
+	kouden,
+	person,
+	relationships,
+	values,
+	errors = {},
+	message,
+	q,
+	hasNext,
+	oob,
+	conflictLatest,
+}) => {
 	const base = `/k/${kouden.id}`;
 	const prefix = `p-${person.id}`;
 	const query = q ? `?q=${encodeURIComponent(q)}` : "";
@@ -195,10 +246,20 @@ export const PersonEditRow: FC<{
 					hx-swap="outerHTML"
 					class="space-y-3"
 					novalidate
+					data-editing-entity="person"
+					data-editing-id={person.id}
 				>
 					<Hidden name="version" value={person.version} />
 					<Hidden name="mode" value="row" />
 					{q && <Hidden name="q" value={q} />}
+					{conflictLatest && (
+						<ConflictDiff
+							mine={values}
+							latest={conflictLatest}
+							discardHref={`${base}/persons${query}`}
+							fields={personConflictFields(relationships)}
+						/>
+					)}
 					<FormAlert errors={errors} message={message} />
 					<div class="grid gap-3 sm:grid-cols-4">
 						{field("name", "氏名", { autofocus: true })}
@@ -272,7 +333,20 @@ export const PersonPage: FC<{
 	errors?: FieldErrors;
 	message?: string | undefined;
 	notice?: string | undefined;
-}> = ({ kouden, person, relationships, canWrite, values, errors = {}, message, notice }) => {
+	conflictLatest?: FormValues | undefined;
+	history?: History | undefined;
+}> = ({
+	kouden,
+	person,
+	relationships,
+	canWrite,
+	values,
+	errors = {},
+	message,
+	notice,
+	conflictLatest,
+	history,
+}) => {
 	const base = `/k/${kouden.id}`;
 	const text = (
 		name: string,
@@ -285,7 +359,16 @@ export const PersonPage: FC<{
 	);
 	return (
 		<div class="mx-auto max-w-3xl space-y-6">
-			<h2 class={ui.h2}>{personLabel(person)}</h2>
+			<div class="flex flex-wrap items-baseline gap-3">
+				<h2 class={ui.h2}>{personLabel(person)}</h2>
+				<span data-editing-target={`person:${person.id}`} class="text-sm text-danger"></span>
+			</div>
+			<p data-live-watch={`person:${person.id}`} hidden role="status" class={ui.alert}>
+				この差出人は他の人が更新しました。{" "}
+				<a href="" class={ui.link}>
+					最新の内容を表示
+				</a>
+			</p>
 			{notice && (
 				<p role="status" class={ui.notice}>
 					{notice}
@@ -297,8 +380,18 @@ export const PersonPage: FC<{
 					action={`${base}/persons/${person.id}`}
 					class={`${ui.card} space-y-4`}
 					novalidate
+					data-editing-entity="person"
+					data-editing-id={person.id}
 				>
 					<Hidden name="version" value={person.version} />
+					{conflictLatest && (
+						<ConflictDiff
+							mine={values}
+							latest={conflictLatest}
+							discardHref={`${base}/persons/${person.id}`}
+							fields={personConflictFields(relationships)}
+						/>
+					)}
 					<FormAlert errors={errors} message={message} />
 					<div class="grid gap-4 sm:grid-cols-2">
 						{text("name", "氏名")}
@@ -373,6 +466,8 @@ export const PersonPage: FC<{
 					))}
 				</ul>
 			</section>
+
+			{history && <HistoryList history={history} />}
 			<p>
 				<a href={`${base}/persons`} class={ui.link}>
 					← 差出人一覧へ

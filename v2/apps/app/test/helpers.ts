@@ -88,6 +88,13 @@ export const HANAKO: GoogleClaims = {
 	name: "佐藤 花子",
 };
 
+export const JIRO: GoogleClaims = {
+	sub: "google-sub-jiro",
+	email: "jiro.suzuki@gmail.com",
+	emailVerified: true,
+	name: "鈴木 次郎",
+};
+
 /** フォーム送信（application/x-www-form-urlencoded）。htmx からの要求を模す場合は htmx: true */
 export function formPost(
 	fields: Record<string, string>,

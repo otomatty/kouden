@@ -6,6 +6,7 @@ import { requestContext } from "./middleware/request-context.ts";
 import { csrfProtection, securityHeaders } from "./middleware/security.ts";
 import { session } from "./middleware/session.ts";
 import { koudenRoutes } from "./routes/koudens.tsx";
+import { inviteRoutes } from "./routes/members.tsx";
 import { pageRoutes } from "./routes/pages.tsx";
 import type { AppDeps, AppEnv } from "./types.ts";
 import { Layout } from "./views/layout.tsx";
@@ -23,6 +24,7 @@ export function createApp(deps: AppDeps = {}) {
 	app.route("/", authRoutes(deps));
 	app.route("/", pageRoutes);
 	app.route("/", koudenRoutes);
+	app.route("/", inviteRoutes);
 
 	app.notFound((c) =>
 		c.html(
