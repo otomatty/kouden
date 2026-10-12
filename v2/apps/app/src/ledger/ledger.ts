@@ -2473,16 +2473,24 @@ export class KoudenLedger extends DurableObject<Env> {
 		);
 	}
 
-	/** 未対応の香典返しの数: 香典をいただいた差出人のうち、香典返しがないか状況が「未対応」の人 */
+	/**
+	 * 未対応の香典返しの数: いただいた額（連名は按分）が 0 円より多い差出人のうち、香典返しがないか状況が「未対応」の人。
+	 * 一括提案と同じ条件にする（連名で負担額が 0 円の人は数えない）
+	 */
 	private pendingReturnCount(): number {
-		return this.scalar(
-			`SELECT count(DISTINCT gc.person_id) AS n
-         FROM gift_contributors gc
-         JOIN gifts g ON g.id = gc.gift_id AND g.deleted_at IS NULL AND g.kind = 'koden'
-         JOIN persons p ON p.id = gc.person_id AND p.deleted_at IS NULL
-         LEFT JOIN returns r ON r.person_id = gc.person_id
-        WHERE r.id IS NULL OR r.status = 'pending'`,
+		const totals = this.personTotals();
+		const statuses = new Map(
+			this.all<{ person_id: string; status: string }>("SELECT person_id, status FROM returns").map(
+				(r) => [r.person_id, r.status],
+			),
 		);
+		return this.all<{ id: string }>("SELECT id FROM persons WHERE deleted_at IS NULL").filter(
+			(p) => {
+				if ((totals.get(p.id)?.kodenTotal ?? 0) <= 0) return false;
+				const status = statuses.get(p.id);
+				return status === undefined || status === "pending";
+			},
+		).length;
 	}
 
 	/**

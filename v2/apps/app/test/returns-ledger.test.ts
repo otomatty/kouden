@@ -379,6 +379,35 @@ describe("期限のお知らせ（E6-5）", () => {
 		expect(stats).toEqual({ return_pending: 2 });
 	});
 
+	it("連名で負担額が 0 円の人は、未対応の件数に数えない", async () => {
+		const ctx = await withGifts();
+		await seedD1(ctx.caller.koudenId, [{ id: "owner-1", role: "owner" }]);
+		const board = unwrap(await ctx.ledger.returnsBoard(ctx.caller));
+		const gift = unwrap(await ctx.ledger.getPerson(ctx.caller, ctx.taro)).gifts[0]!;
+		// 太郎さんの 10,000 円に、負担額 0 円の連名を加える
+		const v2 = unwrap(
+			await ctx.ledger.addContributor(ctx.caller, gift.id, gift.version, {
+				person: { type: "new", input: { name: "連名 花子", organization: undefined } },
+				shareAmount: null,
+			}),
+		);
+		unwrap(
+			await ctx.ledger.updateContributor(ctx.caller, gift.id, v2.version, ctx.taro, {
+				shareAmount: 10000,
+				makePrimary: false,
+			}),
+		);
+		expect(board.rows).toHaveLength(2);
+		await runDurableObjectAlarm(ctx.ledger);
+		const stats = await env.DB.prepare(
+			"SELECT return_pending FROM kouden_stats WHERE kouden_id = ?",
+		)
+			.bind(ctx.caller.koudenId)
+			.first();
+		// 太郎さん（10,000 円）と次郎さん（5,000 円）。連名 花子さん（0 円）は数えない
+		expect(stats).toEqual({ return_pending: 2 });
+	});
+
 	it("未対応が 0 件なら送らずに送信済みにし、全員への送信に失敗したら再試行させる", async () => {
 		const ctx = await withGifts();
 		await seedD1(ctx.caller.koudenId, [{ id: "owner-1", role: "owner" }]);
