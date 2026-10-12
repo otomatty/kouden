@@ -1,6 +1,6 @@
 import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
-import { cleanupMembership, createInvitation } from "../src/kouden/members.ts";
+import { acceptInvitation, cleanupMembership, createInvitation } from "../src/kouden/members.ts";
 import { maskPath } from "../src/middleware/request-context.ts";
 import { formPost, HANAKO, JIRO, makeApp, TARO } from "./helpers.ts";
 
@@ -102,6 +102,22 @@ describe("招待リンク", () => {
 		expect(joined.filter(Boolean)).toHaveLength(1);
 		const used = await env.DB.prepare("SELECT used_count FROM invitations").first("used_count");
 		expect(used).toBe(1);
+	});
+
+	it("同じ人が同時に受けても（二度押しなど）使用回数は 1 回だけ増える", async () => {
+		const { koudenId, invite } = await setup();
+		await invite({ maxUses: "5" });
+		const hanako = makeApp(HANAKO);
+		await hanako.login();
+		const invitationId =
+			(await env.DB.prepare("SELECT id FROM invitations").first<string>("id")) ?? "";
+		const hanakoId = await userId(HANAKO.email);
+		// 同じ時刻（ミリ秒）に 2 回受けた場合: 2 回目の参加は何もしないので、回数も増やさない
+		const now = new Date();
+		expect(await acceptInvitation(env.DB, invitationId, hanakoId, now)).toBe(true);
+		expect(await acceptInvitation(env.DB, invitationId, hanakoId, now)).toBe(false);
+		expect(await env.DB.prepare("SELECT used_count FROM invitations").first("used_count")).toBe(1);
+		expect(await role(koudenId, HANAKO.email)).toBe("editor");
 	});
 
 	it("無効にした招待・期限切れの招待では参加できない", async () => {

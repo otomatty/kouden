@@ -25,9 +25,10 @@ export const koudenAccess = createMiddleware<AppEnv>(async (c, next) => {
 		plan: kouden.plan,
 		tabId: tabIdOf(c.req.header("X-Tab-Id")),
 	});
-	// 画面を表示するとき、データを読む前の変更ログの位置を記録する。
-	// 表示から WebSocket の接続までの間の変更を、接続時に取り直すために使う（04 §5）
-	if (c.req.method === "GET" && c.req.header("HX-Request") !== "true" && !c.req.query("partial")) {
+	// 画面全体を返しうる要求（htmx 以外の GET・POST）では、データを読む前の変更ログの位置を記録する。
+	// 表示から WebSocket の接続までの間の変更を、接続時に取り直すために使う（04 §5）。
+	// POST が入力エラー・競合で画面を返す場合も、その画面のデータはこの位置より後に読む
+	if (c.req.header("HX-Request") !== "true" && !c.req.query("partial")) {
 		const path = c.req.path;
 		if (!path.endsWith("/ws") && !path.endsWith("/changes")) {
 			const seq = await ledgerFor(c.env, kouden.id).currentSeq(c.get("caller"));

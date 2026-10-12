@@ -249,14 +249,11 @@ export async function acceptInvitation(
          ON CONFLICT DO NOTHING`,
 			)
 			.bind(userId, at, invitationId, at),
+		// 直前の INSERT が実際に 1 行を挿入した場合だけ加算する（changes() は同じ接続の直前の文の件数）。
+		// 同じ人が同時に受けて、もう一方の INSERT が ON CONFLICT で何もしなかった場合は加算しない
 		db
-			.prepare(
-				`UPDATE invitations SET used_count = used_count + 1
-          WHERE id = ? AND EXISTS (
-            SELECT 1 FROM kouden_members m
-             WHERE m.kouden_id = invitations.kouden_id AND m.user_id = ? AND m.joined_at = ?)`,
-			)
-			.bind(invitationId, userId, at),
+			.prepare("UPDATE invitations SET used_count = used_count + 1 WHERE id = ? AND changes() = 1")
+			.bind(invitationId),
 	]);
 	return joined?.meta.changes === 1;
 }

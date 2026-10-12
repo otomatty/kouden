@@ -300,7 +300,7 @@ type GiftPageOptions = {
 	/** 競合した保存の、自分の入力（最新の内容と並べて表示し、上書きできるようにする） */
 	conflictMine?: FormValues;
 	/** 競合した負担額の入力（その行の入力欄に残す） */
-	shareDraft?: { personId: string; shareAmount: string };
+	shareDraft?: { personId: string; shareAmount: string; makePrimary: boolean };
 	status?: 200 | 409 | 422;
 };
 
@@ -459,7 +459,11 @@ k.post("/gifts/:giftId/contributors/:personId", async (c) => {
 		// 競合: 入力した負担額をその行に残す（そのまま更新すれば上書き）
 		{
 			contributorErrors: { _form: CONTRIBUTOR_CONFLICT_MESSAGE },
-			shareDraft: { personId: c.req.param("personId"), shareAmount: values.shareAmount ?? "" },
+			shareDraft: {
+				personId: c.req.param("personId"),
+				shareAmount: values.shareAmount ?? "",
+				makePrimary: values.makePrimary === "1",
+			},
 		},
 	);
 });

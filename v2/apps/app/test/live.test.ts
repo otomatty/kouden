@@ -135,6 +135,16 @@ describe("リアルタイム同期", () => {
 		expect(partial).not.toContain("data-seq");
 	});
 
+	it("POST の結果として返す画面（入力エラーなど）にも表示時の位置を埋め込む", async () => {
+		const { taro, koudenId, eventId } = await setupPair();
+		const res = await taro.request(
+			`/k/${koudenId}/reception`,
+			formPost({ eventId, kind: "koden", name: "a" }),
+		);
+		expect(res.status).toBe(422);
+		expect(await res.text()).toMatch(/data-seq="\d+"/);
+	});
+
 	it("取りこぼした変更を since 以降で返す", async () => {
 		const { taro, koudenId, eventId } = await setupPair();
 		const before = (await (await taro.request(`/k/${koudenId}/changes?since=0`)).json()) as {

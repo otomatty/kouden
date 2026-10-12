@@ -206,7 +206,7 @@ CREATE INDEX idx_admin_audit_created ON admin_audit_logs(created_at);
 | `koudens.owner_user_id` と `kouden_members` の owner 行が一致する | 譲渡・作成は `db.batch()` で両方を同時に更新する |
 | オーナーは 1 冊に 1 人 | 部分ユニーク索引 `uq_members_one_owner` |
 | `plan = 'paid'` ⇔ `status = 'paid'` の購入が 1 件以上ある | 購入・返金処理で同じ batch 内で更新する |
-| 招待の使用回数 ≤ 上限 | 1 つの `db.batch()` で、条件（無効化・期限・`used_count < max_uses`・香典帳が active）を満たす場合だけ `INSERT INTO kouden_members ... SELECT ... WHERE ...` で参加させ、続けて「その参加行がある場合だけ」`used_count` を加算する。D1 の書き込みは直列なので、同時に受けても上限を超えない |
+| 招待の使用回数 ≤ 上限 | 1 つの `db.batch()` で、条件（無効化・期限・`used_count < max_uses`・香典帳が active）を満たす場合だけ `INSERT INTO kouden_members ... SELECT ... WHERE ...` で参加させ、続けて「直前の INSERT が 1 行を挿入した場合だけ」（`changes() = 1`）`used_count` を加算する（同じ人の二度押しで加算が重ならない）。D1 の書き込みは直列なので、同時に受けても上限を超えない |
 | 譲渡の承諾は 1 回だけ・オーナーは 1 人 | 1 つの `db.batch()` で、譲渡を `accepted` にする（`pending` かつ期限内かつ送り主が現オーナーの場合だけ）→ 旧オーナーを編集者に → 新オーナーをオーナーに → `koudens.owner_user_id` を更新。後続の文は「この承諾で確定した」ことを条件にする |
 
 ---

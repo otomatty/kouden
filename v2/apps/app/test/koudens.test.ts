@@ -296,6 +296,25 @@ describe("いただきもの・差出人の編集", () => {
 		expect(await share.text()).toMatch(new RegExp(`id="share-${personId}"[^>]*value="4000"`));
 	});
 
+	it("「代表者にする」も競合後の画面に残す", async () => {
+		const { taro, koudenId, eventId, giftId } = await withGift();
+		const path = `/k/${koudenId}/gifts/${giftId}`;
+		await taro.request(`${path}/contributors`, formPost({ version: "1", name: "高橋 花子" }));
+		const page = await (await taro.request(path)).text();
+		const second =
+			[...page.matchAll(/contributors\/([0-9a-f-]{36})"/g)].map((m) => m[1]).at(-1) ?? "";
+		// 他の人が先に更新（version 2 → 3）
+		await taro.request(path, formPost({ version: "2", eventId, kind: "koden", amount: "5000" }));
+		const res = await taro.request(
+			`${path}/contributors/${second}`,
+			formPost({ version: "2", shareAmount: "", makePrimary: "1" }),
+		);
+		expect(res.status).toBe(409);
+		const html = await res.text();
+		const form = html.slice(html.indexOf(`contributors/${second}"`));
+		expect(form.slice(0, form.indexOf("</form>"))).toMatch(/name="makePrimary"[^>]*checked/);
+	});
+
 	it("負担額・代表者の変更は、変更前後を履歴に残す", async () => {
 		const { taro, koudenId, giftId } = await withGift();
 		const path = `/k/${koudenId}/gifts/${giftId}`;

@@ -47,7 +47,7 @@ export const GiftEditPage: FC<{
 	/** 保存時の競合（E8-3）。values は自分の入力、これは最新の内容 */
 	conflictLatest?: FormValues | undefined;
 	/** 競合した負担額の入力（その行の入力欄に残す） */
-	shareDraft?: { personId: string; shareAmount: string } | undefined;
+	shareDraft?: { personId: string; shareAmount: string; makePrimary: boolean } | undefined;
 	history?: History | undefined;
 }> = ({
 	kouden,
@@ -257,7 +257,13 @@ export const GiftEditPage: FC<{
 										/>
 										{!p.isPrimary && (
 											<label class="flex items-center gap-1 text-sm">
-												<input type="checkbox" name="makePrimary" value="1" class="accent-accent" />
+												<input
+													type="checkbox"
+													name="makePrimary"
+													value="1"
+													checked={shareDraft?.personId === p.personId && shareDraft.makePrimary}
+													class="accent-accent"
+												/>
 												代表者にする
 											</label>
 										)}
