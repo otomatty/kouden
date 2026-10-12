@@ -79,6 +79,23 @@ describe("リアルタイム同期", () => {
 		h.ws.close();
 	});
 
+	it("htmx の要求に付いた画面（タブ）の識別子を通知に含める（そのタブだけが自分の変更を無視する）", async () => {
+		const { taro, hanako, koudenId, eventId } = await setupPair();
+		const t = await connect(taro, koudenId);
+		await t.waitFor((m) => m.type === "hello");
+		await hanako.request(`/k/${koudenId}/reception`, {
+			...formPost({ eventId, kind: "koden", name: "a", amount: "1" }, { htmx: true }),
+			headers: {
+				"content-type": "application/x-www-form-urlencoded",
+				"hx-request": "true",
+				"x-tab-id": "tab-hanako-0001",
+			},
+		});
+		const changed = await t.waitFor((m) => m.type === "changed" && m.entity === "gift");
+		expect(changed.tab).toBe("tab-hanako-0001");
+		t.ws.close();
+	});
+
 	it("除外されたメンバーの接続は revoked で閉じる", async () => {
 		const { taro, hanako, koudenId, hanakoId } = await setupPair();
 		const h = await connect(hanako, koudenId);

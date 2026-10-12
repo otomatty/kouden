@@ -198,6 +198,14 @@ async function withGift() {
 }
 
 describe("いただきもの・差出人の編集", () => {
+	it("変更履歴には登録時の内容も出る", async () => {
+		const { taro, koudenId, giftId } = await withGift();
+		const page = await (await taro.request(`/k/${koudenId}/gifts/${giftId}`)).text();
+		expect(page).toContain("変更履歴（1 件）");
+		expect(page).toContain("金額: ¥3,000");
+		expect(page).toContain("種別: 香典");
+	});
+
 	it("一覧の絞り込み・検索", async () => {
 		const { taro, koudenId, eventId } = await withGift();
 		await taro.request(
@@ -400,6 +408,22 @@ describe("設定・アーカイブ・削除", () => {
 		const res = await taro.request(`/k/${koudenId}/relationships/${relId}/delete`, formPost({}));
 		expect(res.status).toBe(422);
 		expect(await res.text()).toContain("使用中の関係は削除できません");
+	});
+
+	it("設定の行事・関係は部分 HTML で取り直せる", async () => {
+		const { taro, koudenId } = await setup();
+		for (const [partial, id] of [
+			["events", "settings-events"],
+			["relationships", "settings-relationships"],
+		]) {
+			const html = await (
+				await taro.request(`/k/${koudenId}/settings?partial=${partial}`, {
+					headers: { "hx-request": "true" },
+				})
+			).text();
+			expect(html.startsWith(`<div id="${id}"`)).toBe(true);
+			expect(html).not.toContain("<html");
+		}
 	});
 
 	it("アーカイブすると閲覧のみになり、一覧のアーカイブに移る", async () => {

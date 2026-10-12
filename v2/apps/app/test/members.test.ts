@@ -128,6 +128,18 @@ describe("招待リンク", () => {
 		expect(await role(koudenId, JIRO.email)).toBeNull();
 	});
 
+	it("招待の画面は参照元を送らない（失敗した参加の画面も）", async () => {
+		const { invite } = await setup({ maxUses: "1" });
+		const path = await invite();
+		expect((await makeApp(HANAKO).request(path)).headers.get("referrer-policy")).toBe(
+			"no-referrer",
+		);
+		await join(HANAKO, path);
+		const { res } = await join(JIRO, path);
+		expect(res.status).toBe(409);
+		expect(res.headers.get("referrer-policy")).toBe("no-referrer");
+	});
+
 	it("存在しない招待は 404", async () => {
 		const anon = makeApp(HANAKO);
 		expect((await anon.request("/invite/nope")).status).toBe(404);
@@ -292,6 +304,23 @@ describe("オーナー譲渡", () => {
 		await taro.request(`/k/${koudenId}/members/${hanakoId}/remove`, formPost({}));
 		expect(await env.DB.prepare("SELECT status FROM ownership_transfers").first("status")).toBe(
 			"cancelled",
+		);
+	});
+
+	it("別の香典帳の URL からは譲渡を承諾できない", async () => {
+		const { taro, hanako, koudenId, hanakoId } = await withMember();
+		await taro.request(`/k/${koudenId}/transfer`, formPost({ toUserId: hanakoId }));
+		const transferId =
+			(await env.DB.prepare("SELECT id FROM ownership_transfers").first<string>("id")) ?? "";
+		// 花子がオーナーの別の香典帳
+		const other = await hanako.request("/k", formPost({ deceasedName: "別の 故人" }));
+		const otherId = other.headers.get("location")?.split("/").pop() ?? "";
+		const res = await hanako.request(`/k/${otherId}/transfer/accept`, formPost({ transferId }));
+		expect(res.status).toBe(409);
+		expect(await role(koudenId, TARO.email)).toBe("owner");
+		await hanako.request(`/k/${otherId}/transfer/decline`, formPost({ transferId }));
+		expect(await env.DB.prepare("SELECT status FROM ownership_transfers").first("status")).toBe(
+			"pending",
 		);
 	});
 

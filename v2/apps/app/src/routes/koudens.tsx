@@ -39,7 +39,7 @@ import {
 	ReceptionPanel,
 	type ReceptionProps,
 } from "../views/kouden/reception.tsx";
-import { SettingsPage } from "../views/kouden/settings.tsx";
+import { EventsSection, RelationshipsSection, SettingsPage } from "../views/kouden/settings.tsx";
 import { KoudenTopPage } from "../views/kouden/top.tsx";
 import { Layout } from "../views/layout.tsx";
 import { NewKoudenPage } from "../views/pages/dashboard.tsx";
@@ -706,7 +706,28 @@ function firstError(error: { issues: readonly { message: string }[] }): string {
 	return error.issues[0]?.message ?? "入力内容を確認してください";
 }
 
-k.get("/settings", (c) => renderSettings(c));
+k.get("/settings", async (c) => {
+	// 他の人の変更を受けて取り直す場合（ledger-live.js）は、その部分だけを返す
+	const partial = c.req.query("partial");
+	const caller = c.get("caller");
+	if (partial === "events") {
+		const events = await ledger(c).listEvents(caller);
+		if (!events.ok) return commonFailure(c, events.error);
+		return c.html(<EventsSection kouden={c.get("kouden")} caller={caller} events={events.value} />);
+	}
+	if (partial === "relationships") {
+		const relationships = await ledger(c).listRelationships(caller);
+		if (!relationships.ok) return commonFailure(c, relationships.error);
+		return c.html(
+			<RelationshipsSection
+				kouden={c.get("kouden")}
+				caller={caller}
+				relationships={relationships.value}
+			/>,
+		);
+	}
+	return renderSettings(c);
+});
 
 k.post("/settings/kouden", async (c) => {
 	const kouden = c.get("kouden");

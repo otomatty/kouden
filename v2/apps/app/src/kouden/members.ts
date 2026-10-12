@@ -395,6 +395,7 @@ export async function cancelTransfer(db: D1Database, koudenId: string, now: Date
 
 export async function declineTransfer(
 	db: D1Database,
+	koudenId: string,
 	transferId: string,
 	userId: string,
 	now: Date,
@@ -402,9 +403,9 @@ export async function declineTransfer(
 	const res = await db
 		.prepare(
 			`UPDATE ownership_transfers SET status = 'declined', resolved_at = ?
-        WHERE id = ? AND to_user_id = ? AND status = 'pending'`,
+        WHERE id = ? AND kouden_id = ? AND to_user_id = ? AND status = 'pending'`,
 		)
-		.bind(now.toISOString(), transferId, userId)
+		.bind(now.toISOString(), transferId, koudenId, userId)
 		.run();
 	return res.meta.changes === 1;
 }
@@ -415,13 +416,15 @@ export async function declineTransfer(
  */
 export async function acceptTransfer(
 	db: D1Database,
+	koudenId: string,
 	transferId: string,
 	userId: string,
 	now: Date,
 ): Promise<Transfer | null> {
+	// 画面の香典帳（URL）の譲渡に限る。別の香典帳の譲渡 ID を送られても受け付けない
 	const row = await db
-		.prepare(`${TRANSFER_SELECT} WHERE t.id = ? AND t.to_user_id = ?`)
-		.bind(transferId, userId)
+		.prepare(`${TRANSFER_SELECT} WHERE t.id = ? AND t.kouden_id = ? AND t.to_user_id = ?`)
+		.bind(transferId, koudenId, userId)
 		.first<TransferRow>();
 	if (!row) return null;
 	const at = now.toISOString();

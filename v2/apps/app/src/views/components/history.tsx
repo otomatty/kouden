@@ -80,7 +80,13 @@ export const HistoryList: FC<{ history: History }> = ({ history }) => (
 		<summary class="cursor-pointer font-medium">変更履歴（{history.entries.length} 件）</summary>
 		<ol class="mt-3 space-y-3">
 			{history.entries.map((e) => {
-				const changes = e.op === "update" ? Object.entries(parseDiff(e.diff)) : [];
+				// 登録は登録時の内容（空の項目を除く）、変更は変更前後を表示する
+				const changes =
+					e.op === "update" || e.op === "create"
+						? Object.entries(parseDiff(e.diff)).filter(
+								([, [, after]]) => e.op === "update" || (after !== null && after !== ""),
+							)
+						: [];
 				return (
 					<li class="border-l-2 border-line pl-3">
 						<p>
@@ -93,7 +99,7 @@ export const HistoryList: FC<{ history: History }> = ({ history }) => (
 								{changes.map(([key, [before, after]]) => (
 									<li>
 										{fieldLabel(key, history.names)}:{" "}
-										{key.startsWith("contributor:") ? (
+										{key.startsWith("contributor:") || e.op === "create" ? (
 											formatValue(key, after, history.names)
 										) : (
 											<>

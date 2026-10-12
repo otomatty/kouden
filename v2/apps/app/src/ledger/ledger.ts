@@ -989,7 +989,7 @@ export class KoudenLedger extends DurableObject<Env> {
 		if (options.revokeUserId) {
 			for (const ws of this.ctx.getWebSockets(options.revokeUserId)) this.revokeSocket(ws);
 		}
-		this.broadcastChanges(before);
+		this.broadcastChanges(before, actor.tabId);
 		this.broadcastPresence();
 	}
 
@@ -1020,7 +1020,7 @@ export class KoudenLedger extends DurableObject<Env> {
 	}
 
 	/** seq より後の変更ログを、接続中の全員に通知する */
-	private broadcastChanges(after: number): void {
+	private broadcastChanges(after: number, tab?: string): void {
 		const sockets = this.openSockets();
 		if (sockets.length === 0) return;
 		const rows = this.all<{
@@ -1033,7 +1033,7 @@ export class KoudenLedger extends DurableObject<Env> {
 			"SELECT seq, entity, entity_id, op, actor_user_id FROM change_log WHERE seq > ? ORDER BY seq LIMIT 50",
 			after,
 		);
-		for (const row of rows) this.send(sockets, { type: "changed", ...toNotice(row) });
+		for (const row of rows) this.send(sockets, { type: "changed", ...toNotice(row), tab });
 	}
 
 	/** 閲覧中のメンバーと編集中の対象（同じ人の複数の接続はまとめる） */
@@ -1195,7 +1195,7 @@ export class KoudenLedger extends DurableObject<Env> {
 			if (err instanceof LedgerFailure) return { ok: false, error: err.error };
 			throw err;
 		}
-		this.broadcastChanges(before);
+		this.broadcastChanges(before, caller.tabId);
 		if ((await this.ctx.storage.getAlarm()) === null) {
 			await this.ctx.storage.setAlarm(Date.now() + PROJECTION_DELAY_MS);
 		}

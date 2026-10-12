@@ -221,7 +221,13 @@ export function registerMemberRoutes(k: Hono<AppEnv>): void {
 	k.post("/transfer/accept", async (c) => {
 		const caller = c.get("caller");
 		const transferId = (await formValues(c)).transferId ?? "";
-		const transfer = await acceptTransfer(c.env.DB, transferId, caller.userId, c.get("now"));
+		const transfer = await acceptTransfer(
+			c.env.DB,
+			caller.koudenId,
+			transferId,
+			caller.userId,
+			c.get("now"),
+		);
 		if (!transfer) {
 			return renderMembers(c, {
 				error: "この譲渡は承諾できません（期限切れ・取り消し済みなど）",
@@ -245,7 +251,13 @@ export function registerMemberRoutes(k: Hono<AppEnv>): void {
 
 	k.post("/transfer/decline", async (c) => {
 		const transferId = (await formValues(c)).transferId ?? "";
-		await declineTransfer(c.env.DB, transferId, c.get("caller").userId, c.get("now"));
+		await declineTransfer(
+			c.env.DB,
+			c.get("kouden").id,
+			transferId,
+			c.get("caller").userId,
+			c.get("now"),
+		);
 		return c.redirect(`${basePath(c)}/members?notice=transfer_declined`, 303);
 	});
 }
@@ -275,7 +287,6 @@ inviteRoutes.get("/invite/:token", async (c) => {
 	if (user && invitation && (await isMember(c.env.DB, invitation.koudenId, user.id))) {
 		return c.redirect(`/k/${invitation.koudenId}`);
 	}
-	c.header("Referrer-Policy", "no-referrer");
 	return c.html(
 		<Layout title="香典帳への招待" user={user}>
 			<InvitePage invitation={invitation} token={token} loggedIn={user !== null} />

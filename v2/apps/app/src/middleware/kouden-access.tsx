@@ -23,6 +23,7 @@ export const koudenAccess = createMiddleware<AppEnv>(async (c, next) => {
 		displayName: user.displayName,
 		role: kouden.status === "archived" ? "viewer" : kouden.memberRole,
 		plan: kouden.plan,
+		tabId: tabIdOf(c.req.header("X-Tab-Id")),
 	});
 	// 画面を表示するとき、データを読む前の変更ログの位置を記録する。
 	// 表示から WebSocket の接続までの間の変更を、接続時に取り直すために使う（04 §5）
@@ -35,6 +36,11 @@ export const koudenAccess = createMiddleware<AppEnv>(async (c, next) => {
 	}
 	return next();
 });
+
+/** 画面（タブ）の識別子。ledger-live.js が htmx の要求に付ける */
+function tabIdOf(value: string | undefined): string | undefined {
+	return value && /^[A-Za-z0-9_-]{8,64}$/.test(value) ? value : undefined;
+}
 
 /** 書き込みの回数制限（ユーザーごと 120 回/分。04 §11） */
 export const writeRateLimit = createMiddleware<AppEnv>(async (c, next) => {

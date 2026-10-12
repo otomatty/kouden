@@ -10,6 +10,14 @@
 	if (!koudenId || !("WebSocket" in window)) return;
 
 	const base = `/k/${koudenId}`;
+	// この画面（タブ）の識別子。htmx の要求に付け、自分のタブの変更の通知だけを無視する
+	// （同じユーザーが別のタブ・端末で開いている画面は取り直す）
+	const tabId = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) =>
+		b.toString(16).padStart(2, "0"),
+	).join("");
+	document.addEventListener("htmx:configRequest", (e) => {
+		e.detail.headers["X-Tab-Id"] = tabId;
+	});
 	let ws = null;
 	// 画面を表示した時点の変更ログの位置。最初の接続時もここから取り直す
 	let lastSeq = Number(script.dataset.seq) || 0;
@@ -123,12 +131,12 @@
 	// ---- 変更の反映 ----
 	function applyChange(m) {
 		// 権限・アーカイブ状態の変更は画面全体に影響するので読み込み直す
-		if (m.entity === "kouden" || (m.entity === "member" && m.id === userId && m.actor !== userId)) {
+		if (m.entity === "kouden" || (m.entity === "member" && m.id === userId && m.tab !== tabId)) {
 			location.reload();
 			return;
 		}
-		// 自分の変更は、操作した画面に反映済み
-		if (m.actor === userId) return;
+		// このタブでの変更は、操作した画面に反映済み
+		if (m.tab && m.tab === tabId) return;
 		for (const el of document.querySelectorAll("[data-live-watch]")) {
 			if (el.dataset.liveWatch === `${m.entity}:${m.id}`) el.hidden = false;
 		}
@@ -137,22 +145,44 @@
 		}
 	}
 
+	/** 部分の中で入力中か（編集フォームが開いている・入力欄にフォーカスがある） */
+	function isBusy(el) {
+		const active = document.activeElement;
+		return Boolean(
+			el.querySelector("form[data-editing-entity]") ||
+			(active && el.contains(active) && active.matches("input, select, textarea")),
+		);
+	}
+
+	function showStale(el) {
+		const notice = el.querySelector("[data-stale-notice]");
+		if (notice) notice.hidden = false;
+	}
+
+	// 取り直し中の部分。応答が届いた時点で入力中なら差し替えない（取り直しを始めた後に入力を始めた場合）
+	const refreshing = new Set();
+	document.addEventListener("htmx:beforeSwap", (e) => {
+		const target = e.detail.target;
+		if (!target || !refreshing.has(target.id)) return;
+		refreshing.delete(target.id);
+		if (isBusy(target)) {
+			e.detail.shouldSwap = false;
+			showStale(target);
+		}
+	});
+
 	function refreshRegion(el) {
 		clearTimeout(timers.get(el.id));
 		timers.set(
 			el.id,
 			setTimeout(() => {
-				const active = document.activeElement;
-				const busy =
-					el.querySelector("form[data-editing-entity]") ||
-					(active && el.contains(active) && active.matches("input, select, textarea"));
 				const url = el.dataset.liveUrl;
-				if (busy || !url || !window.htmx) {
+				if (isBusy(el) || !url || !window.htmx) {
 					// 入力中は差し替えない
-					const notice = el.querySelector("[data-stale-notice]");
-					if (notice) notice.hidden = false;
+					showStale(el);
 					return;
 				}
+				refreshing.add(el.id);
 				window.htmx.ajax("GET", url, { target: `#${el.id}`, swap: "outerHTML" });
 			}, 300),
 		);

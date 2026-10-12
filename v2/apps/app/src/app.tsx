@@ -16,6 +16,11 @@ export function createApp(deps: AppDeps = {}) {
 	const app = new Hono<AppEnv>();
 
 	app.use(requestContext(deps));
+	// 招待トークンを含む URL を参照元として送らない。securityHeaders の後（外側）で上書きする
+	app.use("/invite/*", async (c, next) => {
+		await next();
+		c.res.headers.set("Referrer-Policy", "no-referrer");
+	});
 	app.use(securityHeaders);
 	app.use(csrfProtection);
 	app.use(session);

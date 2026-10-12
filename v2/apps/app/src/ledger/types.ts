@@ -10,6 +10,8 @@ export interface Caller {
 	displayName: string;
 	role: Role;
 	plan: Plan;
+	/** 操作した画面（ブラウザのタブ）の識別子。通知を受けたとき、その画面だけが自分の変更を無視する */
+	tabId?: string | undefined;
 }
 
 export type LedgerError =
@@ -133,8 +135,10 @@ export interface ChangeNotice {
 	entity: string;
 	id: string;
 	op: string;
-	/** 変更したユーザー（自分の変更は画面側で無視する） */
+	/** 変更したユーザー */
 	actor: string;
+	/** 変更した画面（タブ）。その画面は結果を表示済みなので取り直さない */
+	tab?: string | undefined;
 }
 
 /** 記録ごとの変更履歴（E8-4） */
