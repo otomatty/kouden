@@ -45,6 +45,32 @@ describe("Google ログイン", () => {
 		expect(results).toEqual([{ email: "new@example.com" }]);
 	});
 
+	it("削除済みアカウントの Google アカウントで再ログインすると、新しい空のアカウントになる", async () => {
+		await env.DB.prepare(
+			`INSERT INTO users (id, google_sub, email, display_name, created_at, updated_at, deleted_at)
+       VALUES ('deleted-user', ?, 'deleted@example.invalid', '削除済み', '2025-01-01T00:00:00.000Z', '2025-01-01T00:00:00.000Z', '2025-06-01T00:00:00.000Z')`,
+		)
+			.bind(TARO.sub)
+			.run();
+		const { login } = makeApp(TARO);
+
+		const res = await login();
+
+		expect(res.status).toBe(302);
+		expect(res.headers.get("location")).toBe("/");
+		const active = await env.DB.prepare(
+			"SELECT id FROM users WHERE google_sub = ? AND deleted_at IS NULL",
+		)
+			.bind(TARO.sub)
+			.first<{ id: string }>();
+		expect(active?.id).toBeTruthy();
+		expect(active?.id).not.toBe("deleted-user");
+		const deleted = await env.DB.prepare(
+			"SELECT google_sub FROM users WHERE id = 'deleted-user'",
+		).first();
+		expect(deleted).toEqual({ google_sub: null });
+	});
+
 	it("state が一致しなければ失敗する", async () => {
 		const { request } = makeApp(TARO);
 		await request("/auth/google/start");

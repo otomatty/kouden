@@ -88,20 +88,26 @@ async function resolveOnce(
 	}
 
 	const id = uuidv7(now.getTime());
-	await db
-		.prepare(
-			`INSERT INTO users (id, google_sub, email, display_name, avatar_url, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		)
-		.bind(
-			id,
-			claims.sub,
-			claims.email,
-			defaultDisplayName(claims),
-			claims.picture ?? null,
-			nowIso,
-			nowIso,
-		)
-		.run();
+	await db.batch([
+		// 削除済みアカウントが同じ google_sub を持っていると一意制約に当たるので、手放させる。
+		// 削除済みアカウントは復活させず、新しい空のアカウントとして登録する
+		db
+			.prepare("UPDATE users SET google_sub = NULL WHERE google_sub = ? AND deleted_at IS NOT NULL")
+			.bind(claims.sub),
+		db
+			.prepare(
+				`INSERT INTO users (id, google_sub, email, display_name, avatar_url, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			)
+			.bind(
+				id,
+				claims.sub,
+				claims.email,
+				defaultDisplayName(claims),
+				claims.picture ?? null,
+				nowIso,
+				nowIso,
+			),
+	]);
 	return { userId: id, outcome: "created" };
 }
