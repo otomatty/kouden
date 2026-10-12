@@ -70,11 +70,14 @@ describe("Google ログイン", () => {
 		expect(res.headers.get("location")).toBe("/login?error=cancelled");
 	});
 
-	it("外部サイトへの return_to は無視する", async () => {
-		const { login } = makeApp(TARO);
-		const res = await login("//evil.example/path");
-		expect(res.headers.get("location")).toBe("/");
-	});
+	it.each(["//evil.example/path", "/\t/evil.example", "/\\evil.example"])(
+		"外部サイトへの return_to（%j）は無視する",
+		async (returnTo) => {
+			const { login } = makeApp(TARO);
+			const res = await login(returnTo);
+			expect(res.headers.get("location")).toBe("/");
+		},
+	);
 });
 
 async function seedLegacyEmailUser(email: string) {

@@ -21,12 +21,24 @@ interface OAuthState {
 	returnTo: string;
 }
 
-/** オープンリダイレクトを防ぐため、自サイト内の相対パスだけを許可する */
+const RETURN_TO_BASE = "https://return-to.invalid";
+
+/**
+ * オープンリダイレクトを防ぐため、自サイト内のパスだけを許可する。
+ * ブラウザは URL 中のタブ・改行を取り除き、バックスラッシュを `/` とみなすので、
+ * 文字列の見た目ではなく、URL として解決した結果のオリジンで判定する。
+ */
 export function safeReturnTo(value: string | undefined): string {
-	if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) {
+	// oxlint-disable-next-line no-control-regex -- 制御文字の拒否そのものが目的
+	if (!value || !value.startsWith("/") || /[\u0000-\u001f\u007f]/.test(value)) return "/";
+	let url: URL;
+	try {
+		url = new URL(value, RETURN_TO_BASE);
+	} catch {
 		return "/";
 	}
-	return value;
+	if (url.origin !== RETURN_TO_BASE) return "/";
+	return url.pathname + url.search + url.hash;
 }
 
 function isLoginError(value: string | undefined): value is LoginErrorCode {

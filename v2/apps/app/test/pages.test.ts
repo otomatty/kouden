@@ -48,6 +48,11 @@ describe("safeReturnTo", () => {
 		["//evil.example", "/"],
 		["/\\evil.example", "/"],
 		["relative", "/"],
+		// ブラウザはタブ・改行を除去するので `//evil.example` になる
+		["/\t/evil.example", "/"],
+		["/\n/evil.example", "/"],
+		["/%09/evil.example", "/%09/evil.example"],
+		["/k/abc#gifts", "/k/abc#gifts"],
 	])("%s → %s", (input, expected) => {
 		expect(safeReturnTo(input)).toBe(expected);
 	});
