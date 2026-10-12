@@ -17,6 +17,7 @@
 	},
 	"dependencies": {
 		"@kouden/domain": "workspace:*",
+		"@kouden/ui": "workspace:*",
 		"hono": "4.13.13",
 		"jose": "6.2.12",
 		"uqr": "0.1.3",

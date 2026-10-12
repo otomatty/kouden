@@ -66,7 +66,9 @@ const Header: FC<{ user: SessionUser | null }> = ({ user }) => (
 			<nav class="flex items-center gap-4 text-sm">
 				{user ? (
 					<>
-						<span class="hidden text-muted sm:inline">{user.displayName} さん</span>
+						<a href="/account" class="hidden text-muted hover:text-ink sm:inline">
+							{user.displayName} さん
+						</a>
 						<form method="post" action="/logout">
 							<button type="submit" class={ui.buttonSecondary}>
 								ログアウト

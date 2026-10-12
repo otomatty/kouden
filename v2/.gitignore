@@ -12,3 +12,4 @@ dist/
 apps/*/public/assets/app.css
 # ライブラリからコピーするファイル（scripts/copy-vendor.ts）
 apps/*/public/assets/htmx.min.js
+apps/*/public/assets/admin.css

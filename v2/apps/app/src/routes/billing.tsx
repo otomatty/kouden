@@ -33,18 +33,29 @@ export function registerBillingRoutes(k: Hono<AppEnv>): void {
 			return c.redirect(settingsUrl(c, "purchase_unavailable"), 303);
 		}
 		const origin = c.env.APP_ORIGIN;
-		const session = await stripe.createCheckoutSession({
-			koudenId: kouden.id,
-			koudenTitle: kouden.title,
-			userId: user.id,
-			email: user.email,
-			amount: PAID_PRICE_JPY,
-			// {CHECKOUT_SESSION_ID} は Stripe が置き換える
-			successUrl: `${origin}${basePath(c)}/billing/done?session_id={CHECKOUT_SESSION_ID}`,
-			cancelUrl: `${origin}${settingsUrl(c, "purchase_cancelled")}`,
-		});
-		if (!session.url) throw new Error("checkout session has no url");
-		return c.redirect(session.url, 303);
+		let url: string | null;
+		try {
+			const session = await stripe.createCheckoutSession({
+				koudenId: kouden.id,
+				koudenTitle: kouden.title,
+				userId: user.id,
+				email: user.email,
+				amount: PAID_PRICE_JPY,
+				// {CHECKOUT_SESSION_ID} は Stripe が置き換える
+				successUrl: `${origin}${basePath(c)}/billing/done?session_id={CHECKOUT_SESSION_ID}`,
+				cancelUrl: `${origin}${settingsUrl(c, "purchase_cancelled")}`,
+			});
+			url = session.url;
+		} catch (err) {
+			// キーの誤り・Stripe の障害など。何も記録していないので、設定画面に戻して案内する
+			log("error", "checkout_create_failed", {
+				koudenId: kouden.id,
+				error: err instanceof Error ? err.message : String(err),
+			});
+			url = null;
+		}
+		if (!url) return c.redirect(settingsUrl(c, "purchase_unavailable"), 303);
+		return c.redirect(url, 303);
 	});
 
 	k.get("/billing/done", async (c) => {

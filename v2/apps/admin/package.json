@@ -1,0 +1,32 @@
+{
+	"name": "@kouden/admin",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"css": "tailwindcss -i src/styles/admin.css -o public/assets/admin.css --minify",
+		"dev": "bun run css && cf dev",
+		"build": "bun run css && cf build",
+		"deploy": "bun scripts/deploy.ts",
+		"typecheck": "cf workers types && tsc && tsc -p tsconfig.node.json",
+		"test": "vitest run",
+		"check:deploy": "bun scripts/check-deploy-settings.ts"
+	},
+	"dependencies": {
+		"@kouden/domain": "workspace:*",
+		"@kouden/ui": "workspace:*",
+		"hono": "4.13.13",
+		"jose": "6.2.12"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "2.0.0-beta.sha-91c870c02",
+		"@cloudflare/vitest-plugin": "1.4.0",
+		"@tailwindcss/cli": "4.3.3",
+		"@types/node": "22.20.5",
+		"cf": "1.0.0-beta.14",
+		"miniflare": "5.20261006.1-alpha",
+		"tailwindcss": "4.3.3",
+		"typescript": "7.0.2",
+		"vite": "8.3.4",
+		"vitest": "5.0.4"
+	}
+}

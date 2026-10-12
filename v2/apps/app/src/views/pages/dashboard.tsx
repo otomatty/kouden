@@ -112,11 +112,9 @@ export const DashboardPage: FC<{
 				<dt class="text-muted">メールアドレス</dt>
 				<dd class="break-all">{user.email}</dd>
 			</dl>
-			<form method="post" action="/logout/all">
-				<button type="submit" class={ui.buttonSecondary}>
-					すべての端末からログアウト
-				</button>
-			</form>
+			<a href="/account" class={ui.buttonSecondary}>
+				アカウントの設定
+			</a>
 		</section>
 	</div>
 );

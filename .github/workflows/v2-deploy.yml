@@ -49,6 +49,11 @@ jobs:
         working-directory: v2/apps/app
         run: bun run check:deploy -- --mode "$MODE"
 
+      # 運営者画面（Access の設定など）も、デプロイを始める前に検査する
+      - name: Check deploy settings (admin)
+        working-directory: v2/apps/admin
+        run: bun run check:deploy -- --mode "$MODE"
+
       - name: Test
         run: bun run test
 
@@ -81,6 +86,11 @@ jobs:
       - name: Apply D1 migrations (after first deploy)
         working-directory: v2/apps/app
         run: bun run db:migrate -- --mode "$MODE"
+
+      # 運営者画面は利用者向けアプリの後に出す（同じ D1 を使い、マイグレーションはアプリ側で適用済み）
+      - name: Deploy admin
+        working-directory: v2/apps/admin
+        run: bun run deploy -- --mode "$MODE"
 
       - name: Remove secrets file
         if: always()
