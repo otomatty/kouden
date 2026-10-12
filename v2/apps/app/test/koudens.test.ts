@@ -134,6 +134,26 @@ describe("受付", () => {
 		expect(persons).toContain("1 人");
 	});
 
+	it("既存の差出人を選んだまま入力エラーになっても、選択が残る", async () => {
+		const { taro, koudenId, eventId } = await setup();
+		await taro.request(
+			`/k/${koudenId}/reception`,
+			formPost({ eventId, kind: "koden", name: "山田 太郎", amount: "5000" }),
+		);
+		const candidates = await (
+			await taro.request(`/k/${koudenId}/persons/candidates?name=${encodeURIComponent("山田")}`)
+		).text();
+		const personId = /name="personId" value="([^"]+)"/.exec(candidates)?.[1] ?? "";
+		const res = await taro.request(
+			`/k/${koudenId}/reception`,
+			formPost({ eventId, kind: "koden", personId, name: "", amount: "五千" }, { htmx: true }),
+		);
+		expect(res.status).toBe(422);
+		const html = await res.text();
+		expect(html).toMatch(new RegExp(`name="personId" value="${personId}" checked`));
+		expect(html).toContain("山田 太郎");
+	});
+
 	it("閲覧者は受付画面を開けず、登録もできない", async () => {
 		const { koudenId, eventId } = await setup();
 		const hanako = makeApp(HANAKO);
@@ -274,6 +294,29 @@ describe("いただきもの・差出人の編集", () => {
 		expect(html).toContain("東京都千代田区1-1");
 		expect(html).toMatch(new RegExp(`id="person-${second}"[^>]*hx-swap-oob="outerHTML"`));
 		expect(html).toContain(`action="/k/${koudenId}/persons/${second}"`);
+	});
+
+	it("検索中の行で、検索に一致しない名前に変えても保存できる", async () => {
+		const { taro, koudenId, eventId } = await withGift();
+		await taro.request(
+			`/k/${koudenId}/reception`,
+			formPost({ eventId, kind: "koden", name: "高橋 次郎", amount: "1000" }),
+		);
+		const q = encodeURIComponent("高橋");
+		const list = await (await taro.request(`/k/${koudenId}/persons?q=${q}`)).text();
+		const ids = [...list.matchAll(/id="person-([^"]+)"/g)].map((m) => m[1] ?? "");
+		expect(ids).toHaveLength(2);
+		const res = await taro.request(
+			`/k/${koudenId}/persons/${ids[0]}`,
+			formPost(
+				{ version: "1", mode: "row", go: "next", q: "高橋", name: "佐藤 一郎" },
+				{ htmx: true },
+			),
+		);
+		expect(res.status).toBe(200);
+		const html = await res.text();
+		expect(html).toContain("佐藤 一郎");
+		expect(html).toMatch(new RegExp(`id="person-${ids[1]}"[^>]*hx-swap-oob="outerHTML"`));
 	});
 
 	it("差出人の入力エラーは行の中に表示する", async () => {

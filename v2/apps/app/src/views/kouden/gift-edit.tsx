@@ -1,7 +1,7 @@
 import { ATTENDANCES, type FieldErrors, GIFT_KINDS, personLabel } from "@kouden/domain";
 import type { FC } from "hono/jsx";
 import type { KoudenContext } from "../../kouden/store.ts";
-import type { GiftView, LedgerEvent } from "../../ledger/types.ts";
+import type { GiftView, LedgerEvent, PersonView } from "../../ledger/types.ts";
 import {
 	Field,
 	FormAlert,
@@ -13,6 +13,7 @@ import {
 } from "../components/form.tsx";
 import { formatDateTime, yen } from "../format.ts";
 import { ui } from "../ui.ts";
+import { PersonCandidates } from "./person-candidates.tsx";
 
 /** フォームの初期値（保存済みの内容） */
 export function giftFormValues(g: GiftView): FormValues {
@@ -40,6 +41,7 @@ export const GiftEditPage: FC<{
 	notice?: string | undefined;
 	contributorErrors?: FieldErrors;
 	contributorValues?: FormValues;
+	contributorCandidates?: PersonView[];
 }> = ({
 	kouden,
 	gift,
@@ -51,6 +53,7 @@ export const GiftEditPage: FC<{
 	notice,
 	contributorErrors = {},
 	contributorValues = {},
+	contributorCandidates = [],
 }) => {
 	const base = `/k/${kouden.id}`;
 	const giftPath = `${base}/gifts/${gift.id}`;
@@ -283,7 +286,12 @@ export const GiftEditPage: FC<{
 								/>
 							</Field>
 						</div>
-						<div id="contributor-candidates"></div>
+						<div id="contributor-candidates">
+							<PersonCandidates
+								persons={contributorCandidates}
+								selected={contributorValues.personId}
+							/>
+						</div>
 						{contributorErrors.personId && (
 							<p class="text-sm text-danger">{contributorErrors.personId}</p>
 						)}

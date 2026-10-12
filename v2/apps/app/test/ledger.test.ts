@@ -259,6 +259,52 @@ describe("KoudenLedger", () => {
 		expect(last).toMatchObject({ ok: false, error: { code: "invalid" } });
 	});
 
+	it("関係での絞り込みは代表者の関係で行う（関係別の集計と一致させる）", async () => {
+		const { caller, ledger } = setup();
+		const [wake] = unwrap(await ledger.listEvents(caller));
+		const [family, friend] = unwrap(await ledger.listRelationships(caller));
+		const { giftId } = unwrap(
+			await ledger.createAtReception(
+				caller,
+				reception(wake!.id, { amount: "10000", name: "A", relationshipId: family!.id }),
+			),
+		);
+		const b = unwrap(
+			await ledger.createAtReception(
+				caller,
+				reception(wake!.id, { amount: "1000", name: "B", relationshipId: friend!.id }),
+			),
+		);
+		unwrap(
+			await ledger.addContributor(caller, giftId, 1, {
+				person: { type: "existing", personId: b.personId },
+				shareAmount: null,
+			}),
+		);
+		const byFriend = unwrap(await ledger.listGifts(caller, { relationshipId: friend!.id }));
+		expect(byFriend.map((g) => g.id)).toEqual([b.giftId]);
+		const overview = unwrap(await ledger.overview(caller));
+		expect(overview.byRelationship.find((r) => r.relationshipId === friend!.id)?.count).toBe(1);
+	});
+
+	it("連名の負担額・代表者の変更でも最終更新日時が進む", async () => {
+		const { caller, ledger } = setup();
+		const [wake] = unwrap(await ledger.listEvents(caller));
+		const { giftId, personId } = unwrap(
+			await ledger.createAtReception(caller, reception(wake!.id, { amount: "1000", name: "A" })),
+		);
+		const before = unwrap(await ledger.getGift(caller, giftId)).updatedAt;
+		await new Promise((r) => setTimeout(r, 5));
+		unwrap(
+			await ledger.updateContributor({ ...caller, userId: "user-9" }, giftId, 1, personId, {
+				shareAmount: 500,
+				makePrimary: false,
+			}),
+		);
+		const after = unwrap(await ledger.getGift(caller, giftId)).updatedAt;
+		expect(after > before).toBe(true);
+	});
+
 	it("行事: 記録があるものと最後の 1 つは削除できない。並べ替えできる", async () => {
 		const { caller, ledger } = setup();
 		const [wake, funeral] = unwrap(await ledger.listEvents(caller));

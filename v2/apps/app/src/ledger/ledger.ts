@@ -247,7 +247,7 @@ export class KoudenLedger extends DurableObject<Env> {
 			}
 			if (filter.relationshipId) {
 				where.push(`EXISTS (SELECT 1 FROM gift_contributors gc JOIN persons p ON p.id = gc.person_id
-                     WHERE gc.gift_id = g.id AND p.relationship_id = ?)`);
+                     WHERE gc.gift_id = g.id AND gc.is_primary = 1 AND p.relationship_id = ?)`);
 				params.push(filter.relationshipId);
 			}
 			if (filter.q) {
@@ -513,6 +513,12 @@ export class KoudenLedger extends DurableObject<Env> {
 					personId,
 				);
 			}
+			this.sql.exec(
+				"UPDATE gifts SET updated_by = ?, updated_at = ? WHERE id = ?",
+				caller.userId,
+				now,
+				giftId,
+			);
 			this.log(caller, now, "gift", giftId, "update", {
 				[`contributor:${personId}`]: [null, input],
 			});

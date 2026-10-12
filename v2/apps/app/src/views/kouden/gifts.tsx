@@ -54,7 +54,7 @@ export const GiftsPage: FC<{
 							options={Object.entries(GIFT_KINDS).map(([value, label]) => ({ value, label }))}
 						/>
 					</Field>
-					<Field label="関係" name="relationship">
+					<Field label="関係（代表者）" name="relationship">
 						<Select
 							name="relationship"
 							values={values}

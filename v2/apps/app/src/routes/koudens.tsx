@@ -174,6 +174,25 @@ k.get("/", async (c) => {
 
 // ---- 受付 ---------------------------------------------------------------------
 
+/**
+ * 入力エラーで再表示するときの差出人の候補。選んでいた候補は、氏名欄が空でも必ず残す
+ * （候補のラジオボタンだけが personId を送るので、消えると選び直せなくなる）
+ */
+async function candidatesForRetry(c: Ctx, values: FormValues): Promise<PersonView[]> {
+	const caller = c.get("caller");
+	const q = values.name || values.organization;
+	const found = q ? await ledger(c).listPersons(caller, { q, limit: 8 }) : null;
+	const list = found?.ok ? found.value : [];
+	if (values.personId && !list.some((p) => p.id === values.personId)) {
+		const selected = await ledger(c).getPerson(caller, values.personId);
+		if (selected.ok) {
+			const { gifts: _gifts, ...view } = selected.value;
+			list.unshift(view);
+		}
+	}
+	return list;
+}
+
 async function receptionProps(
 	c: Ctx,
 	requestedEventId: string | undefined,
@@ -233,13 +252,7 @@ k.post("/reception", async (c) => {
 			? c.html(<ReceptionPanel {...props} />, status)
 			: koudenPage(c, "受付", "reception", <ReceptionPage {...props} />, { status });
 	};
-	// 入力エラーで再表示するとき、選んでいた候補を残す
-	const candidatesFor = async () => {
-		const q = values.name || values.organization;
-		if (!q) return [];
-		const r = await ledger(c).listPersons(caller, { q, limit: 8 });
-		return r.ok ? r.value : [];
-	};
+	const candidatesFor = () => candidatesForRetry(c, values);
 
 	const parsed = receptionSchema.safeParse(values);
 	if (!parsed.success) {
@@ -337,6 +350,7 @@ type GiftPageOptions = {
 	message?: string;
 	contributorValues?: FormValues;
 	contributorErrors?: FieldErrors;
+	contributorCandidates?: PersonView[];
 	status?: 200 | 409 | 422;
 };
 
@@ -364,6 +378,7 @@ async function renderGift(c: Ctx, giftId: string, options: GiftPageOptions = {})
 			notice={noticeOf(c)}
 			contributorValues={options.contributorValues}
 			contributorErrors={options.contributorErrors}
+			contributorCandidates={options.contributorCandidates}
 		/>,
 		{ status: options.status },
 	);
@@ -423,13 +438,16 @@ k.post("/gifts/:giftId/contributors", async (c) => {
 		return renderGift(c, giftId, {
 			contributorValues: values,
 			contributorErrors: toFieldErrors(parsed.error),
+			contributorCandidates: await candidatesForRetry(c, values),
 			status: 422,
 		});
 	}
 	const result = await ledger(c).addContributor(c.get("caller"), giftId, version.data, parsed.data);
+	const candidates = result.ok ? [] : await candidatesForRetry(c, values);
 	return afterGiftWrite(c, giftId, result, (field, message) => ({
 		contributorValues: values,
 		contributorErrors: { [field]: message },
+		contributorCandidates: candidates,
 	}));
 });
 
@@ -610,6 +628,8 @@ k.post("/persons/:personId", async (c) => {
 			: renderPerson(c, personId, { values, errors, status: 422 });
 	}
 
+	// 「次へ」の行は保存前の一覧で決める（保存で検索条件から外れても、次の人は変わらない）
+	const before = inline && values.go === "next" ? await personRowContext(c, personId, q) : null;
 	const result = await ledger(c).updatePerson(c.get("caller"), personId, version.data, parsed.data);
 	if (!result.ok) {
 		const { error } = result;
@@ -629,11 +649,12 @@ k.post("/persons/:personId", async (c) => {
 
 	if (!inline) return c.redirect(`${basePath(c)}/persons/${personId}?notice=saved`, 303);
 
-	// 保存した行を表示に戻し、「保存して次へ」なら次の行を編集状態で開く（out-of-band で差し替え）
-	const ctx = await personRowContext(c, personId, q);
+	// 保存した行を表示に戻し、「保存して次へ」なら次の行を編集状態で開く（out-of-band で差し替え）。
+	// 保存した行は検索条件に関係なく読む（氏名を変えて検索に一致しなくなっても、その行は表示を更新する）
+	const ctx = await personRowContext(c, personId, undefined);
 	if (!ctx) return errorResponse(c, 404);
 	const kouden = c.get("kouden");
-	const next = values.go === "next" ? ctx.next : undefined;
+	const next = before?.next;
 	let hasNextAfterNext = false;
 	if (next) hasNextAfterNext = (await personRowContext(c, next.id, q))?.next !== undefined;
 	return c.html(
