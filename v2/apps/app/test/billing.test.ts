@@ -323,7 +323,10 @@ describe("有料版の購入（E9-2）", () => {
 		await webhook({ type: "charge.refunded", object: refundedCharge(session) });
 		expect(await plan(koudenId)).toBe("free");
 
-		await taro.request(`/k/${koudenId}/billing/done?session_id=${session.id}`);
+		const revisit = await taro.request(`/k/${koudenId}/billing/done?session_id=${session.id}`);
+		expect(revisit.headers.get("location")).toBe(
+			`/k/${koudenId}/settings?notice=purchase_refunded#billing`,
+		);
 		await webhook({ type: "checkout.session.completed", object: sessionJson(session) });
 		expect(await plan(koudenId)).toBe("free");
 		expect(await purchases(koudenId)).toMatchObject([{ status: "refunded" }]);

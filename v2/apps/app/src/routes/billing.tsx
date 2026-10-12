@@ -69,10 +69,17 @@ export function registerBillingRoutes(k: Hono<AppEnv>): void {
 		if (outcome.kind === "fulfilled" && outcome.upgraded) {
 			await notifyPlan(c.env, c.get("caller"), "paid");
 		}
-		return c.redirect(
-			settingsUrl(c, outcome.kind === "ignored" ? "purchase_pending" : "purchased"),
-			303,
-		);
+		// 表示は確定後の plan で決める（返金済みの支払いでは、確定しても無料のまま）
+		const current = await c.env.DB.prepare("SELECT plan FROM koudens WHERE id = ?")
+			.bind(kouden.id)
+			.first<{ plan: string }>();
+		const notice =
+			current?.plan === "paid"
+				? "purchased"
+				: outcome.kind === "ignored"
+					? "purchase_pending"
+					: "purchase_refunded";
+		return c.redirect(settingsUrl(c, notice), 303);
 	});
 }
 

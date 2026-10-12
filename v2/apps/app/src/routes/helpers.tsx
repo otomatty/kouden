@@ -32,6 +32,7 @@ export const NOTICES = {
 	purchase_pending:
 		"お支払いの完了を確認しています。コンビニ払いなどの場合は、お支払いが済むと有料版になります。",
 	purchase_cancelled: "購入を取りやめました。",
+	purchase_refunded: "この支払いは返金済みのため、無料版のままです。",
 	purchase_unavailable: "現在、購入の受付を停止しています。時間をおいてもう一度お試しください。",
 } as const;
 
