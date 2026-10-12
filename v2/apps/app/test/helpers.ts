@@ -48,9 +48,12 @@ export function makeApp(claims: GoogleClaims, now?: () => Date) {
 	const { provider, seen } = fakeOidc(claims);
 	const app = createApp({ oidc: () => provider, now });
 	const jar = new CookieJar();
+	// ログイン開始の回数制限（IP ごと）にテスト同士で干渉しないよう、端末ごとに別の IP にする
+	const ip = `192.0.2.${Math.floor(Math.random() * 250) + 1}`;
 
 	const request = async (path: string, init: RequestInit = {}) => {
 		const headers = new Headers(init.headers);
+		if (!headers.has("cf-connecting-ip")) headers.set("cf-connecting-ip", ip);
 		const cookie = jar.header();
 		if (cookie) headers.set("cookie", cookie);
 		if (init.method && init.method !== "GET") headers.set("origin", ORIGIN);
@@ -77,3 +80,20 @@ export const TARO: GoogleClaims = {
 	name: "山田 太郎",
 	picture: "https://lh3.googleusercontent.com/a/taro",
 };
+
+export const HANAKO: GoogleClaims = {
+	sub: "google-sub-hanako",
+	email: "hanako.sato@gmail.com",
+	emailVerified: true,
+	name: "佐藤 花子",
+};
+
+/** フォーム送信（application/x-www-form-urlencoded）。htmx からの要求を模す場合は htmx: true */
+export function formPost(
+	fields: Record<string, string>,
+	options: { htmx?: boolean } = {},
+): RequestInit {
+	const headers: Record<string, string> = { "content-type": "application/x-www-form-urlencoded" };
+	if (options.htmx) headers["hx-request"] = "true";
+	return { method: "POST", headers, body: new URLSearchParams(fields).toString() };
+}

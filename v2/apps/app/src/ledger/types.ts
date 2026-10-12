@@ -1,0 +1,125 @@
+import type { Attendance, EventKind, GiftKind, Plan, Role } from "@kouden/domain";
+
+/**
+ * 呼び出し元のコンテキスト（03 §5）。Worker が D1 で確認した内容を DO に渡す。
+ * DO は Worker の binding 経由でしか呼べないので、この値を信頼してよい。
+ */
+export interface Caller {
+	koudenId: string;
+	userId: string;
+	displayName: string;
+	role: Role;
+	plan: Plan;
+}
+
+export type LedgerError =
+	| { code: "forbidden" }
+	| { code: "not_found" }
+	/** 楽観ロックの不一致（開いた後に他の人が更新した） */
+	| { code: "conflict" }
+	/** 無料版の件数上限 */
+	| { code: "limit_reached"; limit: number }
+	/** 業務ルール違反。field は画面の入力欄の名前（該当がなければ `_form`） */
+	| { code: "invalid"; field: string; message: string };
+
+export type LedgerResult<T> = { ok: true; value: T } | { ok: false; error: LedgerError };
+
+export interface LedgerEvent {
+	id: string;
+	kind: EventKind;
+	name: string;
+	date: string | null;
+	sortOrder: number;
+	version: number;
+	/** 有効ないただきものの件数（1 件以上あれば削除できない） */
+	giftCount: number;
+}
+
+export interface LedgerRelationship {
+	id: string;
+	name: string;
+	sortOrder: number;
+	isHidden: boolean;
+	version: number;
+	/** この関係を設定している差出人の数（1 人以上いれば削除できない） */
+	personCount: number;
+}
+
+export interface ContributorView {
+	personId: string;
+	name: string | null;
+	nameKana: string | null;
+	organization: string | null;
+	relationshipName: string | null;
+	isPrimary: boolean;
+	shareAmount: number | null;
+}
+
+export interface GiftView {
+	id: string;
+	eventId: string;
+	eventName: string;
+	receiptNo: number | null;
+	kind: GiftKind;
+	amount: number | null;
+	itemName: string | null;
+	quantity: number | null;
+	message: string | null;
+	attendance: Attendance | null;
+	notes: string | null;
+	version: number;
+	createdAt: string;
+	updatedAt: string;
+	/** 代表者が先頭 */
+	contributors: ContributorView[];
+}
+
+export interface PersonView {
+	id: string;
+	name: string | null;
+	nameKana: string | null;
+	organization: string | null;
+	position: string | null;
+	relationshipId: string | null;
+	relationshipName: string | null;
+	postalCode: string | null;
+	address: string | null;
+	phone: string | null;
+	notes: string | null;
+	version: number;
+	giftCount: number;
+	/** 香典のうち、この人の分（連名は負担額・均等割りで按分） */
+	kodenTotal: number;
+}
+
+export interface PersonDetail extends PersonView {
+	gifts: GiftView[];
+}
+
+export interface Overview {
+	totals: { giftCount: number; kodenCount: number; kodenTotal: number; personCount: number };
+	byKind: { kind: GiftKind; count: number; amount: number }[];
+	byEvent: {
+		eventId: string;
+		name: string;
+		date: string | null;
+		count: number;
+		kodenTotal: number;
+	}[];
+	byRelationship: {
+		relationshipId: string | null;
+		name: string | null;
+		count: number;
+		kodenTotal: number;
+	}[];
+	recent: GiftView[];
+}
+
+export interface ReceptionResult {
+	giftId: string;
+	receiptNo: number;
+	eventId: string;
+	eventName: string;
+	personId: string;
+	personLabel: string;
+}

@@ -1,5 +1,5 @@
 /**
- * デプロイ。仮の値の検査 → Tailwind のビルド → `cf deploy` の順に実行する。
+ * デプロイ。仮の値の検査 → 静的ファイルの生成（Tailwind・htmx）→ `cf deploy` の順に実行する。
  *
  *   bun run deploy -- --mode staging [--secrets-file <path>]
  *
@@ -24,5 +24,5 @@ function run(cmd: string, cmdArgs: string[]): void {
 	if (res.status !== 0) process.exit(res.status ?? 1);
 }
 
-run("bun", ["run", "css"]);
+run("bun", ["run", "assets"]);
 run("cf", ["deploy", ...args]);

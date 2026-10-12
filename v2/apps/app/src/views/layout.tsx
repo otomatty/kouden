@@ -5,6 +5,21 @@ import { ui } from "./ui.ts";
 
 const SITE_NAME = "香典帳";
 
+const HTMX_CONFIG = JSON.stringify({
+	selfRequestsOnly: true,
+	allowEval: false,
+	allowScriptTags: false,
+	includeIndicatorStyles: false,
+	historyCacheSize: 0,
+	responseHandling: [
+		{ code: "204", swap: false },
+		{ code: "[23]..", swap: true },
+		{ code: "409", swap: true },
+		{ code: "422", swap: true },
+		{ code: "[45]..", swap: false, error: true },
+	],
+});
+
 export const Layout: FC<{
 	title?: string;
 	description?: string;
@@ -26,7 +41,12 @@ export const Layout: FC<{
 					}
 				/>
 				<meta name="theme-color" content="#3b3a6b" />
+				{/* ファビコンは未作成。/favicon.ico への 404 を避ける */}
+				<link rel="icon" href="data:," />
 				<link rel="stylesheet" href={`/assets/app.css?v=${__ASSET_VERSION__}`} />
+				{/* htmx の設定: 自分のオリジンにだけ要求する / eval を使わない（CSP）/ 422・409 も差し替える */}
+				<meta name="htmx-config" content={HTMX_CONFIG} />
+				<script src={`/assets/htmx.min.js?v=${__ASSET_VERSION__}`} defer></script>
 			</head>
 			<body class="flex min-h-dvh flex-col bg-paper font-sans text-ink antialiased">
 				<Header user={user} />

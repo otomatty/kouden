@@ -166,7 +166,7 @@ CREATE TABLE stripe_events (
 CREATE TABLE kouden_stats (
   kouden_id         TEXT PRIMARY KEY REFERENCES koudens(id) ON DELETE CASCADE,
   gift_count        INTEGER NOT NULL,
-  total_amount      INTEGER NOT NULL,
+  total_amount      INTEGER NOT NULL,           -- 香典（kind = 'koden'）の合計
   person_count      INTEGER NOT NULL,
   return_pending    INTEGER NOT NULL,
   last_activity_at  TEXT NOT NULL,
@@ -255,6 +255,7 @@ CREATE TABLE persons (
   address           TEXT,
   phone             TEXT,
   notes             TEXT,
+  search_text       TEXT NOT NULL DEFAULT '',   -- 検索用（氏名・カナ・団体・住所を正規化して連結。ひらがな・カタカナ・全角半角を区別しない）
   version           INTEGER NOT NULL DEFAULT 1,
   created_by        TEXT NOT NULL,
   created_at        TEXT NOT NULL,
@@ -297,6 +298,8 @@ CREATE TABLE gift_contributors (
   PRIMARY KEY (gift_id, person_id)
 );
 CREATE INDEX idx_contributors_person ON gift_contributors(person_id);
+-- 代表者は 1 件に 1 人
+CREATE UNIQUE INDEX uq_contributors_primary ON gift_contributors(gift_id) WHERE is_primary = 1;
 
 -- 供物・供花の写真（本体は R2: koudens/{koudenId}/gifts/{giftId}/{photoId}）
 CREATE TABLE gift_photos (
@@ -430,13 +433,16 @@ constructor(ctx: DurableObjectState, env: Env) {
 - マイグレーションはコード内の配列（`MIGRATIONS[n]`）。番号は単調増加で、適用済みのものは変更しない。
 - **後方互換な変更のみ**を基本とする（列の追加、テーブルの追加）。破壊的変更は「新列追加 → 両方書く → 旧列を読まなくする → 次々回で削除」の段階を踏む。
 - 長期間アクセスされない DO は古いスキーマのまま眠っているが、次に起動したときに追いつくので問題ない。
+- 実装では、コンストラクタではなく各 RPC の最初で `migrate` を呼ぶ（`deleteAll()` の後に作り直せるようにするため）。DO 内の RPC は同期的に SQL を実行するので、途中に別の呼び出しが割り込むことはない。
+- 1 番（M1）は台帳の骨格（`events` / `relationships` / `persons` / `gifts` / `gift_contributors` / `change_log`）だけを作る。香典返し・写真・リマインドのテーブルは、それぞれのマイルストーンで 2 番以降として追加する。
+- 新しい DO は、最初の呼び出しで `meta.kouden_id` を記録し、既定の行事・関係を作る（変更ログの記録者は `system`）。D1 への登録と DO の初期化の間で失敗しても、次に開いたときに初期化されるので、作成処理で DO を呼ぶ必要はない。
 
 ## 5. 権限の判定
 
 Worker が D1 から `role` と `plan` を読み、DO の RPC に**呼び出し元コンテキスト**として渡す。DO は外部から直接呼べない（Worker の binding 経由のみ）ので、このコンテキストを信頼してよい。
 
 ```ts
-type Caller = { userId: string; displayName: string; role: 'owner' | 'editor' | 'viewer'; plan: 'free' | 'paid' };
+type Caller = { koudenId: string; userId: string; displayName: string; role: 'owner' | 'editor' | 'viewer'; plan: 'free' | 'paid' };
 await stub.createGift(caller, input);
 ```
 
@@ -448,7 +454,7 @@ await stub.createGift(caller, input);
 | メンバー招待・ロール変更・除外 | ✓ | | |
 | 購入・譲渡・アーカイブ・削除 | ✓ | | |
 
-判定は DO 内の `assertCan(caller, action)` に集約する。D1 側の操作（招待・譲渡など）は Worker の同名関数で判定する。
+判定は `packages/domain` の `can(role, action)` に集約し、DO の書き込みの共通ラッパーと画面（ボタンの出し分け）の両方で使う。アーカイブ中の香典帳は、Worker が `role` を `viewer` にして DO に渡す（E2-4）。D1 側の操作（招待・譲渡など）は Worker の同名関数で判定する。
 
 ## 6. 主要な処理の流れ
 

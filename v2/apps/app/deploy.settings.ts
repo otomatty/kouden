@@ -19,7 +19,7 @@ export interface ModeSettings {
 		id?: string;
 	};
 	/** Rate Limiting binding の namespace（アカウント内で一意な整数文字列） */
-	rateLimitNamespace: string;
+	rateLimitNamespaces: { auth: string; write: string };
 	/** Google OAuth クライアント ID（秘密情報ではない） */
 	googleClientId: string;
 }
@@ -37,7 +37,7 @@ export const MODES: Record<Mode, ModeSettings> = {
 		workerName: "kouden-app-dev",
 		origin: "http://localhost:5173",
 		d1: { name: "kouden-db-dev", id: LOCAL_D1_ID },
-		rateLimitNamespace: "9001",
+		rateLimitNamespaces: { auth: "9001", write: "9002" },
 		googleClientId: PLACEHOLDER_CLIENT_ID,
 	},
 	staging: {
@@ -45,7 +45,7 @@ export const MODES: Record<Mode, ModeSettings> = {
 		origin: `https://staging.${DOMAIN}`,
 		domain: `staging.${DOMAIN}`,
 		d1: { name: "kouden-db-staging" },
-		rateLimitNamespace: "2001",
+		rateLimitNamespaces: { auth: "2001", write: "2002" },
 		googleClientId: PLACEHOLDER_CLIENT_ID,
 	},
 	production: {
@@ -53,7 +53,7 @@ export const MODES: Record<Mode, ModeSettings> = {
 		origin: `https://${DOMAIN}`,
 		domain: DOMAIN,
 		d1: { name: "kouden-db" },
-		rateLimitNamespace: "1001",
+		rateLimitNamespaces: { auth: "1001", write: "1002" },
 		googleClientId: PLACEHOLDER_CLIENT_ID,
 	},
 };

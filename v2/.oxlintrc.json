@@ -18,7 +18,7 @@
 		"no-underscore-dangle": [
 			"warn",
 			{
-				"allow": ["__ASSET_VERSION__"]
+				"allow": ["__ASSET_VERSION__", "_form"]
 			}
 		]
 	},

@@ -7,7 +7,7 @@ Cloudflare Workers 上に作り直している新しい香典帳です。設計�
 | ----------- | --------------------------------------------------------------------------------------------------- |
 | ランタイム  | Cloudflare Workers（D1 / Durable Objects / R2）                                                     |
 | CLI・ビルド | [`cf`](https://developers.cloudflare.com/cf/)（ベータ）+ Vite（`@cloudflare/vite-plugin` 2.0 beta） |
-| 画面        | Hono JSX（サーバー側で HTML 生成）+ Tailwind CSS（htmx は M1 から）                                 |
+| 画面        | Hono JSX（サーバー側で HTML 生成）+ htmx + Tailwind CSS                                             |
 | 認証        | Google OIDC（自前実装）+ D1 のセッション                                                            |
 | 開発ツール  | Bun / Oxlint / oxfmt / TypeScript 7 / Vitest + `@cloudflare/vitest-plugin`                          |
 
@@ -15,8 +15,13 @@ Cloudflare Workers 上に作り直している新しい香典帳です。設計�
 
 ```
 v2/
-├── apps/app/          # 利用者向け Worker（kouden-app）
-└── packages/domain/   # 業務ルール（純粋な TypeScript）
+├── apps/app/          # 利用者向け Worker（kouden-app）と香典帳の DO（KoudenLedger）
+│   └── src/
+│       ├── ledger/    # KoudenLedger: 香典帳 1 冊分の SQLite（スキーマ・マイグレーション・RPC）
+│       ├── kouden/    # D1 の香典帳・メンバーシップ
+│       ├── routes/    # 画面（pages: 公開ページ、koudens: 香典帳の中）
+│       └── views/     # JSX
+└── packages/domain/   # 業務ルール（入力検証・権限・検索の正規化・金額の按分など。純粋な TypeScript）
 ```
 
 ## ローカル開発
@@ -49,10 +54,12 @@ Google ログインを試すには、OAuth クライアントの値を `.dev.var
 | コマンド                               | 内容                                                             |
 | -------------------------------------- | ---------------------------------------------------------------- |
 | `bun run db:migrate:local`             | ローカル D1 にマイグレーションを適用                             |
+| `bun run assets`                       | Tailwind のビルドと htmx のコピー（`dev` / `build` で自動実行）  |
 | `bun run db:migrate -- --mode staging` | ステージングの D1 にマイグレーションを適用（要 `cf auth login`） |
 | `bun run deploy -- --mode staging`     | ステージングへデプロイ（通常は GitHub Actions から）             |
 
 D1 のマイグレーションファイルは `cf d1 migrations create` で作成するか、`apps/app/migrations/` に連番で追加します。
+DO（KoudenLedger）のスキーマは `apps/app/src/ledger/schema.ts` の `MIGRATIONS` の末尾に追加します（各 DO が次に呼ばれたときに適用されます。適用済みの要素は変更しないでください）。
 
 ## 公開までに必要な作業（運営者が行うもの）
 

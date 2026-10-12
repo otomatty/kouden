@@ -22,6 +22,7 @@
         "@tailwindcss/cli": "4.3.3",
         "@types/node": "22.20.5",
         "cf": "1.0.0-beta.14",
+        "htmx.org": "2.0.11",
         "miniflare": "5.20261006.1-alpha",
         "tailwindcss": "4.3.3",
         "typescript": "7.0.2",
@@ -31,6 +32,9 @@
     },
     "packages/domain": {
       "name": "@kouden/domain",
+      "dependencies": {
+        "zod": "4.6.5",
+      },
       "devDependencies": {
         "typescript": "7.0.2",
         "vitest": "5.0.4",
@@ -455,6 +459,8 @@
     "graceful-fs": ["graceful-fs@4.2.11", "", {}, "sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ=="],
 
     "hono": ["hono@4.13.13", "", {}, "sha512-CQ46U0ZkAGmbT/4UxdzzGJpacP2IeKgY4a5/tOI9AABbpOMfK739wfDXmv1usCk+3RkKj1hQy4/fjhiwa2xlrA=="],
+
+    "htmx.org": ["htmx.org@2.0.11", "", {}, "sha512-Thx/WtpeOQqSrqBCw/A1cwGJGg4UrVa3+sW0GmrM3p4gJgO89ecH4qtbnyzDDWFvBTqjnIMCgELTNt636dtamA=="],
 
     "is-extglob": ["is-extglob@2.1.1", "", {}, "sha512-SbKbANkN603Vi4jEZv49LeVJMn4yGwsbzZworEoyEiutsN3nJYdbO36zfhGJ6QEDpOZIFkDtnq5JRxmvl3jsoQ=="],
 

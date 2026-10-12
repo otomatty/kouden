@@ -14,14 +14,23 @@ const TEST_BINDINGS = {
 	SESSION_SECRET: "test-session-secret",
 } as const;
 const TEST_D1 = ["DB"] as const;
+const TEST_DURABLE_OBJECTS = {
+	LEDGER: { className: "KoudenLedger", useSQLite: true },
+};
 const TEST_RATE_LIMITS = {
 	AUTH_RATE_LIMITER: { namespace_id: "9001", simple: { limit: 20, period: 60 as const } },
+	WRITE_RATE_LIMITER: { namespace_id: "9002", simple: { limit: 120, period: 60 as const } },
 };
 
 function assertBindingsMatchConfig(): void {
 	const source = readFileSync(path.join(import.meta.dirname, "cloudflare.config.ts"), "utf8");
 	const configKeys = [...source.matchAll(/^\s+([A-Z][A-Z0-9_]*): bindings\./gm)].map((m) => m[1]);
-	const testKeys = [...Object.keys(TEST_BINDINGS), ...TEST_D1, ...Object.keys(TEST_RATE_LIMITS)];
+	const testKeys = [
+		...Object.keys(TEST_BINDINGS),
+		...TEST_D1,
+		...Object.keys(TEST_DURABLE_OBJECTS),
+		...Object.keys(TEST_RATE_LIMITS),
+	];
 	const missing = configKeys.filter((k) => !testKeys.includes(k as string));
 	const extra = testKeys.filter((k) => !configKeys.includes(k));
 	if (missing.length > 0 || extra.length > 0) {
@@ -41,6 +50,7 @@ export default defineConfig({
 				miniflare: {
 					compatibilityDate: "2026-10-06",
 					d1Databases: [...TEST_D1],
+					durableObjects: TEST_DURABLE_OBJECTS,
 					ratelimits: TEST_RATE_LIMITS,
 					bindings: { ...TEST_BINDINGS, TEST_MIGRATIONS: migrations },
 				},

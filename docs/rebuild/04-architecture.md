@@ -47,7 +47,7 @@ flowchart TB
 | R2 | `kouden-files` | 返礼品画像・供物写真（非公開。Worker 経由で権限確認して配信） |
 | Static Assets | `kouden-app` に同梱 | Tailwind のビルド成果物、htmx、自前の小さなスクリプト |
 | Email Service | `send_email` binding | リマインドメール（`noreply@example.jp`） |
-| Rate Limiting | `AUTH_RATE_LIMITER` ほか | ログイン・書き込み・招待受諾の回数制限 |
+| Rate Limiting | `AUTH_RATE_LIMITER` / `WRITE_RATE_LIMITER` ほか | ログイン・書き込み・招待受諾の回数制限 |
 | Cron Triggers | 毎日 03:00 JST | 期限切れセッション・招待の削除、`deleting` の香典帳の再処理、統計の整合確認 |
 
 **ドメイン**: `example.jp`（本番）、`admin.example.jp`（運営者）、`staging.example.jp`（ステージング、Access で保護）。
@@ -214,7 +214,8 @@ ws.onmessage = (e) => {
 | 項目 | 方針 |
 |---|---|
 | テンプレート | Hono JSX（`hono/jsx`）。ページ = レイアウト + 部分テンプレート。部分テンプレートは htmx からも直接返す |
-| 部分更新 | htmx 2.x（`hx-get` / `hx-post` / `hx-swap` / `hx-trigger`）。`htmx.config.selfRequestsOnly = true` |
+| 部分更新 | htmx 2.x（`hx-get` / `hx-post` / `hx-swap` / `hx-trigger`）。設定は `<meta name="htmx-config">` で `selfRequestsOnly: true`・`allowEval: false`・`includeIndicatorStyles: false`（CSP のため）、入力エラー（422）と競合（409）の応答も差し替える。本体は npm で版を固定し、ビルド時に Static Assets へコピーする（CDN は使わない） |
+| 段階的な拡張 | すべてのフォームは htmx なしでも通常の POST → リダイレクトで動く。htmx は受付の連続入力・差出人の候補表示・一覧の行内編集にだけ使う |
 | スタイル | Tailwind CSS。CLI でビルドして Static Assets に出力。共通部品（ボタン・フォーム・ダイアログ・テーブル）は `packages/ui` に JSX コンポーネントとして作る |
 | ダイアログ | ネイティブの `<dialog>` 要素を使う |
 | 入力検証 | サーバー側で Zod（`packages/domain`）。エラー時はフォームの部分テンプレートをエラー付きで返す。クライアント側は HTML 標準属性（`required`, `inputmode`, `pattern`）のみ |

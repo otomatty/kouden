@@ -10,3 +10,5 @@ dist/
 .DS_Store
 # Tailwind の生成物
 apps/*/public/assets/app.css
+# ライブラリからコピーするファイル（scripts/copy-vendor.ts）
+apps/*/public/assets/htmx.min.js
