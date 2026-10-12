@@ -34,6 +34,11 @@ export default defineConfig(({ mode }) => {
 				GOOGLE_CLIENT_SECRET: bindings.secret(),
 				SESSION_SECRET: bindings.secret(),
 				DB: bindings.d1({ name: s.d1.name, id: s.d1.id }),
+				// 返礼品の画像（04 §2）。キーは koudens/{koudenId}/… で、香典帳の削除時にまとめて消す
+				FILES: bindings.r2({ name: s.r2.name }),
+				// 香典返しの期限のお知らせ（04 §9）
+				EMAIL: bindings.sendEmail({ allowedSenderAddresses: [s.mailFrom] }),
+				MAIL_FROM: bindings.text(s.mailFrom),
 				LEDGER: bindings.durableObject({ worker: s.workerName, exportName: "KoudenLedger" }),
 				AUTH_RATE_LIMITER: bindings.rateLimit({
 					namespace: s.rateLimitNamespaces.auth,

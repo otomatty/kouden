@@ -1,4 +1,12 @@
-import { ATTENDANCES, EVENT_KINDS, formatYen, GIFT_KINDS, ROLES } from "@kouden/domain";
+import {
+	ATTENDANCES,
+	EVENT_KINDS,
+	formatYen,
+	GIFT_KINDS,
+	RETURN_METHODS,
+	RETURN_STATUSES,
+	ROLES,
+} from "@kouden/domain";
 import type { FC } from "hono/jsx";
 import { parseDiff } from "../../ledger/diff.ts";
 import type { History } from "../../ledger/types.ts";
@@ -28,7 +36,17 @@ const FIELD_LABELS: Record<string, string> = {
 	sort_order: "並び順",
 	is_hidden: "非表示",
 	role: "ロール",
-	status: "状態",
+	status: "状況",
+	person_id: "差出人",
+	method: "渡し方",
+	on_day_amount: "当日返しの額",
+	due_date: "期限",
+	arranged_at: "手配日",
+	shipped_at: "発送日",
+	ship_name: "送付先の宛名",
+	ship_postal_code: "送付先の郵便番号",
+	ship_address: "送付先の住所",
+	ship_phone: "送付先の電話番号",
 };
 
 const OP_LABELS: Record<string, string> = {
@@ -48,8 +66,16 @@ function formatValue(key: string, value: unknown, names: Record<string, string>)
 	if (key === "kind") return lookup({ ...GIFT_KINDS, ...EVENT_KINDS }, value);
 	if (key === "attendance") return lookup(ATTENDANCES, value);
 	if (key === "role") return lookup(ROLES, value);
-	if (key === "amount" && typeof value === "number") return formatYen(value);
-	if (key === "event_id" || key === "relationship_id") {
+	if (key === "status") return lookup(RETURN_STATUSES, value);
+	if (key === "method") return lookup(RETURN_METHODS, value);
+	if ((key === "amount" || key === "on_day_amount") && typeof value === "number") {
+		return formatYen(value);
+	}
+	if (key.startsWith("line:") && typeof value === "object") {
+		const v = value as { name?: string; unitPrice?: number; quantity?: number };
+		return `${v.name ?? ""} ${formatYen(v.unitPrice ?? 0)} × ${v.quantity ?? 1}`;
+	}
+	if (key === "event_id" || key === "relationship_id" || key === "person_id") {
 		return typeof value === "string" ? (names[value] ?? "（削除済み）") : "";
 	}
 	if (key === "contributors") {
@@ -68,6 +94,7 @@ function formatValue(key: string, value: unknown, names: Record<string, string>)
 }
 
 function fieldLabel(key: string, names: Record<string, string>): string {
+	if (key.startsWith("line:")) return "明細";
 	if (key.startsWith("contributor:")) {
 		return `差出人「${names[key.slice("contributor:".length)] ?? "不明"}」`;
 	}

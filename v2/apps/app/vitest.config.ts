@@ -12,8 +12,12 @@ const TEST_BINDINGS = {
 	GOOGLE_CLIENT_ID: "test-client-id",
 	GOOGLE_CLIENT_SECRET: "test-client-secret",
 	SESSION_SECRET: "test-session-secret",
+	MAIL_FROM: "noreply@localhost.test",
 } as const;
 const TEST_D1 = ["DB"] as const;
+const TEST_R2 = ["FILES"] as const;
+/** メールは送らない。DO の mailer をテストの中で差し替えて確かめる */
+const TEST_EMAIL = [{ name: "EMAIL" }];
 const TEST_DURABLE_OBJECTS = {
 	LEDGER: { className: "KoudenLedger", useSQLite: true },
 };
@@ -29,6 +33,8 @@ function assertBindingsMatchConfig(): void {
 	const testKeys = [
 		...Object.keys(TEST_BINDINGS),
 		...TEST_D1,
+		...TEST_R2,
+		...TEST_EMAIL.map((e) => e.name),
 		...Object.keys(TEST_DURABLE_OBJECTS),
 		...Object.keys(TEST_RATE_LIMITS),
 	];
@@ -51,6 +57,8 @@ export default defineConfig({
 				miniflare: {
 					compatibilityDate: "2026-10-06",
 					d1Databases: [...TEST_D1],
+					r2Buckets: [...TEST_R2],
+					email: { send_email: TEST_EMAIL },
 					durableObjects: TEST_DURABLE_OBJECTS,
 					ratelimits: TEST_RATE_LIMITS,
 					bindings: { ...TEST_BINDINGS, TEST_MIGRATIONS: migrations },

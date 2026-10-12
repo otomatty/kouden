@@ -3,7 +3,15 @@
  * 空欄は undefined に、全角数字や「10,000円」のような金額は数値にそろえる。
  */
 import { z } from "zod";
-import { ATTENDANCE_VALUES, EVENT_KIND_VALUES, EVENT_KINDS, GIFT_KIND_VALUES } from "./labels.ts";
+import {
+	ATTENDANCE_VALUES,
+	EVENT_KIND_VALUES,
+	EVENT_KINDS,
+	GIFT_KIND_VALUES,
+	RETURN_METHOD_VALUES,
+	RETURN_RATIO_VALUES,
+	RETURN_STATUS_VALUES,
+} from "./labels.ts";
 
 z.config(z.locales.ja());
 
@@ -52,6 +60,27 @@ const optionalYen = (label: string) =>
 			.min(0, { error: `${label}は 0 以上で入力してください` })
 			.max(MAX_AMOUNT, { error: `${label}が大きすぎます` })
 			.optional(),
+	);
+
+const requiredYen = (label: string) =>
+	z.preprocess(
+		toInteger,
+		z
+			.number({
+				error: (issue) =>
+					issue.input === undefined
+						? `${label}を入力してください`
+						: `${label}は数字で入力してください`,
+			})
+			.int({ error: `${label}は整数で入力してください` })
+			.min(0, { error: `${label}は 0 以上で入力してください` })
+			.max(MAX_AMOUNT, { error: `${label}が大きすぎます` }),
+	);
+
+const optionalDate = (label: string) =>
+	z.preprocess(
+		blankToUndefined,
+		z.iso.date({ error: `${label}は YYYY-MM-DD の形式で入力してください` }).optional(),
 	);
 
 const optionalCount = (label: string) =>
@@ -226,6 +255,125 @@ export type ContributorAddInput = z.output<typeof contributorAddSchema>;
 export const contributorShareSchema = z.object({
 	shareAmount: optionalYen("負担額"),
 });
+
+// ---- 香典返し（E6） --------------------------------------------------------
+
+/** 返礼品カタログ（E6-1）。画像はフォームの別の欄で受け取る */
+export const returnItemSchema = z
+	.object({
+		name: requiredText("品名", 50),
+		category: optionalText("分類", 30),
+		price: requiredYen("価格"),
+		description: optionalText("説明", 500),
+	})
+	.transform((v) => ({
+		name: v.name,
+		category: v.category ?? null,
+		price: v.price,
+		description: v.description ?? null,
+	}));
+export type ReturnItemInput = z.output<typeof returnItemSchema>;
+
+/** 金額帯ルール（E6-2）。下限〜上限（上限なしも可）の香典に、目安率と推奨品を決める */
+export const returnRuleSchema = z
+	.object({
+		minAmount: requiredYen("金額帯の下限"),
+		maxAmount: optionalYen("金額帯の上限"),
+		ratio: z.enum(RETURN_RATIO_VALUES, { error: "目安を選んでください" }),
+		suggestedItemId: optionalId,
+	})
+	.superRefine((v, ctx) => {
+		if (v.maxAmount !== undefined && v.maxAmount < v.minAmount) {
+			ctx.addIssue({
+				code: "custom",
+				path: ["maxAmount"],
+				message: "上限は下限以上の金額にしてください",
+			});
+		}
+	})
+	.transform((v) => {
+		const [numerator, denominator] = v.ratio.split("/").map(Number);
+		return {
+			minAmount: v.minAmount,
+			maxAmount: v.maxAmount ?? null,
+			ratioNumerator: numerator ?? 1,
+			ratioDenominator: denominator ?? 2,
+			suggestedItemId: v.suggestedItemId ?? null,
+		};
+	});
+export type ReturnRuleInput = z.output<typeof returnRuleSchema>;
+
+/** 香典返しの状況・送付先（E6-4） */
+export const returnSchema = z
+	.object({
+		status: z.enum(RETURN_STATUS_VALUES, { error: "状況を選んでください" }),
+		method: z.preprocess(
+			blankToUndefined,
+			z.enum(RETURN_METHOD_VALUES, { error: "渡し方を選んでください" }).optional(),
+		),
+		onDayAmount: optionalYen("当日返しの額"),
+		dueDate: optionalDate("期限"),
+		arrangedAt: optionalDate("手配日"),
+		shippedAt: optionalDate("発送日"),
+		shipName: optionalText("送付先の宛名", 50),
+		shipPostalCode: postalCode,
+		shipAddress: optionalText("送付先の住所", 200),
+		shipPhone: phone,
+		notes: optionalText("備考", 1000),
+	})
+	.transform((v) => ({
+		status: v.status,
+		method: v.method ?? null,
+		onDayAmount: v.onDayAmount ?? 0,
+		dueDate: v.dueDate ?? null,
+		arrangedAt: v.arrangedAt ?? null,
+		shippedAt: v.shippedAt ?? null,
+		shipName: v.shipName ?? null,
+		shipPostalCode: v.shipPostalCode ?? null,
+		shipAddress: v.shipAddress ?? null,
+		shipPhone: v.shipPhone ?? null,
+		notes: v.notes ?? null,
+	}));
+export type ReturnInput = z.output<typeof returnSchema>;
+
+/** 香典返しの明細を 1 行追加する。カタログから選ぶか、品名と単価を入力する */
+export const returnLineSchema = z
+	.object({
+		itemId: optionalId,
+		name: optionalText("品名", 50),
+		unitPrice: optionalYen("単価"),
+		quantity: optionalCount("数量"),
+	})
+	.superRefine((v, ctx) => {
+		if (v.itemId !== undefined) return;
+		if (v.name === undefined) {
+			ctx.addIssue({
+				code: "custom",
+				path: ["name"],
+				message: "カタログから選ぶか、品名を入力してください",
+			});
+		}
+		if (v.unitPrice === undefined) {
+			ctx.addIssue({ code: "custom", path: ["unitPrice"], message: "単価を入力してください" });
+		}
+	})
+	.transform((v) =>
+		v.itemId !== undefined
+			? ({ type: "catalog", itemId: v.itemId, quantity: v.quantity ?? 1 } as const)
+			: ({
+					type: "custom",
+					name: v.name ?? "",
+					unitPrice: v.unitPrice ?? 0,
+					quantity: v.quantity ?? 1,
+				} as const),
+	);
+export type ReturnLineInput = z.output<typeof returnLineSchema>;
+
+/** 一括提案で差し引く当日返しの額（空欄は 0） */
+export const onDayAmountSchema = z.preprocess(
+	(v) => (v === undefined ? "" : v),
+	optionalYen("当日返しの額"),
+);
 
 /** 楽観ロック用の version（フォームの hidden） */
 export const versionSchema = z.preprocess(

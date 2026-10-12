@@ -98,6 +98,88 @@ CREATE TABLE change_log (
 );
 CREATE INDEX idx_change_log_entity ON change_log(entity, entity_id);
 `,
+	// 2: 香典返し（M3）。カタログ・金額帯ルール・差出人ごとの香典返しと明細・期限のお知らせ
+	`
+CREATE TABLE return_items (
+  id                TEXT PRIMARY KEY,
+  name              TEXT NOT NULL,
+  category          TEXT,
+  price             INTEGER NOT NULL,
+  description       TEXT,
+  image_r2_key      TEXT,
+  is_active         INTEGER NOT NULL DEFAULT 1,
+  sort_order        INTEGER NOT NULL,
+  version           INTEGER NOT NULL DEFAULT 1,
+  created_at        TEXT NOT NULL,
+  updated_at        TEXT NOT NULL
+);
+
+CREATE TABLE return_rules (
+  id                TEXT PRIMARY KEY,
+  min_amount        INTEGER NOT NULL,
+  max_amount        INTEGER,
+  ratio_numerator   INTEGER NOT NULL,
+  ratio_denominator INTEGER NOT NULL,
+  suggested_item_id TEXT REFERENCES return_items(id),
+  sort_order        INTEGER NOT NULL,
+  version           INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE returns (
+  id                TEXT PRIMARY KEY,
+  person_id         TEXT NOT NULL UNIQUE REFERENCES persons(id),
+  status            TEXT NOT NULL CHECK (status IN ('pending','arranged','shipped','handed_on_day','not_required')),
+  method            TEXT CHECK (method IN ('on_day','shipping','hand_delivery')),
+  on_day_amount     INTEGER NOT NULL DEFAULT 0,
+  due_date          TEXT,
+  arranged_at       TEXT,
+  shipped_at        TEXT,
+  ship_name         TEXT,
+  ship_postal_code  TEXT,
+  ship_address      TEXT,
+  ship_phone        TEXT,
+  notes             TEXT,
+  version           INTEGER NOT NULL DEFAULT 1,
+  created_by        TEXT NOT NULL,
+  created_at        TEXT NOT NULL,
+  updated_by        TEXT NOT NULL,
+  updated_at        TEXT NOT NULL
+);
+CREATE INDEX idx_returns_status ON returns(status);
+
+CREATE TABLE return_lines (
+  id                TEXT PRIMARY KEY,
+  return_id         TEXT NOT NULL REFERENCES returns(id),
+  return_item_id    TEXT REFERENCES return_items(id),
+  name              TEXT NOT NULL,
+  unit_price        INTEGER NOT NULL,
+  quantity          INTEGER NOT NULL DEFAULT 1
+);
+CREATE INDEX idx_return_lines_return ON return_lines(return_id);
+
+CREATE TABLE reminders (
+  id                TEXT PRIMARY KEY,
+  kind              TEXT NOT NULL CHECK (kind IN ('return_due_14d','return_due_3d')),
+  event_id          TEXT NOT NULL REFERENCES events(id),
+  fire_at           TEXT NOT NULL,
+  sent_at           TEXT,
+  UNIQUE (kind, event_id)
+);
+CREATE INDEX idx_reminders_due ON reminders(fire_at) WHERE sent_at IS NULL;
+
+-- この移行より前に日付を入れた四十九日にも、お知らせの予定を作る（14 日前・3 日前の 9:00 JST = 0:00 UTC）。
+-- 期限は日付のある四十九日のうち最も早いもの（KoudenLedger.dueEvent と同じ）。
+-- 時刻の形式は reminderSchedule（packages/domain）と同じ。過ぎた分は作らない
+INSERT INTO reminders (id, kind, event_id, fire_at)
+SELECT lower(hex(randomblob(16))), o.kind, e.id, strftime('%Y-%m-%dT00:00:00.000Z', e.date, o.offset)
+  FROM events e
+  JOIN (SELECT 'return_due_14d' AS kind, '-14 days' AS offset
+        UNION ALL SELECT 'return_due_3d', '-3 days') o
+ WHERE e.id = (SELECT id FROM events
+                WHERE kind = 'memorial_49' AND date IS NOT NULL AND deleted_at IS NULL
+                ORDER BY date, sort_order LIMIT 1)
+   AND strftime('%Y-%m-%dT00:00:00.000Z', e.date, o.offset) > strftime('%Y-%m-%dT%H:%M:%fZ', 'now');
+`,
 ];
 
 /**

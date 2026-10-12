@@ -16,6 +16,7 @@ import { ui } from "../ui.ts";
 import { LiveRegion } from "./shell.tsx";
 import { type ConflictField, ConflictDiff } from "../components/conflict.tsx";
 import { HistoryList } from "../components/history.tsx";
+import { StatusBadge } from "./returns.tsx";
 
 const COLUMNS = 8;
 
@@ -467,6 +468,7 @@ export const PersonPage: FC<{
 				</ul>
 			</section>
 
+			<PersonReturnPanel kouden={kouden} person={person} canWrite={canWrite} />
 			{history && <HistoryList history={history} />}
 			<p>
 				<a href={`${base}/persons`} class={ui.link}>
@@ -474,5 +476,44 @@ export const PersonPage: FC<{
 				</a>
 			</p>
 		</div>
+	);
+};
+
+/** 差出人の香典返し（他の人が作成・変更したら取り直す） */
+export const PersonReturnPanel: FC<{
+	kouden: KoudenContext;
+	person: PersonDetail;
+	canWrite: boolean;
+}> = ({ kouden, person, canWrite }) => {
+	const base = `/k/${kouden.id}`;
+	return (
+		<LiveRegion
+			id="person-return-panel"
+			entities={["return"]}
+			url={`${base}/persons/${person.id}?partial=return`}
+		>
+			<section aria-labelledby="person-return" class={`${ui.cardTight} space-y-2 text-sm`}>
+				<h3 id="person-return" class={ui.h3}>
+					香典返し
+				</h3>
+				{person.ret ? (
+					<p class="flex flex-wrap items-center gap-2">
+						<StatusBadge status={person.ret.status} />
+						<a href={`${base}/returns/${person.ret.id}`} class={ui.link}>
+							香典返しを開く
+						</a>
+					</p>
+				) : canWrite ? (
+					<form method="post" action={`${base}/persons/${person.id}/return`}>
+						<span class="mr-2 text-muted">まだ作成していません。</span>
+						<button type="submit" class={ui.buttonSmall}>
+							香典返しを作成
+						</button>
+					</form>
+				) : (
+					<p class="text-muted">まだ作成していません。</p>
+				)}
+			</section>
+		</LiveRegion>
 	);
 };
