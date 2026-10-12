@@ -5,6 +5,7 @@ import { log } from "./lib/logger.ts";
 import { requestContext } from "./middleware/request-context.ts";
 import { csrfProtection, securityHeaders } from "./middleware/security.ts";
 import { session } from "./middleware/session.ts";
+import { webhookRoutes } from "./routes/billing.tsx";
 import { koudenRoutes } from "./routes/koudens.tsx";
 import { inviteRoutes } from "./routes/members.tsx";
 import { pageRoutes } from "./routes/pages.tsx";
@@ -30,6 +31,7 @@ export function createApp(deps: AppDeps = {}) {
 	app.route("/", pageRoutes);
 	app.route("/", koudenRoutes);
 	app.route("/", inviteRoutes);
+	app.route("/", webhookRoutes);
 
 	app.notFound((c) =>
 		c.html(

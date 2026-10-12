@@ -50,6 +50,7 @@ import {
 	type ReturnItemView,
 	type ReturnLineView,
 	type ReturnRuleView,
+	type OutputData,
 	type ReturnsBoard,
 	type ReturnView,
 } from "./types.ts";
@@ -1126,6 +1127,31 @@ export class KoudenLedger extends DurableObject<Env> {
 		});
 	}
 
+	// ---- 出力（E7-2, E7-3） --------------------------------------------------------
+
+	/** 印刷用ページと Excel の元データ。同じ時点の内容をまとめて読む */
+	async outputData(caller: Caller): Promise<LedgerResult<OutputData>> {
+		return this.read(caller, () => {
+			const totals = this.personTotals();
+			const persons = this.all<PersonRow>(
+				`SELECT ${PERSON_COLUMNS}
+           FROM persons p LEFT JOIN relationships r ON r.id = p.relationship_id
+          WHERE p.deleted_at IS NULL
+          ORDER BY coalesce(p.name_kana, p.name, p.organization), p.created_at`,
+			).map((p) => this.toPersonView(p, totals));
+			return {
+				events: this.events(),
+				gifts: this.queryGifts(
+					"",
+					[],
+					"e.sort_order, g.receipt_no IS NULL, g.receipt_no, g.created_at",
+				),
+				persons,
+				returns: this.returnViews(),
+			};
+		});
+	}
+
 	/**
 	 * 提案を確認した内容で、香典返しをまとめて作る（E6-3）。1 トランザクション。
 	 * すでに香典返しがある差出人は飛ばす（他の人が先に確定した場合など）
@@ -1573,7 +1599,8 @@ export class KoudenLedger extends DurableObject<Env> {
 	async recordExternalChange(
 		actor: Caller,
 		change: {
-			entity: "member" | "kouden";
+			/** plan は購入・返金（04 §7）。kouden（アーカイブなど）と違い、画面を読み込み直さない */
+			entity: "member" | "kouden" | "plan";
 			entityId: string;
 			op: "create" | "update" | "delete";
 			diff: Diff | null;

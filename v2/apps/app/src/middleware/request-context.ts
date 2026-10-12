@@ -1,4 +1,5 @@
 import { createMiddleware } from "hono/factory";
+import { stripeClient } from "../billing/stripe.ts";
 import { log } from "../lib/logger.ts";
 import type { AppDeps, AppEnv } from "../types.ts";
 
@@ -8,6 +9,13 @@ export function requestContext(deps: AppDeps) {
 		const requestId = c.req.header("cf-ray") ?? crypto.randomUUID();
 		c.set("requestId", requestId);
 		c.set("now", deps.now?.() ?? new Date());
+		c.set("stripe", () =>
+			deps.stripe
+				? deps.stripe(c.env)
+				: c.env.STRIPE_SECRET_KEY
+					? stripeClient(c.env.STRIPE_SECRET_KEY)
+					: null,
+		);
 		c.set("user", null);
 		c.set("sessionToken", null);
 

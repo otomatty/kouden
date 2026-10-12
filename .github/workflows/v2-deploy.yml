@@ -62,11 +62,15 @@ jobs:
         env:
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
         run: |
           umask 077
           {
             printf 'GOOGLE_CLIENT_SECRET=%s\n' "$GOOGLE_CLIENT_SECRET"
             printf 'SESSION_SECRET=%s\n' "$SESSION_SECRET"
+            printf 'STRIPE_SECRET_KEY=%s\n' "$STRIPE_SECRET_KEY"
+            printf 'STRIPE_WEBHOOK_SECRET=%s\n' "$STRIPE_WEBHOOK_SECRET"
           } > "$RUNNER_TEMP/secrets.env"
 
       - name: Deploy

@@ -12,6 +12,9 @@ const TEST_BINDINGS = {
 	GOOGLE_CLIENT_ID: "test-client-id",
 	GOOGLE_CLIENT_SECRET: "test-client-secret",
 	SESSION_SECRET: "test-session-secret",
+	// Stripe の API はテストの中で差し替える（AppDeps.stripe）。Webhook の署名はこの値で作る
+	STRIPE_SECRET_KEY: "sk_test_dummy",
+	STRIPE_WEBHOOK_SECRET: "whsec_test_secret",
 	MAIL_FROM: "noreply@localhost.test",
 } as const;
 const TEST_D1 = ["DB"] as const;

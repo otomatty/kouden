@@ -1,3 +1,4 @@
+import { formatYen, PAID_PRICE_JPY } from "@kouden/domain";
 import type { Context } from "hono";
 import type { Child } from "hono/jsx";
 import { ledgerFor } from "../ledger/client.ts";
@@ -27,6 +28,11 @@ export const NOTICES = {
 	transfer_declined: "オーナーの譲渡を辞退しました。",
 	owner: "オーナーになりました。",
 	joined: "香典帳に参加しました。",
+	purchased: "お支払いが完了しました。この香典帳は有料版になり、件数の上限がなくなりました。",
+	purchase_pending:
+		"お支払いの完了を確認しています。コンビニ払いなどの場合は、お支払いが済むと有料版になります。",
+	purchase_cancelled: "購入を取りやめました。",
+	purchase_unavailable: "現在、購入の受付を停止しています。時間をおいてもう一度お試しください。",
 } as const;
 
 export const CONFLICT_MESSAGE =
@@ -100,8 +106,18 @@ export function koudenPage(
 	);
 }
 
-export function limitMessage(c: Ctx, limit: number): string {
-	return c.get("kouden").memberRole === "owner"
-		? `無料版で登録できる ${limit} 件に達しました。有料版（購入）の受付は準備中です。`
-		: `無料版で登録できる ${limit} 件に達しました。オーナーに有料版の購入を依頼してください。`;
+/** 無料版の上限に達したときの案内（E9-2）。購入できるのはオーナーだけ */
+export function limitMessage(c: Ctx, limit: number) {
+	if (c.get("kouden").memberRole !== "owner") {
+		return `無料版で登録できる ${limit} 件に達しました。オーナーに有料版の購入を依頼してください。`;
+	}
+	return (
+		<>
+			無料版で登録できる {limit} 件に達しました。{" "}
+			<a href={`${basePath(c)}/settings#billing`} class="font-medium underline underline-offset-4">
+				有料版を購入する（{formatYen(PAID_PRICE_JPY)}）
+			</a>
+			と、件数の上限がなくなります。
+		</>
+	);
 }

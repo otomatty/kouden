@@ -131,10 +131,8 @@ export const Select: FC<{
 };
 
 /** 項目に属さないエラー（`_form`）と、件数の要約 */
-export const FormAlert: FC<{ errors?: FieldErrors; message?: string | undefined }> = ({
-	errors,
-	message,
-}) => {
+/** message はリンクを含められる（上限に達したときの購入の案内など） */
+export const FormAlert: FC<{ errors?: FieldErrors; message?: Child }> = ({ errors, message }) => {
 	const text = message ?? errors?._form;
 	const count = errors ? Object.keys(errors).filter((k) => k !== "_form").length : 0;
 	if (!text && count === 0) return null;

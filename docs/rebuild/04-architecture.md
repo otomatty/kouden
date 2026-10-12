@@ -75,7 +75,8 @@ v2/                              # 切り替えまでの間、旧実装と同居
 │   │   │   ├── middleware/      # request-context, session, security（CSRF・CSP）
 │   │   │   ├── auth/            # Google OIDC・セッション・ユーザー解決
 │   │   │   ├── ledger/          # KoudenLedger（DO）とその SQL・マイグレーション（M1〜）
-│   │   │   └── billing/         # Stripe（M4〜）
+│   │   │   ├── output/          # 印刷用ページ・Excel の行の組み立て、.xlsx の生成（M4〜）
+│   │   │   └── billing/         # Stripe（Checkout・Webhook の署名検証）と購入の記録（M4〜）
 │   │   └── test/
 │   └── admin/                   # kouden-admin Worker（M5〜）
 ├── packages/
@@ -239,36 +240,56 @@ htmx 本体と、WebSocket を扱う小さな自前スクリプト（`public/ass
 | `/k/:id/returns` | 香典返し（一括提案・状況の一覧と絞り込み） | PC |
 | `/k/:id/returns/:rid` | 香典返し 1 件（状況・送付先・品・変更履歴） | 両方 |
 | `/k/:id/returns/settings` | 返礼品カタログ（画像）・金額帯ルール | PC |
+| `/k/:id/output` | 印刷・出力（印刷用ページと Excel の入口） | 両方 |
 | `/k/:id/print/*` | 印刷用ページ | PC |
 | `/k/:id/members` | メンバー・ロール・招待リンク（QR コード）・オーナー譲渡・退出 | 両方 |
-| `/k/:id/settings` | 香典帳の情報・行事・関係・購入・アーカイブ・削除 | 両方 |
+| `/k/:id/settings` | 香典帳の情報・料金（購入）・行事・関係・アーカイブ・削除 | 両方 |
+| `/k/:id/billing/*` | 購入（Checkout へのリダイレクト・完了画面） | 両方 |
+| `/webhooks/stripe` | Stripe の Webhook | — |
 | `/invite/:token` | 招待の受諾（ログイン前は香典帳名とログインボタン、ログイン後は「参加する」ボタン。GET では参加しない） | スマホ |
 
 ## 7. 決済（Stripe）
 
 ```
-オーナーが「購入」→ POST /k/:id/billing/checkout
-  Checkout Session（mode=payment, ¥2,980, metadata: {kouden_id, user_id}）を作成してリダイレクト
-POST /webhooks/stripe
-  1. 署名検証（stripe SDK の constructEventAsync。Workers の Web Crypto で動作）
+オーナーが「購入」→ POST /k/:id/billing/checkout（有効な香典帳のオーナーのみ）
+  Checkout Session（mode=payment, ¥2,980, metadata: {kouden_id, user_id},
+  payment_intent_data.receipt_email = オーナーのメール）を作成してリダイレクト
+GET /k/:id/billing/done?session_id=…（success_url）
+  Checkout Session を取得し、この香典帳のもので payment_status=paid なら購入を確定する（下の 2. と同じ処理。
+  Webhook を待たずに使えるようにする）。未払い（コンビニ払いなど）なら「確認中」と表示する
+POST /webhooks/stripe（CSRF の検査から除く。署名で検証する）
+  1. 署名検証（Stripe-Signature の t と v1。`t.payload` の HMAC-SHA256 を Web Crypto で計算し、
+     5 分以内の時刻であることを確かめる）
   2. イベントの記録と D1 の更新を、1 つの db.batch() で原子的に確定する
-     checkout.session.completed かつ payment_status=paid:
-       db.batch([ stripe_events INSERT, purchases INSERT, koudens.plan = 'paid' ])
-     charge.refunded:
+     checkout.session.completed / async_payment_succeeded かつ payment_status=paid:
+       db.batch([ stripe_events INSERT, purchases INSERT（Session ID の重複は無視）, koudens.plan = 'paid' ])
+     charge.refunded（全額返金のみ。一部返金は記録だけ）:
        db.batch([ stripe_events INSERT, purchases.status = 'refunded',
                   有効な購入がなければ koudens.plan = 'free' ])
   3. stripe_events の主キー重複でバッチが失敗した場合は処理済みとみなして 200 を返す
      それ以外の失敗は 500 を返す（バッチ全体がロールバックされるので、Stripe の再送で再処理される）
 ```
 
-`plan` は D1 が正で、DO は毎回の呼び出しで受け取るため、DO への通知は不要。返金で `free` に戻っても既存の記録は消さず、新規登録だけが止まる。
+- Stripe の SDK は使わず、Checkout Session の作成・取得の 2 つの API を `fetch` で呼ぶ（`src/billing/stripe.ts`。Worker の容量を抑え、テストで差し替えやすくするため）。
+- Checkout へは購入フォームの送信後にリダイレクトするため、CSP の `form-action` に `https://checkout.stripe.com` を加える。
+- `plan` は D1 が正で、DO は毎回の呼び出しで受け取る。購入・返金で `plan` が変わったら、DO の変更ログに `plan` として記録・通知し、開いている画面の残り件数の表示を取り直す（画面全体は読み込み直さない）。返金で `free` に戻っても既存の記録は消さず、新規登録だけが止まる。
+- 有料の香典帳を重ねて購入した場合（二重決済）や、購入の前に香典帳が削除された場合は、購入を記録したうえでログに警告を出す。返金は運営者が Stripe のダッシュボードで行う。
 
 ## 8. 帳票出力
 
 | 出力 | 実装 |
 |---|---|
-| 印刷用ページ | `/k/:id/print/*` で A4 用の HTML を返す。`@page { size: A4 }`、改ページ制御、ヘッダー・フッター。ブラウザの「印刷 / PDF に保存」を使う |
-| Excel | Worker で `.xlsx` を生成して返す。**ライブラリは M4 の前に PoC で選定する**（Workers で動くこと、バンドルサイズ、日本語・書式の扱い）。Workers で困難な場合は、ブラウザ側で生成する案に切り替える |
+| 入口 | `/k/:id/output`（タブ「印刷・出力」）。閲覧者を含むメンバー全員が使える |
+| 印刷用ページ | `/k/:id/print/gifts`（芳名一覧。`?event=` で行事を絞る）・`/print/returns`（香典返し一覧。`?status=` で状況を絞る）・`/print/addresses`（宛名一覧。香典返しの送付先があればその住所、なければ差出人の住所。`?only=shipping` で配送の方だけ）。アプリの枠を付けない A4 用の HTML を返す。`@page { size: A4 }`、行事ごとの改ページ、改ページ後の見出しの繰り返し、ページ番号（`@bottom-center`）。ブラウザの「印刷 / PDF に保存」を使う |
+| Excel | `/k/:id/export.xlsx`。Worker で `.xlsx` を生成して返す（シート: いただきもの・差出人・香典返し）。金額は数値（`#,##0`）、日付・日時は日付のセル（日時は日本時間に直す）、文字列は文字列のセルとして書くので数式にはならない |
+| キャッシュ | 個人情報を含むので、印刷用ページと Excel は `Cache-Control: private, no-store` |
+
+**Excel のライブラリの PoC（M4）**: 同じ表（500 行・日本語・JIS 第 3・4 水準の文字・数値の書式・列幅・見出しの固定・2 シート）を Workers（workerd）で生成し、openpyxl と LibreOffice で読み戻して比べた。
+
+| 候補 | Workers で動くか | バンドル（minify / gzip） | 書式・列幅 | 判断 |
+|---|---|---|---|---|
+| write-excel-file 4.1.1（`/universal`） | 動く（500 行で約 30 ms） | 73 KB / 20 KB。依存は fflate のみ | 数値・日付の書式、太字・背景色、列幅、見出しの固定 | **採用** |
+| exceljs 4.4.0 | 動く（`nodejs_compat`） | 940 KB / 272 KB。Node のストリーム系の依存が多い | 同等以上 | 容量が大きく、更新も止まっているため見送り |
 
 ## 9. メール
 
@@ -307,4 +328,4 @@ class CloudflareMailer implements Mailer { /* env.EMAIL.send(...) */ }
 | アラート | Cloudflare の通知機能で、エラー率・CPU 超過を通知 |
 | バックアップ | D1 Time Travel（30 日）、DO SQLite の Point-in-Time Recovery（30 日）。加えて週次で全香典帳のエクスポートを R2 の別バケット（ライフサイクル 90 日）に保存する |
 | 回数制限 | ログイン開始: IP ごと 20 回/分。書き込み: ユーザーごと 120 回/分。招待受諾: IP ごと 10 回/分 |
-| シークレット | `GOOGLE_CLIENT_SECRET`, `SESSION_SECRET`（M4 で `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` を追加）。GitHub の Environments に保存し、デプロイ時に `cf deploy --secrets-file` で渡す。ローカルは `.dev.vars` |
+| シークレット | `GOOGLE_CLIENT_SECRET`, `SESSION_SECRET`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`。GitHub の Environments に保存し、デプロイ時に `cf deploy --secrets-file` で渡す。ローカルは `.dev.vars` |

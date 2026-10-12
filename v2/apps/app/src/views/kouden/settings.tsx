@@ -1,15 +1,23 @@
-import { can, EVENT_KINDS, type FieldErrors } from "@kouden/domain";
+import {
+	can,
+	EVENT_KINDS,
+	type FieldErrors,
+	FREE_GIFT_LIMIT,
+	formatYen,
+	PAID_PRICE_JPY,
+} from "@kouden/domain";
 import type { FC } from "hono/jsx";
+import type { PurchaseView } from "../../billing/purchases.ts";
 import type { KoudenContext } from "../../kouden/store.ts";
 import type { Caller, LedgerEvent, LedgerRelationship } from "../../ledger/types.ts";
 import { Field, FormAlert, type FormValues, Hidden, Input, Select } from "../components/form.tsx";
-import { formatDate } from "../format.ts";
+import { formatDate, jstDateOf } from "../format.ts";
 import { ui } from "../ui.ts";
 import { LiveRegion } from "./shell.tsx";
 
 const EVENT_KIND_OPTIONS = Object.entries(EVENT_KINDS).map(([value, label]) => ({ value, label }));
 
-/** 設定: 香典帳の情報・行事（E2-2）・関係（E5-3）・アーカイブと削除（E2-4） */
+/** 設定: 香典帳の情報・有料版（E9）・行事（E2-2）・関係（E5-3）・アーカイブと削除（E2-4） */
 export const SettingsPage: FC<{
 	kouden: KoudenContext;
 	caller: Caller;
@@ -21,6 +29,8 @@ export const SettingsPage: FC<{
 	koudenValues: FormValues;
 	koudenErrors?: FieldErrors;
 	deleteError?: string | undefined;
+	/** 有効な購入（有料版のとき） */
+	purchase: PurchaseView | null;
 }> = ({
 	kouden,
 	caller,
@@ -31,6 +41,7 @@ export const SettingsPage: FC<{
 	koudenValues,
 	koudenErrors = {},
 	deleteError,
+	purchase,
 }) => {
 	const base = `/k/${kouden.id}`;
 	const isOwner = kouden.memberRole === "owner";
@@ -80,6 +91,8 @@ export const SettingsPage: FC<{
 					</dl>
 				)}
 			</section>
+
+			<BillingSection kouden={kouden} purchase={purchase} />
 
 			<EventsSection kouden={kouden} caller={caller} events={events} />
 
@@ -356,3 +369,58 @@ export const MoveButtons: FC<{ action: string; first: boolean; last: boolean; la
 		</form>
 	</>
 );
+
+/** 有料版（E9-1〜E9-3）。購入はオーナーだけができる */
+const BillingSection: FC<{ kouden: KoudenContext; purchase: PurchaseView | null }> = ({
+	kouden,
+	purchase,
+}) => {
+	const base = `/k/${kouden.id}`;
+	return (
+		<section id="billing" aria-labelledby="billing-heading" class={`${ui.card} space-y-4`}>
+			<div class="flex flex-wrap items-baseline gap-3">
+				<h2 id="billing-heading" class={ui.h2}>
+					料金
+				</h2>
+				<span class={ui.badge}>{kouden.plan === "paid" ? "有料版" : "無料版"}</span>
+			</div>
+			{kouden.plan === "paid" ? (
+				<div class="space-y-2 text-sm">
+					<p>有料版です。いただきものの件数に上限はありません。</p>
+					{purchase?.source === "stripe" && (
+						<p class="text-muted">
+							{formatDate(jstDateOf(purchase.createdAt))}に
+							{purchase.buyerName ? `${purchase.buyerName}さんが` : ""}購入しました（
+							{formatYen(purchase.amount)}）。領収書は購入時に Stripe からメールで届いています。
+						</p>
+					)}
+					{purchase?.source === "legacy" && (
+						<p class="text-muted">以前のサービスで購入された香典帳です。</p>
+					)}
+				</div>
+			) : (
+				<div class="space-y-4 text-sm">
+					<p>
+						無料版では、いただきものを {FREE_GIFT_LIMIT} 件まで登録できます。有料版（
+						{formatYen(PAID_PRICE_JPY)}
+						・税込・買い切り）にすると、この香典帳の件数の上限がなくなります。
+					</p>
+					{kouden.memberRole !== "owner" ? (
+						<p class="text-muted">購入はオーナーが行います。オーナーに依頼してください。</p>
+					) : kouden.status !== "active" ? (
+						<p class="text-muted">アーカイブを解除すると購入できます。</p>
+					) : (
+						<form method="post" action={`${base}/billing/checkout`} class="space-y-2">
+							<button type="submit" class={ui.buttonPrimary}>
+								有料版を購入する（{formatYen(PAID_PRICE_JPY)}）
+							</button>
+							<p class="text-muted">
+								Stripe の決済画面に移動します。領収書はご登録のメールアドレスに届きます。
+							</p>
+						</form>
+					)}
+				</div>
+			)}
+		</section>
+	);
+};

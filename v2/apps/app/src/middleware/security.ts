@@ -13,7 +13,8 @@ export const securityHeaders: MiddlewareHandler<AppEnv> = secureHeaders({
 		fontSrc: ["'self'"],
 		objectSrc: ["'none'"],
 		baseUri: ["'self'"],
-		formAction: ["'self'"],
+		// 有料版の購入は Stripe Checkout へフォームの送信後にリダイレクトする（リダイレクト先も form-action の対象）
+		formAction: ["'self'", "https://checkout.stripe.com"],
 		frameAncestors: ["'none'"],
 	},
 	referrerPolicy: "strict-origin-when-cross-origin",
@@ -24,7 +25,13 @@ export const securityHeaders: MiddlewareHandler<AppEnv> = secureHeaders({
 	},
 });
 
-/** GET 以外の要求は Origin が自分のオリジンと一致する場合のみ許可する */
-export const csrfProtection: MiddlewareHandler<AppEnv> = csrf({
+const sameOrigin = csrf({
 	origin: (origin, c) => origin === c.env.APP_ORIGIN,
 });
+
+/**
+ * GET 以外の要求は Origin が自分のオリジンと一致する場合のみ許可する。
+ * Stripe の Webhook はブラウザからの要求ではなく、署名で検証するので除く
+ */
+export const csrfProtection: MiddlewareHandler<AppEnv> = (c, next) =>
+	c.req.path === "/webhooks/stripe" ? next() : sameOrigin(c, next);

@@ -76,9 +76,15 @@ M0 のコードは揃っていますが、以下は Cloudflare・Google・GitHub
    - `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`
    - `GOOGLE_CLIENT_SECRET`
    - `SESSION_SECRET`（`openssl rand -hex 32`。環境ごとに別の値）
+   - `STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`（下の 6.）
    - `production` には承認者（Required reviewers）を設定する
 5. **ステージングを Cloudflare Access で保護**: `staging.<ドメイン>` を Access アプリケーションにし、開発者のメールのみ許可する。
-6. **デプロイ**: GitHub Actions の「v2 Deploy」を手動実行する。初回は D1 がデプロイ時に作成され、続けてマイグレーションが適用される。
+6. **Stripe の設定**（ステージングはテストモード、本番はライブモード）:
+   - Webhook のエンドポイント: `https://<ドメイン>/webhooks/stripe`。送るイベントは `checkout.session.completed`・`checkout.session.async_payment_succeeded`・`checkout.session.async_payment_failed`・`charge.refunded`。表示される署名シークレット（`whsec_...`）を `STRIPE_WEBHOOK_SECRET` に登録する
+   - シークレットキー（`sk_...`。制限付きキーなら Checkout Sessions の書き込み権限）を `STRIPE_SECRET_KEY` に登録する
+   - 「カスタマーメール」で支払い成功時の領収書の送信を有効にする（E9-3）
+   - ローカルで試す場合は `.dev.vars` にテストモードのキーを入れ、`stripe listen --forward-to localhost:5173/webhooks/stripe` が表示する `whsec_...` を `STRIPE_WEBHOOK_SECRET` に入れる
+7. **デプロイ**: GitHub Actions の「v2 Deploy」を手動実行する。初回は D1 がデプロイ時に作成され、続けてマイグレーションが適用される。
 
 ## `cf`（ベータ）の注意点
 

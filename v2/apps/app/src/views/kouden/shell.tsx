@@ -10,6 +10,7 @@ export type KoudenTab =
 	| "gifts"
 	| "persons"
 	| "returns"
+	| "output"
 	| "members"
 	| "settings";
 
@@ -19,6 +20,7 @@ const TABS: readonly { tab: KoudenTab; label: string; path: string }[] = [
 	{ tab: "gifts", label: "いただきもの", path: "/gifts" },
 	{ tab: "persons", label: "差出人", path: "/persons" },
 	{ tab: "returns", label: "香典返し", path: "/returns" },
+	{ tab: "output", label: "印刷・出力", path: "/output" },
 	{ tab: "members", label: "メンバー", path: "/members" },
 	{ tab: "settings", label: "設定", path: "/settings" },
 ];

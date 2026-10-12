@@ -245,6 +245,16 @@ export interface ReturnDetail extends ReturnView {
 	koudenDueDate: string | null;
 }
 
+/** 印刷用ページと Excel の元データ（E7-2, E7-3） */
+export interface OutputData {
+	events: LedgerEvent[];
+	/** 行事の順 → 受付番号の順 */
+	gifts: GiftView[];
+	/** ふりがなの順 */
+	persons: PersonView[];
+	returns: ReturnView[];
+}
+
 /** 一括確定の 1 件分。itemId が null なら明細なし（当日返しで済んだ場合など） */
 export interface ReturnConfirmEntry {
 	personId: string;
