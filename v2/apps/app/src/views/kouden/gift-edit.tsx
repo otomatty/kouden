@@ -46,6 +46,8 @@ export const GiftEditPage: FC<{
 	contributorCandidates?: PersonView[];
 	/** 保存時の競合（E8-3）。values は自分の入力、これは最新の内容 */
 	conflictLatest?: FormValues | undefined;
+	/** 競合した負担額の入力（その行の入力欄に残す） */
+	shareDraft?: { personId: string; shareAmount: string } | undefined;
 	history?: History | undefined;
 }> = ({
 	kouden,
@@ -60,6 +62,7 @@ export const GiftEditPage: FC<{
 	contributorValues = {},
 	contributorCandidates = [],
 	conflictLatest,
+	shareDraft,
 	history,
 }) => {
 	const base = `/k/${kouden.id}`;
@@ -243,7 +246,11 @@ export const GiftEditPage: FC<{
 										<input
 											id={`share-${p.personId}`}
 											name="shareAmount"
-											value={p.shareAmount?.toString() ?? ""}
+											value={
+												shareDraft?.personId === p.personId
+													? shareDraft.shareAmount
+													: (p.shareAmount?.toString() ?? "")
+											}
 											inputmode="numeric"
 											class={`${ui.input} w-28 text-right tabular-nums`}
 											placeholder="均等割り"

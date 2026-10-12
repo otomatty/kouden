@@ -278,15 +278,17 @@ export const MembersPage: FC<{
 											使用 {i.usedCount}
 											{i.maxUses !== null && ` / ${i.maxUses}`} 回
 										</span>
-										<form
-											method="post"
-											action={`${base}/invitations/${i.id}/revoke`}
-											class="ml-auto"
-										>
-											<button type="submit" class={ui.buttonSmall}>
-												無効にする
-											</button>
-										</form>
+										{canManage && (
+											<form
+												method="post"
+												action={`${base}/invitations/${i.id}/revoke`}
+												class="ml-auto"
+											>
+												<button type="submit" class={ui.buttonSmall}>
+													無効にする
+												</button>
+											</form>
+										)}
 									</li>
 								))}
 							</ul>

@@ -58,10 +58,10 @@ function formatValue(key: string, value: unknown, names: Record<string, string>)
 			: "";
 	}
 	if (key.startsWith("contributor:") && typeof value === "object") {
-		const v = value as { shareAmount?: number | null; makePrimary?: boolean };
+		const v = value as { shareAmount?: number | null; isPrimary?: boolean; makePrimary?: boolean };
 		const share =
 			typeof v.shareAmount === "number" ? `負担額 ${formatYen(v.shareAmount)}` : "負担額なし";
-		return v.makePrimary ? `${share}・代表者に変更` : share;
+		return v.isPrimary || v.makePrimary ? `${share}・代表者` : share;
 	}
 	if (typeof value === "boolean") return value ? "はい" : "いいえ";
 	return String(value);
@@ -99,7 +99,8 @@ export const HistoryList: FC<{ history: History }> = ({ history }) => (
 								{changes.map(([key, [before, after]]) => (
 									<li>
 										{fieldLabel(key, history.names)}:{" "}
-										{key.startsWith("contributor:") || e.op === "create" ? (
+										{/* 登録時の内容と、変更前が記録されていない連名の変更は「後」だけを出す */}
+										{e.op === "create" || (key.startsWith("contributor:") && before === null) ? (
 											formatValue(key, after, history.names)
 										) : (
 											<>

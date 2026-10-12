@@ -218,6 +218,23 @@ describe("ロール変更・除外・退出", () => {
 		expect((await client.request(`/k/${koudenId}/leave`, formPost({}))).status).toBe(303);
 	});
 
+	it("アーカイブ中は招待リンクの無効化もできない", async () => {
+		const { taro, koudenId, invite } = await setup();
+		await invite();
+		const invitationId =
+			(await env.DB.prepare("SELECT id FROM invitations").first<string>("id")) ?? "";
+		await taro.request(`/k/${koudenId}/archive`, formPost({ archived: "1" }));
+		const res = await taro.request(
+			`/k/${koudenId}/invitations/${invitationId}/revoke`,
+			formPost({}),
+		);
+		expect(res.status).toBe(403);
+		expect(
+			await env.DB.prepare("SELECT revoked_at FROM invitations").first("revoked_at"),
+		).toBeNull();
+		expect(await (await taro.request(`/k/${koudenId}/members`)).text()).not.toContain("無効にする");
+	});
+
 	it("メンバーは自分で抜けられる。オーナーは抜けられない", async () => {
 		const { taro, koudenId, invite } = await setup();
 		const { client } = await join(HANAKO, await invite());

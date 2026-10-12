@@ -255,6 +255,9 @@ k.get("/persons/candidates", async (c) => {
 
 // ---- いただきもの -------------------------------------------------------------
 
+const CONTRIBUTOR_CONFLICT_MESSAGE =
+	"開いている間に他の人がこの記録を更新しました。最新の差出人を表示しています。入力は残してあるので、確認してからもう一度操作してください。";
+
 k.get("/gifts", async (c) => {
 	const caller = c.get("caller");
 	const filter = parseGiftFilter(c.req.query());
@@ -296,6 +299,8 @@ type GiftPageOptions = {
 	contributorCandidates?: PersonView[];
 	/** 競合した保存の、自分の入力（最新の内容と並べて表示し、上書きできるようにする） */
 	conflictMine?: FormValues;
+	/** 競合した負担額の入力（その行の入力欄に残す） */
+	shareDraft?: { personId: string; shareAmount: string };
 	status?: 200 | 409 | 422;
 };
 
@@ -327,6 +332,7 @@ async function renderGift(c: Ctx, giftId: string, options: GiftPageOptions = {})
 			contributorErrors={options.contributorErrors}
 			contributorCandidates={options.contributorCandidates}
 			conflictLatest={options.conflictMine ? latest : undefined}
+			shareDraft={options.shareDraft}
 			history={history.ok ? history.value : undefined}
 		/>,
 		{ status: options.status },
@@ -339,7 +345,8 @@ async function afterGiftWrite(
 	giftId: string,
 	result: LedgerResult<unknown>,
 	onInvalid: (field: string, message: string) => GiftPageOptions,
-	conflictMine?: FormValues,
+	/** 競合したときの再表示（自分の入力を残す）。省略すると最新の内容とメッセージだけを出す */
+	onConflict?: GiftPageOptions,
 ) {
 	if (result.ok) return c.redirect(`${basePath(c)}/gifts/${giftId}?notice=saved`, 303);
 	const { error } = result;
@@ -347,7 +354,7 @@ async function afterGiftWrite(
 		return renderGift(
 			c,
 			giftId,
-			conflictMine ? { conflictMine, status: 409 } : { message: CONFLICT_MESSAGE, status: 409 },
+			onConflict ? { ...onConflict, status: 409 } : { message: CONFLICT_MESSAGE, status: 409 },
 		);
 	}
 	if (error.code === "invalid")
@@ -373,7 +380,7 @@ k.post("/gifts/:giftId", async (c) => {
 		giftId,
 		result,
 		(field, message) => ({ values, errors: { [field]: message } }),
-		values,
+		{ conflictMine: values },
 	);
 });
 
@@ -402,11 +409,22 @@ k.post("/gifts/:giftId/contributors", async (c) => {
 	}
 	const result = await ledger(c).addContributor(c.get("caller"), giftId, version.data, parsed.data);
 	const candidates = result.ok ? [] : await candidatesForRetry(c, values);
-	return afterGiftWrite(c, giftId, result, (field, message) => ({
-		contributorValues: values,
-		contributorErrors: { [field]: message },
-		contributorCandidates: candidates,
-	}));
+	return afterGiftWrite(
+		c,
+		giftId,
+		result,
+		(field, message) => ({
+			contributorValues: values,
+			contributorErrors: { [field]: message },
+			contributorCandidates: candidates,
+		}),
+		// 競合: 入力を残し、最新の内容で確認してもらう（そのまま追加すれば最新の内容に追加される）
+		{
+			contributorValues: values,
+			contributorErrors: { _form: CONTRIBUTOR_CONFLICT_MESSAGE },
+			contributorCandidates: candidates,
+		},
+	);
 });
 
 k.post("/gifts/:giftId/contributors/:personId", async (c) => {
@@ -433,9 +451,17 @@ k.post("/gifts/:giftId/contributors/:personId", async (c) => {
 			makePrimary: values.makePrimary === "1",
 		},
 	);
-	return afterGiftWrite(c, giftId, result, (_f, message) => ({
-		contributorErrors: { _form: message },
-	}));
+	return afterGiftWrite(
+		c,
+		giftId,
+		result,
+		(_f, message) => ({ contributorErrors: { _form: message } }),
+		// 競合: 入力した負担額をその行に残す（そのまま更新すれば上書き）
+		{
+			contributorErrors: { _form: CONTRIBUTOR_CONFLICT_MESSAGE },
+			shareDraft: { personId: c.req.param("personId"), shareAmount: values.shareAmount ?? "" },
+		},
+	);
 });
 
 k.post("/gifts/:giftId/contributors/:personId/delete", async (c) => {
@@ -448,9 +474,13 @@ k.post("/gifts/:giftId/contributors/:personId/delete", async (c) => {
 		version.data,
 		c.req.param("personId"),
 	);
-	return afterGiftWrite(c, giftId, result, (_f, message) => ({
-		contributorErrors: { _form: message },
-	}));
+	return afterGiftWrite(
+		c,
+		giftId,
+		result,
+		(_f, message) => ({ contributorErrors: { _form: message } }),
+		{ contributorErrors: { _form: CONTRIBUTOR_CONFLICT_MESSAGE } },
+	);
 });
 
 // ---- 差出人 -------------------------------------------------------------------

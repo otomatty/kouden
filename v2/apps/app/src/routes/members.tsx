@@ -99,7 +99,7 @@ export function registerMemberRoutes(k: Hono<AppEnv>): void {
 	// ---- 招待リンク ----
 	k.post("/invitations", async (c) => {
 		const kouden = c.get("kouden");
-		if (ownerOnly(c) || kouden.status !== "active") return errorResponse(c, 403);
+		if (cannotChangeMembers(c)) return errorResponse(c, 403);
 		const values = await formValues(c);
 		const role = values.role === "viewer" ? "viewer" : "editor";
 		const days = Number(values.expiresInDays);
@@ -131,7 +131,7 @@ export function registerMemberRoutes(k: Hono<AppEnv>): void {
 	});
 
 	k.post("/invitations/:invitationId/revoke", async (c) => {
-		if (ownerOnly(c)) return errorResponse(c, 403);
+		if (cannotChangeMembers(c)) return errorResponse(c, 403);
 		await revokeInvitation(c.env.DB, c.get("kouden").id, c.req.param("invitationId"), c.get("now"));
 		return c.redirect(`${basePath(c)}/members?notice=revoked#invitations`, 303);
 	});

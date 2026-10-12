@@ -35,10 +35,19 @@
 	const MUTATION_CONTROLS =
 		'form[method="post" i] button:not([type="button"]), form[method="post" i] input[type="submit"], [data-requires-online]';
 
+	// 開いた直後は接続を待つ間も送信できないようにする。ただし警告バナーは、
+	// 一度切れたとき・オフラインのとき・接続に 3 秒以上かかったときだけ出す（開くたびに一瞬出ないように）
+	let everConnected = false;
+	let connectTimedOut = false;
+	setTimeout(() => {
+		connectTimedOut = true;
+		updateOnline();
+	}, 3000);
+
 	function updateOnline() {
 		const online = connected && navigator.onLine;
 		const banner = document.querySelector("[data-connection]");
-		if (banner) banner.hidden = online;
+		if (banner) banner.hidden = online || (navigator.onLine && !everConnected && !connectTimedOut);
 		for (const el of document.querySelectorAll(MUTATION_CONTROLS)) {
 			if (!online && !el.disabled) {
 				// 元から無効なボタン（先頭の「↑」など）は、復帰時に有効にしないよう印を付けたものだけ戻す
@@ -59,6 +68,7 @@
 		ws.addEventListener("open", () => {
 			retry = 0;
 			connected = true;
+			everConnected = true;
 			updateOnline();
 			editingSent = "";
 			sendEditing();
@@ -237,5 +247,6 @@
 			.catch(() => undefined);
 	});
 
+	updateOnline();
 	connect();
 })();
