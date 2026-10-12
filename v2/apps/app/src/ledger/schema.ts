@@ -168,13 +168,16 @@ CREATE TABLE reminders (
 CREATE INDEX idx_reminders_due ON reminders(fire_at) WHERE sent_at IS NULL;
 
 -- この移行より前に日付を入れた四十九日にも、お知らせの予定を作る（14 日前・3 日前の 9:00 JST = 0:00 UTC）。
+-- 期限は日付のある四十九日のうち最も早いもの（KoudenLedger.dueEvent と同じ）。
 -- 時刻の形式は reminderSchedule（packages/domain）と同じ。過ぎた分は作らない
 INSERT INTO reminders (id, kind, event_id, fire_at)
 SELECT lower(hex(randomblob(16))), o.kind, e.id, strftime('%Y-%m-%dT00:00:00.000Z', e.date, o.offset)
   FROM events e
   JOIN (SELECT 'return_due_14d' AS kind, '-14 days' AS offset
         UNION ALL SELECT 'return_due_3d', '-3 days') o
- WHERE e.kind = 'memorial_49' AND e.date IS NOT NULL AND e.deleted_at IS NULL
+ WHERE e.id = (SELECT id FROM events
+                WHERE kind = 'memorial_49' AND date IS NOT NULL AND deleted_at IS NULL
+                ORDER BY date, sort_order LIMIT 1)
    AND strftime('%Y-%m-%dT00:00:00.000Z', e.date, o.offset) > strftime('%Y-%m-%dT%H:%M:%fZ', 'now');
 `,
 ];

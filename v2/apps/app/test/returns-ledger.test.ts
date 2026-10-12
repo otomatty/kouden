@@ -30,6 +30,9 @@ function unwrap<T>(result: LedgerResult<T>): T {
 	return result.value;
 }
 
+/** n 日後の日付（YYYY-MM-DD） */
+const day = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+
 const item = (name: string, price: string) => returnItemSchema.parse({ name, price });
 
 async function withGifts() {
@@ -269,6 +272,34 @@ describe("期限のお知らせ（E6-5）", () => {
 			await ctx.ledger.updateEvent(ctx.caller, id, 1, eventSchema.parse({ kind: "funeral", date })),
 		);
 		expect(await reminders(ctx.ledger)).toEqual([]);
+	});
+
+	it("四十九日が複数あっても、期限（最も早い日付）の分だけ予定する", async () => {
+		const ctx = await withGifts();
+		const late = unwrap(
+			await ctx.ledger.createEvent(
+				ctx.caller,
+				eventSchema.parse({ kind: "memorial_49", date: day(60) }),
+			),
+		);
+		const early = unwrap(
+			await ctx.ledger.createEvent(
+				ctx.caller,
+				eventSchema.parse({ kind: "memorial_49", date: day(30) }),
+			),
+		);
+		const eventsOf = async () =>
+			runInDurableObject(ctx.ledger, (_obj, state) =>
+				state.storage.sql
+					.exec<{ event_id: string }>("SELECT DISTINCT event_id FROM reminders")
+					.toArray()
+					.map((r) => r.event_id),
+			);
+		expect(await eventsOf()).toEqual([early.id]);
+		// 早い方を削除すると、残った四十九日に移る
+		unwrap(await ctx.ledger.deleteEvent(ctx.caller, early.id));
+		expect(await eventsOf()).toEqual([late.id]);
+		expect(await reminders(ctx.ledger)).toHaveLength(2);
 	});
 
 	it("期限が来たら、オーナーと希望した編集者に未対応の件数を知らせる", async () => {

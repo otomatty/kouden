@@ -713,7 +713,7 @@ export class KoudenLedger extends DurableObject<Env> {
 		return this.mutate(caller, "settings.write", (now) => {
 			const id = uuidv7();
 			this.insertEvent(id, input, this.nextSortOrder("events"), now);
-			this.syncReminders(id, now);
+			this.syncReminders(now);
 			this.log(caller, now, "event", id, "create", diffOf(null, { ...input }));
 			return { id };
 		});
@@ -740,7 +740,7 @@ export class KoudenLedger extends DurableObject<Env> {
 				now,
 				eventId,
 			);
-			this.syncReminders(eventId, now);
+			this.syncReminders(now);
 			const { version: _v, ...before } = current;
 			this.log(caller, now, "event", eventId, "update", diffOf(before, { ...input }));
 			return null;
@@ -780,7 +780,7 @@ export class KoudenLedger extends DurableObject<Env> {
 				now,
 				eventId,
 			);
-			this.syncReminders(eventId, now);
+			this.syncReminders(now);
 			this.log(caller, now, "event", eventId, "delete", null);
 			return null;
 		});
@@ -2448,11 +2448,11 @@ export class KoudenLedger extends DurableObject<Env> {
 	}
 
 	/** 香典返しの期限の基準にする行事（日付のある四十九日のうち最も早いもの） */
-	private dueEvent(): { name: string; date: string } | undefined {
-		return this.first<{ name: string; date: string }>(
-			`SELECT name, date FROM events
+	private dueEvent(): { id: string; name: string; date: string } | undefined {
+		return this.first<{ id: string; name: string; date: string }>(
+			`SELECT id, name, date FROM events
         WHERE kind = 'memorial_49' AND date IS NOT NULL AND deleted_at IS NULL
-        ORDER BY date LIMIT 1`,
+        ORDER BY date, sort_order LIMIT 1`,
 		);
 	}
 
@@ -2469,34 +2469,29 @@ export class KoudenLedger extends DurableObject<Env> {
 	}
 
 	/**
-	 * 行事の日付から、期限のお知らせ（E6-5）を作り直す。四十九日の行事の日付を期限とする。
-	 * 日時が変わらないものは残す（送信済みの印を保つ）
+	 * 期限のお知らせ（E6-5）を作り直す。期限は香典帳に 1 つ（dueEvent: 日付のある四十九日のうち最も早いもの）で、
+	 * その行事の分だけを予定する。行事を追加・変更・削除するたびに呼ぶ。日時が変わらないものは残す（送信済みの印を保つ）
 	 */
-	private syncReminders(eventId: string, now: string): void {
-		const event = this.first<{ kind: string; date: string | null; deleted_at: string | null }>(
-			"SELECT kind, date, deleted_at FROM events WHERE id = ?",
-			eventId,
+	private syncReminders(now: string): void {
+		const due = this.dueEvent();
+		const wanted = due ? reminderSchedule(due.date, new Date(now)) : [];
+		const existing = this.all<{ id: string; kind: string; event_id: string; fire_at: string }>(
+			"SELECT id, kind, event_id, fire_at FROM reminders",
 		);
-		const wanted =
-			event && event.deleted_at === null && event.kind === "memorial_49" && event.date
-				? reminderSchedule(event.date, new Date(now))
-				: [];
-		const existing = this.all<{ id: string; kind: string; fire_at: string }>(
-			"SELECT id, kind, fire_at FROM reminders WHERE event_id = ?",
-			eventId,
-		);
+		const same = (r: (typeof existing)[number], w: (typeof wanted)[number]) =>
+			r.event_id === due?.id && r.kind === w.kind && r.fire_at === w.fireAt;
 		for (const r of existing) {
-			if (!wanted.some((w) => w.kind === r.kind && w.fireAt === r.fire_at)) {
+			if (!wanted.some((w) => same(r, w))) {
 				this.sql.exec("DELETE FROM reminders WHERE id = ?", r.id);
 			}
 		}
 		for (const w of wanted) {
-			if (!existing.some((r) => r.kind === w.kind && r.fire_at === w.fireAt)) {
+			if (due && !existing.some((r) => same(r, w))) {
 				this.sql.exec(
 					"INSERT INTO reminders (id, kind, event_id, fire_at) VALUES (?, ?, ?, ?)",
 					uuidv7(),
 					w.kind,
-					eventId,
+					due.id,
 					w.fireAt,
 				);
 			}
