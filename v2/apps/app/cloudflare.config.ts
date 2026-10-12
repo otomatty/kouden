@@ -33,6 +33,9 @@ export default defineConfig(({ mode }) => {
 				GOOGLE_CLIENT_ID: bindings.text(s.googleClientId),
 				GOOGLE_CLIENT_SECRET: bindings.secret(),
 				SESSION_SECRET: bindings.secret(),
+				// 有料版の購入（04 §7）。Checkout Session の作成と Webhook の署名検証に使う
+				STRIPE_SECRET_KEY: bindings.secret(),
+				STRIPE_WEBHOOK_SECRET: bindings.secret(),
 				DB: bindings.d1({ name: s.d1.name, id: s.d1.id }),
 				// 返礼品の画像（04 §2）。キーは koudens/{koudenId}/… で、香典帳の削除時にまとめて消す
 				FILES: bindings.r2({ name: s.r2.name }),

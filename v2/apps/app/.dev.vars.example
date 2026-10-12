@@ -2,3 +2,7 @@
 GOOGLE_CLIENT_SECRET=
 # `openssl rand -hex 32` で生成
 SESSION_SECRET=
+# Stripe のテストモードのキー（購入を試す場合のみ。空なら購入ボタンは「準備中」になる）
+STRIPE_SECRET_KEY=
+# `stripe listen --forward-to localhost:5173/webhooks/stripe` が表示する whsec_...
+STRIPE_WEBHOOK_SECRET=

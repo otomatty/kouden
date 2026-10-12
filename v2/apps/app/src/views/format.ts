@@ -28,6 +28,12 @@ export function formatDate(ymd: string | null): string {
 	return Number.isNaN(d.getTime()) ? ymd : fullDate.format(d);
 }
 
+/** ISO 日時 → 日本時間の日付（YYYY-MM-DD） */
+export function jstDateOf(iso: string): string {
+	const t = new Date(iso).getTime();
+	return Number.isNaN(t) ? "" : new Date(t + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
 /** 金額。null は「—」 */
 export function yen(amount: number | null): string {
 	return amount === null ? "—" : formatYen(amount);

@@ -1,6 +1,7 @@
 import { env } from "cloudflare:test";
 import type { GoogleClaims, OidcProvider } from "../src/auth/google.ts";
 import { createApp } from "../src/app.tsx";
+import type { AppDeps } from "../src/types.ts";
 
 export const ORIGIN = "http://localhost:5173";
 
@@ -44,9 +45,13 @@ export function fakeOidc(claims: GoogleClaims) {
 	return { provider, seen };
 }
 
-export function makeApp(claims: GoogleClaims, now?: () => Date) {
+export function makeApp(
+	claims: GoogleClaims,
+	now?: () => Date,
+	deps: Omit<AppDeps, "oidc" | "now"> = {},
+) {
 	const { provider, seen } = fakeOidc(claims);
-	const app = createApp({ oidc: () => provider, now });
+	const app = createApp({ ...deps, oidc: () => provider, now });
 	const jar = new CookieJar();
 	// ログイン開始の回数制限（IP ごと）にテスト同士で干渉しないよう、端末ごとに別の IP にする
 	const ip = `192.0.2.${Math.floor(Math.random() * 250) + 1}`;

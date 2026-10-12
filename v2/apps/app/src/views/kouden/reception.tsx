@@ -1,5 +1,5 @@
 import { ATTENDANCES, type FieldErrors, GIFT_KINDS, type GiftKind } from "@kouden/domain";
-import type { FC } from "hono/jsx";
+import type { Child, FC } from "hono/jsx";
 import type { KoudenContext } from "../../kouden/store.ts";
 import type { LedgerEvent, LedgerRelationship, PersonView } from "../../ledger/types.ts";
 import {
@@ -33,7 +33,7 @@ export interface ReceptionProps {
 	values: FormValues;
 	errors?: FieldErrors;
 	/** 項目に属さないメッセージ（上限に達した、など） */
-	message?: string | undefined;
+	message?: Child;
 	done?: ReceptionDone | undefined;
 	candidates?: PersonView[];
 }

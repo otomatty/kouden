@@ -17,7 +17,7 @@ export const KoudenTopPage: FC<{ kouden: KoudenContext; caller: Caller; overview
 	return (
 		<LiveRegion
 			id="overview"
-			entities={["gift", "person", "event", "relationship"]}
+			entities={["gift", "person", "event", "relationship", "plan"]}
 			url={`${base}?partial=overview`}
 			class="space-y-8"
 		>
@@ -38,7 +38,10 @@ export const KoudenTopPage: FC<{ kouden: KoudenContext; caller: Caller; overview
 				{kouden.plan === "free" && (
 					<p class="text-sm text-muted">
 						無料版: {FREE_GIFT_LIMIT} 件まで登録できます（残り{" "}
-						{Math.max(0, FREE_GIFT_LIMIT - totals.giftCount)} 件）
+						{Math.max(0, FREE_GIFT_LIMIT - totals.giftCount)} 件）。{" "}
+						<a href={`${base}/settings#billing`} class={ui.link}>
+							{kouden.memberRole === "owner" ? "有料版を購入する" : "有料版について"}
+						</a>
 					</p>
 				)}
 				{can(caller.role, "ledger.write") && (

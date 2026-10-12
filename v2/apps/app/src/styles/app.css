@@ -26,3 +26,54 @@
 		outline-offset: 2px;
 	}
 }
+
+/* 印刷用ページ（E7-2, 04 §8）。ブラウザの「印刷 / PDF に保存」で A4 に収める */
+@page {
+	size: A4;
+	margin: 14mm 12mm 16mm;
+
+	@bottom-center {
+		content: counter(page) " / " counter(pages);
+		font-size: 9pt;
+		color: #6b6f76;
+	}
+}
+
+@layer components {
+	.print-table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 10pt;
+		line-height: 1.5;
+	}
+	.print-table th,
+	.print-table td {
+		border: 1px solid #b8b4aa;
+		padding: 3pt 5pt;
+		text-align: left;
+		vertical-align: top;
+	}
+	.print-table th {
+		background: #f0eee8;
+		font-weight: 600;
+		white-space: nowrap;
+	}
+	/* 改ページしても見出しの行を繰り返し、行の途中では切らない */
+	.print-table thead {
+		display: table-header-group;
+	}
+	.print-table tr {
+		break-inside: avoid;
+	}
+	.print-section + .print-section {
+		break-before: page;
+	}
+}
+
+@media print {
+	html,
+	body {
+		background: #fff;
+		print-color-adjust: exact;
+	}
+}

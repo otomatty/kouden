@@ -15,6 +15,7 @@ import {
 	versionSchema,
 } from "@kouden/domain";
 import { Hono } from "hono";
+import { paidPurchase } from "../billing/purchases.ts";
 import { createKouden, deleteKouden, updateKoudenInfo } from "../kouden/store.ts";
 import { ledgerFor } from "../ledger/client.ts";
 import { CALLER_HEADER, type LedgerResult, type PersonView } from "../ledger/types.ts";
@@ -60,6 +61,8 @@ import {
 	unwrap,
 } from "./helpers.tsx";
 import { registerMemberRoutes, setStatusAndNotify } from "./members.tsx";
+import { registerBillingRoutes } from "./billing.tsx";
+import { registerOutputRoutes } from "./output.tsx";
 import { registerReturnRoutes } from "./returns.tsx";
 
 // ---- 香典帳の作成 -------------------------------------------------------------
@@ -716,9 +719,10 @@ async function renderSettings(
 ) {
 	const caller = c.get("caller");
 	const kouden = c.get("kouden");
-	const [events, relationships] = await Promise.all([
+	const [events, relationships, purchase] = await Promise.all([
 		ledger(c).listEvents(caller),
 		ledger(c).listRelationships(caller),
+		kouden.plan === "paid" ? paidPurchase(c.env.DB, kouden.id) : Promise.resolve(null),
 	]);
 	if (!events.ok) return commonFailure(c, events.error);
 	if (!relationships.ok) return commonFailure(c, relationships.error);
@@ -738,6 +742,7 @@ async function renderSettings(
 			}
 			koudenErrors={options.koudenErrors}
 			deleteError={options.deleteError}
+			purchase={purchase}
 		/>,
 		{ status: options.status },
 	);
@@ -915,6 +920,8 @@ k.post("/delete", async (c) => {
 
 registerMemberRoutes(k);
 registerReturnRoutes(k);
+registerOutputRoutes(k);
+registerBillingRoutes(k);
 
 // ---- リアルタイム（04 §5） ------------------------------------------------------
 
