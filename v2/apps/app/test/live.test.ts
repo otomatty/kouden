@@ -1,5 +1,7 @@
 import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
+import { ledgerFor } from "../src/ledger/client.ts";
+import { CALLER_HEADER, type Caller } from "../src/ledger/types.ts";
 import { formPost, HANAKO, makeApp, ORIGIN, TARO } from "./helpers.ts";
 
 type Message = { type: string; [key: string]: unknown };
@@ -104,6 +106,43 @@ describe("リアルタイム同期", () => {
 		expect(res.status).toBe(303);
 		await h.waitFor((m) => m.type === "revoked");
 		expect((await hanako.request(`/k/${koudenId}`)).status).toBe(404);
+	});
+
+	it("Worker の確認後に除外された人の接続は、DO で受け付けた時点で閉じる", async () => {
+		const { taro, koudenId, hanakoId } = await setupPair();
+		const t = await connect(taro, koudenId);
+		await t.waitFor((m) => m.type === "hello");
+		// Worker の権限確認は通った後、DO に届く前に除外が完了した状況
+		await env.DB.prepare("DELETE FROM kouden_members WHERE kouden_id = ? AND user_id = ?")
+			.bind(koudenId, hanakoId)
+			.run();
+		const caller: Caller = {
+			koudenId,
+			userId: hanakoId,
+			displayName: "佐藤 花子",
+			role: "editor",
+			plan: "free",
+		};
+		const res = await ledgerFor(env, koudenId).fetch("https://ledger/ws", {
+			headers: {
+				Upgrade: "websocket",
+				[CALLER_HEADER]: encodeURIComponent(JSON.stringify(caller)),
+			},
+		});
+		const ws = res.webSocket;
+		if (!ws) throw new Error("no websocket");
+		const messages: Message[] = [];
+		ws.addEventListener("message", (e) => messages.push(JSON.parse(e.data as string) as Message));
+		ws.accept();
+		const started = Date.now();
+		while (!messages.some((m) => m.type === "revoked") && Date.now() - started < 2000) {
+			await new Promise((r) => setTimeout(r, 10));
+		}
+		expect(messages.map((m) => m.type)).toEqual(["revoked"]);
+		// 他のメンバーの「閲覧中」にも出さない
+		const presence = t.messages.filter((m) => m.type === "presence").at(-1);
+		expect(JSON.stringify(presence)).not.toContain(hanakoId);
+		t.ws.close();
 	});
 
 	it("他のサイトからの WebSocket 接続は拒否する", async () => {

@@ -156,8 +156,10 @@ Worker
   caller 情報（JSON を URL エンコード）をヘッダー X-Kouden-Caller に付けて DO の fetch へ転送
 DO
   ctx.acceptWebSocket(ws, [userId])           ← Hibernation API（待機中は課金されない）
-  ws.serializeAttachment({ userId, name, editing: null })
-  接続直後に {type: 'hello', seq}（現在の変更ログの位置）を送る
+  ws.serializeAttachment({ userId, name, editing: null, pending: true })
+  D1 でメンバーかを確かめる（Worker の確認後、DO に届く前に除外された場合に備える。先に受け付けるので、
+  除外の切断が確認より後でもこの接続は対象に入る）。メンバーでなければ revoked で閉じる
+  確認できたら pending を外し、{type: 'hello', seq}（現在の変更ログの位置）を送る（pending の間は通知も閲覧中の表示もしない）
   ping / pong は setWebSocketAutoResponse で DO を起こさずに応答する（ブラウザが 30 秒ごとに送る）
 ```
 
@@ -165,7 +167,7 @@ DO
 
 | type | 内容 | ブラウザの動作 |
 |---|---|---|
-| `hello` | `{seq}` | 手元の seq より新しければ、その間の変更を `/k/:id/changes?since=` で取り直す。画面には表示した時点の seq（データを読む前に記録）を埋め込んでいるので、表示から最初の接続までの間の変更も取り直せる。取り直しに失敗しても起点を保持し、再試行する |
+| `hello` | `{seq}` | 手元の seq より新しければ、その間の変更を `/k/:id/changes?since=` で取り直す。画面には表示した時点の seq（データを読む前に記録）を埋め込んでいるので、表示から最初の接続までの間の変更も取り直せる。取り直しに失敗しても起点を保持し、再試行する。取りこぼしが多すぎる（`reset`）ときは画面全体を読み込み直す |
 | `changed` | `{seq, entity, id, op, actor}` | 該当する部分 HTML を取り直す（自分の変更は無視） |
 | `presence` | `[{userId, name, editing: {entity, id} \| null}]` | 閲覧中のメンバーと「○○さんが編集中」を表示 |
 | `revoked` | — | 権限が外された。接続を閉じて一覧へ戻す |

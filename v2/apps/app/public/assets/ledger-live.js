@@ -127,7 +127,9 @@
 			if (!res.ok) throw new Error(`changes: ${res.status}`);
 			const data = await res.json();
 			if (data.reset) {
-				for (const el of document.querySelectorAll("[data-live]")) refreshRegion(el);
+				// 取りこぼしが多すぎる。部分だけでなく画面全体（ロール・アーカイブ状態など）が古い可能性があるので読み込み直す
+				location.reload();
+				return;
 			} else {
 				for (const change of data.changes) applyChange(change);
 			}

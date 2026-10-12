@@ -45,6 +45,8 @@ interface Attachment {
 	userId: string;
 	name: string;
 	editing: { entity: string; id: string } | null;
+	/** メンバーであることを確かめ終えるまでは、通知も閲覧中の表示もしない */
+	pending?: boolean;
 }
 
 /** 「編集中」として受け付ける対象 */
@@ -895,15 +897,33 @@ export class KoudenLedger extends DurableObject<Env> {
 		}
 		const pair = new WebSocketPair();
 		const [client, server] = [pair[0], pair[1]];
+		// Worker で権限を確かめた後、ここに届くまでの間に除外される場合がある。
+		// 先に受け付けてから D1 でメンバーかを確かめる。除外の処理（D1 から削除 → recordExternalChange で切断）が
+		// 確認より前なら確認で見つからず、後ならこの接続も切断の対象になるので、どちらの順でも取りこぼさない
 		this.ctx.acceptWebSocket(server, [caller.userId]);
 		const attachment: Attachment = {
 			userId: caller.userId,
 			name: caller.displayName,
 			editing: null,
+			pending: true,
 		};
 		server.serializeAttachment(attachment);
-		server.send(JSON.stringify({ type: "hello", seq: this.lastSeq() }));
-		this.broadcastPresence();
+		const member = await this.env.DB.prepare(
+			"SELECT 1 AS ok FROM kouden_members WHERE kouden_id = ? AND user_id = ?",
+		)
+			.bind(caller.koudenId, caller.userId)
+			.first();
+		if (!member) {
+			this.revokeSocket(server);
+		} else if (server.readyState === WebSocket.OPEN) {
+			// 確認中に届いた「編集中」を消さないよう、保存済みの値に重ねる
+			server.serializeAttachment({
+				...(server.deserializeAttachment() as Attachment),
+				pending: false,
+			});
+			server.send(JSON.stringify({ type: "hello", seq: this.lastSeq() }));
+			this.broadcastPresence();
+		}
 		return new Response(null, { status: 101, webSocket: client });
 	}
 
@@ -1015,7 +1035,12 @@ export class KoudenLedger extends DurableObject<Env> {
 	private openSockets(exclude?: WebSocket): WebSocket[] {
 		return this.ctx
 			.getWebSockets()
-			.filter((ws) => ws !== exclude && ws.readyState === WebSocket.OPEN);
+			.filter(
+				(ws) =>
+					ws !== exclude &&
+					ws.readyState === WebSocket.OPEN &&
+					(ws.deserializeAttachment() as Attachment | null)?.pending !== true,
+			);
 	}
 
 	private send(sockets: WebSocket[], message: unknown): void {
