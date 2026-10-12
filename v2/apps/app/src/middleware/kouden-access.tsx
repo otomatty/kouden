@@ -30,7 +30,7 @@ export const koudenAccess = createMiddleware<AppEnv>(async (c, next) => {
 	// POST が入力エラー・競合で画面を返す場合も、その画面のデータはこの位置より後に読む
 	if (c.req.header("HX-Request") !== "true" && !c.req.query("partial")) {
 		const path = c.req.path;
-		if (!path.endsWith("/ws") && !path.endsWith("/changes")) {
+		if (!path.endsWith("/ws") && !path.endsWith("/changes") && !path.includes("/files/")) {
 			const seq = await ledgerFor(c.env, kouden.id).currentSeq(c.get("caller"));
 			if (seq.ok) c.set("renderSeq", seq.value);
 		}

@@ -7,3 +7,14 @@ export { nowIso } from "./time.ts";
 export { allocateAmount, type ContributorShare } from "./allocation.ts";
 export { can, type Action } from "./permissions.ts";
 export { personLabel } from "./format.ts";
+export {
+	DEFAULT_RATIO,
+	findRule,
+	type ItemForSuggestion,
+	REMINDER_OFFSETS,
+	type ReminderKind,
+	reminderSchedule,
+	type ReturnSuggestion,
+	type RuleForSuggestion,
+	suggestReturn,
+} from "./returns.ts";

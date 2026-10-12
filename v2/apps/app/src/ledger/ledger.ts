@@ -16,11 +16,17 @@ import {
 	personLabel,
 	type ReceptionInput,
 	type RelationshipInput,
+	type ReturnInput,
+	type ReturnItemInput,
+	type ReturnLineInput,
+	type ReturnRuleInput,
+	reminderSchedule,
 	toSearchKey,
 	uuidv7,
 } from "@kouden/domain";
 import { DurableObject } from "cloudflare:workers";
 import { log } from "../lib/logger.ts";
+import { cloudflareMailer, type Mail, type Mailer } from "../lib/mailer.ts";
 import { parseDiff } from "./diff.ts";
 import { MIGRATIONS, migrate } from "./schema.ts";
 import {
@@ -38,6 +44,13 @@ import {
 	type PersonDetail,
 	type PersonView,
 	type ReceptionResult,
+	type ReturnConfirmEntry,
+	type ReturnDetail,
+	type ReturnItemView,
+	type ReturnLineView,
+	type ReturnRuleView,
+	type ReturnsBoard,
+	type ReturnView,
 } from "./types.ts";
 
 /** WebSocket ごとに保存する情報（Hibernation 中も保持される） */
@@ -50,12 +63,49 @@ interface Attachment {
 }
 
 /** 「編集中」として受け付ける対象 */
-const EDITABLE_ENTITIES = new Set(["gift", "person"]);
+const EDITABLE_ENTITIES = new Set(["gift", "person", "return"]);
 
 /** 書き込みから統計の投影（D1 kouden_stats）までの待ち時間（03 §7） */
 export const PROJECTION_DELAY_MS = 5_000;
 
 const SYSTEM_ACTOR = { userId: "system", displayName: "システム" } as const;
+
+/** 香典返しを一度に確定できる件数 */
+const MAX_CONFIRM_ENTRIES = 2000;
+
+/** 日本時間の日付（YYYY-MM-DD） */
+function jstDate(iso: string): string {
+	return new Date(Date.parse(iso) + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+/** 香典返しの期限のお知らせ（E6-5） */
+function reminderMail(p: {
+	to: { email: string; display_name: string };
+	koudenTitle: string;
+	days: number;
+	eventName: string;
+	dueDate: string;
+	pending: number;
+	url: string;
+}): Mail {
+	const [y, m, d] = p.dueDate.split("-").map(Number);
+	const date = `${y}年${m}月${d}日`;
+	return {
+		to: p.to.email,
+		subject: `【香典帳】香典返しの期限まであと ${p.days} 日です（${p.koudenTitle}）`,
+		text: [
+			`${p.to.display_name} 様`,
+			"",
+			`「${p.koudenTitle}」の香典返しの期限（${p.eventName}・${date}）まで、あと ${p.days} 日です。`,
+			`まだ対応していない香典返しが ${p.pending} 件あります。`,
+			"",
+			`香典返しの画面: ${p.url}`,
+			"",
+			"このメールは香典帳から自動でお送りしています。",
+			"編集者の方は、メンバーの画面でお知らせを受け取らない設定にできます。",
+		].join("\n"),
+	};
+}
 
 type Row = Record<string, SqlStorageValue>;
 type Diff = Record<string, [unknown, unknown]>;
@@ -165,8 +215,12 @@ export class KoudenLedger extends DurableObject<Env> {
 	/** unknown: まだ確認していない / ready: スキーマ適用済み / deleted: 香典帳が削除済み */
 	private state: "unknown" | "ready" | "deleted" = "unknown";
 
+	/** お知らせメールの送信（テストでは差し替える） */
+	mailer: Mailer;
+
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
+		this.mailer = cloudflareMailer(env);
 		// 接続の生存確認（ブラウザが定期的に ping を送る）。DO を起こさずに応答する
 		ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
 	}
@@ -357,7 +411,15 @@ export class KoudenLedger extends DurableObject<Env> {
 				[personId],
 				"e.sort_order, g.receipt_no",
 			);
-			return { ...this.toPersonView(row, this.personTotals()), gifts };
+			const ret = this.first<{ id: string; status: string }>(
+				"SELECT id, status FROM returns WHERE person_id = ?",
+				personId,
+			);
+			return {
+				...this.toPersonView(row, this.personTotals()),
+				gifts,
+				ret: ret ? { id: ret.id, status: ret.status as ReturnView["status"] } : null,
+			};
 		});
 	}
 
@@ -648,6 +710,7 @@ export class KoudenLedger extends DurableObject<Env> {
 		return this.mutate(caller, "settings.write", (now) => {
 			const id = uuidv7();
 			this.insertEvent(id, input, this.nextSortOrder("events"), now);
+			this.syncReminders(id, now);
 			this.log(caller, now, "event", id, "create", diffOf(null, { ...input }));
 			return { id };
 		});
@@ -674,6 +737,7 @@ export class KoudenLedger extends DurableObject<Env> {
 				now,
 				eventId,
 			);
+			this.syncReminders(eventId, now);
 			const { version: _v, ...before } = current;
 			this.log(caller, now, "event", eventId, "update", diffOf(before, { ...input }));
 			return null;
@@ -713,6 +777,7 @@ export class KoudenLedger extends DurableObject<Env> {
 				now,
 				eventId,
 			);
+			this.syncReminders(eventId, now);
 			this.log(caller, now, "event", eventId, "delete", null);
 			return null;
 		});
@@ -823,11 +888,495 @@ export class KoudenLedger extends DurableObject<Env> {
 		});
 	}
 
+	// ---- 香典返し: カタログ（E6-1） ---------------------------------------------
+
+	async listReturnItems(caller: Caller): Promise<LedgerResult<ReturnItemView[]>> {
+		return this.read(caller, () => this.returnItems());
+	}
+
+	async createReturnItem(
+		caller: Caller,
+		input: ReturnItemInput,
+		imageKey: string | null,
+	): Promise<LedgerResult<{ id: string }>> {
+		return this.mutate(caller, "settings.write", (now) => {
+			const id = uuidv7();
+			const record = { ...this.returnItemRecord(input), image_r2_key: imageKey };
+			this.sql.exec(
+				`INSERT INTO return_items (id, name, category, price, description, image_r2_key, sort_order,
+                                   created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				id,
+				record.name,
+				record.category,
+				record.price,
+				record.description,
+				record.image_r2_key,
+				this.nextSortOrder("return_items"),
+				now,
+				now,
+			);
+			this.log(caller, now, "return_item", id, "create", diffOf(null, record));
+			return { id };
+		});
+	}
+
+	/**
+	 * 返礼品の変更。image は新しい画像のキー（null は画像を外す、undefined はそのまま）。
+	 * 使わなくなった画像のキーを返すので、Worker が R2 から消す
+	 */
+	async updateReturnItem(
+		caller: Caller,
+		itemId: string,
+		version: number,
+		input: ReturnItemInput,
+		image: string | null | undefined,
+	): Promise<LedgerResult<{ removedImageKey: string | null }>> {
+		return this.mutate(caller, "settings.write", (now) => {
+			const current = this.first<Row & { image_r2_key: string | null; version: number }>(
+				"SELECT name, category, price, description, image_r2_key, version FROM return_items WHERE id = ?",
+				itemId,
+			);
+			if (!current) throw new LedgerFailure({ code: "not_found" });
+			if (current.version !== version) throw new LedgerFailure({ code: "conflict" });
+			const next = {
+				...this.returnItemRecord(input),
+				image_r2_key: image === undefined ? current.image_r2_key : image,
+			};
+			this.sql.exec(
+				`UPDATE return_items SET name = ?, category = ?, price = ?, description = ?, image_r2_key = ?,
+                version = version + 1, updated_at = ? WHERE id = ?`,
+				next.name,
+				next.category,
+				next.price,
+				next.description,
+				next.image_r2_key,
+				now,
+				itemId,
+			);
+			const { version: _v, ...before } = current;
+			this.log(caller, now, "return_item", itemId, "update", diffOf(before, next));
+			return {
+				removedImageKey: current.image_r2_key !== next.image_r2_key ? current.image_r2_key : null,
+			};
+		});
+	}
+
+	async moveReturnItem(
+		caller: Caller,
+		itemId: string,
+		direction: Direction,
+	): Promise<LedgerResult<null>> {
+		return this.mutate(caller, "settings.write", (now) => {
+			this.swapSortOrder(caller, now, "return_items", "return_item", itemId, direction, "1 = 1");
+			return null;
+		});
+	}
+
+	/** 無効にした品は提案・明細の選択肢に出ない（作成済みの明細はそのまま） */
+	async setReturnItemActive(
+		caller: Caller,
+		itemId: string,
+		active: boolean,
+	): Promise<LedgerResult<null>> {
+		return this.mutate(caller, "settings.write", (now) => {
+			const current = this.first<{ is_active: number }>(
+				"SELECT is_active FROM return_items WHERE id = ?",
+				itemId,
+			);
+			if (!current) throw new LedgerFailure({ code: "not_found" });
+			this.sql.exec(
+				"UPDATE return_items SET is_active = ?, version = version + 1, updated_at = ? WHERE id = ?",
+				active ? 1 : 0,
+				now,
+				itemId,
+			);
+			this.log(caller, now, "return_item", itemId, "update", {
+				is_active: [current.is_active === 1, active],
+			});
+			return null;
+		});
+	}
+
+	/** 明細・金額帯ルールで使われている品は削除できない（無効にはできる）。画像のキーを返す */
+	async deleteReturnItem(
+		caller: Caller,
+		itemId: string,
+	): Promise<LedgerResult<{ imageKey: string | null }>> {
+		return this.mutate(caller, "settings.write", (now) => {
+			const current = this.first<{ name: string; image_r2_key: string | null }>(
+				"SELECT name, image_r2_key FROM return_items WHERE id = ?",
+				itemId,
+			);
+			if (!current) throw new LedgerFailure({ code: "not_found" });
+			if (this.returnItemUsage(itemId) > 0) {
+				throw invalid("_form", "使用中の返礼品は削除できません。無効にしてください");
+			}
+			this.sql.exec("DELETE FROM return_items WHERE id = ?", itemId);
+			this.log(caller, now, "return_item", itemId, "delete", { name: [current.name, null] });
+			return { imageKey: current.image_r2_key };
+		});
+	}
+
+	// ---- 香典返し: 金額帯ルール（E6-2） -----------------------------------------
+
+	async listReturnRules(caller: Caller): Promise<LedgerResult<ReturnRuleView[]>> {
+		return this.read(caller, () => this.returnRules());
+	}
+
+	async createReturnRule(
+		caller: Caller,
+		input: ReturnRuleInput,
+	): Promise<LedgerResult<{ id: string }>> {
+		return this.mutate(caller, "settings.write", (now) => {
+			this.assertSuggestedItem(input.suggestedItemId, null);
+			const id = uuidv7();
+			const record = this.returnRuleRecord(input);
+			this.sql.exec(
+				`INSERT INTO return_rules (id, min_amount, max_amount, ratio_numerator, ratio_denominator,
+                                   suggested_item_id, sort_order)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+				id,
+				record.min_amount,
+				record.max_amount,
+				record.ratio_numerator,
+				record.ratio_denominator,
+				record.suggested_item_id,
+				this.nextSortOrder("return_rules"),
+			);
+			this.log(caller, now, "return_rule", id, "create", diffOf(null, record));
+			return { id };
+		});
+	}
+
+	async updateReturnRule(
+		caller: Caller,
+		ruleId: string,
+		version: number,
+		input: ReturnRuleInput,
+	): Promise<LedgerResult<null>> {
+		return this.mutate(caller, "settings.write", (now) => {
+			const current = this.first<Row & { suggested_item_id: string | null; version: number }>(
+				`SELECT min_amount, max_amount, ratio_numerator, ratio_denominator, suggested_item_id, version
+           FROM return_rules WHERE id = ?`,
+				ruleId,
+			);
+			if (!current) throw new LedgerFailure({ code: "not_found" });
+			if (current.version !== version) throw new LedgerFailure({ code: "conflict" });
+			this.assertSuggestedItem(input.suggestedItemId, current.suggested_item_id);
+			const next = this.returnRuleRecord(input);
+			this.sql.exec(
+				`UPDATE return_rules SET min_amount = ?, max_amount = ?, ratio_numerator = ?, ratio_denominator = ?,
+                suggested_item_id = ?, version = version + 1 WHERE id = ?`,
+				next.min_amount,
+				next.max_amount,
+				next.ratio_numerator,
+				next.ratio_denominator,
+				next.suggested_item_id,
+				ruleId,
+			);
+			const { version: _v, ...before } = current;
+			this.log(caller, now, "return_rule", ruleId, "update", diffOf(before, next));
+			return null;
+		});
+	}
+
+	async deleteReturnRule(caller: Caller, ruleId: string): Promise<LedgerResult<null>> {
+		return this.mutate(caller, "settings.write", (now) => {
+			if (!this.first<Row>("SELECT id FROM return_rules WHERE id = ?", ruleId)) {
+				throw new LedgerFailure({ code: "not_found" });
+			}
+			this.sql.exec("DELETE FROM return_rules WHERE id = ?", ruleId);
+			this.log(caller, now, "return_rule", ruleId, "delete", null);
+			return null;
+		});
+	}
+
+	// ---- 香典返し: 一覧・一括確定・状況（E6-3, E6-4） -----------------------------
+
+	/** 香典返しの一覧。いただきものがある差出人と、香典返しを作成済みの差出人を並べる */
+	async returnsBoard(caller: Caller): Promise<LedgerResult<ReturnsBoard>> {
+		return this.read(caller, () => {
+			const totals = this.personTotals();
+			const returns = new Map(this.returnViews().map((r) => [r.personId, r]));
+			const rows = this.all<PersonRow>(
+				`SELECT ${PERSON_COLUMNS}
+           FROM persons p LEFT JOIN relationships r ON r.id = p.relationship_id
+          WHERE p.deleted_at IS NULL
+          ORDER BY coalesce(p.name_kana, p.name, p.organization), p.created_at`,
+			)
+				.filter((p) => (totals.get(p.id)?.giftCount ?? 0) > 0 || returns.has(p.id))
+				.map((p) => ({ person: this.toPersonView(p, totals), ret: returns.get(p.id) ?? null }));
+			const due = this.dueEvent();
+			return {
+				rows,
+				items: this.returnItems(),
+				rules: this.returnRules(),
+				dueDate: due?.date ?? null,
+				dueEventName: due?.name ?? null,
+			};
+		});
+	}
+
+	/**
+	 * 提案を確認した内容で、香典返しをまとめて作る（E6-3）。1 トランザクション。
+	 * すでに香典返しがある差出人は飛ばす（他の人が先に確定した場合など）
+	 */
+	async confirmReturns(
+		caller: Caller,
+		entries: readonly ReturnConfirmEntry[],
+	): Promise<LedgerResult<{ created: number; skipped: number }>> {
+		return this.mutate(caller, "ledger.write", (now) => {
+			if (entries.length > MAX_CONFIRM_ENTRIES) {
+				throw invalid("_form", `一度に確定できるのは ${MAX_CONFIRM_ENTRIES} 件までです`);
+			}
+			let created = 0;
+			let skipped = 0;
+			for (const entry of entries) {
+				const person = this.first<Row>(
+					"SELECT id FROM persons WHERE id = ? AND deleted_at IS NULL",
+					entry.personId,
+				);
+				const exists = this.first<Row>(
+					"SELECT id FROM returns WHERE person_id = ?",
+					entry.personId,
+				);
+				if (!person || exists) {
+					skipped += 1;
+					continue;
+				}
+				const item = entry.itemId === null ? null : this.activeItem(entry.itemId);
+				const onDay = Math.max(0, entry.onDayAmount);
+				// 品がなく当日返しを渡していれば、当日返しで済んだものとして扱う
+				const settledOnDay = item === null && onDay > 0;
+				const id = uuidv7();
+				const record = {
+					status: settledOnDay ? "handed_on_day" : "pending",
+					method: settledOnDay ? "on_day" : null,
+					on_day_amount: onDay,
+				};
+				this.sql.exec(
+					`INSERT INTO returns (id, person_id, status, method, on_day_amount,
+                                created_by, created_at, updated_by, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+					id,
+					entry.personId,
+					record.status,
+					record.method,
+					record.on_day_amount,
+					caller.userId,
+					now,
+					caller.userId,
+					now,
+				);
+				const diff: Diff = { ...diffOf(null, record), person_id: [null, entry.personId] };
+				if (item) {
+					const line = this.insertReturnLine(id, {
+						itemId: item.id,
+						name: item.name,
+						unitPrice: item.price,
+						quantity: 1,
+					});
+					diff[`line:${line.id}`] = [null, line.snapshot];
+				}
+				this.log(caller, now, "return", id, "create", diff);
+				created += 1;
+			}
+			if (created === 0) {
+				throw invalid("_form", "確定できる香典返しがありません（すでに作成済みです）");
+			}
+			return { created, skipped };
+		});
+	}
+
+	/** 差出人の画面から、香典返しを 1 件作る（提案を使わない場合） */
+	async createReturn(caller: Caller, personId: string): Promise<LedgerResult<{ id: string }>> {
+		return this.mutate(caller, "ledger.write", (now) => {
+			if (
+				!this.first<Row>("SELECT id FROM persons WHERE id = ? AND deleted_at IS NULL", personId)
+			) {
+				throw new LedgerFailure({ code: "not_found" });
+			}
+			const existing = this.first<{ id: string }>(
+				"SELECT id FROM returns WHERE person_id = ?",
+				personId,
+			);
+			if (existing) throw invalid("_form", "この差出人の香典返しは作成済みです");
+			const id = uuidv7();
+			this.sql.exec(
+				`INSERT INTO returns (id, person_id, status, created_by, created_at, updated_by, updated_at)
+         VALUES (?, ?, 'pending', ?, ?, ?, ?)`,
+				id,
+				personId,
+				caller.userId,
+				now,
+				caller.userId,
+				now,
+			);
+			this.log(caller, now, "return", id, "create", {
+				person_id: [null, personId],
+				status: [null, "pending"],
+			});
+			return { id };
+		});
+	}
+
+	async getReturn(caller: Caller, returnId: string): Promise<LedgerResult<ReturnDetail>> {
+		return this.read(caller, () => {
+			const ret = this.returnViews(returnId)[0];
+			if (!ret) throw new LedgerFailure({ code: "not_found" });
+			const person = this.first<PersonRow>(
+				`SELECT ${PERSON_COLUMNS}
+           FROM persons p LEFT JOIN relationships r ON r.id = p.relationship_id
+          WHERE p.id = ?`,
+				ret.personId,
+			);
+			if (!person) throw new LedgerFailure({ code: "not_found" });
+			return {
+				...ret,
+				person: this.toPersonView(person, this.personTotals()),
+				koudenDueDate: this.dueEvent()?.date ?? null,
+			};
+		});
+	}
+
+	/**
+	 * 状況・送付先の変更（E6-4）。手配済み・発送済みにしたときに日付が空なら、今日の日付を入れる
+	 */
+	async updateReturn(
+		caller: Caller,
+		returnId: string,
+		version: number,
+		input: ReturnInput,
+	): Promise<LedgerResult<{ version: number }>> {
+		return this.mutate(caller, "ledger.write", (now) => {
+			const current = this.lockReturn(returnId, version);
+			const today = jstDate(now);
+			const next = {
+				status: input.status,
+				method: input.method,
+				on_day_amount: input.onDayAmount,
+				due_date: input.dueDate,
+				arranged_at:
+					input.arrangedAt ??
+					(input.status === "arranged" && current.status !== "arranged" ? today : null),
+				shipped_at:
+					input.shippedAt ??
+					(input.status === "shipped" && current.status !== "shipped" ? today : null),
+				ship_name: input.shipName,
+				ship_postal_code: input.shipPostalCode,
+				ship_address: input.shipAddress,
+				ship_phone: input.shipPhone,
+				notes: input.notes,
+			};
+			this.sql.exec(
+				`UPDATE returns SET status = ?, method = ?, on_day_amount = ?, due_date = ?, arranged_at = ?,
+                shipped_at = ?, ship_name = ?, ship_postal_code = ?, ship_address = ?, ship_phone = ?,
+                notes = ?, updated_by = ?, updated_at = ? WHERE id = ?`,
+				next.status,
+				next.method,
+				next.on_day_amount,
+				next.due_date,
+				next.arranged_at,
+				next.shipped_at,
+				next.ship_name,
+				next.ship_postal_code,
+				next.ship_address,
+				next.ship_phone,
+				next.notes,
+				caller.userId,
+				now,
+				returnId,
+			);
+			this.log(caller, now, "return", returnId, "update", diffOf(current, next));
+			return { version: version + 1 };
+		});
+	}
+
+	async addReturnLine(
+		caller: Caller,
+		returnId: string,
+		version: number,
+		input: ReturnLineInput,
+	): Promise<LedgerResult<{ version: number }>> {
+		return this.mutate(caller, "ledger.write", (now) => {
+			this.lockReturn(returnId, version);
+			const line =
+				input.type === "catalog"
+					? (() => {
+							const item = this.activeItem(input.itemId);
+							return {
+								itemId: item.id,
+								name: item.name,
+								unitPrice: item.price,
+								quantity: input.quantity,
+							};
+						})()
+					: {
+							itemId: null,
+							name: input.name,
+							unitPrice: input.unitPrice,
+							quantity: input.quantity,
+						};
+			const inserted = this.insertReturnLine(returnId, line);
+			this.touchReturn(caller, now, returnId);
+			this.log(caller, now, "return", returnId, "update", {
+				[`line:${inserted.id}`]: [null, inserted.snapshot],
+			});
+			return { version: version + 1 };
+		});
+	}
+
+	async removeReturnLine(
+		caller: Caller,
+		returnId: string,
+		version: number,
+		lineId: string,
+	): Promise<LedgerResult<{ version: number }>> {
+		return this.mutate(caller, "ledger.write", (now) => {
+			this.lockReturn(returnId, version);
+			const line = this.first<{ name: string; unit_price: number; quantity: number }>(
+				"SELECT name, unit_price, quantity FROM return_lines WHERE id = ? AND return_id = ?",
+				lineId,
+				returnId,
+			);
+			if (!line) throw new LedgerFailure({ code: "not_found" });
+			this.sql.exec("DELETE FROM return_lines WHERE id = ?", lineId);
+			this.touchReturn(caller, now, returnId);
+			this.log(caller, now, "return", returnId, "update", {
+				[`line:${lineId}`]: [
+					{ name: line.name, unitPrice: line.unit_price, quantity: line.quantity },
+					null,
+				],
+			});
+			return { version: version + 1 };
+		});
+	}
+
+	/** 香典返しを取り消す（明細ごと削除し、差出人は「未作成」に戻る） */
+	async deleteReturn(
+		caller: Caller,
+		returnId: string,
+		version: number,
+	): Promise<LedgerResult<{ personId: string }>> {
+		return this.mutate(caller, "ledger.write", (now) => {
+			this.lockReturn(returnId, version);
+			const personId = this.first<{ person_id: string }>(
+				"SELECT person_id FROM returns WHERE id = ?",
+				returnId,
+			)?.person_id;
+			this.sql.exec("DELETE FROM return_lines WHERE return_id = ?", returnId);
+			this.sql.exec("DELETE FROM returns WHERE id = ?", returnId);
+			this.log(caller, now, "return", returnId, "delete", null);
+			return { personId: personId ?? "" };
+		});
+	}
+
 	// ---- 変更履歴（E8-4） -------------------------------------------------------
 
 	async history(
 		caller: Caller,
-		entity: "gift" | "person",
+		entity: "gift" | "person" | "return",
 		entityId: string,
 	): Promise<LedgerResult<History>> {
 		return this.read(caller, () => {
@@ -861,6 +1410,7 @@ export class KoudenLedger extends DurableObject<Env> {
 				for (const [key, [before, after]] of Object.entries(parseDiff(e.diff))) {
 					if (key === "event_id") addAll(ids.event, [before, after]);
 					else if (key === "relationship_id") addAll(ids.relationship, [before, after]);
+					else if (key === "person_id") addAll(ids.person, [before, after]);
 					else if (key === "contributors")
 						addAll(ids.person, [...asArray(before), ...asArray(after)]);
 					else if (key.startsWith("contributor:")) ids.person.add(key.slice("contributor:".length));
@@ -1125,47 +1675,17 @@ export class KoudenLedger extends DurableObject<Env> {
 		this.state = "deleted";
 	}
 
-	/** 統計の投影（03 §7）。書き込みの数秒後に D1 の kouden_stats を更新する */
+	/**
+	 * アラーム。統計の投影（03 §7、書き込みの数秒後）と、期限の来たお知らせの送信（E6-5）をまとめて行い、
+	 * 次のお知らせがあればその時刻に予約し直す
+	 */
 	override async alarm(): Promise<void> {
 		if (!this.ensureSchema()) return;
 		const koudenId = this.meta("kouden_id");
 		if (koudenId === null) return;
-		const stats = this.first<{ gift_count: number; total_amount: number }>(
-			`SELECT count(*) AS gift_count, coalesce(sum(CASE WHEN kind = 'koden' THEN amount END), 0) AS total_amount
-         FROM gifts WHERE deleted_at IS NULL`,
-		);
-		const last = this.first<{ seq: number; at: string }>(
-			"SELECT seq, at FROM change_log ORDER BY seq DESC LIMIT 1",
-		);
-		if (!stats || !last) return;
-		try {
-			await this.env.DB.prepare(
-				`INSERT INTO kouden_stats (kouden_id, gift_count, total_amount, person_count, return_pending,
-                                   last_activity_at, projected_seq)
-         VALUES (?, ?, ?, ?, 0, ?, ?)
-         ON CONFLICT (kouden_id) DO UPDATE SET
-           gift_count = excluded.gift_count, total_amount = excluded.total_amount,
-           person_count = excluded.person_count, return_pending = excluded.return_pending,
-           last_activity_at = excluded.last_activity_at, projected_seq = excluded.projected_seq
-         WHERE excluded.projected_seq > kouden_stats.projected_seq`,
-			)
-				.bind(
-					koudenId,
-					stats.gift_count,
-					stats.total_amount,
-					this.activePersonCount(),
-					last.at,
-					last.seq,
-				)
-				.run();
-		} catch (err) {
-			// 香典帳が D1 から削除済みなら投影先がない。再試行しても成功しないので終える
-			if (err instanceof Error && err.message.includes("FOREIGN KEY")) {
-				log("warn", "ledger_projection_orphan", { koudenId });
-				return;
-			}
-			throw err;
-		}
+		if (!(await this.project(koudenId))) return;
+		await this.sendDueReminders(koudenId);
+		await this.scheduleAlarm(false);
 	}
 
 	// ---- 共通の仕組み -------------------------------------------------------
@@ -1245,9 +1765,7 @@ export class KoudenLedger extends DurableObject<Env> {
 			throw err;
 		}
 		this.broadcastChanges(before, caller.tabId);
-		if ((await this.ctx.storage.getAlarm()) === null) {
-			await this.ctx.storage.setAlarm(Date.now() + PROJECTION_DELAY_MS);
-		}
+		await this.scheduleAlarm(true);
 		return { ok: true, value };
 	}
 
@@ -1350,7 +1868,9 @@ export class KoudenLedger extends DurableObject<Env> {
 		);
 	}
 
-	private nextSortOrder(table: "events" | "relationships"): number {
+	private nextSortOrder(
+		table: "events" | "relationships" | "return_items" | "return_rules",
+	): number {
 		return this.scalar(`SELECT coalesce(max(sort_order), 0) + 1 AS n FROM ${table}`);
 	}
 
@@ -1358,7 +1878,7 @@ export class KoudenLedger extends DurableObject<Env> {
 	private swapSortOrder(
 		caller: Caller,
 		now: string,
-		table: "events" | "relationships",
+		table: "events" | "relationships" | "return_items",
 		entity: string,
 		id: string,
 		direction: Direction,
@@ -1684,5 +2204,419 @@ export class KoudenLedger extends DurableObject<Env> {
 			updatedAt: g.updated_at,
 			contributors: contributors.get(g.id) ?? [],
 		}));
+	}
+
+	// ---- 香典返しの個別の処理 -------------------------------------------------
+
+	private returnItems(): ReturnItemView[] {
+		return this.all<{
+			id: string;
+			name: string;
+			category: string | null;
+			price: number;
+			description: string | null;
+			image_r2_key: string | null;
+			is_active: number;
+			sort_order: number;
+			version: number;
+			used: number;
+		}>(
+			`SELECT i.*, (SELECT count(*) FROM return_lines l WHERE l.return_item_id = i.id)
+                 + (SELECT count(*) FROM return_rules r WHERE r.suggested_item_id = i.id) AS used
+         FROM return_items i ORDER BY i.sort_order`,
+		).map((i) => ({
+			id: i.id,
+			name: i.name,
+			category: i.category,
+			price: i.price,
+			description: i.description,
+			imageKey: i.image_r2_key,
+			isActive: i.is_active === 1,
+			sortOrder: i.sort_order,
+			version: i.version,
+			usedCount: i.used,
+		}));
+	}
+
+	private returnRules(): ReturnRuleView[] {
+		return this.all<{
+			id: string;
+			min_amount: number;
+			max_amount: number | null;
+			ratio_numerator: number;
+			ratio_denominator: number;
+			suggested_item_id: string | null;
+			item_name: string | null;
+			version: number;
+		}>(
+			`SELECT r.*, i.name AS item_name FROM return_rules r
+         LEFT JOIN return_items i ON i.id = r.suggested_item_id
+        ORDER BY r.min_amount, r.sort_order`,
+		).map((r) => ({
+			id: r.id,
+			minAmount: r.min_amount,
+			maxAmount: r.max_amount,
+			ratioNumerator: r.ratio_numerator,
+			ratioDenominator: r.ratio_denominator,
+			suggestedItemId: r.suggested_item_id,
+			suggestedItemName: r.item_name,
+			version: r.version,
+		}));
+	}
+
+	private returnItemRecord(input: ReturnItemInput) {
+		return {
+			name: input.name,
+			category: input.category,
+			price: input.price,
+			description: input.description,
+		};
+	}
+
+	private returnRuleRecord(input: ReturnRuleInput) {
+		return {
+			min_amount: input.minAmount,
+			max_amount: input.maxAmount,
+			ratio_numerator: input.ratioNumerator,
+			ratio_denominator: input.ratioDenominator,
+			suggested_item_id: input.suggestedItemId,
+		};
+	}
+
+	private returnItemUsage(itemId: string): number {
+		return (
+			this.scalar("SELECT count(*) AS n FROM return_lines WHERE return_item_id = ?", itemId) +
+			this.scalar("SELECT count(*) AS n FROM return_rules WHERE suggested_item_id = ?", itemId)
+		);
+	}
+
+	/** 推奨品は有効な品から選ぶ（すでに設定済みの品は、無効にした後もそのまま保存できる） */
+	private assertSuggestedItem(itemId: string | null, currentItemId: string | null): void {
+		if (itemId === null) return;
+		const item = this.first<{ is_active: number }>(
+			"SELECT is_active FROM return_items WHERE id = ?",
+			itemId,
+		);
+		if (!item || (item.is_active !== 1 && itemId !== currentItemId)) {
+			throw invalid("suggestedItemId", "推奨品を選び直してください");
+		}
+	}
+
+	private activeItem(itemId: string): { id: string; name: string; price: number } {
+		const item = this.first<{ id: string; name: string; price: number; is_active: number }>(
+			"SELECT id, name, price, is_active FROM return_items WHERE id = ?",
+			itemId,
+		);
+		if (!item || item.is_active !== 1) {
+			throw invalid("itemId", "返礼品が見つかりません。カタログを確認してください");
+		}
+		return item;
+	}
+
+	/** 明細を 1 行追加する。品名・単価はその時点の値を写して持つ（カタログの変更の影響を受けない） */
+	private insertReturnLine(
+		returnId: string,
+		line: { itemId: string | null; name: string; unitPrice: number; quantity: number },
+	): { id: string; snapshot: { name: string; unitPrice: number; quantity: number } } {
+		const id = uuidv7();
+		this.sql.exec(
+			`INSERT INTO return_lines (id, return_id, return_item_id, name, unit_price, quantity)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+			id,
+			returnId,
+			line.itemId,
+			line.name,
+			line.unitPrice,
+			line.quantity,
+		);
+		return {
+			id,
+			snapshot: { name: line.name, unitPrice: line.unitPrice, quantity: line.quantity },
+		};
+	}
+
+	/** 楽観ロックを確認し、変更前の行を返す。version はここで 1 つ進める */
+	private lockReturn(returnId: string, version: number): Row & { status: string } {
+		const current = this.first<Row & { status: string; version: number }>(
+			`SELECT status, method, on_day_amount, due_date, arranged_at, shipped_at, ship_name,
+              ship_postal_code, ship_address, ship_phone, notes, version
+         FROM returns WHERE id = ?`,
+			returnId,
+		);
+		if (!current) throw new LedgerFailure({ code: "not_found" });
+		if (current.version !== version) throw new LedgerFailure({ code: "conflict" });
+		this.sql.exec("UPDATE returns SET version = version + 1 WHERE id = ?", returnId);
+		const { version: _v, ...row } = current;
+		return row;
+	}
+
+	private touchReturn(caller: Caller, now: string, returnId: string): void {
+		this.sql.exec(
+			"UPDATE returns SET updated_by = ?, updated_at = ? WHERE id = ?",
+			caller.userId,
+			now,
+			returnId,
+		);
+	}
+
+	/** 香典返しと明細を読む（returnId を省略するとすべて） */
+	private returnViews(returnId?: string): ReturnView[] {
+		const rows = this.all<{
+			id: string;
+			person_id: string;
+			status: string;
+			method: string | null;
+			on_day_amount: number;
+			due_date: string | null;
+			arranged_at: string | null;
+			shipped_at: string | null;
+			ship_name: string | null;
+			ship_postal_code: string | null;
+			ship_address: string | null;
+			ship_phone: string | null;
+			notes: string | null;
+			version: number;
+			updated_at: string;
+		}>(
+			`SELECT * FROM returns ${returnId === undefined ? "" : "WHERE id = ?"}`,
+			...(returnId === undefined ? [] : [returnId]),
+		);
+		if (rows.length === 0) return [];
+		const lines = new Map<string, ReturnLineView[]>();
+		for (const l of this.all<{
+			id: string;
+			return_id: string;
+			return_item_id: string | null;
+			name: string;
+			unit_price: number;
+			quantity: number;
+		}>(
+			`SELECT id, return_id, return_item_id, name, unit_price, quantity FROM return_lines
+        ${returnId === undefined ? "" : "WHERE return_id = ?"} ORDER BY rowid`,
+			...(returnId === undefined ? [] : [returnId]),
+		)) {
+			const list = lines.get(l.return_id) ?? [];
+			list.push({
+				id: l.id,
+				itemId: l.return_item_id,
+				name: l.name,
+				unitPrice: l.unit_price,
+				quantity: l.quantity,
+			});
+			lines.set(l.return_id, list);
+		}
+		return rows.map((r) => {
+			const own = lines.get(r.id) ?? [];
+			return {
+				id: r.id,
+				personId: r.person_id,
+				status: r.status as ReturnView["status"],
+				method: r.method as ReturnView["method"],
+				onDayAmount: r.on_day_amount,
+				dueDate: r.due_date,
+				arrangedAt: r.arranged_at,
+				shippedAt: r.shipped_at,
+				shipName: r.ship_name,
+				shipPostalCode: r.ship_postal_code,
+				shipAddress: r.ship_address,
+				shipPhone: r.ship_phone,
+				notes: r.notes,
+				version: r.version,
+				lines: own,
+				linesTotal: own.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0),
+				updatedAt: r.updated_at,
+			};
+		});
+	}
+
+	/** 香典返しの期限の基準にする行事（日付のある四十九日のうち最も早いもの） */
+	private dueEvent(): { name: string; date: string } | undefined {
+		return this.first<{ name: string; date: string }>(
+			`SELECT name, date FROM events
+        WHERE kind = 'memorial_49' AND date IS NOT NULL AND deleted_at IS NULL
+        ORDER BY date LIMIT 1`,
+		);
+	}
+
+	/** 未対応の香典返しの数: 香典をいただいた差出人のうち、香典返しがないか状況が「未対応」の人 */
+	private pendingReturnCount(): number {
+		return this.scalar(
+			`SELECT count(DISTINCT gc.person_id) AS n
+         FROM gift_contributors gc
+         JOIN gifts g ON g.id = gc.gift_id AND g.deleted_at IS NULL AND g.kind = 'koden'
+         JOIN persons p ON p.id = gc.person_id AND p.deleted_at IS NULL
+         LEFT JOIN returns r ON r.person_id = gc.person_id
+        WHERE r.id IS NULL OR r.status = 'pending'`,
+		);
+	}
+
+	/**
+	 * 行事の日付から、期限のお知らせ（E6-5）を作り直す。四十九日の行事の日付を期限とする。
+	 * 日時が変わらないものは残す（送信済みの印を保つ）
+	 */
+	private syncReminders(eventId: string, now: string): void {
+		const event = this.first<{ kind: string; date: string | null; deleted_at: string | null }>(
+			"SELECT kind, date, deleted_at FROM events WHERE id = ?",
+			eventId,
+		);
+		const wanted =
+			event && event.deleted_at === null && event.kind === "memorial_49" && event.date
+				? reminderSchedule(event.date, new Date(now))
+				: [];
+		const existing = this.all<{ id: string; kind: string; fire_at: string }>(
+			"SELECT id, kind, fire_at FROM reminders WHERE event_id = ?",
+			eventId,
+		);
+		for (const r of existing) {
+			if (!wanted.some((w) => w.kind === r.kind && w.fireAt === r.fire_at)) {
+				this.sql.exec("DELETE FROM reminders WHERE id = ?", r.id);
+			}
+		}
+		for (const w of wanted) {
+			if (!existing.some((r) => r.kind === w.kind && r.fire_at === w.fireAt)) {
+				this.sql.exec(
+					"INSERT INTO reminders (id, kind, event_id, fire_at) VALUES (?, ?, ?, ?)",
+					uuidv7(),
+					w.kind,
+					eventId,
+					w.fireAt,
+				);
+			}
+		}
+	}
+
+	/**
+	 * アラームを予約する。DO のアラームは 1 つだけなので、統計の投影（書き込みの数秒後）と
+	 * 次のお知らせのうち、早い方に合わせる（03 §7）
+	 */
+	private async scheduleAlarm(projectionSoon: boolean): Promise<void> {
+		const candidates: number[] = [];
+		if (projectionSoon) candidates.push(Date.now() + PROJECTION_DELAY_MS);
+		const next = this.first<{ at: string | null }>(
+			"SELECT min(fire_at) AS at FROM reminders WHERE sent_at IS NULL",
+		)?.at;
+		if (next) candidates.push(Date.parse(next));
+		if (candidates.length === 0) return;
+		const wanted = Math.min(...candidates);
+		const current = await this.ctx.storage.getAlarm();
+		if (current === null || wanted < current) await this.ctx.storage.setAlarm(wanted);
+	}
+
+	/** 統計の投影（03 §7）。香典帳が D1 から削除済みなら false */
+	private async project(koudenId: string): Promise<boolean> {
+		const stats = this.first<{ gift_count: number; total_amount: number }>(
+			`SELECT count(*) AS gift_count, coalesce(sum(CASE WHEN kind = 'koden' THEN amount END), 0) AS total_amount
+         FROM gifts WHERE deleted_at IS NULL`,
+		);
+		const last = this.first<{ seq: number; at: string }>(
+			"SELECT seq, at FROM change_log ORDER BY seq DESC LIMIT 1",
+		);
+		if (!stats || !last) return true;
+		try {
+			await this.env.DB.prepare(
+				`INSERT INTO kouden_stats (kouden_id, gift_count, total_amount, person_count, return_pending,
+                                   last_activity_at, projected_seq)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT (kouden_id) DO UPDATE SET
+           gift_count = excluded.gift_count, total_amount = excluded.total_amount,
+           person_count = excluded.person_count, return_pending = excluded.return_pending,
+           last_activity_at = excluded.last_activity_at, projected_seq = excluded.projected_seq
+         WHERE excluded.projected_seq > kouden_stats.projected_seq`,
+			)
+				.bind(
+					koudenId,
+					stats.gift_count,
+					stats.total_amount,
+					this.activePersonCount(),
+					this.pendingReturnCount(),
+					last.at,
+					last.seq,
+				)
+				.run();
+			return true;
+		} catch (err) {
+			// 香典帳が D1 から削除済みなら投影先がない。再試行しても成功しないので終える
+			if (err instanceof Error && err.message.includes("FOREIGN KEY")) {
+				log("warn", "ledger_projection_orphan", { koudenId });
+				return false;
+			}
+			throw err;
+		}
+	}
+
+	/**
+	 * 期限の来たお知らせを送る（E6-5）。宛先はオーナーと、お知らせを希望した編集者（D1）。
+	 * 未対応が 0 件のとき・アーカイブ中は送らずに送信済みにする。
+	 * 全員への送信に失敗したら例外にして、アラームの自動再試行に任せる
+	 */
+	private async sendDueReminders(koudenId: string): Promise<void> {
+		const due = this.all<{
+			id: string;
+			kind: string;
+			event_id: string;
+			event_name: string;
+			date: string;
+		}>(
+			`SELECT r.id, r.kind, r.event_id, e.name AS event_name, e.date
+         FROM reminders r JOIN events e ON e.id = r.event_id
+        WHERE r.sent_at IS NULL AND r.fire_at <= ? AND e.deleted_at IS NULL AND e.date IS NOT NULL
+        ORDER BY r.fire_at`,
+			new Date().toISOString(),
+		);
+		if (due.length === 0) return;
+		// 遅れて発火して同じ行事の分が重なった場合は、期限に近い方の 1 通だけ送る
+		const latest = new Map<string, (typeof due)[number]>();
+		for (const r of due) latest.set(r.event_id, r);
+
+		const kouden = await this.env.DB.prepare("SELECT title, status FROM koudens WHERE id = ?")
+			.bind(koudenId)
+			.first<{ title: string; status: string }>();
+		const pending = this.pendingReturnCount();
+		const recipients =
+			kouden?.status === "active" && pending > 0
+				? (
+						await this.env.DB.prepare(
+							`SELECT u.email, u.display_name FROM kouden_members m JOIN users u ON u.id = m.user_id
+                WHERE m.kouden_id = ? AND u.deleted_at IS NULL
+                  AND (m.role = 'owner' OR (m.role = 'editor' AND m.notify_reminders = 1))`,
+						)
+							.bind(koudenId)
+							.all<{ email: string; display_name: string }>()
+					).results
+				: [];
+
+		for (const r of latest.values()) {
+			let sent = 0;
+			for (const to of recipients) {
+				try {
+					await this.mailer.send(
+						reminderMail({
+							to,
+							koudenTitle: kouden?.title ?? "",
+							days: r.kind === "return_due_14d" ? 14 : 3,
+							eventName: r.event_name,
+							dueDate: r.date,
+							pending,
+							url: `${this.env.APP_ORIGIN}/k/${koudenId}/returns`,
+						}),
+					);
+					sent += 1;
+				} catch (err) {
+					log("error", "reminder_mail_failed", {
+						koudenId,
+						kind: r.kind,
+						error: err instanceof Error ? err.message : String(err),
+					});
+				}
+			}
+			if (recipients.length > 0 && sent === 0) throw new Error("reminder mail failed");
+			this.sql.exec(
+				"UPDATE reminders SET sent_at = ? WHERE event_id = ? AND sent_at IS NULL AND fire_at <= ?",
+				new Date().toISOString(),
+				r.event_id,
+				new Date().toISOString(),
+			);
+			log("info", "reminder_sent", { koudenId, kind: r.kind, recipients: sent, pending });
+		}
 	}
 }

@@ -36,6 +36,7 @@ export const MembersPage: FC<{
 	const isOwner = kouden.memberRole === "owner";
 	// アーカイブ中は閲覧のみ（E2-4）。ロール変更・除外・譲渡の申し出はできない
 	const canManage = isOwner && kouden.status === "active";
+	const notifyOn = members.find((m) => m.userId === userId)?.notifyReminders ?? false;
 	return (
 		<div class="mx-auto max-w-3xl space-y-8">
 			{error && (
@@ -132,6 +133,7 @@ export const MembersPage: FC<{
 									<span class="font-medium">{m.displayName}</span>
 									{m.userId === userId && <span class="ml-1 text-sm text-muted">（あなた）</span>}
 									<span class={`${ui.badge} ml-2`}>{ROLES[m.role]}</span>
+									{isOwner && m.notifyReminders && <span class={`${ui.badge} ml-1`}>お知らせ</span>}
 									{isOwner && <div class="text-xs break-all text-muted">{m.email}</div>}
 								</div>
 								{canManage && m.role !== "owner" && (
@@ -190,6 +192,29 @@ export const MembersPage: FC<{
 					)}
 				</section>
 			</LiveRegion>
+
+			<section id="notifications" class={`${ui.card} space-y-3`} aria-labelledby="notify-heading">
+				<h2 id="notify-heading" class={ui.h2}>
+					期限のお知らせ
+				</h2>
+				<p class="text-sm text-muted">
+					四十九日の行事に日付を入れると、香典返しの期限の 14 日前と 3
+					日前に、未対応の件数をメールでお知らせします。
+				</p>
+				{kouden.memberRole === "owner" && <p class="text-sm">オーナーには常にお送りします。</p>}
+				{kouden.memberRole === "editor" && (
+					<form method="post" action={`${base}/members/me/notifications`} class="space-y-2">
+						<p class="text-sm">
+							あなたは現在、お知らせを{notifyOn ? "受け取っています" : "受け取っていません"}。
+						</p>
+						<Hidden name="on" value={notifyOn ? "0" : "1"} />
+						<button type="submit" class={ui.buttonSecondary}>
+							{notifyOn ? "お知らせを受け取らない" : "お知らせを受け取る"}
+						</button>
+					</form>
+				)}
+				{kouden.memberRole === "viewer" && <p class="text-sm">閲覧者にはお送りしません。</p>}
+			</section>
 
 			{isOwner && transfer && transfer.fromUserId === userId && (
 				<section class={`${ui.card} space-y-3`} aria-labelledby="transfer-pending">

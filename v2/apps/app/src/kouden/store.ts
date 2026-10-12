@@ -1,5 +1,6 @@
 import type { KoudenInput, Plan, Role } from "@kouden/domain";
 import { uuidv7 } from "@kouden/domain";
+import { deleteKoudenFiles } from "./files.ts";
 
 /** 香典帳の目録（D1 koudens）と、閲覧者のメンバーシップ */
 export interface KoudenContext {
@@ -170,6 +171,7 @@ export async function finishDeletion(
 	deleteLedger: (koudenId: string) => Promise<void>,
 ): Promise<void> {
 	await deleteLedger(koudenId);
+	await deleteKoudenFiles(env, koudenId);
 	// kouden_members・kouden_stats は ON DELETE CASCADE で消える
 	await env.DB.prepare("DELETE FROM koudens WHERE id = ? AND status = 'deleting'")
 		.bind(koudenId)

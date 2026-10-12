@@ -18,6 +18,10 @@ export interface ModeSettings {
 		/** 省略すると `cf deploy` が名前で解決・作成する */
 		id?: string;
 	};
+	/** 返礼品画像などを置く R2 バケット（非公開。Worker が権限を確認して配信する） */
+	r2: { name: string };
+	/** お知らせメールの送信元（Email Service に登録したドメインのアドレス） */
+	mailFrom: string;
 	/** Rate Limiting binding の namespace（アカウント内で一意な整数文字列） */
 	rateLimitNamespaces: { auth: string; write: string; invite: string };
 	/** Google OAuth クライアント ID（秘密情報ではない） */
@@ -37,6 +41,8 @@ export const MODES: Record<Mode, ModeSettings> = {
 		workerName: "kouden-app-dev",
 		origin: "http://localhost:5173",
 		d1: { name: "kouden-db-dev", id: LOCAL_D1_ID },
+		r2: { name: "kouden-files-dev" },
+		mailFrom: "noreply@localhost.test",
 		rateLimitNamespaces: { auth: "9001", write: "9002", invite: "9003" },
 		googleClientId: PLACEHOLDER_CLIENT_ID,
 	},
@@ -45,6 +51,8 @@ export const MODES: Record<Mode, ModeSettings> = {
 		origin: `https://staging.${DOMAIN}`,
 		domain: `staging.${DOMAIN}`,
 		d1: { name: "kouden-db-staging" },
+		r2: { name: "kouden-files-staging" },
+		mailFrom: `noreply@staging.${DOMAIN}`,
 		rateLimitNamespaces: { auth: "2001", write: "2002", invite: "2003" },
 		googleClientId: PLACEHOLDER_CLIENT_ID,
 	},
@@ -53,6 +61,8 @@ export const MODES: Record<Mode, ModeSettings> = {
 		origin: `https://${DOMAIN}`,
 		domain: DOMAIN,
 		d1: { name: "kouden-db" },
+		r2: { name: "kouden-files" },
+		mailFrom: `noreply@${DOMAIN}`,
 		rateLimitNamespaces: { auth: "1001", write: "1002", invite: "1003" },
 		googleClientId: PLACEHOLDER_CLIENT_ID,
 	},

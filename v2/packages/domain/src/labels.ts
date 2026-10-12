@@ -53,3 +53,38 @@ export const ROLES: Record<Role, string> = {
 };
 
 export type Plan = "free" | "paid";
+
+/** 香典返しの対応状況（03 §3 returns.status, E6-4） */
+export const RETURN_STATUSES = {
+	pending: "未対応",
+	arranged: "手配済み",
+	shipped: "発送済み",
+	handed_on_day: "当日返し済み",
+	not_required: "不要",
+} as const;
+export type ReturnStatus = keyof typeof RETURN_STATUSES;
+export const RETURN_STATUS_VALUES = Object.keys(RETURN_STATUSES) as [
+	ReturnStatus,
+	...ReturnStatus[],
+];
+
+/** 香典返しの渡し方（03 §3 returns.method） */
+export const RETURN_METHODS = {
+	on_day: "当日返し",
+	shipping: "配送",
+	hand_delivery: "手渡し",
+} as const;
+export type ReturnMethod = keyof typeof RETURN_METHODS;
+export const RETURN_METHOD_VALUES = Object.keys(RETURN_METHODS) as [
+	ReturnMethod,
+	...ReturnMethod[],
+];
+
+/** 金額帯ルールで選べる返礼の目安率（E6-2） */
+export const RETURN_RATIOS = {
+	"1/2": "半返し（2 分の 1）",
+	"1/3": "3 分の 1 返し",
+	"1/4": "4 分の 1 返し",
+} as const;
+export type ReturnRatio = keyof typeof RETURN_RATIOS;
+export const RETURN_RATIO_VALUES = Object.keys(RETURN_RATIOS) as [ReturnRatio, ...ReturnRatio[]];

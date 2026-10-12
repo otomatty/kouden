@@ -4,13 +4,21 @@ import type { KoudenContext } from "../../kouden/store.ts";
 import type { Caller } from "../../ledger/types.ts";
 import { ui } from "../ui.ts";
 
-export type KoudenTab = "top" | "reception" | "gifts" | "persons" | "members" | "settings";
+export type KoudenTab =
+	| "top"
+	| "reception"
+	| "gifts"
+	| "persons"
+	| "returns"
+	| "members"
+	| "settings";
 
 const TABS: readonly { tab: KoudenTab; label: string; path: string }[] = [
 	{ tab: "top", label: "トップ", path: "" },
 	{ tab: "reception", label: "受付", path: "/reception" },
 	{ tab: "gifts", label: "いただきもの", path: "/gifts" },
 	{ tab: "persons", label: "差出人", path: "/persons" },
+	{ tab: "returns", label: "香典返し", path: "/returns" },
 	{ tab: "members", label: "メンバー", path: "/members" },
 	{ tab: "settings", label: "設定", path: "/settings" },
 ];

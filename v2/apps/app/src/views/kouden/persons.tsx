@@ -16,6 +16,7 @@ import { ui } from "../ui.ts";
 import { LiveRegion } from "./shell.tsx";
 import { type ConflictField, ConflictDiff } from "../components/conflict.tsx";
 import { HistoryList } from "../components/history.tsx";
+import { StatusBadge } from "./returns.tsx";
 
 const COLUMNS = 8;
 
@@ -467,6 +468,28 @@ export const PersonPage: FC<{
 				</ul>
 			</section>
 
+			<section aria-labelledby="person-return" class={`${ui.cardTight} space-y-2 text-sm`}>
+				<h3 id="person-return" class={ui.h3}>
+					香典返し
+				</h3>
+				{person.ret ? (
+					<p class="flex flex-wrap items-center gap-2">
+						<StatusBadge status={person.ret.status} />
+						<a href={`${base}/returns/${person.ret.id}`} class={ui.link}>
+							香典返しを開く
+						</a>
+					</p>
+				) : canWrite ? (
+					<form method="post" action={`${base}/persons/${person.id}/return`}>
+						<span class="mr-2 text-muted">まだ作成していません。</span>
+						<button type="submit" class={ui.buttonSmall}>
+							香典返しを作成
+						</button>
+					</form>
+				) : (
+					<p class="text-muted">まだ作成していません。</p>
+				)}
+			</section>
 			{history && <HistoryList history={history} />}
 			<p>
 				<a href={`${base}/persons`} class={ui.link}>

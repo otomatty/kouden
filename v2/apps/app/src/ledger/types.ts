@@ -1,4 +1,12 @@
-import type { Attendance, EventKind, GiftKind, Plan, Role } from "@kouden/domain";
+import type {
+	Attendance,
+	EventKind,
+	GiftKind,
+	Plan,
+	ReturnMethod,
+	ReturnStatus,
+	Role,
+} from "@kouden/domain";
 
 /**
  * 呼び出し元のコンテキスト（03 §5）。Worker が D1 で確認した内容を DO に渡す。
@@ -96,6 +104,8 @@ export interface PersonView {
 
 export interface PersonDetail extends PersonView {
 	gifts: GiftView[];
+	/** この人への香典返し（まだなければ null） */
+	ret: { id: string; status: ReturnStatus } | null;
 }
 
 export interface Overview {
@@ -155,4 +165,89 @@ export interface History {
 	entries: HistoryEntry[];
 	/** 差分の中の ID（行事・関係・差出人）→ 表示名 */
 	names: Record<string, string>;
+}
+
+// ---- 香典返し（E6） ----------------------------------------------------------
+
+export interface ReturnItemView {
+	id: string;
+	name: string;
+	category: string | null;
+	price: number;
+	description: string | null;
+	/** R2 のキー（koudens/{koudenId}/return-items/{objectId}） */
+	imageKey: string | null;
+	isActive: boolean;
+	sortOrder: number;
+	version: number;
+	/** 明細・金額帯ルールで使われている数（1 以上なら削除できない） */
+	usedCount: number;
+}
+
+export interface ReturnRuleView {
+	id: string;
+	minAmount: number;
+	maxAmount: number | null;
+	ratioNumerator: number;
+	ratioDenominator: number;
+	suggestedItemId: string | null;
+	suggestedItemName: string | null;
+	version: number;
+}
+
+export interface ReturnLineView {
+	id: string;
+	itemId: string | null;
+	name: string;
+	unitPrice: number;
+	quantity: number;
+}
+
+export interface ReturnView {
+	id: string;
+	personId: string;
+	status: ReturnStatus;
+	method: ReturnMethod | null;
+	onDayAmount: number;
+	dueDate: string | null;
+	arrangedAt: string | null;
+	shippedAt: string | null;
+	shipName: string | null;
+	shipPostalCode: string | null;
+	shipAddress: string | null;
+	shipPhone: string | null;
+	notes: string | null;
+	version: number;
+	lines: ReturnLineView[];
+	/** 明細の合計 */
+	linesTotal: number;
+	updatedAt: string;
+}
+
+/** 香典返しの一覧の 1 行（差出人ごと） */
+export interface ReturnBoardRow {
+	person: PersonView;
+	ret: ReturnView | null;
+}
+
+export interface ReturnsBoard {
+	rows: ReturnBoardRow[];
+	items: ReturnItemView[];
+	rules: ReturnRuleView[];
+	/** 期限（四十九日の行事の日付のうち最も早いもの）。行事に日付がなければ null */
+	dueDate: string | null;
+	dueEventName: string | null;
+}
+
+export interface ReturnDetail extends ReturnView {
+	person: PersonView;
+	/** 香典帳の期限（四十九日の日付） */
+	koudenDueDate: string | null;
+}
+
+/** 一括確定の 1 件分。itemId が null なら明細なし（当日返しで済んだ場合など） */
+export interface ReturnConfirmEntry {
+	personId: string;
+	itemId: string | null;
+	onDayAmount: number;
 }

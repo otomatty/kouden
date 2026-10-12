@@ -105,6 +105,7 @@ CREATE TABLE kouden_members (
   role              TEXT NOT NULL CHECK (role IN ('owner','editor','viewer')),
   joined_at         TEXT NOT NULL,
   invited_by        TEXT REFERENCES users(id),
+  notify_reminders  INTEGER NOT NULL DEFAULT 0, -- 香典返しの期限のお知らせを受け取るか（編集者が選ぶ。オーナーは常に受け取る）
   PRIMARY KEY (kouden_id, user_id)
 );
 CREATE INDEX idx_members_user ON kouden_members(user_id);
@@ -437,7 +438,7 @@ constructor(ctx: DurableObjectState, env: Env) {
 - **後方互換な変更のみ**を基本とする（列の追加、テーブルの追加）。破壊的変更は「新列追加 → 両方書く → 旧列を読まなくする → 次々回で削除」の段階を踏む。
 - 長期間アクセスされない DO は古いスキーマのまま眠っているが、次に起動したときに追いつくので問題ない。
 - 実装では、コンストラクタではなく各 RPC の最初で `migrate` を呼ぶ（`deleteAll()` の後に作り直せるようにするため）。DO 内の RPC は同期的に SQL を実行するので、途中に別の呼び出しが割り込むことはない。
-- 1 番（M1）は台帳の骨格（`events` / `relationships` / `persons` / `gifts` / `gift_contributors` / `change_log`）だけを作る。香典返し・写真・リマインドのテーブルは、それぞれのマイルストーンで 2 番以降として追加する。
+- 1 番（M1）は台帳の骨格（`events` / `relationships` / `persons` / `gifts` / `gift_contributors` / `change_log`）だけを作る。2 番（M3）で香典返し（`return_items` / `return_rules` / `returns` / `return_lines`）とリマインド（`reminders`）を追加した。写真のテーブルは後のマイルストーンで追加する。
 - 新しい DO は、最初の呼び出しで `meta.kouden_id` を記録し、既定の行事・関係を作る（変更ログの記録者は `system`）。D1 への登録と DO の初期化の間で失敗しても、次に開いたときに初期化されるので、作成処理で DO を呼ぶ必要はない。
 
 ## 5. 権限の判定
@@ -481,8 +482,8 @@ Worker: 受付番号入りの完了 HTML を返す
 ### 香典返しの一括提案
 
 1. 差出人ごとの受取合計を香典（`kind = 'koden'`）から計算する。単名なら `amount`。連名なら `share_amount`、未入力なら `amount` を人数で均等割り（端数は代表者 `is_primary` に寄せる）
-2. 合計 − `on_day_amount` に一致する `return_rules` を探す
-3. 目安額 = 合計 × 比率。推奨品があればそれ、なければ目安額に最も近い有効なカタログ品を提案
+2. 合計（いただいた額）が当てはまる `return_rules` を探す（帯が重なる場合は下限の高い方。なければ半返し）
+3. 目安額 = 合計 × 比率 − 当日返しで渡した額（`on_day_amount`）。推奨品が有効ならそれ、なければ目安額に最も近い有効なカタログ品（同じ差なら安い方）を提案する。目安額が 0 なら品は提案せず、当日返しを渡していれば「当日返し済み」で作る
 4. 画面で確認・修正 → 確定時に `returns` / `return_lines` を一括作成（1 トランザクション）
 
 ### オーナー譲渡（D1 のみ）
@@ -495,7 +496,7 @@ Worker: 受付番号入りの完了 HTML を返す
 - アラームで現在の要約を計算し、D1 の `kouden_stats` に `INSERT ... ON CONFLICT DO UPDATE ... WHERE excluded.projected_seq > kouden_stats.projected_seq` で書き込む（古い要約で上書きしない）。
 - 失敗した場合はアラームの自動再試行に任せる。投影は表示専用なので、遅延しても業務に影響しない。
 
-DO のアラームは 1 オブジェクトにつき 1 つしか持てないため、リマインドと投影は「次に発火すべき最も早い時刻」を計算して 1 つのアラームにまとめ、発火時に期限の来た処理を全部実行する。
+DO のアラームは 1 オブジェクトにつき 1 つしか持てないため、リマインドと投影は「次に発火すべき最も早い時刻」を計算して 1 つのアラームにまとめ、発火時に期限の来た処理を全部実行する。投影は `kouden_stats.return_pending` に未対応の香典返しの数も書く。
 
 ## 8. 削除
 

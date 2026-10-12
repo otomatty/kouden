@@ -17,25 +17,48 @@ export interface Member {
 	email: string;
 	role: Role;
 	joinedAt: string;
+	/** 香典返しの期限のお知らせを受け取るか（オーナーは常に受け取る） */
+	notifyReminders: boolean;
 }
 
 export async function listMembers(db: D1Database, koudenId: string): Promise<Member[]> {
 	const { results } = await db
 		.prepare(
-			`SELECT m.user_id, u.display_name, u.email, m.role, m.joined_at
+			`SELECT m.user_id, u.display_name, u.email, m.role, m.joined_at, m.notify_reminders
          FROM kouden_members m JOIN users u ON u.id = m.user_id
         WHERE m.kouden_id = ?
         ORDER BY CASE m.role WHEN 'owner' THEN 0 WHEN 'editor' THEN 1 ELSE 2 END, m.joined_at`,
 		)
 		.bind(koudenId)
-		.all<{ user_id: string; display_name: string; email: string; role: Role; joined_at: string }>();
+		.all<{
+			user_id: string;
+			display_name: string;
+			email: string;
+			role: Role;
+			joined_at: string;
+			notify_reminders: number;
+		}>();
 	return results.map((r) => ({
 		userId: r.user_id,
 		displayName: r.display_name,
 		email: r.email,
 		role: r.role,
 		joinedAt: r.joined_at,
+		notifyReminders: r.role === "owner" || r.notify_reminders === 1,
 	}));
+}
+
+/** 期限のお知らせ（E6-5）を受け取るかを、本人が切り替える */
+export async function setNotifyReminders(
+	db: D1Database,
+	koudenId: string,
+	userId: string,
+	on: boolean,
+): Promise<void> {
+	await db
+		.prepare("UPDATE kouden_members SET notify_reminders = ? WHERE kouden_id = ? AND user_id = ?")
+		.bind(on ? 1 : 0, koudenId, userId)
+		.run();
 }
 
 /** ロールの変更（オーナーの行は変えない）。変更できたら true */

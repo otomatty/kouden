@@ -162,8 +162,20 @@
 		const active = document.activeElement;
 		return Boolean(
 			el.querySelector("form[data-editing-entity]") ||
+			// 開いている編集欄（返礼品の編集など）
+			el.querySelector("details[open] form") ||
+			// 入力を変えたフォーム（一括提案の選択など。フォーカスが外れていても守る）
+			el.querySelector("form[data-dirty]") ||
 			(active && el.contains(active) && active.matches("input, select, textarea")),
 		);
+	}
+
+	// 取り直す部分の中のフォームを変更したら印を付ける（送信・画面の移動で消える）
+	for (const type of ["input", "change"]) {
+		document.addEventListener(type, (e) => {
+			const form = e.target instanceof Element ? e.target.closest("form") : null;
+			if (form?.closest("[data-live]")) form.dataset.dirty = "";
+		});
 	}
 
 	function showStale(el) {

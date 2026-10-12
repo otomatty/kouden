@@ -59,6 +59,7 @@ import {
 	unwrap,
 } from "./helpers.tsx";
 import { registerMemberRoutes, setStatusAndNotify } from "./members.tsx";
+import { registerReturnRoutes } from "./returns.tsx";
 
 // ---- 香典帳の作成 -------------------------------------------------------------
 
@@ -898,6 +899,7 @@ k.post("/delete", async (c) => {
 });
 
 registerMemberRoutes(k);
+registerReturnRoutes(k);
 
 // ---- リアルタイム（04 §5） ------------------------------------------------------
 

@@ -44,7 +44,7 @@ flowchart TB
 | Worker | `kouden-admin` | 運営者画面（Access の背後） |
 | Durable Object | `KoudenLedger`（SQLite backend） | 香典帳 1 冊の中身 |
 | D1 | `kouden-db` | 横断データ（[03 §2](./03-domain-model.md#2-d1-スキーマ)） |
-| R2 | `kouden-files` | 返礼品画像・供物写真（非公開。Worker 経由で権限確認して配信） |
+| R2 | `kouden-files` | 返礼品画像・供物写真（非公開。Worker 経由で権限確認して配信）。キーは `koudens/{koudenId}/return-items/{objectId}` で、画像を差し替えるたびに新しい ID にする。配信は `GET /k/:id/files/return-items/:objectId`（メンバーのみ。URL の香典帳 ID でキーを組み立てるので、他の香典帳の画像は読めない）で、`Cache-Control: private, max-age=31536000, immutable`。アップロードは JPEG・PNG・WebP の 5 MB まで。形式はブラウザの申告ではなく先頭のバイト列で判定する |
 | Static Assets | `kouden-app` に同梱 | Tailwind のビルド成果物、htmx、自前の小さなスクリプト |
 | Email Service | `send_email` binding | リマインドメール（`noreply@example.jp`） |
 | Rate Limiting | `AUTH_RATE_LIMITER` / `WRITE_RATE_LIMITER` ほか | ログイン・書き込み・招待受諾の回数制限 |
@@ -236,10 +236,12 @@ htmx 本体と、WebSocket を扱う小さな自前スクリプト（`public/ass
 | `/k/:id/reception?event=…` | 受付入力（大きな受付番号、連続入力） | スマホ |
 | `/k/:id/gifts` | いただきもの一覧（絞り込み・連続編集） | PC |
 | `/k/:id/persons/:pid` | 差出人の詳細（いただきもの・香典返し・履歴） | 両方 |
-| `/k/:id/returns` | 香典返し（一括提案・状況管理） | PC |
+| `/k/:id/returns` | 香典返し（一括提案・状況の一覧と絞り込み） | PC |
+| `/k/:id/returns/:rid` | 香典返し 1 件（状況・送付先・品・変更履歴） | 両方 |
+| `/k/:id/returns/settings` | 返礼品カタログ（画像）・金額帯ルール | PC |
 | `/k/:id/print/*` | 印刷用ページ | PC |
 | `/k/:id/members` | メンバー・ロール・招待リンク（QR コード）・オーナー譲渡・退出 | 両方 |
-| `/k/:id/settings` | 香典帳の情報・行事・関係・カタログ・金額帯ルール・購入・アーカイブ・削除 | 両方 |
+| `/k/:id/settings` | 香典帳の情報・行事・関係・購入・アーカイブ・削除 | 両方 |
 | `/invite/:token` | 招待の受諾（ログイン前は香典帳名とログインボタン、ログイン後は「参加する」ボタン。GET では参加しない） | スマホ |
 
 ## 7. 決済（Stripe）
@@ -278,7 +280,9 @@ class CloudflareMailer implements Mailer { /* env.EMAIL.send(...) */ }
 
 - 送信元: `noreply@example.jp`。SPF・DKIM・DMARC は Email Service のドメイン登録で設定される。
 - 送信するのは香典返しのリマインドのみ。DO のアラームから送る。
-- 宛先はオーナーと、通知を希望した編集者（D1 から取得）。
+- 宛先はオーナーと、通知を希望した編集者（D1 `kouden_members.notify_reminders`。編集者がメンバーの画面で自分で切り替える）。
+- 期限は四十九日の行事の日付。その 14 日前と 3 日前の 9:00（日本時間）に、未対応の件数（香典をいただいた差出人のうち、香典返しがないか「未対応」の人数）を知らせる。未対応が 0 件のとき・アーカイブ中は送らない。行事の日付を変えると予定を作り直し、すでに過ぎた分は送らない。
+- 全員への送信に失敗したらアラームを失敗させ、自動の再試行に任せる。一部だけ失敗した場合は送信済みとして記録し、ログに残す（二重送信を避ける）。
 
 ## 10. 環境と CI/CD
 

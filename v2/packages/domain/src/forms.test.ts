@@ -6,6 +6,9 @@ import {
 	parseGiftFilter,
 	personSchema,
 	receptionSchema,
+	returnItemSchema,
+	returnLineSchema,
+	returnRuleSchema,
 	toFieldErrors,
 } from "./forms.ts";
 
@@ -114,5 +117,47 @@ describe("parseGiftFilter", () => {
 		expect(
 			parseGiftFilter({ event: "e1", kind: "cash", q: " 山田 ", min: "３０００", max: "abc" }),
 		).toEqual({ eventId: "e1", q: "山田", minAmount: 3000 });
+	});
+});
+
+describe("香典返しのフォーム", () => {
+	it("金額帯ルール: 目安率を分数にし、上限は下限以上", () => {
+		expect(
+			returnRuleSchema.parse({
+				minAmount: "5,000",
+				maxAmount: "",
+				ratio: "1/3",
+				suggestedItemId: "",
+			}),
+		).toEqual({
+			minAmount: 5000,
+			maxAmount: null,
+			ratioNumerator: 1,
+			ratioDenominator: 3,
+			suggestedItemId: null,
+		});
+		const bad = returnRuleSchema.safeParse({ minAmount: "10000", maxAmount: "5000", ratio: "1/2" });
+		expect(bad.success).toBe(false);
+	});
+
+	it("返礼品: 価格は必須", () => {
+		const r = returnItemSchema.safeParse({ name: "お茶", price: "" });
+		expect(r.success).toBe(false);
+		expect(r.error && toFieldErrors(r.error).price).toBe("価格を入力してください");
+	});
+
+	it("明細: カタログを選ぶか、品名と単価を入力する", () => {
+		expect(returnLineSchema.parse({ itemId: "x" })).toEqual({
+			type: "catalog",
+			itemId: "x",
+			quantity: 1,
+		});
+		expect(returnLineSchema.parse({ name: "お礼状", unitPrice: "100", quantity: "2" })).toEqual({
+			type: "custom",
+			name: "お礼状",
+			unitPrice: 100,
+			quantity: 2,
+		});
+		expect(returnLineSchema.safeParse({ name: "お礼状" }).success).toBe(false);
 	});
 });

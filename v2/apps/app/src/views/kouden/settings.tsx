@@ -335,7 +335,7 @@ export const RelationshipsSection: FC<{
 	);
 };
 
-const MoveButtons: FC<{ action: string; first: boolean; last: boolean; label: string }> = ({
+export const MoveButtons: FC<{ action: string; first: boolean; last: boolean; label: string }> = ({
 	action,
 	first,
 	last,

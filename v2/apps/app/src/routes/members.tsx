@@ -17,6 +17,7 @@ import {
 	pendingTransfer,
 	removeMember,
 	revokeInvitation,
+	setNotifyReminders,
 } from "../kouden/members.ts";
 import { setKoudenStatus } from "../kouden/store.ts";
 import { ledgerFor } from "../ledger/client.ts";
@@ -164,6 +165,15 @@ export function registerMemberRoutes(k: Hono<AppEnv>): void {
 			);
 		}
 		return c.redirect(`${basePath(c)}/members?notice=removed`, 303);
+	});
+
+	// ---- 期限のお知らせ（E6-5）。編集者が自分で切り替える（オーナーは常に受け取る） ----
+	k.post("/members/me/notifications", async (c) => {
+		const kouden = c.get("kouden");
+		if (kouden.memberRole !== "editor") return errorResponse(c, 403);
+		const on = (await formValues(c)).on === "1";
+		await setNotifyReminders(c.env.DB, kouden.id, c.get("caller").userId, on);
+		return c.redirect(`${basePath(c)}/members?notice=saved#notifications`, 303);
 	});
 
 	k.post("/leave", async (c) => {
