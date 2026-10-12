@@ -47,7 +47,7 @@ flowchart LR
 |---|---|---|
 | `auth.users` + `profiles` | D1 `users` | `legacy_user_id` = 旧 ID。`display_name` は `profiles.display_name`。アバターは移行しない（Google の画像を使う） |
 | `auth.identities`（provider = google） | `users.google_sub` | `provider_id`（= Google の `sub`）をそのまま設定する。**Google ログインのユーザーは初回ログインで確実に紐づく** |
-| `auth.identities`（provider = email） | `users.google_sub = NULL` + `legacy_users` | 初回の Google ログイン時に確認済みメールが一致すれば自動で紐づく。一致しなければ運営者が手動で紐づける |
+| `auth.identities`（provider = email） | `users.google_sub = NULL` + `legacy_users` | アドレスが Gmail / Google Workspace なら、初回の Google ログイン時にメールが一致すれば自動で紐づく（ADR-P17）。それ以外のアドレスは運営者が本人確認のうえ手動で紐づける |
 
 ### 香典帳とメンバー
 
@@ -86,9 +86,9 @@ flowchart LR
 
 | 時期 | 作業 |
 |---|---|
-| M0 | 本番 Supabase の件数を調査する（ユーザー数、Google / メールの内訳、香典帳数、最大の香典帳の件数、Storage の容量、`name` と `organization` がどちらも NULL の香典の件数）。移行時間の見積もりと変換規則の確認に使う |
+| M0 | 本番 Supabase の件数を調査する（ユーザー数、Google / メールの内訳、メールログインのうち Gmail / それ以外のアドレスの件数、香典帳数、最大の香典帳の件数、Storage の容量、`name` と `organization` がどちらも NULL の香典の件数）。移行時間の見積もりと変換規則の確認に使う |
 | M6 開始時 | 本番のスナップショットでステージングへのリハーサルを行う。**リハーサル用のデータは個人情報を含むため、ステージング（Access で保護）でのみ扱い、リハーサル後に削除する** |
-| 切り替え 14 日前 | 旧アプリにバナーとメールで告知する（停止日時、Google ログインへの一本化、メールログインの人への案内、保留中の招待は再発行が必要なこと） |
+| 切り替え 14 日前 | 旧アプリにバナーとメールで告知する（停止日時、Google ログインへの一本化、メールログインの人への案内（Gmail 以外のアドレスだった人は切り替え後に問い合わせが必要なこと）、保留中の招待は再発行が必要なこと） |
 | 切り替え 3 日前 | 最終リハーサル。所要時間を計測し、停止時間を確定する |
 
 ## 5. 検証項目

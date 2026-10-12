@@ -116,8 +116,9 @@ GET /k/:koudenId/gifts
   2. ID トークンを Google の JWKS で検証（iss, aud, exp, nonce）
   3. ユーザー解決:
      a. users.google_sub が一致 → そのユーザー
-     b. なければ email_verified = true かつ legacy_users.email が一致し未紐づけ
-        → 旧ユーザーのレコードに google_sub を設定して紐づけ（linked_by = 'auto'）
+     b. なければ、メールが Gmail または Google Workspace（hd がメールのドメインと一致）で、
+        確認済み・未紐づけの旧ユーザーと 1 件だけ一致すれば、google_sub を設定して紐づけ（linked_by = 'auto'）
+        それ以外のアドレスは自動では紐づけない（ADR-P17。運営者が手動で紐づける）
      c. どちらもなければ新規作成
   4. セッション発行: 32 バイトの乱数 → Cookie `__Host-kouden_session`（HttpOnly, Secure, SameSite=Lax, Path=/, 30 日）
                      D1 には SHA-256 ハッシュのみ保存
@@ -132,6 +133,10 @@ GET /k/:koudenId/gifts
 - Cookie は `SameSite=Lax`。
 - GET 以外の要求は `Origin` ヘッダーが自ドメインと一致することを必須にする（Hono の `csrf` ミドルウェア）。
 - htmx の要求も通常のフォーム送信と同じ扱い。トークンの埋め込みは不要。
+
+### 既知の制約（受け入れ済み）
+
+- ログイン開始（`/auth/google/start`）は GET で一時 Cookie を上書きするため、ログイン途中に外部ページから遷移させられると、進行中のログインが state 不一致で失敗する。表示は「ログインに失敗しました」で、再試行すれば成功する。攻撃者のアカウントでログインさせる攻撃（login CSRF）は state と nonce の照合で防げているため、影響は再試行 1 回にとどまる。Cookie を state ごとに分ける対策は効果に比べてコードが増えるので、採用しない（otomatty/kouden#161 のレビューで判断）。
 
 ### Cloudflare Access（運営者）
 

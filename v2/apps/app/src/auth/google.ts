@@ -10,6 +10,8 @@ export interface GoogleClaims {
 	sub: string;
 	email: string;
 	emailVerified: boolean;
+	/** Google Workspace のドメイン（`hd` クレーム）。個人の Google アカウントでは無い */
+	hostedDomain?: string;
 	name?: string;
 	picture?: string;
 }
@@ -107,6 +109,7 @@ export function googleOidc(options: {
 				sub: payload.sub,
 				email: payload.email,
 				emailVerified: payload.email_verified === true,
+				hostedDomain: typeof payload.hd === "string" ? payload.hd : undefined,
 				name: typeof payload.name === "string" ? payload.name : undefined,
 				picture: typeof payload.picture === "string" ? payload.picture : undefined,
 			};

@@ -26,8 +26,9 @@ export const LoginPage: FC<{ startUrl: string; error?: LoginErrorCode }> = ({
 				Google アカウントでログイン
 			</a>
 			<p class="text-left text-sm leading-relaxed text-muted">
-				以前メールアドレスでログインしていた方は、同じメールアドレスの Google
-				アカウントでログインすると、以前のデータに自動でつながります。
+				以前メールアドレスでログインしていた方は、同じアドレスの Google アカウント（Gmail または
+				Google
+				Workspace）でログインすると、以前のデータに自動でつながります。それ以外のアドレスだった方は、お問い合わせください。
 			</p>
 		</div>
 	</div>

@@ -27,7 +27,7 @@ describe("Google ログイン", () => {
 			.bind(TARO.sub)
 			.first<{ id: string; display_name: string; email: string }>();
 		expect(user?.display_name).toBe("山田 太郎");
-		expect(user?.email).toBe("taro@example.com");
+		expect(user?.email).toBe("taro.yamada@gmail.com");
 
 		const home = await request("/");
 		expect(await home.text()).toContain("山田 太郎");
@@ -121,8 +121,8 @@ async function seedLegacyEmailUser(email: string) {
 }
 
 describe("旧アプリのユーザーの紐づけ", () => {
-	it("確認済みメールが一致すれば旧アカウントに紐づく（表示名は旧データを維持）", async () => {
-		await seedLegacyEmailUser("Taro@Example.com");
+	it("Gmail の確認済みメールが一致すれば旧アカウントに紐づく（表示名は旧データを維持）", async () => {
+		await seedLegacyEmailUser("Taro.Yamada@Gmail.com");
 		const { login } = makeApp(TARO);
 
 		await login();
@@ -202,6 +202,39 @@ describe("旧アプリのユーザーの紐づけ", () => {
 		expect(legacy).toEqual({ google_sub: null });
 		const link = await env.DB.prepare("SELECT linked_user_id FROM legacy_users").first();
 		expect(link).toEqual({ linked_user_id: "manually-linked" });
+	});
+
+	it("Google Workspace のドメイン（hd がメールのドメインと一致）なら紐づける", async () => {
+		await seedLegacyEmailUser("hanako@company.example");
+		const { login } = makeApp({
+			...TARO,
+			email: "hanako@company.example",
+			hostedDomain: "company.example",
+		});
+
+		await login();
+
+		const user = await env.DB.prepare(
+			"SELECT google_sub FROM users WHERE id = 'legacy-user-1'",
+		).first();
+		expect(user).toEqual({ google_sub: TARO.sub });
+	});
+
+	it.each([
+		["hd なし（個人の Google アカウントに外部のアドレスを登録）", undefined],
+		["hd がメールのドメインと不一致", "other.example"],
+	])("Gmail・Workspace 以外のアドレスは自動では紐づけない：%s", async (_label, hostedDomain) => {
+		await seedLegacyEmailUser("hanako@yahoo.example");
+		const { login } = makeApp({ ...TARO, email: "hanako@yahoo.example", hostedDomain });
+
+		await login();
+
+		const legacy = await env.DB.prepare(
+			"SELECT google_sub FROM users WHERE id = 'legacy-user-1'",
+		).first();
+		expect(legacy).toEqual({ google_sub: null });
+		const link = await env.DB.prepare("SELECT linked_user_id FROM legacy_users").first();
+		expect(link).toEqual({ linked_user_id: null });
 	});
 
 	it("メールが未確認なら紐づけず、新しいユーザーを作る", async () => {

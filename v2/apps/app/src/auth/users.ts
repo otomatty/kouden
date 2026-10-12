@@ -5,6 +5,24 @@ export type ResolveOutcome = "existing" | "linked_legacy" | "created";
 
 const MAX_DISPLAY_NAME = 50;
 
+/** Google が持ち主を管理している個人向けドメイン */
+const GOOGLE_CONSUMER_DOMAINS = new Set(["gmail.com", "googlemail.com"]);
+
+/**
+ * このメールアドレスの持ち主を Google が保証できるか（ADR-P17）。
+ *
+ * `email_verified` は「Google アカウント作成時に確認した」ことしか示さず、Gmail 以外の
+ * アドレスは後から別人に再割り当てされうる。Gmail と、Google Workspace のドメイン
+ * （`hd` クレームがメールのドメインと一致）だけを、旧アカウントへの自動紐づけに使う。
+ */
+export function isEmailAuthoritative(claims: GoogleClaims): boolean {
+	if (!claims.emailVerified) return false;
+	const domain = claims.email.split("@").pop()?.toLowerCase();
+	if (!domain) return false;
+	if (GOOGLE_CONSUMER_DOMAINS.has(domain)) return true;
+	return claims.hostedDomain !== undefined && claims.hostedDomain.toLowerCase() === domain;
+}
+
 function defaultDisplayName(claims: GoogleClaims): string {
 	const name = claims.name?.trim() || claims.email.split("@")[0] || "利用者";
 	return name.slice(0, MAX_DISPLAY_NAME);
@@ -18,7 +36,8 @@ function isUniqueViolation(e: unknown): boolean {
  * Google の属性からアプリのユーザーを特定する。
  *
  * 1. google_sub が一致するユーザー
- * 2. 旧アプリのメールログインユーザー（google_sub 未設定）で、確認済みメールが 1 件だけ一致 → 紐づける
+ * 2. 旧アプリのメールログインユーザー（google_sub 未設定・未紐づけ）で、Google が持ち主を保証できる
+ *    メール（Gmail / Google Workspace）が 1 件だけ一致 → 紐づける。それ以外は運営者が手動で紐づける
  * 3. どちらもなければ新規作成
  */
 export async function resolveUserFromGoogle(
@@ -54,7 +73,7 @@ async function resolveOnce(
 		return { userId: existing.id, outcome: "existing" };
 	}
 
-	if (claims.emailVerified) {
+	if (isEmailAuthoritative(claims)) {
 		const { results } = await db
 			.prepare(
 				// 運営者が手動で紐づけ済み（legacy_users.linked_user_id あり）の旧ユーザーは対象外

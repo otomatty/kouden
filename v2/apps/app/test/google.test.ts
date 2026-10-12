@@ -79,6 +79,7 @@ describe("googleOidc", () => {
 			sub: "123",
 			email: "a@example.com",
 			emailVerified: true,
+			hostedDomain: undefined,
 			name: "A",
 			picture: undefined,
 		});
@@ -113,6 +114,17 @@ describe("googleOidc", () => {
 	it("トークンエンドポイントがエラーを返したら拒否する", async () => {
 		const { provider } = providerReturning({ error: "invalid_grant" }, 400);
 		await expect(provider.exchangeAndVerify(params)).rejects.toThrow(OidcError);
+	});
+
+	it("Google Workspace の hd クレームを取り出す", async () => {
+		const token = await idToken({
+			sub: "1",
+			email: "a@company.example",
+			hd: "company.example",
+			nonce: "n1",
+		});
+		const { provider } = providerReturning({ id_token: token });
+		expect((await provider.exchangeAndVerify(params)).hostedDomain).toBe("company.example");
 	});
 
 	it("email_verified がなければ未確認として扱う", async () => {

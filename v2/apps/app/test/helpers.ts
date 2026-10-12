@@ -72,7 +72,7 @@ export function makeApp(claims: GoogleClaims, now?: () => Date) {
 
 export const TARO: GoogleClaims = {
 	sub: "google-sub-taro",
-	email: "taro@example.com",
+	email: "taro.yamada@gmail.com",
 	emailVerified: true,
 	name: "山田 太郎",
 	picture: "https://lh3.googleusercontent.com/a/taro",
