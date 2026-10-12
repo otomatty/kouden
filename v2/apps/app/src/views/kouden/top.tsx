@@ -4,8 +4,9 @@ import type { KoudenContext } from "../../kouden/store.ts";
 import type { Caller, Overview } from "../../ledger/types.ts";
 import { formatDate, formatDateTime, yen } from "../format.ts";
 import { ui } from "../ui.ts";
+import { LiveRegion } from "./shell.tsx";
 
-/** 香典帳トップ: 合計・行事別・種別別・関係別・最近の登録（E7-1） */
+/** 香典帳トップ: 合計・行事別・種別別・関係別・最近の登録（E7-1）。他の人の変更で取り直す（E8-1） */
 export const KoudenTopPage: FC<{ kouden: KoudenContext; caller: Caller; overview: Overview }> = ({
 	kouden,
 	caller,
@@ -14,7 +15,12 @@ export const KoudenTopPage: FC<{ kouden: KoudenContext; caller: Caller; overview
 	const base = `/k/${kouden.id}`;
 	const { totals } = overview;
 	return (
-		<div class="space-y-8">
+		<LiveRegion
+			id="overview"
+			entities={["gift", "person", "event", "relationship"]}
+			url={`${base}?partial=overview`}
+			class="space-y-8"
+		>
 			{kouden.title !== `故 ${kouden.deceasedName} 様` && (
 				<p class="text-muted">故 {kouden.deceasedName} 様</p>
 			)}
@@ -111,7 +117,7 @@ export const KoudenTopPage: FC<{ kouden: KoudenContext; caller: Caller; overview
 					</ul>
 				)}
 			</section>
-		</div>
+		</LiveRegion>
 	);
 };
 

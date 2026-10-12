@@ -2,6 +2,7 @@ import { createMiddleware } from "hono/factory";
 import { Layout } from "../views/layout.tsx";
 import { ErrorPage } from "../views/pages/error.tsx";
 import { loadKouden } from "../kouden/store.ts";
+import { ledgerFor } from "../ledger/client.ts";
 import type { AppEnv } from "../types.ts";
 
 /**
@@ -22,9 +23,25 @@ export const koudenAccess = createMiddleware<AppEnv>(async (c, next) => {
 		displayName: user.displayName,
 		role: kouden.status === "archived" ? "viewer" : kouden.memberRole,
 		plan: kouden.plan,
+		tabId: tabIdOf(c.req.header("X-Tab-Id")),
 	});
+	// 画面全体を返しうる要求（htmx 以外の GET・POST）では、データを読む前の変更ログの位置を記録する。
+	// 表示から WebSocket の接続までの間の変更を、接続時に取り直すために使う（04 §5）。
+	// POST が入力エラー・競合で画面を返す場合も、その画面のデータはこの位置より後に読む
+	if (c.req.header("HX-Request") !== "true" && !c.req.query("partial")) {
+		const path = c.req.path;
+		if (!path.endsWith("/ws") && !path.endsWith("/changes")) {
+			const seq = await ledgerFor(c.env, kouden.id).currentSeq(c.get("caller"));
+			if (seq.ok) c.set("renderSeq", seq.value);
+		}
+	}
 	return next();
 });
+
+/** 画面（タブ）の識別子。ledger-live.js が htmx の要求に付ける */
+function tabIdOf(value: string | undefined): string | undefined {
+	return value && /^[A-Za-z0-9_-]{8,64}$/.test(value) ? value : undefined;
+}
 
 /** 書き込みの回数制限（ユーザーごと 120 回/分。04 §11） */
 export const writeRateLimit = createMiddleware<AppEnv>(async (c, next) => {

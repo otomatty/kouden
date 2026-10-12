@@ -1,7 +1,8 @@
 import { ATTENDANCES, type FieldErrors, GIFT_KINDS, personLabel } from "@kouden/domain";
 import type { FC } from "hono/jsx";
 import type { KoudenContext } from "../../kouden/store.ts";
-import type { GiftView, LedgerEvent, PersonView } from "../../ledger/types.ts";
+import type { GiftView, History, LedgerEvent, PersonView } from "../../ledger/types.ts";
+import { ConflictDiff } from "../components/conflict.tsx";
 import {
 	Field,
 	FormAlert,
@@ -11,6 +12,7 @@ import {
 	Select,
 	Textarea,
 } from "../components/form.tsx";
+import { HistoryList } from "../components/history.tsx";
 import { formatDateTime, yen } from "../format.ts";
 import { ui } from "../ui.ts";
 import { PersonCandidates } from "./person-candidates.tsx";
@@ -42,6 +44,11 @@ export const GiftEditPage: FC<{
 	contributorErrors?: FieldErrors;
 	contributorValues?: FormValues;
 	contributorCandidates?: PersonView[];
+	/** 保存時の競合（E8-3）。values は自分の入力、これは最新の内容 */
+	conflictLatest?: FormValues | undefined;
+	/** 競合した負担額の入力（その行の入力欄に残す） */
+	shareDraft?: { personId: string; shareAmount: string; makePrimary: boolean } | undefined;
+	history?: History | undefined;
 }> = ({
 	kouden,
 	gift,
@@ -54,9 +61,13 @@ export const GiftEditPage: FC<{
 	contributorErrors = {},
 	contributorValues = {},
 	contributorCandidates = [],
+	conflictLatest,
+	shareDraft,
+	history,
 }) => {
 	const base = `/k/${kouden.id}`;
 	const giftPath = `${base}/gifts/${gift.id}`;
+	const eventNames = Object.fromEntries(events.map((e) => [e.id, e.name]));
 	return (
 		<div class="mx-auto max-w-3xl space-y-6">
 			<div class="flex flex-wrap items-baseline justify-between gap-2">
@@ -65,7 +76,15 @@ export const GiftEditPage: FC<{
 					{gift.receiptNo !== null && <span class="ml-2 tabular-nums">No.{gift.receiptNo}</span>}
 				</h2>
 				<p class="text-sm text-muted">最終更新 {formatDateTime(gift.updatedAt)}</p>
+				<span data-editing-target={`gift:${gift.id}`} class="w-full text-sm text-danger"></span>
 			</div>
+			<p data-live-watch={`gift:${gift.id}`} hidden role="status" class={ui.alert}>
+				この記録は他の人が更新しました。{" "}
+				<a href="" class={ui.link}>
+					最新の内容を表示
+				</a>
+				（このまま保存すると、違いを確認する画面になります）
+			</p>
 			{notice && (
 				<p role="status" class={ui.notice}>
 					{notice}
@@ -73,8 +92,32 @@ export const GiftEditPage: FC<{
 			)}
 
 			{canWrite ? (
-				<form method="post" action={giftPath} class={`${ui.card} space-y-4`} novalidate>
+				<form
+					method="post"
+					action={giftPath}
+					class={`${ui.card} space-y-4`}
+					novalidate
+					data-editing-entity="gift"
+					data-editing-id={gift.id}
+				>
 					<Hidden name="version" value={gift.version} />
+					{conflictLatest && (
+						<ConflictDiff
+							mine={values}
+							latest={conflictLatest}
+							discardHref={giftPath}
+							fields={[
+								{ name: "eventId", label: "行事", options: eventNames },
+								{ name: "kind", label: "種別", options: GIFT_KINDS },
+								{ name: "amount", label: "金額" },
+								{ name: "attendance", label: "参列", options: ATTENDANCES },
+								{ name: "itemName", label: "品名" },
+								{ name: "quantity", label: "数量" },
+								{ name: "message", label: "弔電の文面" },
+								{ name: "notes", label: "備考" },
+							]}
+						/>
+					)}
 					<FormAlert errors={errors} message={message} />
 					<div class="grid gap-4 sm:grid-cols-2">
 						<Field
@@ -197,20 +240,30 @@ export const GiftEditPage: FC<{
 										class="flex items-center gap-2"
 									>
 										<Hidden name="version" value={gift.version} />
-										<label class="text-sm text-muted" for={`share-${p.personId}`}>
+										<label class="text-sm whitespace-nowrap text-muted" for={`share-${p.personId}`}>
 											負担額
 										</label>
 										<input
 											id={`share-${p.personId}`}
 											name="shareAmount"
-											value={p.shareAmount?.toString() ?? ""}
+											value={
+												shareDraft?.personId === p.personId
+													? shareDraft.shareAmount
+													: (p.shareAmount?.toString() ?? "")
+											}
 											inputmode="numeric"
 											class={`${ui.input} w-28 text-right tabular-nums`}
 											placeholder="均等割り"
 										/>
 										{!p.isPrimary && (
 											<label class="flex items-center gap-1 text-sm">
-												<input type="checkbox" name="makePrimary" value="1" class="accent-accent" />
+												<input
+													type="checkbox"
+													name="makePrimary"
+													value="1"
+													checked={shareDraft?.personId === p.personId && shareDraft.makePrimary}
+													class="accent-accent"
+												/>
 												代表者にする
 											</label>
 										)}
@@ -316,6 +369,8 @@ export const GiftEditPage: FC<{
 					</form>
 				</details>
 			)}
+
+			{history && <HistoryList history={history} />}
 
 			<p>
 				<a href={`${base}/gifts`} class={ui.link}>

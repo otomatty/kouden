@@ -5,6 +5,7 @@ import type { Caller, LedgerEvent, LedgerRelationship } from "../../ledger/types
 import { Field, FormAlert, type FormValues, Hidden, Input, Select } from "../components/form.tsx";
 import { formatDate } from "../format.ts";
 import { ui } from "../ui.ts";
+import { LiveRegion } from "./shell.tsx";
 
 const EVENT_KIND_OPTIONS = Object.entries(EVENT_KINDS).map(([value, label]) => ({ value, label }));
 
@@ -32,7 +33,6 @@ export const SettingsPage: FC<{
 	deleteError,
 }) => {
 	const base = `/k/${kouden.id}`;
-	const canEdit = can(caller.role, "settings.write");
 	const isOwner = kouden.memberRole === "owner";
 	return (
 		<div class="mx-auto max-w-3xl space-y-8">
@@ -81,6 +81,72 @@ export const SettingsPage: FC<{
 				)}
 			</section>
 
+			<EventsSection kouden={kouden} caller={caller} events={events} />
+
+			<RelationshipsSection kouden={kouden} caller={caller} relationships={relationships} />
+
+			{isOwner && (
+				<section id="archive" aria-labelledby="archive-heading" class={`${ui.card} space-y-4`}>
+					<h2 id="archive-heading" class={ui.h2}>
+						アーカイブ
+					</h2>
+					<p class="text-sm text-muted">
+						アーカイブすると一覧の「アーカイブ」に移り、メンバー全員が閲覧のみになります。いつでも元に戻せます。
+					</p>
+					<form method="post" action={`${base}/archive`}>
+						<Hidden name="archived" value={kouden.status === "archived" ? "0" : "1"} />
+						<button type="submit" class={ui.buttonSecondary}>
+							{kouden.status === "archived" ? "アーカイブを解除する" : "アーカイブする"}
+						</button>
+					</form>
+				</section>
+			)}
+
+			{isOwner && (
+				<section
+					id="delete"
+					aria-labelledby="delete-heading"
+					class="space-y-4 rounded-xl border border-danger/40 bg-surface p-6"
+				>
+					<h2 id="delete-heading" class={`${ui.h2} text-danger`}>
+						香典帳の削除
+					</h2>
+					<p class="text-sm">
+						記録・差出人・設定がすべて完全に削除され、元に戻せません。削除するには香典帳の名前「
+						<strong>{kouden.title}</strong>」を入力してください。
+					</p>
+					<form method="post" action={`${base}/delete`} class="flex flex-wrap items-end gap-2">
+						<Field label="香典帳の名前" name="confirm" error={deleteError} class="min-w-60 flex-1">
+							<Input
+								name="confirm"
+								values={{}}
+								errors={deleteError ? { confirm: deleteError } : {}}
+							/>
+						</Field>
+						<button type="submit" class={ui.buttonDanger}>
+							完全に削除する
+						</button>
+					</form>
+				</section>
+			)}
+		</div>
+	);
+};
+
+/** 行事（E2-2）。他の人の変更で取り直す */
+export const EventsSection: FC<{
+	kouden: KoudenContext;
+	caller: Caller;
+	events: LedgerEvent[];
+}> = ({ kouden, caller, events }) => {
+	const base = `/k/${kouden.id}`;
+	const canEdit = can(caller.role, "settings.write");
+	return (
+		<LiveRegion
+			id="settings-events"
+			entities={["event"]}
+			url={`/k/${kouden.id}/settings?partial=events`}
+		>
 			<section aria-labelledby="events" class={`${ui.card} space-y-4`}>
 				<h2 id="events" class={ui.h2}>
 					行事
@@ -174,7 +240,24 @@ export const SettingsPage: FC<{
 					</form>
 				)}
 			</section>
+		</LiveRegion>
+	);
+};
 
+/** 故人との関係（E5-3）。他の人の変更で取り直す */
+export const RelationshipsSection: FC<{
+	kouden: KoudenContext;
+	caller: Caller;
+	relationships: LedgerRelationship[];
+}> = ({ kouden, caller, relationships }) => {
+	const base = `/k/${kouden.id}`;
+	const canEdit = can(caller.role, "settings.write");
+	return (
+		<LiveRegion
+			id="settings-relationships"
+			entities={["relationship"]}
+			url={`/k/${kouden.id}/settings?partial=relationships`}
+		>
 			<section aria-labelledby="relationships" class={`${ui.card} space-y-4`}>
 				<h2 id="relationships" class={ui.h2}>
 					故人との関係
@@ -248,52 +331,7 @@ export const SettingsPage: FC<{
 					</form>
 				)}
 			</section>
-
-			{isOwner && (
-				<section id="archive" aria-labelledby="archive-heading" class={`${ui.card} space-y-4`}>
-					<h2 id="archive-heading" class={ui.h2}>
-						アーカイブ
-					</h2>
-					<p class="text-sm text-muted">
-						アーカイブすると一覧の「アーカイブ」に移り、メンバー全員が閲覧のみになります。いつでも元に戻せます。
-					</p>
-					<form method="post" action={`${base}/archive`}>
-						<Hidden name="archived" value={kouden.status === "archived" ? "0" : "1"} />
-						<button type="submit" class={ui.buttonSecondary}>
-							{kouden.status === "archived" ? "アーカイブを解除する" : "アーカイブする"}
-						</button>
-					</form>
-				</section>
-			)}
-
-			{isOwner && (
-				<section
-					id="delete"
-					aria-labelledby="delete-heading"
-					class="space-y-4 rounded-xl border border-danger/40 bg-surface p-6"
-				>
-					<h2 id="delete-heading" class={`${ui.h2} text-danger`}>
-						香典帳の削除
-					</h2>
-					<p class="text-sm">
-						記録・差出人・設定がすべて完全に削除され、元に戻せません。削除するには香典帳の名前「
-						<strong>{kouden.title}</strong>」を入力してください。
-					</p>
-					<form method="post" action={`${base}/delete`} class="flex flex-wrap items-end gap-2">
-						<Field label="香典帳の名前" name="confirm" error={deleteError} class="min-w-60 flex-1">
-							<Input
-								name="confirm"
-								values={{}}
-								errors={deleteError ? { confirm: deleteError } : {}}
-							/>
-						</Field>
-						<button type="submit" class={ui.buttonDanger}>
-							完全に削除する
-						</button>
-					</form>
-				</section>
-			)}
-		</div>
+		</LiveRegion>
 	);
 };
 

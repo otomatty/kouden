@@ -22,5 +22,7 @@ export interface AppEnv {
 		/** /k/:koudenId 配下でのみ設定される（kouden-access ミドルウェア） */
 		kouden: KoudenContext;
 		caller: Caller;
+		/** 画面を表示した時点の変更ログの位置（ページの GET のみ） */
+		renderSeq?: number;
 	};
 }

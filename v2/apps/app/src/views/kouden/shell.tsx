@@ -1,26 +1,41 @@
 import { ROLES } from "@kouden/domain";
 import type { Child, FC } from "hono/jsx";
 import type { KoudenContext } from "../../kouden/store.ts";
+import type { Caller } from "../../ledger/types.ts";
 import { ui } from "../ui.ts";
 
-export type KoudenTab = "top" | "reception" | "gifts" | "persons" | "settings";
+export type KoudenTab = "top" | "reception" | "gifts" | "persons" | "members" | "settings";
 
 const TABS: readonly { tab: KoudenTab; label: string; path: string }[] = [
 	{ tab: "top", label: "トップ", path: "" },
 	{ tab: "reception", label: "受付", path: "/reception" },
 	{ tab: "gifts", label: "いただきもの", path: "/gifts" },
 	{ tab: "persons", label: "差出人", path: "/persons" },
+	{ tab: "members", label: "メンバー", path: "/members" },
 	{ tab: "settings", label: "設定", path: "/settings" },
 ];
 
-/** 香典帳の中の画面の共通枠（見出し・タブ・アーカイブ中の表示） */
+/**
+ * 香典帳の中の画面の共通枠（見出し・タブ・アーカイブ中の表示・閲覧中のメンバー・接続状態）。
+ * ledger-live.js が WebSocket で変更を受け取り、[data-live] の部分を取り直す（04 §5）。
+ */
 export const KoudenShell: FC<{
 	kouden: KoudenContext;
+	caller: Caller;
+	renderSeq?: number | undefined;
 	tab: KoudenTab;
-	wide?: boolean;
+	wide?: boolean | undefined;
 	children?: Child;
-}> = ({ kouden, tab, wide, children }) => (
+}> = ({ kouden, caller, renderSeq, tab, wide, children }) => (
 	<div class={`${wide ? ui.containerWide : ui.container} space-y-6`}>
+		<div
+			data-connection
+			hidden
+			role="status"
+			class="sticky top-0 z-10 rounded-lg border border-danger/40 bg-surface px-4 py-2 text-sm text-danger shadow-sm"
+		>
+			通信が切れています。再接続するまで保存できません。
+		</div>
 		<div class="space-y-3">
 			<a href="/" class="text-sm text-muted hover:text-ink">
 				← 香典帳一覧
@@ -29,6 +44,7 @@ export const KoudenShell: FC<{
 				<h1 class={ui.h1}>{kouden.title}</h1>
 				<span class={ui.badge}>{ROLES[kouden.memberRole]}</span>
 			</div>
+			<p data-presence aria-live="polite" class="min-h-5 text-xs text-muted"></p>
 		</div>
 		<nav aria-label="香典帳のメニュー" class="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
 			<ul class="flex min-w-max gap-1 border-b border-line">
@@ -62,6 +78,35 @@ export const KoudenShell: FC<{
 				)}
 			</p>
 		)}
+		{children}
+		<script
+			src={`/assets/ledger-live.js?v=${__ASSET_VERSION__}`}
+			defer
+			data-kouden-id={kouden.id}
+			data-user-id={caller.userId}
+			data-seq={renderSeq?.toString()}
+		></script>
+	</div>
+);
+
+/**
+ * 他の人の変更で取り直す部分（04 §5）。entities の変更通知を受けると url を取り直して差し替える。
+ * 中で入力中（編集フォームが開いている）の場合は取り直さず、「他の人の変更があります」を出す。
+ */
+export const LiveRegion: FC<{
+	id: string;
+	entities: readonly string[];
+	url?: string | undefined;
+	class?: string;
+	children?: Child;
+}> = ({ id, entities, url, class: className, children }) => (
+	<div id={id} data-live={entities.join(",")} data-live-url={url} class={className}>
+		<p data-stale-notice hidden role="status" class={`${ui.notice} mb-3`}>
+			他の人の変更があります。{" "}
+			<a href="" class={ui.link}>
+				再読み込み
+			</a>
+		</p>
 		{children}
 	</div>
 );

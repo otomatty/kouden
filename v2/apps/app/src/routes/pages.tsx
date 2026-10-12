@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { incomingTransfers } from "../kouden/members.ts";
 import { listMyKoudens } from "../kouden/store.ts";
 import type { AppEnv } from "../types.ts";
 import { Layout } from "../views/layout.tsx";
@@ -14,11 +15,22 @@ pageRoutes.get("/", async (c) => {
 	const user = c.get("user");
 	if (user) {
 		const tab = c.req.query("tab") === "archived" ? "archived" : "active";
-		const koudens = await listMyKoudens(c.env.DB, user.id, tab);
-		const notice = c.req.query("notice") === "deleted" ? "香典帳を削除しました。" : undefined;
+		const [koudens, transfers] = await Promise.all([
+			listMyKoudens(c.env.DB, user.id, tab),
+			incomingTransfers(c.env.DB, user.id, c.get("now")),
+		]);
+		const notices = { deleted: "香典帳を削除しました。", left: "香典帳から抜けました。" } as const;
+		const key = c.req.query("notice");
+		const notice = key && key in notices ? notices[key as keyof typeof notices] : undefined;
 		return c.html(
 			<Layout title="香典帳一覧" user={user}>
-				<DashboardPage user={user} koudens={koudens} tab={tab} notice={notice} />
+				<DashboardPage
+					user={user}
+					koudens={koudens}
+					tab={tab}
+					notice={notice}
+					transfers={transfers}
+				/>
 			</Layout>,
 		);
 	}

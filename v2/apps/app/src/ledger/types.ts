@@ -10,6 +10,8 @@ export interface Caller {
 	displayName: string;
 	role: Role;
 	plan: Plan;
+	/** 操作した画面（ブラウザのタブ）の識別子。通知を受けたとき、その画面だけが自分の変更を無視する */
+	tabId?: string | undefined;
 }
 
 export type LedgerError =
@@ -122,4 +124,35 @@ export interface ReceptionResult {
 	eventName: string;
 	personId: string;
 	personLabel: string;
+}
+
+/** WebSocket の接続要求で、Worker が確認済みの呼び出し元を DO に渡すヘッダー（JSON を URL エンコード） */
+export const CALLER_HEADER = "X-Kouden-Caller";
+
+/** 変更の通知（04 §5）。HTML は送らず、何が変わったかだけを知らせる */
+export interface ChangeNotice {
+	seq: number;
+	entity: string;
+	id: string;
+	op: string;
+	/** 変更したユーザー */
+	actor: string;
+	/** 変更した画面（タブ）。その画面は結果を表示済みなので取り直さない */
+	tab?: string | undefined;
+}
+
+/** 記録ごとの変更履歴（E8-4） */
+export interface HistoryEntry {
+	seq: number;
+	at: string;
+	actorName: string;
+	op: string;
+	/** 変更前後の JSON（{"amount":[5000,10000]}）。RPC の型を単純に保つため文字列のまま渡す */
+	diff: string | null;
+}
+
+export interface History {
+	entries: HistoryEntry[];
+	/** 差分の中の ID（行事・関係・差出人）→ 表示名 */
+	names: Record<string, string>;
 }

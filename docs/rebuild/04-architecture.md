@@ -152,17 +152,23 @@ GET /k/:koudenId/gifts
 ブラウザ（香典帳の画面を開くと）
   new WebSocket('wss://example.jp/k/:koudenId/ws')
 Worker
-  session + kouden-access を通過したら、caller 情報をヘッダーに付けて DO の fetch へ転送
+  session + kouden-access を通過し、Origin が自分のオリジンと一致したら（他サイトからの接続を拒否）、
+  caller 情報（JSON を URL エンコード）をヘッダー X-Kouden-Caller に付けて DO の fetch へ転送
 DO
   ctx.acceptWebSocket(ws, [userId])           ← Hibernation API（待機中は課金されない）
-  ws.serializeAttachment({ userId, name, role, editing: null })
+  ws.serializeAttachment({ userId, name, editing: null, pending: true })
+  D1 でメンバーかを確かめる（Worker の確認後、DO に届く前に除外された場合に備える。先に受け付けるので、
+  除外の切断が確認より後でもこの接続は対象に入る）。メンバーでなければ revoked で閉じる
+  確認できたら pending を外し、{type: 'hello', seq}（現在の変更ログの位置）を送る（pending の間は通知も閲覧中の表示もしない）
+  ping / pong は setWebSocketAutoResponse で DO を起こさずに応答する（ブラウザが 30 秒ごとに送る）
 ```
 
 ### サーバー → ブラウザのメッセージ（JSON）
 
 | type | 内容 | ブラウザの動作 |
 |---|---|---|
-| `changed` | `{seq, entity, id, op}` | 画面上の該当要素に htmx イベントを発火し、部分 HTML を取り直す |
+| `hello` | `{seq}` | 手元の seq より新しければ、その間の変更を `/k/:id/changes?since=` で取り直す。画面には表示した時点の seq（データを読む前に記録）を埋め込んでいるので、表示から最初の接続までの間の変更も取り直せる。取り直しに失敗しても起点を保持し、再試行する。取りこぼしが多すぎる（`reset`）ときは画面全体を読み込み直す |
+| `changed` | `{seq, entity, id, op, actor}` | 該当する部分 HTML を取り直す（自分の変更は無視） |
 | `presence` | `[{userId, name, editing: {entity, id} \| null}]` | 閲覧中のメンバーと「○○さんが編集中」を表示 |
 | `revoked` | — | 権限が外された。接続を閉じて一覧へ戻す |
 
@@ -172,9 +178,10 @@ WebSocket は接続時にだけ権限を確認するため、メンバーシッ�
 
 | 操作（D1 の更新が成功した後） | Worker → DO | DO の処理 |
 |---|---|---|
-| メンバーの除外・本人の退出 | `stub.revokeUser(userId)` | `ctx.getWebSockets(userId)` で対象の接続を取り出し、`revoked` を送って閉じる |
-| ロールの変更・オーナー譲渡 | `stub.updateMemberRole(userId, role)` | 対象の接続の attachment の `role` を更新し、`changed`（entity: `member`）を送る。画面は取り直しで新しいロールの表示になる |
-| 香典帳の削除 | `stub.deleteAll()` の前に全員を `revoked` | 全接続に `revoked` を送って閉じる |
+| メンバーの除外・本人の退出 | `stub.recordExternalChange(actor, {entity: 'member', op: 'delete'}, {revokeUserId})` | 変更ログに記録し、`ctx.getWebSockets(userId)` の接続に `revoked` を送って閉じる |
+| 参加・ロールの変更・オーナー譲渡 | `stub.recordExternalChange(actor, {entity: 'member', ...})` | 変更ログに記録し、`changed`（entity: `member`）を送る。本人の画面は読み込み直して新しいロールの表示になる |
+| アーカイブ・解除 | `stub.recordExternalChange(actor, {entity: 'kouden', ...})` | 全員のロールの実効値が変わるので、全員の画面が読み込み直す。アーカイブ中はメンバーの変更（ロール変更・除外・招待・譲渡の申し出）もできない（退出と、保留中の譲渡への応答・取り消しはできる） |
+| 香典帳の削除 | `stub.deleteAll()` | 中身を消す前に全接続に `revoked` を送って閉じる |
 
 D1 の更新と DO への通知の間で失敗しても、権限の正は D1 にあり、各端末が取り直す HTTP 要求はその都度 D1 で権限確認されるため、閲覧できるのは通知（`changed` の種類と ID）までに限られる。DO への通知が失敗した場合は Worker が再試行する。
 
@@ -182,25 +189,23 @@ D1 の更新と DO への通知の間で失敗しても、権限の正は D1 に
 
 ### ブラウザ側
 
-htmx 本体と、WebSocket を扱う小さな自前スクリプト（数 KB）だけを使う。
+htmx 本体と、WebSocket を扱う小さな自前スクリプト（`public/assets/ledger-live.js`、数 KB）だけを使う。画面側は HTML の属性で指示する。
 
 ```html
-<!-- 例: 合計欄は gift が変わったら自分を取り直す -->
-<section id="totals" hx-get="/k/abc/totals" hx-trigger="ledger:gift from:body">…</section>
+<!-- 取り直す部分: gift / person が変わったら data-live-url を取り直して差し替える -->
+<div id="overview" data-live="gift,person,event,relationship" data-live-url="/k/abc?partial=overview">
+  <p data-stale-notice hidden>他の人の変更があります。<a href="">再読み込み</a></p>
+  …
+</div>
+<!-- 編集フォーム: 開いている間は「編集中」を知らせる -->
+<form data-editing-entity="gift" data-editing-id="…">…</form>
+<!-- 「○○さんが編集中」の表示先 -->
+<span data-editing-target="gift:…"></span>
+<!-- 開いている記録が他の人に更新されたら表示する -->
+<p data-live-watch="gift:…" hidden>この記録は他の人が更新しました。</p>
 ```
 
-```js
-// ledger-live.js（概略）
-ws.onmessage = (e) => {
-  const m = JSON.parse(e.data);
-  if (m.type === 'changed') {
-    lastSeq = m.seq;
-    htmx.trigger(document.body, `ledger:${m.entity}`, m);
-  }
-  if (m.type === 'presence') renderPresence(m.users);
-};
-```
-
+- **取り直し**: `changed` を受けると、`data-live` に該当する部分の `data-live-url` を `htmx.ajax` で取り直す（300ms でまとめる）。ただし、その部分の中で入力中（編集フォームが開いている・入力欄にフォーカスがある）なら差し替えず、`data-stale-notice` を表示する。`data-live-url` のない部分（設定・メンバー）も同様にお知らせだけを出す。
 - **再接続**: 指数バックオフで自動再接続。再接続時に `/k/:id/changes?since=lastSeq` で取りこぼした変更の種類を取得し、該当部分を取り直す。
 - **編集中表示**: 編集フォームを開いたら `{"type":"editing","entity":"gift","id":"…"}` を送り、閉じたら `null` を送る。DO は attachment を更新して `presence` を全員に配信する。
 - **競合**: 編集フォームは開いた時点の `version` を hidden で持つ。保存時に DO が `CONFLICT` を返したら、差分表示と「上書きする / 破棄する」の選択肢を出す。
@@ -233,8 +238,9 @@ ws.onmessage = (e) => {
 | `/k/:id/persons/:pid` | 差出人の詳細（いただきもの・香典返し・履歴） | 両方 |
 | `/k/:id/returns` | 香典返し（一括提案・状況管理） | PC |
 | `/k/:id/print/*` | 印刷用ページ | PC |
-| `/k/:id/settings` | 行事・関係・カタログ・金額帯ルール・メンバー・招待・譲渡・購入 | 両方 |
-| `/invite/:token` | 招待の受諾 | スマホ |
+| `/k/:id/members` | メンバー・ロール・招待リンク（QR コード）・オーナー譲渡・退出 | 両方 |
+| `/k/:id/settings` | 香典帳の情報・行事・関係・カタログ・金額帯ルール・購入・アーカイブ・削除 | 両方 |
+| `/invite/:token` | 招待の受諾（ログイン前は香典帳名とログインボタン、ログイン後は「参加する」ボタン。GET では参加しない） | スマホ |
 
 ## 7. 決済（Stripe）
 
@@ -293,7 +299,7 @@ class CloudflareMailer implements Mailer { /* env.EMAIL.send(...) */ }
 
 | 項目 | 方針 |
 |---|---|
-| ログ | Workers Logs を有効化。1 行 1 JSON で `requestId`, `userId`, `koudenId`, `route`, `status`, `ms` を出す。**差出人の個人情報はログに出さない** |
+| ログ | Workers Logs を有効化。1 行 1 JSON で `requestId`, `userId`, `koudenId`, `route`, `status`, `ms` を出す。**差出人の個人情報はログに出さない**。招待リンクのトークンはパスから伏せる（`/invite/:token`） |
 | アラート | Cloudflare の通知機能で、エラー率・CPU 超過を通知 |
 | バックアップ | D1 Time Travel（30 日）、DO SQLite の Point-in-Time Recovery（30 日）。加えて週次で全香典帳のエクスポートを R2 の別バケット（ライフサイクル 90 日）に保存する |
 | 回数制限 | ログイン開始: IP ごと 20 回/分。書き込み: ユーザーごと 120 回/分。招待受諾: IP ごと 10 回/分 |

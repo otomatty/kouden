@@ -20,6 +20,7 @@ const TEST_DURABLE_OBJECTS = {
 const TEST_RATE_LIMITS = {
 	AUTH_RATE_LIMITER: { namespace_id: "9001", simple: { limit: 20, period: 60 as const } },
 	WRITE_RATE_LIMITER: { namespace_id: "9002", simple: { limit: 120, period: 60 as const } },
+	INVITE_RATE_LIMITER: { namespace_id: "9003", simple: { limit: 10, period: 60 as const } },
 };
 
 function assertBindingsMatchConfig(): void {

@@ -1,6 +1,7 @@
 import { type FieldErrors, formatYen, ROLES } from "@kouden/domain";
 import type { FC } from "hono/jsx";
 import type { SessionUser } from "../../auth/session-store.ts";
+import type { Transfer } from "../../kouden/members.ts";
 import type { KoudenListItem } from "../../kouden/store.ts";
 import { Field, FormAlert, type FormValues, Input } from "../components/form.tsx";
 import { formatDateTime } from "../format.ts";
@@ -12,7 +13,8 @@ export const DashboardPage: FC<{
 	koudens: KoudenListItem[];
 	tab: "active" | "archived";
 	notice?: string | undefined;
-}> = ({ user, koudens, tab, notice }) => (
+	transfers?: Transfer[];
+}> = ({ user, koudens, tab, notice, transfers = [] }) => (
 	<div class={`${ui.container} space-y-8`}>
 		<div class="flex flex-wrap items-center justify-between gap-4">
 			<h1 class={ui.h1}>香典帳</h1>
@@ -25,6 +27,14 @@ export const DashboardPage: FC<{
 				{notice}
 			</p>
 		)}
+		{transfers.map((t) => (
+			<p role="status" class="rounded-lg border-2 border-accent bg-surface px-4 py-3 text-sm">
+				{t.fromName} さんから「{t.koudenTitle}」のオーナーの譲渡を依頼されています。{" "}
+				<a href={`/k/${t.koudenId}/members`} class={ui.link}>
+					確認する
+				</a>
+			</p>
+		))}
 		<nav aria-label="表示する香典帳" class="flex gap-1 border-b border-line">
 			{(
 				[
