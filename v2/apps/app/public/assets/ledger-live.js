@@ -1,7 +1,7 @@
 // 香典帳のリアルタイム同期（docs/rebuild/04-architecture.md §5）
 // - DO から「何が変わったか」だけを受け取り、該当する [data-live] 部分を htmx で取り直す
 // - 閲覧中のメンバーと「○○さんが編集中」を表示する
-// - 通信が切れたら警告を出し、[data-requires-online] のボタンを無効にする
+// - 通信が切れたら警告を出し、保存・送信のボタン（POST のフォーム）を無効にする
 // CSP のため eval・インラインのイベントハンドラは使わない。
 (() => {
 	const script = document.currentScript;
@@ -12,6 +12,8 @@
 	const base = `/k/${koudenId}`;
 	let ws = null;
 	let lastSeq = 0;
+	// 再接続時に取り直す必要がある変更の起点（取り直しに成功するまで保持する）
+	let gapFrom = null;
 	let retry = 0;
 	let pingTimer = 0;
 	let connected = false;
@@ -20,11 +22,24 @@
 	const timers = new Map();
 
 	// ---- 接続状態 ----
+	// 状態を変える操作（POST のフォームの送信ボタン）。GET の検索フォームは対象外
+	const MUTATION_CONTROLS =
+		'form[method="post" i] button:not([type="button"]), form[method="post" i] input[type="submit"], [data-requires-online]';
+
 	function updateOnline() {
 		const online = connected && navigator.onLine;
 		const banner = document.querySelector("[data-connection]");
 		if (banner) banner.hidden = online;
-		for (const el of document.querySelectorAll("[data-requires-online]")) el.disabled = !online;
+		for (const el of document.querySelectorAll(MUTATION_CONTROLS)) {
+			if (!online && !el.disabled) {
+				// 元から無効なボタン（先頭の「↑」など）は、復帰時に有効にしないよう印を付けたものだけ戻す
+				el.disabled = true;
+				el.dataset.offlineDisabled = "";
+			} else if (online && "offlineDisabled" in el.dataset) {
+				el.disabled = false;
+				delete el.dataset.offlineDisabled;
+			}
+		}
 	}
 	window.addEventListener("online", updateOnline);
 	window.addEventListener("offline", updateOnline);
@@ -65,10 +80,10 @@
 
 	function handle(m) {
 		if (m.type === "hello") {
-			const previous = lastSeq;
-			lastSeq = m.seq;
-			// 再接続: 切れている間の変更を取り直す
-			if (previous && m.seq > previous) catchUp(previous);
+			// 再接続: 切れている間の変更を取り直す。取り直しに失敗しても起点を失わないよう gapFrom に残す
+			if (lastSeq && m.seq > lastSeq && gapFrom === null) gapFrom = lastSeq;
+			lastSeq = Math.max(lastSeq, m.seq);
+			if (gapFrom !== null) catchUp();
 		} else if (m.type === "changed") {
 			lastSeq = Math.max(lastSeq, m.seq);
 			applyChange(m);
@@ -80,20 +95,27 @@
 		}
 	}
 
-	async function catchUp(since) {
+	let catchUpTimer = 0;
+
+	async function catchUp() {
+		const since = gapFrom;
+		if (since === null) return;
+		clearTimeout(catchUpTimer);
 		try {
 			const res = await fetch(`${base}/changes?since=${since}`, {
 				headers: { Accept: "application/json" },
 			});
-			if (!res.ok) return;
+			if (!res.ok) throw new Error(`changes: ${res.status}`);
 			const data = await res.json();
 			if (data.reset) {
 				for (const el of document.querySelectorAll("[data-live]")) refreshRegion(el);
-				return;
+			} else {
+				for (const change of data.changes) applyChange(change);
 			}
-			for (const change of data.changes) applyChange(change);
+			if (gapFrom === since) gapFrom = null;
 		} catch {
-			// 次の再接続で取り直す
+			// 起点は gapFrom に残っている。少し待って取り直す（次の再接続でも取り直す）
+			catchUpTimer = setTimeout(catchUp, 5000);
 		}
 	}
 
