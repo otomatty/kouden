@@ -305,6 +305,33 @@ describe("KoudenLedger", () => {
 		expect(after > before).toBe(true);
 	});
 
+	it("連名の負担額の合計は金額を超えられない（金額を下げる場合も）", async () => {
+		const { caller, ledger } = setup();
+		const [wake] = unwrap(await ledger.listEvents(caller));
+		const { giftId, personId } = unwrap(
+			await ledger.createAtReception(caller, reception(wake!.id, { amount: "10000", name: "A" })),
+		);
+		const over = await ledger.addContributor(caller, giftId, 1, {
+			person: { type: "new", input: { name: "B", organization: undefined } },
+			shareAmount: 12000,
+		});
+		expect(over).toMatchObject({ ok: false, error: { code: "invalid", field: "shareAmount" } });
+
+		const v = unwrap(
+			await ledger.updateContributor(caller, giftId, 1, personId, {
+				shareAmount: 7000,
+				makePrimary: false,
+			}),
+		).version;
+		const lowered = await ledger.updateGift(caller, giftId, v, {
+			eventId: wake!.id,
+			kind: "koden",
+			amount: 5000,
+		} as GiftInput);
+		expect(lowered).toMatchObject({ ok: false, error: { code: "invalid", field: "amount" } });
+		expect(unwrap(await ledger.getGift(caller, giftId)).amount).toBe(10000);
+	});
+
 	it("行事: 記録があるものと最後の 1 つは削除できない。並べ替えできる", async () => {
 		const { caller, ledger } = setup();
 		const [wake, funeral] = unwrap(await ledger.listEvents(caller));
@@ -371,18 +398,28 @@ describe("KoudenLedger", () => {
 		expect(stats).toMatchObject({ gift_count: 2, total_amount: 3000, person_count: 2 });
 	});
 
-	it("deleteAll で中身をすべて消す", async () => {
+	it("deleteAll で中身をすべて消し、遅れて届いた要求でも台帳を作り直さない", async () => {
 		const { caller, ledger } = setup();
 		const [wake] = unwrap(await ledger.listEvents(caller));
 		await ledger.createAtReception(caller, reception(wake!.id, { amount: "1", name: "a" }));
 		await ledger.deleteAll();
-		const tables = await runInDurableObject(ledger, (_obj, state) =>
-			state.storage.sql
-				.exec<{ name: string }>(
-					"SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'gifts'",
-				)
-				.toArray(),
+		const tables = () =>
+			runInDurableObject(ledger, (_obj, state) =>
+				state.storage.sql
+					.exec<{ name: string }>(
+						"SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'gifts'",
+					)
+					.toArray(),
+			);
+		expect(await tables()).toEqual([]);
+
+		// 削除の直前に権限確認を通った要求が、削除後に届いた場合
+		const late = await ledger.createAtReception(
+			caller,
+			reception(wake!.id, { amount: "1", name: "b" }),
 		);
-		expect(tables).toEqual([]);
+		expect(late).toEqual({ ok: false, error: { code: "not_found" } });
+		expect(await ledger.listEvents(caller)).toEqual({ ok: false, error: { code: "not_found" } });
+		expect(await tables()).toEqual([]);
 	});
 });

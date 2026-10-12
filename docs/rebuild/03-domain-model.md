@@ -413,6 +413,7 @@ CREATE INDEX idx_change_log_entity ON change_log(entity, entity_id);
 | 書き込みごとに変更ログが 1 行以上追加される | 書き込みメソッドの共通ラッパーで強制 |
 | 楽観ロック | `UPDATE ... WHERE id = ? AND version = ?` の更新件数が 0 なら `CONFLICT` を返す |
 | いただきものには差出人が 1 人以上いる | 作成メソッドで `gift_contributors` を同時に挿入。最後の 1 人は外せない |
+| 連名の負担額の合計 ≤ 金額 | 金額・負担額を変える書き込みの中で合計を確認し、超えるなら失敗させる |
 
 ---
 
@@ -498,5 +499,5 @@ DO のアラームは 1 オブジェクトにつき 1 つしか持てないた�
 
 | 対象 | 処理 |
 |---|---|
-| 香典帳の削除 | D1 `koudens.status = 'deleting'` → DO `deleteAll()` + アラーム削除 → R2 の `koudens/{id}/` 以下を削除 → D1 の関連行を削除。途中で失敗しても、日次 Cron が `deleting` のものを再処理する |
+| 香典帳の削除 | D1 `koudens.status = 'deleting'` → DO `deleteAll()` + アラーム削除（削除済みの印 `meta.deleted_at` だけを残し、削除の直前に権限確認を通った要求が遅れて届いても台帳を作り直さない）→ R2 の `koudens/{id}/` 以下を削除 → D1 の関連行を削除。途中で失敗しても、日次 Cron が `deleting` のものを再処理する |
 | アカウントの削除 | オーナーである冊がすべて譲渡済みまたは削除済みであることを確認 → メンバー行・セッション削除 → `users.deleted_at` を設定し、メール・名前を匿名化し、`google_sub` を NULL にする（同じ Google アカウントで再登録すると新しい空のアカウントになる。ログイン処理も、削除済みの行が `google_sub` を持っていれば手放させてから登録する）。変更ログの `actor_name` はスナップショットなので残る |

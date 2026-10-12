@@ -406,12 +406,12 @@ describe("設定・アーカイブ・削除", () => {
 		expect(await env.DB.prepare("SELECT count(*) AS n FROM koudens").first("n")).toBe(0);
 		expect(await env.DB.prepare("SELECT count(*) AS n FROM kouden_members").first("n")).toBe(0);
 		expect((await taro.request(`/k/${koudenId}`)).status).toBe(404);
-		// DO の中身も消えている（次に開くと空のスキーマから作り直される）
+		// DO の中身も消えていて、作り直されない
 		const ledger = ledgerFor(env, koudenId);
 		const gifts = await ledger.listGifts(
 			{ koudenId, userId: "u", displayName: "u", role: "owner", plan: "free" },
 			{},
 		);
-		expect(gifts).toEqual({ ok: true, value: [] });
+		expect(gifts).toEqual({ ok: false, error: { code: "not_found" } });
 	});
 });

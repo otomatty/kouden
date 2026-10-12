@@ -123,7 +123,8 @@ const PERSON_COLUMNS = `p.id, p.name, p.name_kana, p.organization, p.position, p
  * - 初めて呼ばれたときにスキーマを作り、既定の行事・関係を用意する
  */
 export class KoudenLedger extends DurableObject<Env> {
-	private ready = false;
+	/** unknown: まだ確認していない / ready: スキーマ適用済み / deleted: 香典帳が削除済み */
+	private state: "unknown" | "ready" | "deleted" = "unknown";
 
 	private get sql(): SqlStorage {
 		return this.ctx.storage.sql;
@@ -417,6 +418,7 @@ export class KoudenLedger extends DurableObject<Env> {
 				now,
 				giftId,
 			);
+			this.assertSharesWithinAmount(giftId, "amount");
 			this.log(caller, now, "gift", giftId, "update", diffOf(current, next));
 			return { version: version + 1 };
 		});
@@ -457,6 +459,7 @@ export class KoudenLedger extends DurableObject<Env> {
 				person.id,
 				input.shareAmount,
 			);
+			this.assertSharesWithinAmount(giftId, "shareAmount");
 			return this.finishContributorChange(caller, now, giftId, before);
 		});
 	}
@@ -513,6 +516,7 @@ export class KoudenLedger extends DurableObject<Env> {
 					personId,
 				);
 			}
+			this.assertSharesWithinAmount(giftId, "_form");
 			this.sql.exec(
 				"UPDATE gifts SET updated_by = ?, updated_at = ? WHERE id = ?",
 				caller.userId,
@@ -752,16 +756,25 @@ export class KoudenLedger extends DurableObject<Env> {
 
 	// ---- 香典帳の削除・投影 --------------------------------------------------
 
-	/** 香典帳の削除（03 §8）。オーナーの確認は Worker が D1 で行う */
+	/**
+	 * 香典帳の削除（03 §8）。オーナーの確認は Worker が D1 で行う。
+	 * 削除済みの印（meta.deleted_at）だけを残し、削除の直前に権限確認を通った要求が遅れて届いても、
+	 * 台帳を作り直さずに not_found を返す。
+	 */
 	async deleteAll(): Promise<void> {
 		await this.ctx.storage.deleteAlarm();
 		await this.ctx.storage.deleteAll();
-		this.ready = false;
+		this.sql.exec("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)");
+		this.sql.exec(
+			"INSERT OR REPLACE INTO meta (key, value) VALUES ('deleted_at', ?)",
+			new Date().toISOString(),
+		);
+		this.state = "deleted";
 	}
 
 	/** 統計の投影（03 §7）。書き込みの数秒後に D1 の kouden_stats を更新する */
 	override async alarm(): Promise<void> {
-		this.ensureSchema();
+		if (!this.ensureSchema()) return;
 		const koudenId = this.meta("kouden_id");
 		if (koudenId === null) return;
 		const stats = this.first<{ gift_count: number; total_amount: number }>(
@@ -804,15 +817,23 @@ export class KoudenLedger extends DurableObject<Env> {
 
 	// ---- 共通の仕組み -------------------------------------------------------
 
-	private ensureSchema(): void {
-		if (this.ready) return;
-		migrate(this.ctx.storage, MIGRATIONS);
-		this.ready = true;
+	/** スキーマを用意する。削除済みの香典帳なら false（スキーマは作らない） */
+	private ensureSchema(): boolean {
+		if (this.state === "unknown") {
+			this.sql.exec("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)");
+			if (this.meta("deleted_at") !== null) {
+				this.state = "deleted";
+			} else {
+				migrate(this.ctx.storage, MIGRATIONS);
+				this.state = "ready";
+			}
+		}
+		return this.state === "ready";
 	}
 
-	/** スキーマを用意し、初回なら既定の行事・関係を作る */
+	/** スキーマを用意し、初回なら既定の行事・関係を作る。削除済みなら not_found */
 	private prepare(caller: Caller): void {
-		this.ensureSchema();
+		if (!this.ensureSchema()) throw new LedgerFailure({ code: "not_found" });
 		const koudenId = this.meta("kouden_id");
 		if (koudenId === caller.koudenId) return;
 		if (koudenId !== null) {
@@ -839,9 +860,9 @@ export class KoudenLedger extends DurableObject<Env> {
 	}
 
 	private async read<T>(caller: Caller, fn: () => T): Promise<LedgerResult<T>> {
-		this.prepare(caller);
-		if (!can(caller.role, "ledger.read")) return { ok: false, error: { code: "forbidden" } };
 		try {
+			this.prepare(caller);
+			if (!can(caller.role, "ledger.read")) return { ok: false, error: { code: "forbidden" } };
 			return { ok: true, value: fn() };
 		} catch (err) {
 			if (err instanceof LedgerFailure) return { ok: false, error: err.error };
@@ -855,11 +876,11 @@ export class KoudenLedger extends DurableObject<Env> {
 		action: Action,
 		fn: (now: string) => T,
 	): Promise<LedgerResult<T>> {
-		this.prepare(caller);
-		if (!can(caller.role, action)) return { ok: false, error: { code: "forbidden" } };
-		const before = this.lastSeq();
 		let value: T;
 		try {
+			this.prepare(caller);
+			if (!can(caller.role, action)) return { ok: false, error: { code: "forbidden" } };
+			const before = this.lastSeq();
 			value = this.ctx.storage.transactionSync(() => {
 				const result = fn(new Date().toISOString());
 				if (this.lastSeq() === before) throw new Error("ledger write without change_log");
@@ -1043,6 +1064,22 @@ export class KoudenLedger extends DurableObject<Env> {
 		this.sql.exec("UPDATE gifts SET version = version + 1 WHERE id = ?", giftId);
 		const { version: _v, ...row } = current;
 		return row;
+	}
+
+	/**
+	 * 連名の負担額の合計は金額を超えられない（超えると差出人ごとの受取額が実際より多くなる）。
+	 * 金額・負担額のどちらを変えた場合も、同じトランザクションの中で確認する
+	 */
+	private assertSharesWithinAmount(giftId: string, field: string): void {
+		const row = this.first<{ amount: number | null; shares: number | null }>(
+			`SELECT g.amount, sum(gc.share_amount) AS shares
+         FROM gifts g JOIN gift_contributors gc ON gc.gift_id = g.id
+        WHERE g.id = ? GROUP BY g.id`,
+			giftId,
+		);
+		if (row && row.amount !== null && row.shares !== null && row.shares > row.amount) {
+			throw invalid(field, "連名の負担額の合計が金額を超えています");
+		}
 	}
 
 	private contributorIds(giftId: string): string[] {
