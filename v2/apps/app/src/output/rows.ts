@@ -70,13 +70,15 @@ export interface AddressRow {
 }
 
 /**
- * 宛名の一覧。香典返しに送付先の住所があればそれを、なければ差出人の住所を使う。
- * 住所のない差出人は除く（件数は別に数える）
+ * 宛名の一覧（data.persons の全員。いただきものを削除した差出人も含む）。
+ * 香典返しに送付先の住所があればそれを、なければ差出人の住所を使う。住所のない差出人は除く（件数は別に数える）
  */
 export function addressRows(data: OutputData): { rows: AddressRow[]; withoutAddress: number } {
+	const returns = new Map(data.returns.map((r) => [r.personId, r]));
 	const rows: AddressRow[] = [];
 	let withoutAddress = 0;
-	for (const { person, ret } of returnRows(data)) {
+	for (const person of data.persons) {
+		const ret = returns.get(person.id);
 		if (ret?.shipAddress) {
 			rows.push({
 				personId: person.id,

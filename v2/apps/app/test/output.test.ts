@@ -142,6 +142,21 @@ describe("印刷・出力（E7-2, E7-3）", () => {
 		expect(shipping).not.toContain("鈴木商店");
 	});
 
+	it("宛名一覧: いただきものを削除した差出人も「すべての差出人」に出す", async () => {
+		const { taro, koudenId, give } = await setup();
+		await give({ name: "佐藤 一郎", amount: "10000", address: "東京都千代田区千代田1-1" });
+		const gifts = await (await taro.request(`/k/${koudenId}/gifts`)).text();
+		const giftId = new RegExp(`/k/${koudenId}/gifts/([0-9a-f-]{36})`).exec(gifts)?.[1] ?? "";
+		const deleted = await taro.request(
+			`/k/${koudenId}/gifts/${giftId}/delete`,
+			formPost({ version: "1" }),
+		);
+		expect(deleted.status).toBe(303);
+		const all = await (await taro.request(`/k/${koudenId}/print/addresses`)).text();
+		expect(all).toContain("佐藤 一郎 様");
+		expect(all).toContain("東京都千代田区千代田1-1");
+	});
+
 	it("Excel: 3 枚のシートに書き出し、文字列は数式にしない", async () => {
 		const { taro, koudenId, give } = await setup();
 		await give({ name: "佐藤 一郎", nameKana: "さとう いちろう", amount: "10000" });

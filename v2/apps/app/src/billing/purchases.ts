@@ -53,8 +53,8 @@ export interface WebhookEventRef {
 }
 
 export type FulfillOutcome =
-	/** 購入を記録し、香典帳を有料にした */
-	| { kind: "fulfilled"; koudenId: string; userId: string }
+	/** 購入を記録した。upgraded はこの購入で香典帳が無料から有料に変わったか */
+	| { kind: "fulfilled"; koudenId: string; userId: string; upgraded: boolean }
 	/** 同じ Checkout Session の購入は記録済み（Webhook と完了画面の両方から呼ばれるため） */
 	| { kind: "already"; koudenId: string }
 	/** 同じ Webhook イベントは処理済み */
@@ -64,7 +64,9 @@ export type FulfillOutcome =
 
 /**
  * 支払いが済んだ Checkout Session から購入を確定する。Webhook と完了画面（success_url）の両方から呼ぶ。
- * 何度呼ばれても購入は 1 件だけ記録される（stripe_checkout_session_id が UNIQUE）
+ * 何度呼ばれても購入は 1 件だけ記録される（stripe_checkout_session_id が UNIQUE）。
+ * Stripe のイベントは順番どおりに届くとは限らないので、先に全額返金が届いていた支払いは返金済みとして記録する。
+ * 香典帳は、有効な購入があるときだけ有料にする（返金後に完了画面を開き直しても有料に戻らない）
  */
 export async function fulfillCheckout(
 	db: D1Database,
@@ -87,7 +89,10 @@ export async function fulfillCheckout(
 			.prepare(
 				`INSERT INTO purchases (id, kouden_id, user_id, amount, currency, stripe_checkout_session_id,
                                 stripe_payment_intent_id, source, status, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'stripe', 'paid', ?)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'stripe',
+                 CASE WHEN EXISTS (SELECT 1 FROM stripe_refunds WHERE payment_intent_id = ?7)
+                      THEN 'refunded' ELSE 'paid' END,
+                 ?8)
          ON CONFLICT DO NOTHING`,
 			)
 			.bind(
@@ -101,7 +106,11 @@ export async function fulfillCheckout(
 				at,
 			),
 		db
-			.prepare("UPDATE koudens SET plan = 'paid', updated_at = ? WHERE id = ? AND plan = 'free'")
+			.prepare(
+				`UPDATE koudens SET plan = 'paid', updated_at = ?1
+          WHERE id = ?2 AND plan = 'free'
+            AND EXISTS (SELECT 1 FROM purchases p WHERE p.kouden_id = ?2 AND p.status = 'paid')`,
+			)
 			.bind(at, koudenId),
 	];
 
@@ -117,14 +126,24 @@ export async function fulfillCheckout(
 	if (!inserted) return { kind: "already", koudenId };
 
 	if (!upgraded) {
-		// 有料の香典帳を重ねて購入した（二重決済）か、購入の前に香典帳が削除された。返金の対応が要る
-		const exists = await db.prepare("SELECT 1 FROM koudens WHERE id = ?").bind(koudenId).first();
-		log("warn", exists ? "purchase_duplicate" : "purchase_for_missing_kouden", {
-			koudenId,
-			sessionId: session.id,
-		});
+		// 有料の香典帳を重ねて購入した（二重決済）・購入の前に香典帳が削除された・確定の前に返金された。
+		// 前の 2 つは返金の対応が要る
+		const row = await db
+			.prepare(
+				`SELECT (SELECT status FROM purchases WHERE stripe_checkout_session_id = ?) AS status,
+                (SELECT 1 FROM koudens WHERE id = ?) AS kouden`,
+			)
+			.bind(session.id, koudenId)
+			.first<{ status: string | null; kouden: number | null }>();
+		const reason =
+			row?.status === "refunded"
+				? "purchase_already_refunded"
+				: row?.kouden
+					? "purchase_duplicate"
+					: "purchase_for_missing_kouden";
+		log("warn", reason, { koudenId, sessionId: session.id });
 	}
-	return { kind: "fulfilled", koudenId, userId };
+	return { kind: "fulfilled", koudenId, userId, upgraded };
 }
 
 export type RefundOutcome =
@@ -163,6 +182,12 @@ export async function refundPayment(
 	try {
 		results = await db.batch([
 			recordEvent(db, event, at),
+			// 購入の確定より先に返金が届いた場合に備えて、返金済みの支払いを覚えておく
+			db
+				.prepare(
+					"INSERT INTO stripe_refunds (payment_intent_id, refunded_at) VALUES (?, ?) ON CONFLICT DO NOTHING",
+				)
+				.bind(pi, at),
 			db
 				.prepare(
 					`UPDATE purchases SET status = 'refunded', refunded_at = ?
@@ -182,13 +207,13 @@ export async function refundPayment(
 		if (isDuplicateEvent(err)) return { kind: "duplicate_event" };
 		throw err;
 	}
-	if (!purchase || (results[1]?.meta.changes ?? 0) === 0) {
+	if (!purchase || (results[2]?.meta.changes ?? 0) === 0) {
 		return { kind: "ignored", reason: purchase ? "already_refunded" : "unknown_payment" };
 	}
 	return {
 		kind: "refunded",
 		koudenId: purchase.kouden_id,
-		downgraded: (results[2]?.meta.changes ?? 0) > 0,
+		downgraded: (results[3]?.meta.changes ?? 0) > 0,
 	};
 }
 

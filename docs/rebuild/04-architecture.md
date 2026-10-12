@@ -262,9 +262,11 @@ POST /webhooks/stripe（CSRF の検査から除く。署名で検証する）
      5 分以内の時刻であることを確かめる）
   2. イベントの記録と D1 の更新を、1 つの db.batch() で原子的に確定する
      checkout.session.completed / async_payment_succeeded かつ payment_status=paid:
-       db.batch([ stripe_events INSERT, purchases INSERT（Session ID の重複は無視）, koudens.plan = 'paid' ])
+       db.batch([ stripe_events INSERT,
+                  purchases INSERT（Session ID の重複は無視。stripe_refunds にある支払いは refunded で記録）,
+                  有効な購入があれば koudens.plan = 'paid' ])
      charge.refunded（全額返金のみ。一部返金は記録だけ）:
-       db.batch([ stripe_events INSERT, purchases.status = 'refunded',
+       db.batch([ stripe_events INSERT, stripe_refunds INSERT, purchases.status = 'refunded',
                   有効な購入がなければ koudens.plan = 'free' ])
   3. stripe_events の主キー重複でバッチが失敗した場合は処理済みとみなして 200 を返す
      それ以外の失敗は 500 を返す（バッチ全体がロールバックされるので、Stripe の再送で再処理される）
@@ -272,7 +274,8 @@ POST /webhooks/stripe（CSRF の検査から除く。署名で検証する）
 
 - Stripe の SDK は使わず、Checkout Session の作成・取得の 2 つの API を `fetch` で呼ぶ（`src/billing/stripe.ts`。Worker の容量を抑え、テストで差し替えやすくするため）。
 - Checkout へは購入フォームの送信後にリダイレクトするため、CSP の `form-action` に `https://checkout.stripe.com` を加える。
-- `plan` は D1 が正で、DO は毎回の呼び出しで受け取る。購入・返金で `plan` が変わったら、DO の変更ログに `plan` として記録・通知し、開いている画面の残り件数の表示を取り直す（画面全体は読み込み直さない）。返金で `free` に戻っても既存の記録は消さず、新規登録だけが止まる。
+- Stripe のイベントは順番どおりに届くとは限らない。購入の確定より先に返金が届いても、`stripe_refunds` に残した返金を確定時に照らし合わせ、返金済みの支払いを有効な購入にしない。返金後に完了画面を開き直しても、有効な購入がないので有料に戻らない。
+- `plan` は D1 が正で、DO は毎回の呼び出しで受け取る。購入・返金で `plan` が実際に変わったときだけ、DO の変更ログに `plan` として記録・通知し、開いている画面の残り件数の表示を取り直す（画面全体は読み込み直さない）。返金で `free` に戻っても既存の記録は消さず、新規登録だけが止まる。
 - 有料の香典帳を重ねて購入した場合（二重決済）や、購入の前に香典帳が削除された場合は、購入を記録したうえでログに警告を出す。返金は運営者が Stripe のダッシュボードで行う。
 
 ## 8. 帳票出力

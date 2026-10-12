@@ -22,3 +22,10 @@ CREATE TABLE stripe_events (
   type              TEXT NOT NULL,
   processed_at      TEXT NOT NULL
 );
+
+-- 全額返金された支払い。Stripe のイベントは順番どおりに届くとは限らず、購入の確定より先に返金が届くことがある。
+-- 購入の確定時にここを見て、返金済みの支払いを有効な購入にしない
+CREATE TABLE stripe_refunds (
+  payment_intent_id TEXT PRIMARY KEY,
+  refunded_at       TEXT NOT NULL
+);

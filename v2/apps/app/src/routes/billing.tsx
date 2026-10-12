@@ -66,7 +66,9 @@ export function registerBillingRoutes(k: Hono<AppEnv>): void {
 			});
 			return c.redirect(settingsUrl(c, "purchase_pending"), 303);
 		}
-		if (outcome.kind === "fulfilled") await notifyPlan(c.env, c.get("caller"), "paid");
+		if (outcome.kind === "fulfilled" && outcome.upgraded) {
+			await notifyPlan(c.env, c.get("caller"), "paid");
+		}
 		return c.redirect(
 			settingsUrl(c, outcome.kind === "ignored" ? "purchase_pending" : "purchased"),
 			303,
@@ -135,7 +137,8 @@ webhookRoutes.post("/webhooks/stripe", async (c) => {
 			if (session.paymentStatus !== "paid") break;
 			const outcome = await fulfillCheckout(c.env.DB, session, now, ref);
 			log("info", "stripe_checkout", { eventId: event.id, outcome: outcome.kind });
-			if (outcome.kind === "fulfilled") {
+			// 実際に無料から有料に変わった場合だけ知らせる（二重決済・削除済みの香典帳では知らせない）
+			if (outcome.kind === "fulfilled" && outcome.upgraded) {
 				const actor = await webhookActor(c.env, outcome.koudenId, outcome.userId);
 				await notifyPlan(c.env, actor, "paid");
 			}

@@ -69,6 +69,15 @@ const sessionJson = (s: CheckoutSession) => ({
 	metadata: s.metadata,
 });
 
+/** 全額返金された Charge（Webhook の data.object） */
+const refundedCharge = (s: CheckoutSession) => ({
+	id: `ch_${s.id.slice(8)}`,
+	object: "charge",
+	payment_intent: s.paymentIntentId,
+	refunded: true,
+	amount_refunded: s.amountTotal,
+});
+
 async function signed(payload: string, at = Date.now(), secret = WEBHOOK_SECRET) {
 	const t = Math.floor(at / 1000);
 	return `t=${t},v1=${await hmacSha256(secret, `${t}.${payload}`)}`;
@@ -304,6 +313,45 @@ describe("有料版の購入（E9-2）", () => {
 		expect(await (await taro.request(`/k/${koudenId}`)).text()).toContain("佐藤 一郎");
 		const settings = await (await taro.request(`/k/${koudenId}/settings`)).text();
 		expect(settings).toContain("有料版を購入する");
+	});
+
+	it("全額返金の後に完了画面を開き直しても、有料に戻らない", async () => {
+		const { taro, koudenId, webhook, checkoutAndPay } = await setup();
+		const session = await checkoutAndPay();
+		await taro.request(`/k/${koudenId}/billing/done?session_id=${session.id}`);
+		expect(await plan(koudenId)).toBe("paid");
+		await webhook({ type: "charge.refunded", object: refundedCharge(session) });
+		expect(await plan(koudenId)).toBe("free");
+
+		await taro.request(`/k/${koudenId}/billing/done?session_id=${session.id}`);
+		await webhook({ type: "checkout.session.completed", object: sessionJson(session) });
+		expect(await plan(koudenId)).toBe("free");
+		expect(await purchases(koudenId)).toMatchObject([{ status: "refunded" }]);
+	});
+
+	it("返金のイベントが購入の確定より先に届いても、返金済みの支払いを有効な購入にしない", async () => {
+		const { koudenId, webhook, checkoutAndPay } = await setup();
+		const session = await checkoutAndPay();
+		await webhook({ type: "charge.refunded", object: refundedCharge(session) });
+		await webhook({ type: "checkout.session.completed", object: sessionJson(session) });
+		expect(await plan(koudenId)).toBe("free");
+		expect(await purchases(koudenId)).toMatchObject([{ status: "refunded" }]);
+	});
+
+	it("二重決済では購入を記録するが、プランの変更は 1 回だけ知らせる", async () => {
+		const { koudenId, webhook, checkoutAndPay } = await setup();
+		const first = await checkoutAndPay();
+		const second = await checkoutAndPay();
+		await webhook({ type: "checkout.session.completed", object: sessionJson(first) });
+		await webhook({ type: "checkout.session.completed", object: sessionJson(second) });
+		expect(await plan(koudenId)).toBe("paid");
+		expect(await purchases(koudenId)).toHaveLength(2);
+		const logged = await runInDurableObject(ledgerFor(env, koudenId), (_obj, state) =>
+			state.storage.sql
+				.exec<{ n: number }>("SELECT count(*) AS n FROM change_log WHERE entity = 'plan'")
+				.toArray(),
+		);
+		expect(logged).toEqual([{ n: 1 }]);
 	});
 
 	it("署名のない・誤った Webhook は 400 で、何も変えない", async () => {
