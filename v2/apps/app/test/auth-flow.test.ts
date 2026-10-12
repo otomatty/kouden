@@ -181,6 +181,29 @@ describe("旧アプリのユーザーの紐づけ", () => {
 		expect(legacy).toEqual({ google_sub: "other-sub" });
 	});
 
+	it("運営者が手動で紐づけ済みの旧ユーザーは、自動では紐づけない", async () => {
+		await seedLegacyEmailUser(TARO.email);
+		await env.DB.batch([
+			env.DB.prepare(
+				`INSERT INTO users (id, google_sub, email, display_name, created_at, updated_at)
+         VALUES ('manually-linked', 'other-sub', 'other@example.com', '別アカウント', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z')`,
+			),
+			env.DB.prepare(
+				"UPDATE legacy_users SET linked_user_id = 'manually-linked', linked_by = 'admin@example.com' WHERE legacy_user_id = 'supabase-uid-1'",
+			),
+		]);
+		const { login } = makeApp(TARO);
+
+		await login();
+
+		const legacy = await env.DB.prepare(
+			"SELECT google_sub FROM users WHERE id = 'legacy-user-1'",
+		).first();
+		expect(legacy).toEqual({ google_sub: null });
+		const link = await env.DB.prepare("SELECT linked_user_id FROM legacy_users").first();
+		expect(link).toEqual({ linked_user_id: "manually-linked" });
+	});
+
 	it("メールが未確認なら紐づけず、新しいユーザーを作る", async () => {
 		await seedLegacyEmailUser(TARO.email);
 		const { login } = makeApp({ ...TARO, emailVerified: false });

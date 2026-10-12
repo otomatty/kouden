@@ -57,9 +57,12 @@ async function resolveOnce(
 	if (claims.emailVerified) {
 		const { results } = await db
 			.prepare(
-				`SELECT id, legacy_user_id FROM users
-          WHERE google_sub IS NULL AND legacy_user_id IS NOT NULL AND deleted_at IS NULL
-            AND lower(email) = lower(?)
+				// 運営者が手動で紐づけ済み（legacy_users.linked_user_id あり）の旧ユーザーは対象外
+				`SELECT u.id, u.legacy_user_id FROM users u
+           JOIN legacy_users l ON l.legacy_user_id = u.legacy_user_id
+          WHERE u.google_sub IS NULL AND u.legacy_user_id IS NOT NULL AND u.deleted_at IS NULL
+            AND l.linked_user_id IS NULL
+            AND lower(u.email) = lower(?)
           LIMIT 2`,
 			)
 			.bind(claims.email)
@@ -70,9 +73,19 @@ async function resolveOnce(
 			const [linked] = await db.batch([
 				db
 					.prepare(
-						"UPDATE users SET google_sub = ?, email = ?, avatar_url = ?, updated_at = ? WHERE id = ? AND google_sub IS NULL",
+						// 未紐づけであることを同じトランザクション内で再確認する（SELECT 後の競合対策）
+						`UPDATE users SET google_sub = ?, email = ?, avatar_url = ?, updated_at = ?
+              WHERE id = ? AND google_sub IS NULL
+                AND EXISTS (SELECT 1 FROM legacy_users WHERE legacy_user_id = ? AND linked_user_id IS NULL)`,
 					)
-					.bind(claims.sub, claims.email, claims.picture ?? null, nowIso, legacy.id),
+					.bind(
+						claims.sub,
+						claims.email,
+						claims.picture ?? null,
+						nowIso,
+						legacy.id,
+						legacy.legacy_user_id,
+					),
 				db
 					.prepare(
 						`UPDATE legacy_users SET linked_user_id = ?, linked_at = ?, linked_by = 'auto'
@@ -80,7 +93,7 @@ async function resolveOnce(
 					)
 					.bind(legacy.id, nowIso, legacy.legacy_user_id),
 			]);
-			// 同時ログインで別の Google アカウントが先に紐づけた場合は 0 件になる。
+			// 同時ログインで別の Google アカウントが先に紐づけた場合や、直前に運営者が手動で紐づけた場合は 0 件になる。
 			// その旧ユーザーとして扱わず、最初からやり直す（既存の sub で見つかるか、新規作成になる）
 			if (linked?.meta.changes !== 1) return await resolveOnce(db, claims, now);
 			return { userId: legacy.id, outcome: "linked_legacy" };
