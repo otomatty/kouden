@@ -71,6 +71,9 @@ export const PROJECTION_DELAY_MS = 5_000;
 
 const SYSTEM_ACTOR = { userId: "system", displayName: "システム" } as const;
 
+/** お知らせの送信に全員分失敗したときに、送り直す間隔 */
+export const REMINDER_RETRY_MS = 30 * 60 * 1000;
+
 /** 香典返しを一度に確定できる件数 */
 const MAX_CONFIRM_ENTRIES = 2000;
 
@@ -1698,7 +1701,18 @@ export class KoudenLedger extends DurableObject<Env> {
 		const koudenId = this.meta("kouden_id");
 		if (koudenId === null) return;
 		if (!(await this.project(koudenId))) return;
-		await this.sendDueReminders(koudenId);
+		try {
+			await this.sendDueReminders(koudenId);
+		} catch (err) {
+			// 例外にするとアラームの自動再試行（数分で終わる）に頼ることになり、使い切ると予約が消えて
+			// 次のお知らせも送られなくなる。少し後に自分で予約し直す
+			log("error", "reminder_alarm_failed", {
+				koudenId,
+				error: err instanceof Error ? err.message : String(err),
+			});
+			await this.ctx.storage.setAlarm(Date.now() + REMINDER_RETRY_MS);
+			return;
+		}
 		await this.scheduleAlarm(false);
 	}
 
@@ -2566,7 +2580,7 @@ export class KoudenLedger extends DurableObject<Env> {
 	/**
 	 * 期限の来たお知らせを送る（E6-5）。宛先はオーナーと、お知らせを希望した編集者（D1）。
 	 * 未対応が 0 件のとき・アーカイブ中は送らずに送信済みにする。
-	 * 全員への送信に失敗したら例外にして、アラームの自動再試行に任せる
+	 * 全員への送信に失敗したら例外にする（alarm が REMINDER_RETRY_MS 後に送り直す）
 	 */
 	private async sendDueReminders(koudenId: string): Promise<void> {
 		const due = this.all<{

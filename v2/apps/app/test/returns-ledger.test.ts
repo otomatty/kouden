@@ -9,6 +9,7 @@ import {
 import { env, runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 import { ledgerFor } from "../src/ledger/client.ts";
+import { REMINDER_RETRY_MS } from "../src/ledger/ledger.ts";
 import { MIGRATIONS } from "../src/ledger/schema.ts";
 import type { Mail } from "../src/lib/mailer.ts";
 import type { Caller, LedgerResult } from "../src/ledger/types.ts";
@@ -398,7 +399,11 @@ describe("期限のお知らせ（E6-5）", () => {
 				},
 			};
 		});
-		await expect(runDurableObjectAlarm(ctx.ledger)).rejects.toThrow("reminder mail failed");
+		const before = Date.now();
+		expect(await runDurableObjectAlarm(ctx.ledger)).toBe(true);
+		// 失敗しても予約は消さず、少し後に送り直す
+		const retry = await runInDurableObject(ctx.ledger, (_obj, state) => state.storage.getAlarm());
+		expect(retry).toBeGreaterThanOrEqual(before + REMINDER_RETRY_MS);
 		expect(
 			(await reminders(ctx.ledger)).find((r) => r.kind === "return_due_14d")?.sent_at,
 		).toBeNull();
