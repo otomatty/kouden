@@ -1,0 +1,21 @@
+{
+	"name": "kouden-v2",
+	"private": true,
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	],
+	"type": "module",
+	"scripts": {
+		"lint": "oxlint --deny-warnings",
+		"fmt": "oxfmt",
+		"fmt:check": "oxfmt --check",
+		"typecheck": "bun run --filter '*' typecheck",
+		"test": "bun run --filter '*' test",
+		"build": "bun run --filter '*' build"
+	},
+	"devDependencies": {
+		"oxfmt": "0.72.0",
+		"oxlint": "1.87.0"
+	}
+}

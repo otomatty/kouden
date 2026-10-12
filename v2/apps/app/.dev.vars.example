@@ -1,0 +1,4 @@
+# ローカル開発用のシークレット。`.dev.vars` にコピーして値を入れる（コミットしない）
+GOOGLE_CLIENT_SECRET=
+# `openssl rand -hex 32` で生成
+SESSION_SECRET=

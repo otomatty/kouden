@@ -1,0 +1,83 @@
+name: v2 Deploy
+
+# 手動実行のみ。GitHub の Environments（staging / production）にシークレットと承認ルールを設定する
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "デプロイ先"
+        required: true
+        type: choice
+        options: [staging, production]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v2-deploy-${{ inputs.mode }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.mode }}
+    defaults:
+      run:
+        working-directory: v2
+    env:
+      MODE: ${{ inputs.mode }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # 依存パッケージのスクリプトから GitHub トークンを読めないよう、認証情報を残さない
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Check deploy settings
+        working-directory: v2/apps/app
+        run: bun run check:deploy -- --mode "$MODE"
+
+      - name: Test
+        run: bun run test
+
+      # 初回（DB 作成前）はスキップされる
+      - name: Apply D1 migrations
+        working-directory: v2/apps/app
+        run: bun run db:migrate -- --mode "$MODE" --allow-missing
+
+      # シークレットはシェルに直接展開せず、環境変数経由で書き出す
+      - name: Write secrets file
+        env:
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+        run: |
+          umask 077
+          {
+            printf 'GOOGLE_CLIENT_SECRET=%s\n' "$GOOGLE_CLIENT_SECRET"
+            printf 'SESSION_SECRET=%s\n' "$SESSION_SECRET"
+          } > "$RUNNER_TEMP/secrets.env"
+
+      - name: Deploy
+        working-directory: v2/apps/app
+        run: bun run deploy -- --mode "$MODE" --secrets-file "$RUNNER_TEMP/secrets.env"
+
+      # 初回デプロイで DB が作られた場合に、ここで適用される（2 回目以降は何もしない）
+      - name: Apply D1 migrations (after first deploy)
+        working-directory: v2/apps/app
+        run: bun run db:migrate -- --mode "$MODE"
+
+      - name: Remove secrets file
+        if: always()
+        run: rm -f "$RUNNER_TEMP/secrets.env"
