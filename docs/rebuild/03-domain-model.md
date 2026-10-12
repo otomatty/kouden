@@ -493,7 +493,7 @@ Worker: 受付番号入りの完了 HTML を返す
 ## 7. 統計の投影（DO → D1）
 
 - DO は書き込み後、5 秒後に発火するアラームを予約する（既に予約済みなら何もしない）。
-- アラームで現在の要約を計算し、D1 の `kouden_stats` に `INSERT ... ON CONFLICT DO UPDATE ... WHERE excluded.projected_seq > kouden_stats.projected_seq` で書き込む（古い要約で上書きしない）。
+- アラームで現在の要約を計算し、D1 の `kouden_stats` に `INSERT ... ON CONFLICT DO UPDATE ... WHERE excluded.projected_seq >= kouden_stats.projected_seq` で書き込む（古い要約で上書きしない。同じ seq は中身も同じなので上書きしてよく、スキーマの移行で増えた項目を埋めるのに使う）。
 - 失敗した場合はアラームの自動再試行に任せる。投影は表示専用なので、遅延しても業務に影響しない。
 
 DO のアラームは 1 オブジェクトにつき 1 つしか持てないため、リマインドと投影は「次に発火すべき最も早い時刻」を計算して 1 つのアラームにまとめ、発火時に期限の来た処理を全部実行する。投影は `kouden_stats.return_pending` に未対応の香典返しの数も書く。

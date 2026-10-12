@@ -202,7 +202,8 @@ export const MembersPage: FC<{
 					日前に、未対応の件数をメールでお知らせします。
 				</p>
 				{kouden.memberRole === "owner" && <p class="text-sm">オーナーには常にお送りします。</p>}
-				{kouden.memberRole === "editor" && (
+				{kouden.status !== "active" && <p class="text-sm">アーカイブ中はお知らせを送りません。</p>}
+				{kouden.memberRole === "editor" && kouden.status === "active" && (
 					<form method="post" action={`${base}/members/me/notifications`} class="space-y-2">
 						<p class="text-sm">
 							あなたは現在、お知らせを{notifyOn ? "受け取っています" : "受け取っていません"}。

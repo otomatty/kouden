@@ -1753,7 +1753,8 @@ export class KoudenLedger extends DurableObject<Env> {
 			this.prepare(caller);
 			if (this.migratedNow) {
 				this.migratedNow = false;
-				await this.scheduleAlarm(false);
+				// 移行で増えた項目（return_pending など）も投影し直す
+				await this.scheduleAlarm(true);
 			}
 			if (!can(caller.role, "ledger.read")) return { ok: false, error: { code: "forbidden" } };
 			return { ok: true, value: fn() };
@@ -2517,7 +2518,10 @@ export class KoudenLedger extends DurableObject<Env> {
 		if (current === null || wanted < current) await this.ctx.storage.setAlarm(wanted);
 	}
 
-	/** 統計の投影（03 §7）。香典帳が D1 から削除済みなら false */
+	/**
+	 * 統計の投影（03 §7）。香典帳が D1 から削除済みなら false。
+	 * 同じ seq でも上書きする（スキーマの移行で増えた項目を、変更ログが進む前に埋めるため。同じ seq なら中身も同じ）
+	 */
 	private async project(koudenId: string): Promise<boolean> {
 		const stats = this.first<{ gift_count: number; total_amount: number }>(
 			`SELECT count(*) AS gift_count, coalesce(sum(CASE WHEN kind = 'koden' THEN amount END), 0) AS total_amount
@@ -2536,7 +2540,7 @@ export class KoudenLedger extends DurableObject<Env> {
            gift_count = excluded.gift_count, total_amount = excluded.total_amount,
            person_count = excluded.person_count, return_pending = excluded.return_pending,
            last_activity_at = excluded.last_activity_at, projected_seq = excluded.projected_seq
-         WHERE excluded.projected_seq > kouden_stats.projected_seq`,
+         WHERE excluded.projected_seq >= kouden_stats.projected_seq`,
 			)
 				.bind(
 					koudenId,

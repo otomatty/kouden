@@ -252,8 +252,33 @@ describe("期限のお知らせ（E6-5）", () => {
 		expect(list[0]?.fire_at).toBe(
 			new Date(Date.parse(`${date}T00:00:00Z`) - 14 * 86_400_000).toISOString(),
 		);
+		// まず移行で増えた項目を投影し、その後にお知らせの時刻へ予約し直す
 		const alarm = await runInDurableObject(ledger, (_obj, state) => state.storage.getAlarm());
-		expect(alarm).toBe(Date.parse(list[0]!.fire_at));
+		expect(alarm).toBeLessThan(Date.parse(list[0]!.fire_at));
+		await runDurableObjectAlarm(ledger);
+		const next = await runInDurableObject(ledger, (_obj, state) => state.storage.getAlarm());
+		expect(next).toBe(Date.parse(list[0]!.fire_at));
+	});
+
+	it("同じ seq でも投影し直し、移行で増えた未対応の件数を埋める", async () => {
+		const ctx = await withGifts();
+		await seedD1(ctx.caller.koudenId, [{ id: "owner-1", role: "owner" }]);
+		await runDurableObjectAlarm(ctx.ledger);
+		// 移行前の投影（return_pending は 0 のまま、seq は同じ）
+		await env.DB.prepare("UPDATE kouden_stats SET return_pending = 0 WHERE kouden_id = ?")
+			.bind(ctx.caller.koudenId)
+			.run();
+		// 自動で発火しないよう先の時刻に予約し、テストから発火させる
+		await runInDurableObject(ctx.ledger, (_obj, state) =>
+			state.storage.setAlarm(Date.now() + 60_000),
+		);
+		expect(await runDurableObjectAlarm(ctx.ledger)).toBe(true);
+		const stats = await env.DB.prepare(
+			"SELECT return_pending FROM kouden_stats WHERE kouden_id = ?",
+		)
+			.bind(ctx.caller.koudenId)
+			.first();
+		expect(stats).toEqual({ return_pending: 2 });
 	});
 
 	it("四十九日の日付から 14 日前・3 日前のお知らせを作り、日付を変えると作り直す", async () => {

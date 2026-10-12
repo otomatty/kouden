@@ -1,3 +1,5 @@
+import { log } from "../lib/logger.ts";
+
 /**
  * 香典帳のファイル（R2: kouden-files）。04 §2。
  * キーは `koudens/{koudenId}/…` で、香典帳の削除時に接頭辞ごと消す。
@@ -53,8 +55,20 @@ export async function putReturnItemImage(
 	return { key };
 }
 
+/**
+ * 使わなくなったファイルを消す。失敗しても記録の変更は終わっているので、ログに残すだけにする
+ * （残ったファイルは香典帳の削除時に接頭辞ごと消える）
+ */
 export async function deleteFile(env: Env, key: string | null): Promise<void> {
-	if (key) await env.FILES.delete(key);
+	if (!key) return;
+	try {
+		await env.FILES.delete(key);
+	} catch (err) {
+		log("error", "file_delete_failed", {
+			key,
+			error: err instanceof Error ? err.message : String(err),
+		});
+	}
 }
 
 /** 香典帳のファイルをすべて消す（03 §8 香典帳の削除） */

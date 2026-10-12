@@ -282,5 +282,16 @@ describe("期限のお知らせの設定（E6-5）", () => {
 			formPost({ on: "0" }),
 		);
 		expect(owner.status).toBe(403);
+
+		// アーカイブ中は閲覧のみ（お知らせも送らない）
+		await taro.request(`/k/${koudenId}/archive`, formPost({ archived: "1" }));
+		const archived = await hanako.request(
+			`/k/${koudenId}/members/me/notifications`,
+			formPost({ on: "0" }),
+		);
+		expect(archived.status).toBe(403);
+		expect(await (await hanako.request(`/k/${koudenId}/members`)).text()).toContain(
+			"アーカイブ中はお知らせを送りません",
+		);
 	});
 });
