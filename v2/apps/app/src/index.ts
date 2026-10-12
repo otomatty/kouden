@@ -1,6 +1,8 @@
 import { createApp } from "./app.tsx";
 import { runDailyMaintenance } from "./scheduled.ts";
 
+export { KoudenLedger } from "./ledger/ledger.ts";
+
 const app = createApp();
 
 export default {

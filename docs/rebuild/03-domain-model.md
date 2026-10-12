@@ -166,7 +166,7 @@ CREATE TABLE stripe_events (
 CREATE TABLE kouden_stats (
   kouden_id         TEXT PRIMARY KEY REFERENCES koudens(id) ON DELETE CASCADE,
   gift_count        INTEGER NOT NULL,
-  total_amount      INTEGER NOT NULL,
+  total_amount      INTEGER NOT NULL,           -- 香典（kind = 'koden'）の合計
   person_count      INTEGER NOT NULL,
   return_pending    INTEGER NOT NULL,
   last_activity_at  TEXT NOT NULL,
@@ -255,6 +255,7 @@ CREATE TABLE persons (
   address           TEXT,
   phone             TEXT,
   notes             TEXT,
+  search_text       TEXT NOT NULL DEFAULT '',   -- 検索用（氏名・カナ・団体・住所を正規化して連結。ひらがな・カタカナ・全角半角を区別しない）
   version           INTEGER NOT NULL DEFAULT 1,
   created_by        TEXT NOT NULL,
   created_at        TEXT NOT NULL,
@@ -297,6 +298,8 @@ CREATE TABLE gift_contributors (
   PRIMARY KEY (gift_id, person_id)
 );
 CREATE INDEX idx_contributors_person ON gift_contributors(person_id);
+-- 代表者は 1 件に 1 人
+CREATE UNIQUE INDEX uq_contributors_primary ON gift_contributors(gift_id) WHERE is_primary = 1;
 
 -- 供物・供花の写真（本体は R2: koudens/{koudenId}/gifts/{giftId}/{photoId}）
 CREATE TABLE gift_photos (
@@ -410,6 +413,7 @@ CREATE INDEX idx_change_log_entity ON change_log(entity, entity_id);
 | 書き込みごとに変更ログが 1 行以上追加される | 書き込みメソッドの共通ラッパーで強制 |
 | 楽観ロック | `UPDATE ... WHERE id = ? AND version = ?` の更新件数が 0 なら `CONFLICT` を返す |
 | いただきものには差出人が 1 人以上いる | 作成メソッドで `gift_contributors` を同時に挿入。最後の 1 人は外せない |
+| 連名の負担額の合計 ≤ 金額 | 金額・負担額を変える書き込みの中で合計を確認し、超えるなら失敗させる |
 
 ---
 
@@ -430,13 +434,16 @@ constructor(ctx: DurableObjectState, env: Env) {
 - マイグレーションはコード内の配列（`MIGRATIONS[n]`）。番号は単調増加で、適用済みのものは変更しない。
 - **後方互換な変更のみ**を基本とする（列の追加、テーブルの追加）。破壊的変更は「新列追加 → 両方書く → 旧列を読まなくする → 次々回で削除」の段階を踏む。
 - 長期間アクセスされない DO は古いスキーマのまま眠っているが、次に起動したときに追いつくので問題ない。
+- 実装では、コンストラクタではなく各 RPC の最初で `migrate` を呼ぶ（`deleteAll()` の後に作り直せるようにするため）。DO 内の RPC は同期的に SQL を実行するので、途中に別の呼び出しが割り込むことはない。
+- 1 番（M1）は台帳の骨格（`events` / `relationships` / `persons` / `gifts` / `gift_contributors` / `change_log`）だけを作る。香典返し・写真・リマインドのテーブルは、それぞれのマイルストーンで 2 番以降として追加する。
+- 新しい DO は、最初の呼び出しで `meta.kouden_id` を記録し、既定の行事・関係を作る（変更ログの記録者は `system`）。D1 への登録と DO の初期化の間で失敗しても、次に開いたときに初期化されるので、作成処理で DO を呼ぶ必要はない。
 
 ## 5. 権限の判定
 
 Worker が D1 から `role` と `plan` を読み、DO の RPC に**呼び出し元コンテキスト**として渡す。DO は外部から直接呼べない（Worker の binding 経由のみ）ので、このコンテキストを信頼してよい。
 
 ```ts
-type Caller = { userId: string; displayName: string; role: 'owner' | 'editor' | 'viewer'; plan: 'free' | 'paid' };
+type Caller = { koudenId: string; userId: string; displayName: string; role: 'owner' | 'editor' | 'viewer'; plan: 'free' | 'paid' };
 await stub.createGift(caller, input);
 ```
 
@@ -448,7 +455,7 @@ await stub.createGift(caller, input);
 | メンバー招待・ロール変更・除外 | ✓ | | |
 | 購入・譲渡・アーカイブ・削除 | ✓ | | |
 
-判定は DO 内の `assertCan(caller, action)` に集約する。D1 側の操作（招待・譲渡など）は Worker の同名関数で判定する。
+判定は `packages/domain` の `can(role, action)` に集約し、DO の書き込みの共通ラッパーと画面（ボタンの出し分け）の両方で使う。アーカイブ中の香典帳は、Worker が `role` を `viewer` にして DO に渡す（E2-4）。D1 側の操作（招待・譲渡など）は Worker の同名関数で判定する。
 
 ## 6. 主要な処理の流れ
 
@@ -492,5 +499,5 @@ DO のアラームは 1 オブジェクトにつき 1 つしか持てないた�
 
 | 対象 | 処理 |
 |---|---|
-| 香典帳の削除 | D1 `koudens.status = 'deleting'` → DO `deleteAll()` + アラーム削除 → R2 の `koudens/{id}/` 以下を削除 → D1 の関連行を削除。途中で失敗しても、日次 Cron が `deleting` のものを再処理する |
+| 香典帳の削除 | D1 `koudens.status = 'deleting'` → DO `deleteAll()` + アラーム削除（削除済みの印 `meta.deleted_at` だけを残し、削除の直前に権限確認を通った要求が遅れて届いても台帳を作り直さない）→ R2 の `koudens/{id}/` 以下を削除 → D1 の関連行を削除。途中で失敗しても、日次 Cron が `deleting` のものを再処理する |
 | アカウントの削除 | オーナーである冊がすべて譲渡済みまたは削除済みであることを確認 → メンバー行・セッション削除 → `users.deleted_at` を設定し、メール・名前を匿名化し、`google_sub` を NULL にする（同じ Google アカウントで再登録すると新しい空のアカウントになる。ログイン処理も、削除済みの行が `google_sub` を持っていれば手放させてから登録する）。変更ログの `actor_name` はスナップショットなので残る |

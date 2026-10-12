@@ -5,6 +5,7 @@ import { log } from "./lib/logger.ts";
 import { requestContext } from "./middleware/request-context.ts";
 import { csrfProtection, securityHeaders } from "./middleware/security.ts";
 import { session } from "./middleware/session.ts";
+import { koudenRoutes } from "./routes/koudens.tsx";
 import { pageRoutes } from "./routes/pages.tsx";
 import type { AppDeps, AppEnv } from "./types.ts";
 import { Layout } from "./views/layout.tsx";
@@ -21,6 +22,7 @@ export function createApp(deps: AppDeps = {}) {
 	app.get("/healthz", (c) => c.text("ok"));
 	app.route("/", authRoutes(deps));
 	app.route("/", pageRoutes);
+	app.route("/", koudenRoutes);
 
 	app.notFound((c) =>
 		c.html(

@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { listMyKoudens } from "../kouden/store.ts";
 import type { AppEnv } from "../types.ts";
 import { Layout } from "../views/layout.tsx";
 import { DashboardPage } from "../views/pages/dashboard.tsx";
@@ -9,12 +10,15 @@ import { PricingPage } from "../views/pages/pricing.tsx";
 
 export const pageRoutes = new Hono<AppEnv>();
 
-pageRoutes.get("/", (c) => {
+pageRoutes.get("/", async (c) => {
 	const user = c.get("user");
 	if (user) {
+		const tab = c.req.query("tab") === "archived" ? "archived" : "active";
+		const koudens = await listMyKoudens(c.env.DB, user.id, tab);
+		const notice = c.req.query("notice") === "deleted" ? "香典帳を削除しました。" : undefined;
 		return c.html(
 			<Layout title="香典帳一覧" user={user}>
-				<DashboardPage user={user} />
+				<DashboardPage user={user} koudens={koudens} tab={tab} notice={notice} />
 			</Layout>,
 		);
 	}
