@@ -171,12 +171,12 @@
 		if (notice) notice.hidden = false;
 	}
 
-	// 取り直し中の部分。応答が届いた時点で入力中なら差し替えない（取り直しを始めた後に入力を始めた場合）
-	const refreshing = new Set();
+	// 取り直しの応答が届いた時点で入力中なら差し替えない（取り直しを始めた後に入力を始めた場合）。
+	// 取り直しは要求ごとに印のヘッダーを付けて見分ける（同じ部分の取り直しが重なっても、それぞれ確かめる）
+	const LIVE_HEADER = "X-Live-Refresh";
 	document.addEventListener("htmx:beforeSwap", (e) => {
 		const target = e.detail.target;
-		if (!target || !refreshing.has(target.id)) return;
-		refreshing.delete(target.id);
+		if (!target || !e.detail.requestConfig?.headers?.[LIVE_HEADER]) return;
 		if (isBusy(target)) {
 			e.detail.shouldSwap = false;
 			showStale(target);
@@ -194,8 +194,11 @@
 					showStale(el);
 					return;
 				}
-				refreshing.add(el.id);
-				window.htmx.ajax("GET", url, { target: `#${el.id}`, swap: "outerHTML" });
+				window.htmx.ajax("GET", url, {
+					target: `#${el.id}`,
+					swap: "outerHTML",
+					headers: { [LIVE_HEADER]: "1" },
+				});
 			}, 300),
 		);
 	}

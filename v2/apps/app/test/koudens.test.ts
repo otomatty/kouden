@@ -332,6 +332,22 @@ describe("いただきもの・差出人の編集", () => {
 		expect(after).toContain("負担額 ¥2,000・代表者 → 負担額 ¥3,000・代表者");
 	});
 
+	it("代表者を替えると、外れた人の変更も同じ履歴に残す", async () => {
+		const { taro, koudenId, giftId } = await withGift();
+		const path = `/k/${koudenId}/gifts/${giftId}`;
+		await taro.request(`${path}/contributors`, formPost({ version: "1", name: "高橋 花子" }));
+		const page = await (await taro.request(path)).text();
+		const ids = [...page.matchAll(/contributors\/([0-9a-f-]{36})"/g)].map((m) => m[1]);
+		const hanakoId = ids.find((id) => id !== ids[0]) ?? "";
+		await taro.request(
+			`${path}/contributors/${hanakoId}`,
+			formPost({ version: "2", shareAmount: "", makePrimary: "1" }),
+		);
+		const after = await (await taro.request(path)).text();
+		expect(after).toContain("負担額なし → 負担額なし・代表者");
+		expect(after).toContain("負担額なし・代表者 → 負担額なし");
+	});
+
 	it("削除すると一覧から消える", async () => {
 		const { taro, koudenId, giftId } = await withGift();
 		const res = await taro.request(

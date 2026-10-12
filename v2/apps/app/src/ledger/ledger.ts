@@ -551,6 +551,14 @@ export class KoudenLedger extends DurableObject<Env> {
 				personId,
 			);
 			if (!current) throw new LedgerFailure({ code: "not_found" });
+			// 代表者を替えるときは、外れる人の変更も同じ履歴に残す
+			const demoted = input.makePrimary
+				? this.first<{ person_id: string; share_amount: number | null }>(
+						"SELECT person_id, share_amount FROM gift_contributors WHERE gift_id = ? AND is_primary = 1 AND person_id <> ?",
+						giftId,
+						personId,
+					)
+				: null;
 			this.sql.exec(
 				"UPDATE gift_contributors SET share_amount = ? WHERE gift_id = ? AND person_id = ?",
 				input.shareAmount,
@@ -578,9 +586,15 @@ export class KoudenLedger extends DurableObject<Env> {
 				shareAmount: input.shareAmount,
 				isPrimary: before.isPrimary || input.makePrimary,
 			};
-			this.log(caller, now, "gift", giftId, "update", {
-				[`contributor:${personId}`]: [before, after],
-			});
+			const diff: Diff = { [`contributor:${personId}`]: [before, after] };
+			if (demoted) {
+				const share = demoted.share_amount;
+				diff[`contributor:${demoted.person_id}`] = [
+					{ shareAmount: share, isPrimary: true },
+					{ shareAmount: share, isPrimary: false },
+				];
+			}
+			this.log(caller, now, "gift", giftId, "update", diff);
 			return { version: version + 1 };
 		});
 	}
