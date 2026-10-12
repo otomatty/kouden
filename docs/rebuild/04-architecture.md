@@ -165,7 +165,7 @@ DO
 
 | type | 内容 | ブラウザの動作 |
 |---|---|---|
-| `hello` | `{seq}` | 再接続なら、前回の seq 以降の変更を `/k/:id/changes?since=` で取り直す |
+| `hello` | `{seq}` | 手元の seq より新しければ、その間の変更を `/k/:id/changes?since=` で取り直す。画面には表示した時点の seq（データを読む前に記録）を埋め込んでいるので、表示から最初の接続までの間の変更も取り直せる。取り直しに失敗しても起点を保持し、再試行する |
 | `changed` | `{seq, entity, id, op, actor}` | 該当する部分 HTML を取り直す（自分の変更は無視） |
 | `presence` | `[{userId, name, editing: {entity, id} \| null}]` | 閲覧中のメンバーと「○○さんが編集中」を表示 |
 | `revoked` | — | 権限が外された。接続を閉じて一覧へ戻す |
@@ -178,7 +178,7 @@ WebSocket は接続時にだけ権限を確認するため、メンバーシッ�
 |---|---|---|
 | メンバーの除外・本人の退出 | `stub.recordExternalChange(actor, {entity: 'member', op: 'delete'}, {revokeUserId})` | 変更ログに記録し、`ctx.getWebSockets(userId)` の接続に `revoked` を送って閉じる |
 | 参加・ロールの変更・オーナー譲渡 | `stub.recordExternalChange(actor, {entity: 'member', ...})` | 変更ログに記録し、`changed`（entity: `member`）を送る。本人の画面は読み込み直して新しいロールの表示になる |
-| アーカイブ・解除 | `stub.recordExternalChange(actor, {entity: 'kouden', ...})` | 全員のロールの実効値が変わるので、全員の画面が読み込み直す |
+| アーカイブ・解除 | `stub.recordExternalChange(actor, {entity: 'kouden', ...})` | 全員のロールの実効値が変わるので、全員の画面が読み込み直す。アーカイブ中はメンバーの変更（ロール変更・除外・招待・譲渡の申し出）もできない（退出と、保留中の譲渡への応答・取り消しはできる） |
 | 香典帳の削除 | `stub.deleteAll()` | 中身を消す前に全接続に `revoked` を送って閉じる |
 
 D1 の更新と DO への通知の間で失敗しても、権限の正は D1 にあり、各端末が取り直す HTTP 要求はその都度 D1 で権限確認されるため、閲覧できるのは通知（`changed` の種類と ID）までに限られる。DO への通知が失敗した場合は Worker が再試行する。

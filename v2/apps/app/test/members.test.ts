@@ -184,6 +184,28 @@ describe("ロール変更・除外・退出", () => {
 		expect(await role(koudenId, JIRO.email)).toBe("editor");
 	});
 
+	it("アーカイブ中はロール変更・除外・譲渡の申し出ができない（退出はできる）", async () => {
+		const { taro, koudenId, invite } = await setup();
+		const { client } = await join(HANAKO, await invite());
+		const hanakoId = await userId(HANAKO.email);
+		await taro.request(`/k/${koudenId}/archive`, formPost({ archived: "1" }));
+		expect(
+			(await taro.request(`/k/${koudenId}/members/${hanakoId}/role`, formPost({ role: "viewer" })))
+				.status,
+		).toBe(403);
+		expect(
+			(await taro.request(`/k/${koudenId}/members/${hanakoId}/remove`, formPost({}))).status,
+		).toBe(403);
+		expect(
+			(await taro.request(`/k/${koudenId}/transfer`, formPost({ toUserId: hanakoId }))).status,
+		).toBe(403);
+		expect(await role(koudenId, HANAKO.email)).toBe("editor");
+		expect(await (await taro.request(`/k/${koudenId}/members`)).text()).toContain(
+			"アーカイブ中はメンバーを変更できません",
+		);
+		expect((await client.request(`/k/${koudenId}/leave`, formPost({}))).status).toBe(303);
+	});
+
 	it("メンバーは自分で抜けられる。オーナーは抜けられない", async () => {
 		const { taro, koudenId, invite } = await setup();
 		const { client } = await join(HANAKO, await invite());

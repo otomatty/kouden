@@ -34,6 +34,8 @@ export const MembersPage: FC<{
 }> = ({ kouden, userId, members, invitations, transfer, newInvite, notice, error }) => {
 	const base = `/k/${kouden.id}`;
 	const isOwner = kouden.memberRole === "owner";
+	// アーカイブ中は閲覧のみ（E2-4）。ロール変更・除外・譲渡の申し出はできない
+	const canManage = isOwner && kouden.status === "active";
 	return (
 		<div class="mx-auto max-w-3xl space-y-8">
 			{error && (
@@ -120,6 +122,9 @@ export const MembersPage: FC<{
 					<h2 id="member-list" class={ui.h2}>
 						メンバー（{members.length} 人）
 					</h2>
+					{isOwner && !canManage && (
+						<p class="text-sm text-muted">アーカイブ中はメンバーを変更できません。</p>
+					)}
 					<ul class="divide-y divide-line">
 						{members.map((m) => (
 							<li class="flex flex-wrap items-center gap-3 py-3">
@@ -129,7 +134,7 @@ export const MembersPage: FC<{
 									<span class={`${ui.badge} ml-2`}>{ROLES[m.role]}</span>
 									{isOwner && <div class="text-xs break-all text-muted">{m.email}</div>}
 								</div>
-								{isOwner && m.role !== "owner" && (
+								{canManage && m.role !== "owner" && (
 									<>
 										<form
 											method="post"

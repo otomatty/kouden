@@ -11,7 +11,8 @@
 
 	const base = `/k/${koudenId}`;
 	let ws = null;
-	let lastSeq = 0;
+	// 画面を表示した時点の変更ログの位置。最初の接続時もここから取り直す
+	let lastSeq = Number(script.dataset.seq) || 0;
 	// 再接続時に取り直す必要がある変更の起点（取り直しに成功するまで保持する）
 	let gapFrom = null;
 	let retry = 0;

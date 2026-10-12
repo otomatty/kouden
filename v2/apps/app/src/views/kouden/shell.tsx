@@ -22,10 +22,11 @@ const TABS: readonly { tab: KoudenTab; label: string; path: string }[] = [
 export const KoudenShell: FC<{
 	kouden: KoudenContext;
 	caller: Caller;
+	renderSeq?: number | undefined;
 	tab: KoudenTab;
 	wide?: boolean | undefined;
 	children?: Child;
-}> = ({ kouden, caller, tab, wide, children }) => (
+}> = ({ kouden, caller, renderSeq, tab, wide, children }) => (
 	<div class={`${wide ? ui.containerWide : ui.container} space-y-6`}>
 		<div
 			data-connection
@@ -83,6 +84,7 @@ export const KoudenShell: FC<{
 			defer
 			data-kouden-id={kouden.id}
 			data-user-id={caller.userId}
+			data-seq={renderSeq?.toString()}
 		></script>
 	</div>
 );

@@ -86,7 +86,13 @@ export function koudenPage(
 	const kouden = c.get("kouden");
 	return c.html(
 		<Layout title={`${title} - ${kouden.title}`} user={c.get("user")}>
-			<KoudenShell kouden={kouden} caller={c.get("caller")} tab={tab} wide={options.wide}>
+			<KoudenShell
+				kouden={kouden}
+				caller={c.get("caller")}
+				renderSeq={c.get("renderSeq")}
+				tab={tab}
+				wide={options.wide}
+			>
 				{body}
 			</KoudenShell>
 		</Layout>,

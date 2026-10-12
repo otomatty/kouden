@@ -97,6 +97,27 @@ describe("リアルタイム同期", () => {
 		expect(res.status).toBe(403);
 	});
 
+	it("画面には表示した時点の変更ログの位置を埋め込む（部分 HTML には埋め込まない）", async () => {
+		const { taro, koudenId, eventId } = await setupPair();
+		const seqOf = async () =>
+			Number(
+				/data-seq="(\d+)"/.exec(await (await taro.request(`/k/${koudenId}/gifts`)).text())?.[1],
+			);
+		const before = await seqOf();
+		expect(before).toBeGreaterThan(0);
+		await taro.request(
+			`/k/${koudenId}/reception`,
+			formPost({ eventId, kind: "koden", name: "a", amount: "1" }),
+		);
+		expect(await seqOf()).toBe(before + 2);
+		const partial = await (
+			await taro.request(`/k/${koudenId}/gifts?partial=results`, {
+				headers: { "hx-request": "true" },
+			})
+		).text();
+		expect(partial).not.toContain("data-seq");
+	});
+
 	it("取りこぼした変更を since 以降で返す", async () => {
 		const { taro, koudenId, eventId } = await setupPair();
 		const before = (await (await taro.request(`/k/${koudenId}/changes?since=0`)).json()) as {

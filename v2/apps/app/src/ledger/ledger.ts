@@ -929,6 +929,11 @@ export class KoudenLedger extends DurableObject<Env> {
 		this.broadcastPresence(ws);
 	}
 
+	/** 現在の変更ログの位置。画面を表示した時点の位置として埋め込み、接続時に以降の変更を取り直す */
+	async currentSeq(caller: Caller): Promise<LedgerResult<number>> {
+		return this.read(caller, () => this.lastSeq());
+	}
+
 	/** 取りこぼした変更（再接続時）。多すぎる場合は reset を返し、画面側で全体を取り直す */
 	async changesSince(
 		caller: Caller,

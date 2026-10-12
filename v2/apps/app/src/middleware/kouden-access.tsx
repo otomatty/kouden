@@ -2,6 +2,7 @@ import { createMiddleware } from "hono/factory";
 import { Layout } from "../views/layout.tsx";
 import { ErrorPage } from "../views/pages/error.tsx";
 import { loadKouden } from "../kouden/store.ts";
+import { ledgerFor } from "../ledger/client.ts";
 import type { AppEnv } from "../types.ts";
 
 /**
@@ -23,6 +24,15 @@ export const koudenAccess = createMiddleware<AppEnv>(async (c, next) => {
 		role: kouden.status === "archived" ? "viewer" : kouden.memberRole,
 		plan: kouden.plan,
 	});
+	// 画面を表示するとき、データを読む前の変更ログの位置を記録する。
+	// 表示から WebSocket の接続までの間の変更を、接続時に取り直すために使う（04 §5）
+	if (c.req.method === "GET" && c.req.header("HX-Request") !== "true" && !c.req.query("partial")) {
+		const path = c.req.path;
+		if (!path.endsWith("/ws") && !path.endsWith("/changes")) {
+			const seq = await ledgerFor(c.env, kouden.id).currentSeq(c.get("caller"));
+			if (seq.ok) c.set("renderSeq", seq.value);
+		}
+	}
 	return next();
 });
 

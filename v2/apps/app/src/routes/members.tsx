@@ -89,6 +89,9 @@ async function renderMembers(
 
 const ownerOnly = (c: Ctx) => !can(c.get("kouden").memberRole, "members.manage");
 
+/** メンバーの変更（ロール変更・除外・招待・譲渡の申し出）。アーカイブ中は閲覧のみ（E2-4）なのでできない */
+const cannotChangeMembers = (c: Ctx) => ownerOnly(c) || c.get("kouden").status !== "active";
+
 /** /k/:koudenId 配下のメンバー関連のルート */
 export function registerMemberRoutes(k: Hono<AppEnv>): void {
 	k.get("/members", (c) => renderMembers(c));
@@ -135,7 +138,7 @@ export function registerMemberRoutes(k: Hono<AppEnv>): void {
 
 	// ---- ロール変更・除外・退出（E3-3, E3-5） ----
 	k.post("/members/:userId/role", async (c) => {
-		if (ownerOnly(c)) return errorResponse(c, 403);
+		if (cannotChangeMembers(c)) return errorResponse(c, 403);
 		const userId = c.req.param("userId");
 		const role = (await formValues(c)).role === "viewer" ? "viewer" : "editor";
 		if (await changeRole(c.env.DB, c.get("kouden").id, userId, role)) {
@@ -150,7 +153,7 @@ export function registerMemberRoutes(k: Hono<AppEnv>): void {
 	});
 
 	k.post("/members/:userId/remove", async (c) => {
-		if (ownerOnly(c)) return errorResponse(c, 403);
+		if (cannotChangeMembers(c)) return errorResponse(c, 403);
 		const userId = c.req.param("userId");
 		if (await removeMember(c.env.DB, c.get("kouden").id, userId, c.get("now"))) {
 			await notifyLedger(
@@ -185,7 +188,7 @@ export function registerMemberRoutes(k: Hono<AppEnv>): void {
 
 	// ---- オーナー譲渡（E3-4） ----
 	k.post("/transfer", async (c) => {
-		if (ownerOnly(c)) return errorResponse(c, 403);
+		if (cannotChangeMembers(c)) return errorResponse(c, 403);
 		const toUserId = (await formValues(c)).toUserId ?? "";
 		const result = await createTransfer(
 			c.env.DB,
