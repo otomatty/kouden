@@ -1700,13 +1700,13 @@ export class KoudenLedger extends DurableObject<Env> {
 		if (!this.ensureSchema()) return;
 		const koudenId = this.meta("kouden_id");
 		if (koudenId === null) return;
-		if (!(await this.project(koudenId))) return;
 		try {
+			if (!(await this.project(koudenId))) return;
 			await this.sendDueReminders(koudenId);
 		} catch (err) {
-			// 例外にするとアラームの自動再試行（数分で終わる）に頼ることになり、使い切ると予約が消えて
-			// 次のお知らせも送られなくなる。少し後に自分で予約し直す
-			log("error", "reminder_alarm_failed", {
+			// 投影（D1）やお知らせの送信の失敗を例外にすると、アラームの自動再試行（数分で終わる）に頼ることになり、
+			// 使い切ると予約が消えて次のお知らせも送られなくなる。少し後に自分で予約し直す
+			log("error", "ledger_alarm_failed", {
 				koudenId,
 				error: err instanceof Error ? err.message : String(err),
 			});

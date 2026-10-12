@@ -379,6 +379,26 @@ describe("期限のお知らせ（E6-5）", () => {
 		expect(stats).toEqual({ return_pending: 2 });
 	});
 
+	it("投影（D1）に失敗しても、少し後にアラームを予約し直す", async () => {
+		const ctx = await withGifts();
+		await addMemorial(ctx);
+		const before = Date.now();
+		await runInDurableObject(ctx.ledger, (obj) => {
+			const original = (obj as unknown as { env: Env }).env;
+			(obj as unknown as { env: Env }).env = {
+				...original,
+				DB: {
+					prepare: () => {
+						throw new Error("D1 unavailable");
+					},
+				} as unknown as D1Database,
+			};
+		});
+		expect(await runDurableObjectAlarm(ctx.ledger)).toBe(true);
+		const retry = await runInDurableObject(ctx.ledger, (_obj, state) => state.storage.getAlarm());
+		expect(retry).toBeGreaterThanOrEqual(before + REMINDER_RETRY_MS);
+	});
+
 	it("連名で負担額が 0 円の人は、未対応の件数に数えない", async () => {
 		const ctx = await withGifts();
 		await seedD1(ctx.caller.koudenId, [{ id: "owner-1", role: "owner" }]);
