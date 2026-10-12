@@ -1,5 +1,6 @@
-import { env } from "cloudflare:test";
+import { env, runInDurableObject } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
+import { ledgerFor } from "../src/ledger/client.ts";
 import { formPost, HANAKO, makeApp, TARO } from "./helpers.ts";
 
 const PNG = new Uint8Array([
@@ -281,6 +282,19 @@ describe("香典返しの一括提案と状況（E6-2〜E6-4）", () => {
 		expect(page).toContain("03-1234-5678");
 	});
 
+	it("期限は取り直す部分の中にあり、行事の変更で取り直される", async () => {
+		const { taro, koudenId } = await setup();
+		const before = await (await taro.request(`/k/${koudenId}/returns?partial=board`)).text();
+		expect(before).toContain('data-live="gift,person,event,');
+		expect(before).toContain("四十九日に日付を入れると");
+		await taro.request(
+			`/k/${koudenId}/events`,
+			formPost({ kind: "memorial_49", name: "", date: "2026-12-20" }),
+		);
+		const after = await (await taro.request(`/k/${koudenId}/returns?partial=board`)).text();
+		expect(after).toContain("2026年12月20日");
+	});
+
 	it("差出人の画面の香典返しの欄は、部分だけを取り直せる", async () => {
 		const { taro, koudenId, give } = await setup();
 		await give("高橋 一郎", "10000");
@@ -320,6 +334,15 @@ describe("期限のお知らせの設定（E6-5）", () => {
 		expect(await (await hanako.request(`/k/${koudenId}/members`)).text()).toContain(
 			"お知らせを受け取らない",
 		);
+		// 他の画面（オーナーのメンバー一覧など）が取り直せるよう、変更を記録して知らせる
+		const logged = await runInDurableObject(ledgerFor(env, koudenId), (_obj, state) =>
+			state.storage.sql
+				.exec<{ entity: string; entity_id: string }>(
+					"SELECT entity, entity_id FROM change_log ORDER BY seq DESC LIMIT 1",
+				)
+				.toArray(),
+		);
+		expect(logged).toEqual([{ entity: "member", entity_id: hanakoId }]);
 
 		const owner = await taro.request(
 			`/k/${koudenId}/members/me/notifications`,

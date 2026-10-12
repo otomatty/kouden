@@ -173,7 +173,15 @@ export function registerMemberRoutes(k: Hono<AppEnv>): void {
 		// アーカイブ中は閲覧のみ（お知らせも送らない）
 		if (kouden.memberRole !== "editor" || kouden.status !== "active") return errorResponse(c, 403);
 		const on = (await formValues(c)).on === "1";
-		await setNotifyReminders(c.env.DB, kouden.id, c.get("caller").userId, on);
+		const caller = c.get("caller");
+		await setNotifyReminders(c.env.DB, kouden.id, caller.userId, on);
+		// メンバーの画面（オーナーに見える「お知らせ」の表示）を取り直してもらう
+		await notifyLedger(c.env, caller, {
+			entity: "member",
+			entityId: caller.userId,
+			op: "update",
+			diff: { notify_reminders: [!on, on] },
+		});
 		return c.redirect(`${basePath(c)}/members?notice=saved#notifications`, 303);
 	});
 

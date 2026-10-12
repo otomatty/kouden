@@ -70,40 +70,21 @@ export const ReturnsPage: FC<{
 	onDay: number;
 	notice?: string | undefined;
 	error?: string | undefined;
-}> = (props) => {
-	const base = `/k/${props.kouden.id}`;
-	return (
-		<div class="space-y-6">
-			{props.error && (
-				<p role="alert" class={ui.alert}>
-					{props.error}
-				</p>
-			)}
-			{props.notice && (
-				<p role="status" class={ui.notice}>
-					{props.notice}
-				</p>
-			)}
-			<div class="flex flex-wrap items-center justify-between gap-3">
-				<p class="text-sm">
-					{props.board.dueDate ? (
-						<>
-							期限: <strong>{formatDate(props.board.dueDate)}</strong>（{props.board.dueEventName}）
-						</>
-					) : (
-						<span class="text-muted">
-							設定の「行事」で四十九日に日付を入れると、期限とお知らせメールの日程が決まります。
-						</span>
-					)}
-				</p>
-				<a href={`${base}/returns/settings`} class={ui.buttonSecondary}>
-					カタログ・金額帯ルール
-				</a>
-			</div>
-			<ReturnsBoardRegion {...props} />
-		</div>
-	);
-};
+}> = (props) => (
+	<div class="space-y-6">
+		{props.error && (
+			<p role="alert" class={ui.alert}>
+				{props.error}
+			</p>
+		)}
+		{props.notice && (
+			<p role="status" class={ui.notice}>
+				{props.notice}
+			</p>
+		)}
+		<ReturnsBoardRegion {...props} />
+	</div>
+);
 
 /** 他の人の変更で取り直す部分（提案と一覧） */
 export const ReturnsBoardRegion: FC<{
@@ -121,10 +102,26 @@ export const ReturnsBoardRegion: FC<{
 	return (
 		<LiveRegion
 			id="returns-board"
-			entities={["gift", "person", "return", "return_item", "return_rule"]}
+			entities={["gift", "person", "event", "return", "return_item", "return_rule"]}
 			url={`${base}/returns?${query.toString()}`}
 			class="space-y-6"
 		>
+			<div class="flex flex-wrap items-center justify-between gap-3">
+				<p class="text-sm">
+					{board.dueDate ? (
+						<>
+							期限: <strong>{formatDate(board.dueDate)}</strong>（{board.dueEventName}）
+						</>
+					) : (
+						<span class="text-muted">
+							設定の「行事」で四十九日に日付を入れると、期限とお知らせメールの日程が決まります。
+						</span>
+					)}
+				</p>
+				<a href={`${base}/returns/settings`} class={ui.buttonSecondary}>
+					カタログ・金額帯ルール
+				</a>
+			</div>
 			{canWrite && proposals.length > 0 && (
 				<Proposals kouden={kouden} board={board} proposals={proposals} onDay={onDay} />
 			)}
