@@ -34,7 +34,7 @@ flowchart LR
 |---|---|
 | 1. 抽出 | Supabase の service key で全テーブルを読み、香典帳ごとの JSON にまとめる。Storage のオブジェクト一覧も取る |
 | 2. 変換 | §3 の対応表に従って新しい形に変換する。ID は旧 UUID から決定的に生成（UUIDv5）し、再実行しても同じ ID になるようにする |
-| 3a. D1 投入 | `cf d1 query`（または D1 の HTTP API）で `users` / `legacy_users` / `koudens` / `kouden_members` / `purchases` を投入（`INSERT OR REPLACE`） |
+| 3a. D1 投入 | `cf d1 query`（または D1 の HTTP API）で `users` / `legacy_users` / `koudens` / `kouden_members` / `purchases` を投入。再実行で既存行を消さないよう `INSERT ... ON CONFLICT DO UPDATE` を使う（`INSERT OR REPLACE` は行を削除して入れ直すため、`ON DELETE CASCADE` で関連行まで消える） |
 | 3b. DO 投入 | 移行専用の内部エンドポイント `POST /internal/import/:koudenId`（Access サービストークンで保護。移行完了後に無効化）経由で `stub.importSnapshot(json)` を呼ぶ。DO は中身を全消去してから入れ直す |
 | 3c. 画像 | Supabase Storage（`return-items`、供物写真）から R2 の `koudens/{koudenId}/…` へコピー |
 | 4. 検証 | §5 の項目を香典帳ごとに比較し、1 件でも不一致があれば失敗にする |
@@ -64,7 +64,7 @@ flowchart LR
 |---|---|---|
 | — | `events` | 香典帳ごとに既定の行事「葬儀」を 1 件作成し、旧データはすべてここに入れる。受付番号は付けない（`receipt_no = NULL`） |
 | `relationships` | `relationships` | そのまま |
-| `kouden_entries` | `persons` + `gifts`（`kind = 'koden'`）+ `gift_contributors` | **1 件 = 1 人**として差出人を作る（自動での名寄せはしない。誤った統合を避けるため）。`attendance_type`: `FUNERAL` → `attended`、`CONDOLENCE_VISIT` → `condolence_visit`、`ABSENT` → `absent` |
+| `kouden_entries` | `persons` + `gifts`（`kind = 'koden'`）+ `gift_contributors` | **1 件 = 1 人**として差出人を作る（自動での名寄せはしない。誤った統合を避けるため）。`name` と `organization` がどちらも NULL の行は、差出人の必須条件を満たさないため `name = '（氏名未記入）'` とし、`notes` に移行時の補完であることを記録する（件数は §4 の事前調査で確認する）。`attendance_type`: `FUNERAL` → `attended`、`CONDOLENCE_VISIT` → `condolence_visit`、`ABSENT` → `absent` |
 | `offerings` | `gifts`（`kind` は `type` から `kumotsu` / `kyoka` / `other` に写像） | `provider_name`、`description`、`quantity`、`price`（→ `amount`）、`notes` を移す |
 | `offering_allocations` / `offering_entries` | `gift_contributors` | 紐づく香典の差出人を供物の差出人にする。`allocated_amount` → `share_amount`、`is_primary_contributor` → `is_primary`。紐づきがなければ `provider_name` で差出人を新規作成 |
 | `offering_photos` | `gift_photos` + R2 | 画像を R2 にコピーし、キーを書き換える |
@@ -86,7 +86,7 @@ flowchart LR
 
 | 時期 | 作業 |
 |---|---|
-| M0 | 本番 Supabase の件数を調査する（ユーザー数、Google / メールの内訳、香典帳数、最大の香典帳の件数、Storage の容量）。移行時間の見積もりに使う |
+| M0 | 本番 Supabase の件数を調査する（ユーザー数、Google / メールの内訳、香典帳数、最大の香典帳の件数、Storage の容量、`name` と `organization` がどちらも NULL の香典の件数）。移行時間の見積もりと変換規則の確認に使う |
 | M6 開始時 | 本番のスナップショットでステージングへのリハーサルを行う。**リハーサル用のデータは個人情報を含むため、ステージング（Access で保護）でのみ扱い、リハーサル後に削除する** |
 | 切り替え 14 日前 | 旧アプリにバナーとメールで告知する（停止日時、Google ログインへの一本化、メールログインの人への案内、保留中の招待は再発行が必要なこと） |
 | 切り替え 3 日前 | 最終リハーサル。所要時間を計測し、停止時間を確定する |
@@ -115,10 +115,13 @@ flowchart LR
 | T+0:10 | 最終の抽出と `pg_dump` のバックアップ | 中止し、メンテナンスを解除 |
 | T+0:30 | 変換 → D1 投入 → DO 投入 → 画像コピー | 本番の D1・DO・R2 を空にして再実行、または中止 |
 | T+1:30 | 検証レポートの確認、目視確認 | 中止し、メンテナンスを解除（旧データは変更していないので戻せる） |
-| T+2:00 | 内部の取り込みエンドポイントを無効化。新アプリを公開。旧ドメインから新ドメインへ 301 リダイレクト | 新アプリを非公開に戻し、メンテナンスを解除 |
-| T+2:30 | 運営者アカウントでログインを確認、テスト用香典帳で登録・同期・購入（テストモード）を確認 | — |
+| T+2:00 | 内部の取り込みエンドポイントを無効化。新アプリを**運営者限定で**公開（Cloudflare Access で運営者のみ許可） | 新アプリを非公開に戻し、メンテナンスを解除 |
+| T+2:30 | 運営者アカウントでログインを確認、テスト用香典帳で登録・同期・購入（テストモード）を確認。確認後、テスト用のデータを削除 | 新アプリを非公開に戻し、メンテナンスを解除 |
+| T+2:45 | Access の制限を外して一般公開し、旧ドメインから新ドメインへ 301 リダイレクト | 下記「一般公開後の切り戻し」 |
 
-**中止の判断基準**: 検証で 1 件でも不一致がある、または予定時間を 1 時間以上超過した場合は中止して旧アプリに戻す。旧アプリのデータはメンテナンス中に変更しないので、メンテナンスを解除するだけで元に戻る。
+**中止の判断基準**: 検証で 1 件でも不一致がある、または予定時間を 1 時間以上超過した場合は中止して旧アプリに戻す。一般公開（T+2:45）までは利用者の書き込みを受け付けず、旧アプリのデータもメンテナンス中に変更しないので、メンテナンスを解除するだけで元に戻る。
+
+**一般公開後の切り戻し**: 一般公開後は、新環境にだけ存在する書き込みが発生する。原則として前進修正（新アプリの修正をデプロイ）で対応する。どうしても旧アプリに戻す場合は、新アプリを再びメンテナンス状態にして書き込みを止め、一般公開以降に新環境で作成・更新されたデータ（変更ログで特定できる）を Supabase の形式に書き戻し、§5 と同じ項目で検証してから旧アプリのメンテナンスを解除する。書き戻しツールは移行ツールの逆変換として M6 で用意しておく。
 
 ## 7. 切り替え後
 

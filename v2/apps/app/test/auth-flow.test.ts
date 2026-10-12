@@ -1,5 +1,6 @@
 import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
+import { resolveUserFromGoogle } from "../src/auth/users.ts";
 import { makeApp, TARO } from "./helpers.ts";
 
 async function countSessions(userId: string): Promise<number> {
@@ -110,6 +111,48 @@ describe("旧アプリのユーザーの紐づけ", () => {
 		).first();
 		expect(legacy).toEqual({ linked_user_id: "legacy-user-1", linked_by: "auto" });
 		expect(await countSessions("legacy-user-1")).toBe(1);
+	});
+
+	it("同時ログインで別の Google アカウントが先に紐づけた場合、その旧ユーザーとしては扱わない", async () => {
+		await seedLegacyEmailUser(TARO.email);
+		// 旧ユーザーを探す SELECT の直後に、別のアカウント（other-sub）が先に紐づけた状態を作る
+		const racingDb = new Proxy(env.DB, {
+			get(target, prop) {
+				if (prop === "prepare") {
+					return (sql: string) => {
+						const stmt = target.prepare(sql);
+						if (!sql.includes("legacy_user_id IS NOT NULL")) return stmt;
+						return {
+							bind: (...args: unknown[]) => {
+								const bound = stmt.bind(...args);
+								return {
+									all: async () => {
+										const res = await bound.all();
+										await target
+											.prepare(
+												"UPDATE users SET google_sub = 'other-sub' WHERE id = 'legacy-user-1'",
+											)
+											.run();
+										return res;
+									},
+								};
+							},
+						};
+					};
+				}
+				const value: unknown = Reflect.get(target, prop);
+				return typeof value === "function" ? value.bind(target) : value;
+			},
+		});
+
+		const { userId, outcome } = await resolveUserFromGoogle(racingDb, TARO, new Date());
+
+		expect(userId).not.toBe("legacy-user-1");
+		expect(outcome).toBe("created");
+		const legacy = await env.DB.prepare(
+			"SELECT google_sub FROM users WHERE id = 'legacy-user-1'",
+		).first();
+		expect(legacy).toEqual({ google_sub: "other-sub" });
 	});
 
 	it("メールが未確認なら紐づけず、新しいユーザーを作る", async () => {

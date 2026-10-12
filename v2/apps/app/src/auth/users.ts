@@ -67,7 +67,7 @@ async function resolveOnce(
 		// 2 件以上一致したら自動では判断しない（運営者による手動紐づけに回す）
 		const [legacy] = results;
 		if (results.length === 1 && legacy) {
-			await db.batch([
+			const [linked] = await db.batch([
 				db
 					.prepare(
 						"UPDATE users SET google_sub = ?, email = ?, avatar_url = ?, updated_at = ? WHERE id = ? AND google_sub IS NULL",
@@ -80,6 +80,9 @@ async function resolveOnce(
 					)
 					.bind(legacy.id, nowIso, legacy.legacy_user_id),
 			]);
+			// 同時ログインで別の Google アカウントが先に紐づけた場合は 0 件になる。
+			// その旧ユーザーとして扱わず、最初からやり直す（既存の sub で見つかるか、新規作成になる）
+			if (linked?.meta.changes !== 1) return await resolveOnce(db, claims, now);
 			return { userId: legacy.id, outcome: "linked_legacy" };
 		}
 	}

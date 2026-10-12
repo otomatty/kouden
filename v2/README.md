@@ -33,7 +33,7 @@ bun run db:migrate:local         # ローカル D1 にマイグレーション�
 bun run dev                      # http://localhost:5173
 ```
 
-Google ログインを試すには、OAuth クライアントの値を `.dev.vars` の `GOOGLE_CLIENT_SECRET` と `apps/app/cloudflare.config.ts` の `GOOGLE_CLIENT_ID` に設定してください（承認済みのリダイレクト URI に `http://localhost:5173/auth/google/callback` を追加しておく）。
+Google ログインを試すには、OAuth クライアントの値を `.dev.vars` の `GOOGLE_CLIENT_SECRET` と `apps/app/deploy.settings.ts` の `development` の `googleClientId` に設定してください（承認済みのリダイレクト URI に `http://localhost:5173/auth/google/callback` を追加しておく）。
 
 ## よく使うコマンド（`v2/` で実行）
 
@@ -62,7 +62,7 @@ M0 のコードは揃っていますが、以下は Cloudflare・Google・GitHub
 2. **Google OAuth クライアントの作成**（Google Cloud Console）:
    - 種類: ウェブ アプリケーション
    - 承認済みのリダイレクト URI: `https://<ドメイン>/auth/google/callback`、`https://staging.<ドメイン>/auth/google/callback`、`http://localhost:5173/auth/google/callback`
-   - クライアント ID を `apps/app/cloudflare.config.ts` の `GOOGLE_CLIENT_ID` に設定する
+   - クライアント ID を `apps/app/deploy.settings.ts` の各 mode の `googleClientId` に設定する
    - 同意画面のブランド確認のため、取得したドメインを Search Console で所有確認する
 3. **Cloudflare の API トークン作成**: 権限は Workers Scripts・D1・Workers Routes / Custom Domains の編集。
 4. **GitHub の Environments（`staging` / `production`）にシークレットを登録**:

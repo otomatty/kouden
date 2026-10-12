@@ -23,6 +23,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # 依存パッケージのスクリプトから GitHub トークンを読めないよう、認証情報を残さない
+          persist-credentials: false
 
       # cf は Node.js 22 以上で動く
       - uses: actions/setup-node@v4

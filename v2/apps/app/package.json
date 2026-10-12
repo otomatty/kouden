@@ -11,7 +11,8 @@
 		"db:migrate:local": "bun scripts/d1-local-migrate.ts",
 		"db:migrate": "bun scripts/d1-migrate.ts",
 		"typecheck": "cf workers types && tsc && tsc -p tsconfig.node.json",
-		"test": "vitest run"
+		"test": "vitest run",
+		"check:deploy": "bun scripts/check-deploy-settings.ts"
 	},
 	"dependencies": {
 		"@kouden/domain": "workspace:*",

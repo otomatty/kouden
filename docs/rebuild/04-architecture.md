@@ -161,6 +161,18 @@ DO
 | `presence` | `[{userId, name, editing: {entity, id} \| null}]` | 閲覧中のメンバーと「○○さんが編集中」を表示 |
 | `revoked` | — | 権限が外された。接続を閉じて一覧へ戻す |
 
+### 権限の変更と接続の失効
+
+WebSocket は接続時にだけ権限を確認するため、メンバーシップが変わったら DO 側で既存の接続に反映する。
+
+| 操作（D1 の更新が成功した後） | Worker → DO | DO の処理 |
+|---|---|---|
+| メンバーの除外・本人の退出 | `stub.revokeUser(userId)` | `ctx.getWebSockets(userId)` で対象の接続を取り出し、`revoked` を送って閉じる |
+| ロールの変更・オーナー譲渡 | `stub.updateMemberRole(userId, role)` | 対象の接続の attachment の `role` を更新し、`changed`（entity: `member`）を送る。画面は取り直しで新しいロールの表示になる |
+| 香典帳の削除 | `stub.deleteAll()` の前に全員を `revoked` | 全接続に `revoked` を送って閉じる |
+
+D1 の更新と DO への通知の間で失敗しても、権限の正は D1 にあり、各端末が取り直す HTTP 要求はその都度 D1 で権限確認されるため、閲覧できるのは通知（`changed` の種類と ID）までに限られる。DO への通知が失敗した場合は Worker が再試行する。
+
 **HTML ではなく通知だけを送る**のがポイント。部分 HTML は各端末が通常の GET で取り直すので、ロールによる表示の違い（編集ボタンの有無など）を DO 側で考える必要がない。
 
 ### ブラウザ側
@@ -225,10 +237,14 @@ ws.onmessage = (e) => {
   Checkout Session（mode=payment, ¥2,980, metadata: {kouden_id, user_id}）を作成してリダイレクト
 POST /webhooks/stripe
   1. 署名検証（stripe SDK の constructEventAsync。Workers の Web Crypto で動作）
-  2. stripe_events に event_id を INSERT（重複なら 200 で即終了）
-  3. checkout.session.completed かつ payment_status=paid:
-     db.batch([ purchases INSERT, koudens.plan = 'paid' ])
-  4. charge.refunded: purchases.status = 'refunded'、有効な購入がなくなれば plan = 'free'
+  2. イベントの記録と D1 の更新を、1 つの db.batch() で原子的に確定する
+     checkout.session.completed かつ payment_status=paid:
+       db.batch([ stripe_events INSERT, purchases INSERT, koudens.plan = 'paid' ])
+     charge.refunded:
+       db.batch([ stripe_events INSERT, purchases.status = 'refunded',
+                  有効な購入がなければ koudens.plan = 'free' ])
+  3. stripe_events の主キー重複でバッチが失敗した場合は処理済みとみなして 200 を返す
+     それ以外の失敗は 500 を返す（バッチ全体がロールバックされるので、Stripe の再送で再処理される）
 ```
 
 `plan` は D1 が正で、DO は毎回の呼び出しで受け取るため、DO への通知は不要。返金で `free` に戻っても既存の記録は消さず、新規登録だけが止まる。

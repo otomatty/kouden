@@ -44,10 +44,14 @@ function cf(args: string[]): string {
 
 let databaseId = settings.d1.id;
 if (!databaseId) {
-	const list = JSON.parse(cf(["d1", "list", "--name", settings.d1.name])) as Array<{
-		uuid: string;
-		name: string;
-	}>;
+	const raw = cf(["d1", "list", "--name", settings.d1.name]);
+	let list: Array<{ uuid: string; name: string }>;
+	try {
+		list = JSON.parse(raw) as Array<{ uuid: string; name: string }>;
+	} catch {
+		console.error(`cf d1 list の出力を JSON として解析できませんでした:\n${raw}`);
+		process.exit(1);
+	}
 	databaseId = list.find((db) => db.name === settings.d1.name)?.uuid;
 	if (!databaseId && values["allow-missing"]) {
 		console.warn(`D1 "${settings.d1.name}" はまだありません。マイグレーションをスキップします`);

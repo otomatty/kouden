@@ -26,10 +26,7 @@ export default defineConfig(({ mode }) => {
 			],
 			env: {
 				APP_ORIGIN: bindings.text(s.origin),
-				GOOGLE_CLIENT_ID: bindings.text(
-					// TODO(M0): Google Cloud で OAuth クライアントを作成したら置き換える
-					"REPLACE_ME.apps.googleusercontent.com",
-				),
+				GOOGLE_CLIENT_ID: bindings.text(s.googleClientId),
 				GOOGLE_CLIENT_SECRET: bindings.secret(),
 				SESSION_SECRET: bindings.secret(),
 				DB: bindings.d1({ name: s.d1.name, id: s.d1.id }),
