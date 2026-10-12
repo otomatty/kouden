@@ -3,6 +3,14 @@
 
 ---
 
+## v2（Cloudflare 版）について
+
+リポジトリ直下の Next.js + Supabase 実装は、Cloudflare Workers 版へ全面的に作り直し中です。
+新しい実装は `v2/`（独立した Bun ワークスペース）にあり、設計は `docs/rebuild/` にあります。
+`v2/` の作業では、以下の旧実装向けのガイドラインではなく `v2/README.md` と `docs/rebuild/` に従ってください。
+
+---
+
 ## 概要
 
 香典帳（Kouden）は、葬儀・法要における香典・供物の記録・管理を行う **Next.js 15 App Router** の Web アプリケーションです。

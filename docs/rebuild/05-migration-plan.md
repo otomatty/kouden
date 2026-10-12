@@ -6,7 +6,7 @@
 
 | # | マイルストーン | 内容 | 対応ストーリー |
 |---|---|---|---|
-| M0 | 基盤 | ドメイン取得、Cloudflare リソース作成、モノレポ・wrangler・CI、Tailwind・レイアウト、Google ログイン・セッション、公開サイトの骨格 | E1-1, E1-3, E11 |
+| M0 | 基盤 | ドメイン取得、Cloudflare リソース作成、モノレポ・`cf`・CI、Tailwind・レイアウト、Google ログイン・セッション、公開サイトの骨格 | E1-1, E1-3, E11 |
 | M1 | 台帳の骨格 | 香典帳の作成・一覧、`KoudenLedger` DO（マイグレーション機構・変更ログ）、行事・関係、いただきもの・差出人の CRUD、受付番号、受付画面、合計 | E2, E4-1〜6, E5-1, E5-3, E7-1 |
 | M2 | 共同編集 | メンバー・招待リンク・ロール、WebSocket による同期・編集中表示・競合検出、変更履歴、オーナー譲渡、退出 | E3, E8 |
 | M3 | 香典返し | カタログ（R2 画像）、金額帯ルール、一括提案、状況管理、リマインド（DO アラーム + Email Service） | E6 |
@@ -28,13 +28,13 @@ flowchart LR
   d1 & do & r2 -->|4. 検証| report["検証レポート"]
 ```
 
-ツールは `tools/migrate-from-supabase/` に置き、Bun で実行する。各段階は**冪等**（何度実行しても同じ結果）にする。
+ツールは `v2/tools/migrate-from-supabase/` に置き、Bun で実行する。各段階は**冪等**（何度実行しても同じ結果）にする。
 
 | 段階 | 処理 |
 |---|---|
 | 1. 抽出 | Supabase の service key で全テーブルを読み、香典帳ごとの JSON にまとめる。Storage のオブジェクト一覧も取る |
 | 2. 変換 | §3 の対応表に従って新しい形に変換する。ID は旧 UUID から決定的に生成（UUIDv5）し、再実行しても同じ ID になるようにする |
-| 3a. D1 投入 | `wrangler d1 execute --file` で `users` / `legacy_users` / `koudens` / `kouden_members` / `purchases` を投入（`INSERT OR REPLACE`） |
+| 3a. D1 投入 | `cf d1 query`（または D1 の HTTP API）で `users` / `legacy_users` / `koudens` / `kouden_members` / `purchases` を投入（`INSERT OR REPLACE`） |
 | 3b. DO 投入 | 移行専用の内部エンドポイント `POST /internal/import/:koudenId`（Access サービストークンで保護。移行完了後に無効化）経由で `stub.importSnapshot(json)` を呼ぶ。DO は中身を全消去してから入れ直す |
 | 3c. 画像 | Supabase Storage（`return-items`、供物写真）から R2 の `koudens/{koudenId}/…` へコピー |
 | 4. 検証 | §5 の項目を香典帳ごとに比較し、1 件でも不一致があれば失敗にする |

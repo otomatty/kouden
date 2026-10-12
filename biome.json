@@ -13,7 +13,8 @@
 			"**/dist/**",
 			"**/build/**",
 			"**/coverage/**",
-			"**/public/**"
+			"**/public/**",
+			"v2/**"
 		]
 	},
 	"formatter": {

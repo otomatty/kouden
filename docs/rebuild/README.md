@@ -10,6 +10,8 @@
 | 04 | [アーキテクチャ](./04-architecture.md) | Worker 構成、認証、リアルタイム、画面技術、運用 |
 | 05 | [移行計画](./05-migration-plan.md) | 実装マイルストーン、Supabase からのデータ移行、切り替え手順 |
 
+実装は [`v2/`](../../v2/README.md) にある。
+
 ## 一行サマリー
 
 **Hono（JSX SSR + htmx）on Cloudflare Workers。香典帳 1 冊 = 1 Durable Object（SQLite）、横断データは D1、ファイルは R2。認証は Google OIDC を自前実装、運営者画面のみ Cloudflare Access。**
@@ -24,3 +26,4 @@
 | Excel 生成ライブラリ | Workers 上で動作するものを PoC で選定（[04 §8](./04-architecture.md#8-帳票出力)） | M4 着手前 |
 | Google OAuth のブランド確認 | 取得ドメインで Search Console 所有確認が必要 | M0 |
 | Cloudflare Email Service | ベータ版。GA 前に問題があれば Resend に差し替え（`Mailer` で抽象化済み） | M3 |
+| `cf` CLI / Vite plugin 2.0 | ベータ版。回避策と撤退条件は [ADR-T15](./01-decisions.md#adr-t15-cli-は-cfベータ-vite-を使う) | 正式版リリース時 |

@@ -47,7 +47,7 @@ flowchart TB
 | R2 | `kouden-files` | 返礼品画像・供物写真（非公開。Worker 経由で権限確認して配信） |
 | Static Assets | `kouden-app` に同梱 | Tailwind のビルド成果物、htmx、自前の小さなスクリプト |
 | Email Service | `send_email` binding | リマインドメール（`noreply@example.jp`） |
-| Rate Limiting | `ratelimit` binding | ログイン・書き込み・招待受諾の回数制限 |
+| Rate Limiting | `AUTH_RATE_LIMITER` ほか | ログイン・書き込み・招待受諾の回数制限 |
 | Cron Triggers | 毎日 03:00 JST | 期限切れセッション・招待の削除、`deleting` の香典帳の再処理、統計の整合確認 |
 
 **ドメイン**: `example.jp`（本番）、`admin.example.jp`（運営者）、`staging.example.jp`（ステージング、Access で保護）。
@@ -57,27 +57,32 @@ flowchart TB
 Bun workspaces によるモノレポ。
 
 ```
-.
+v2/                              # 切り替えまでの間、旧実装と同居させる（ADR-T13）
 ├── apps/
-│   ├── app/                    # kouden-app Worker
+│   ├── app/                     # kouden-app Worker
+│   │   ├── cloudflare.config.ts # Worker の設定（mode ごと）
+│   │   ├── deploy.settings.ts   # mode ごとの Worker 名・ドメイン・D1 名など
+│   │   ├── vite.config.ts
+│   │   ├── vitest.config.ts     # テスト用 binding（cloudflare.config.ts と一致を検査）
+│   │   ├── migrations/          # D1 マイグレーション
+│   │   ├── scripts/             # D1 マイグレーション適用（ローカル / リモート）
+│   │   ├── public/              # Static Assets（Tailwind の出力先を含む）
 │   │   ├── src/
-│   │   │   ├── index.ts        # Hono エントリ、DO の export
-│   │   │   ├── routes/         # 画面・API（機能ごと）
-│   │   │   ├── views/          # JSX（ページ・部分テンプレート）
-│   │   │   ├── middleware/     # session, kouden-access, csrf, rate-limit
-│   │   │   ├── ledger/         # KoudenLedger（DO）とその SQL・マイグレーション
-│   │   │   ├── auth/           # Google OIDC
-│   │   │   └── billing/        # Stripe
-│   │   ├── public/             # Static Assets
-│   │   ├── migrations/         # D1 マイグレーション（wrangler d1 migrations）
-│   │   └── wrangler.jsonc
-│   └── admin/                  # kouden-admin Worker
+│   │   │   ├── index.ts         # エントリ（fetch / scheduled）、DO の export
+│   │   │   ├── app.tsx          # Hono アプリの組み立て
+│   │   │   ├── routes/          # 画面・API（機能ごと）
+│   │   │   ├── views/           # JSX（レイアウト・ページ・部分テンプレート）
+│   │   │   ├── middleware/      # request-context, session, security（CSRF・CSP）
+│   │   │   ├── auth/            # Google OIDC・セッション・ユーザー解決
+│   │   │   ├── ledger/          # KoudenLedger（DO）とその SQL・マイグレーション（M1〜）
+│   │   │   └── billing/         # Stripe（M4〜）
+│   │   └── test/
+│   └── admin/                   # kouden-admin Worker（M5〜）
 ├── packages/
-│   ├── domain/                 # 純粋な TS: 金額計算、香典返し提案、バリデーション（Zod）
-│   └── ui/                     # 共通 JSX コンポーネント、Tailwind 設定
-├── tools/
-│   └── migrate-from-supabase/  # 移行ツール（05 参照）
-└── docs/rebuild/
+│   ├── domain/                  # 純粋な TS: ID 生成、料金、金額計算、香典返し提案、バリデーション
+│   └── ui/                      # 共通 JSX コンポーネント（admin を作る M5 で切り出す）
+└── tools/
+    └── migrate-from-supabase/   # 移行ツール（M6、05 参照）
 ```
 
 **方針**: 業務ルール（金額計算・提案ロジック・入力検証）は `packages/domain` に純粋関数として置き、DO・画面・移行ツールから共有する。DO は「永続化と直列化」、Worker は「認証・認可・描画」に専念する。
@@ -114,12 +119,12 @@ GET /k/:koudenId/gifts
      b. なければ email_verified = true かつ legacy_users.email が一致し未紐づけ
         → 旧ユーザーのレコードに google_sub を設定して紐づけ（linked_by = 'auto'）
      c. どちらもなければ新規作成
-  4. セッション発行: 32 バイトの乱数 → Cookie `__Host-kouden_session`（HttpOnly, Secure, SameSite=Lax, Path=/）
+  4. セッション発行: 32 バイトの乱数 → Cookie `__Host-kouden_session`（HttpOnly, Secure, SameSite=Lax, Path=/, 30 日）
                      D1 には SHA-256 ハッシュのみ保存
   5. 元の URL（招待リンクなど）へリダイレクト
 ```
 
-- ライブラリは実装時に選定する（候補: `arctic`、`@hono/oauth-providers`）。ID トークンの検証は `jose` 相当の処理で自前でも行う。
+- OAuth ライブラリは使わず、認可 URL の組み立てとトークン交換は自前で実装した（数十行）。ID トークンは `jose` で Google の JWKS を使って検証する（`iss`, `aud`, `exp`, `nonce`）。state・nonce・PKCE の値は、署名付きの短命 Cookie `__Host-kouden_oauth` に入れる。
 - Google の `sub` はアカウント固有で、OAuth クライアントが変わっても同じ値になる。旧 Supabase の Google ユーザーは `auth.identities.provider_id` に `sub` が入っているので、移行時に `users.google_sub` を事前に埋めておける（[05](./05-migration-plan.md)）。
 
 ### CSRF 対策
@@ -251,16 +256,16 @@ class CloudflareMailer implements Mailer { /* env.EMAIL.send(...) */ }
 
 | 環境 | Worker 名 | D1 / R2 | 公開範囲 |
 |---|---|---|---|
-| ローカル | `wrangler dev`（Miniflare） | ローカルの模擬環境 | 開発者のみ |
+| ローカル（`development`） | `bun run dev`（`cf dev` + Tailwind の監視） | `.cloudflare/state` の模擬環境 | 開発者のみ |
 | ステージング | `kouden-app-staging` / `kouden-admin-staging` | `kouden-db-staging` / `kouden-files-staging` | `staging.example.jp`。Access で開発者のみ |
 | 本番 | `kouden-app` / `kouden-admin` | `kouden-db` / `kouden-files` | `example.jp` |
 
-DO の名前空間は Worker ごとに独立するため、Worker 名を分ければ環境ごとに自動で分離される。
+環境は `cf` の mode で切り替える（`--mode staging` など）。Worker 名・ドメイン・D1 名は `deploy.settings.ts` に集約している。DO の名前空間は Worker ごとに独立するため、Worker 名を分ければ環境ごとに自動で分離される。
 
 **GitHub Actions**
-1. PR: `oxlint` → `oxfmt --check` → `tsc --noEmit` → `vitest`（`@cloudflare/vitest-pool-workers` で D1・DO を含めて実行）
-2. `main` へのマージ: D1 マイグレーション適用 → ステージングへデプロイ → Playwright の E2E
-3. 本番: 手動実行のワークフロー（ステージングで確認済みのコミットを指定）
+1. `v2-ci.yml`（PR と `main` への push、`v2/` 配下の変更時）: `oxfmt --check` → `oxlint` → 型チェック → `vitest`（`@cloudflare/vitest-plugin` で D1・DO を含めて Workers ランタイム上で実行）→ `cf build`
+2. `v2-deploy.yml`（手動実行。`staging` / `production` を選ぶ）: テスト → D1 マイグレーション → `cf deploy --secrets-file` → （初回のみ）D1 マイグレーション。GitHub の Environments でシークレットと承認ルールを管理する
+3. ステージングへのデプロイ後の Playwright による E2E は M1 以降で追加する
 
 ## 11. 運用
 
@@ -270,4 +275,4 @@ DO の名前空間は Worker ごとに独立するため、Worker 名を分け�
 | アラート | Cloudflare の通知機能で、エラー率・CPU 超過を通知 |
 | バックアップ | D1 Time Travel（30 日）、DO SQLite の Point-in-Time Recovery（30 日）。加えて週次で全香典帳のエクスポートを R2 の別バケット（ライフサイクル 90 日）に保存する |
 | 回数制限 | ログイン開始: IP ごと 20 回/分。書き込み: ユーザーごと 120 回/分。招待受諾: IP ごと 10 回/分 |
-| シークレット | `GOOGLE_CLIENT_SECRET`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `SESSION_COOKIE_SECRET` は `wrangler secret` で管理 |
+| シークレット | `GOOGLE_CLIENT_SECRET`, `SESSION_SECRET`（M4 で `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` を追加）。GitHub の Environments に保存し、デプロイ時に `cf deploy --secrets-file` で渡す。ローカルは `.dev.vars` |

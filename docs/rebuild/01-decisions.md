@@ -114,17 +114,33 @@
 - **決定**: Checkout Session を作成し、Webhook（署名検証 + イベント ID で冪等化）で購入を確定する。
 
 ### ADR-T10 開発ツール
-- **決定**: Bun（パッケージ管理・スクリプト）、Oxlint、oxfmt、TypeScript、Vitest + `@cloudflare/vitest-pool-workers`、Playwright。
+- **決定**: Bun（パッケージ管理・スクリプト）、`cf`（ADR-T15）、Oxlint、oxfmt、TypeScript 7、Vitest + `@cloudflare/vitest-plugin`、Playwright。
 - **注意**: oxfmt は 1.0 未到達のため、バージョンを固定し、更新は差分を確認してから行う。
+- **注意**: Vitest 5 のファイルシステムキャッシュ（`fsModuleCache`）は `@cloudflare/vitest-plugin` 1.4.0 と組み合わせると失敗するため無効にしている。
 
 ### ADR-T11 監視は Workers Logs / Observability のみ
 - **決定**: 構造化 JSON ログ（requestId・userId・koudenId を付与）。外部監視サービスは使わない。
 
 ### ADR-T12 環境は本番 + ステージング
-- **決定**: wrangler の environments で D1・R2・DO を分離する。ステージングはホスト全体を Cloudflare Access で保護する。
+- **決定**: `cf` の mode（`development` / `staging` / `production`）で Worker 名・D1・R2 を分離する。DO の名前空間は Worker ごとに分かれるので、Worker 名を分ければ自動で分離される。ステージングはホスト全体を Cloudflare Access で保護する。
 
 ### ADR-T13 リポジトリは同一リポジトリで全面置き換え
-- **決定**: 開発中は新実装を `apps/` `packages/` `tools/` に置き、旧実装（`src/` ほか）と同居させる（旧アプリは切り替えまで Vercel で動き続ける）。切り替え後に `legacy-nextjs` タグを打ち、旧実装を `main` から削除する。移行ツールも同じリポジトリに置く。
+- **決定**: 開発中は新実装を `v2/`（独立した Bun ワークスペース。中に `apps/` `packages/` `tools/`）に置き、旧実装（`src/` ほか）と同居させる。旧アプリは切り替えまで Vercel で動き続ける。切り替え後に `legacy-nextjs` タグを打ち、旧実装を削除して `v2/` の中身をリポジトリ直下へ移す。移行ツールも同じリポジトリに置く。
+- **理由**: 旧実装の `package.json`・`tsconfig.json`・Biome がリポジトリ直下にあり、そこにワークスペースを足すと旧アプリのビルドに影響するため。旧実装側の `tsconfig.json` と `biome.json` では `v2` を対象外にしている。
 
 ### ADR-T14 切り替えはメンテナンス停止による一括移行
 - **決定**: ステージングでリハーサルした後、告知した日時に旧アプリを停止して全データを移す。
+
+### ADR-T15 CLI は `cf`（ベータ）+ Vite を使う
+- **決定**: wrangler ではなく Cloudflare CLI `cf` を使う。設定は TypeScript の `cloudflare.config.ts`、ビルドは Vite（`@cloudflare/vite-plugin` 2.0 beta）。`cf` と Vite plugin はバージョンを固定する。
+- **理由**: 設定が型付きで、binding の型が自動生成される。mode ごとに完全な設定を返すので、環境ごとの設定漏れが起きにくい。DO は `exports.durableObject({ storage: "sqlite" })` の宣言だけで済み、`migrations` の履歴管理が不要。
+- **ベータ版ゆえの回避策**（M0 時点、`cf` 1.0.0-beta.14）:
+
+  | 課題 | 回避策 |
+  |---|---|
+  | `cf` にライブログ（tail）がない | Workers Logs のダッシュボードを使う。必要時のみ `npx wrangler tail <Worker 名>` |
+  | シークレットを 1 つだけ登録できない | デプロイ時に `cf deploy --secrets-file` で渡す（CI で実施） |
+  | Vitest 連携が `cloudflare.config.ts` を読めない | `vitest.config.ts` に binding を宣言し、キーが一致するかを起動時に検査する |
+  | `cf d1 migrations apply --local` が不安定（応答が返らないことがある） | ローカル D1 は Miniflare を直接使うスクリプト（`bun run db:migrate:local`）で適用する |
+  | `cf d1 migrations apply` は ID しか受け付けず、既定でリモートに適用する | `bun run db:migrate -- --mode <mode>` が名前から ID を引いて適用する |
+- **撤退条件**: 正式版までに重大な不具合が続く場合は、`cloudflare.config.ts` を `wrangler.jsonc` に書き直して wrangler に戻す（アプリのコードはそのまま使える）。
