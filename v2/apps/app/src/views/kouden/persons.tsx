@@ -468,6 +468,30 @@ export const PersonPage: FC<{
 				</ul>
 			</section>
 
+			<PersonReturnPanel kouden={kouden} person={person} canWrite={canWrite} />
+			{history && <HistoryList history={history} />}
+			<p>
+				<a href={`${base}/persons`} class={ui.link}>
+					← 差出人一覧へ
+				</a>
+			</p>
+		</div>
+	);
+};
+
+/** 差出人の香典返し（他の人が作成・変更したら取り直す） */
+export const PersonReturnPanel: FC<{
+	kouden: KoudenContext;
+	person: PersonDetail;
+	canWrite: boolean;
+}> = ({ kouden, person, canWrite }) => {
+	const base = `/k/${kouden.id}`;
+	return (
+		<LiveRegion
+			id="person-return-panel"
+			entities={["return"]}
+			url={`${base}/persons/${person.id}?partial=return`}
+		>
 			<section aria-labelledby="person-return" class={`${ui.cardTight} space-y-2 text-sm`}>
 				<h3 id="person-return" class={ui.h3}>
 					香典返し
@@ -490,12 +514,6 @@ export const PersonPage: FC<{
 					<p class="text-muted">まだ作成していません。</p>
 				)}
 			</section>
-			{history && <HistoryList history={history} />}
-			<p>
-				<a href={`${base}/persons`} class={ui.link}>
-					← 差出人一覧へ
-				</a>
-			</p>
-		</div>
+		</LiveRegion>
 	);
 };

@@ -251,6 +251,50 @@ describe("香典返しの一括提案と状況（E6-2〜E6-4）", () => {
 		);
 		expect(item.status).toBe(403);
 	});
+
+	it("閲覧者の画面にも、保存した当日返し・期限・電話番号を表示する", async () => {
+		const { taro, koudenId, give } = await setup();
+		await give("高橋 一郎", "10000");
+		const persons = await (await taro.request(`/k/${koudenId}/persons`)).text();
+		const personId = /\/persons\/([0-9a-f-]{36})"/.exec(persons)?.[1] ?? "";
+		const path =
+			(await taro.request(`/k/${koudenId}/persons/${personId}/return`, formPost({}))).headers.get(
+				"location",
+			) ?? "";
+		await taro.request(
+			path,
+			formPost({
+				version: "1",
+				status: "pending",
+				onDayAmount: "2000",
+				dueDate: "2026-12-20",
+				shipPhone: "03-1234-5678",
+			}),
+		);
+		const hanako = makeApp(HANAKO);
+		await hanako.login();
+		await addMember(koudenId, HANAKO.email, "viewer");
+		const page = await (await hanako.request(path)).text();
+		expect(page).not.toContain('name="status"');
+		expect(page).toContain("¥2,000");
+		expect(page).toContain("2026年12月20日");
+		expect(page).toContain("03-1234-5678");
+	});
+
+	it("差出人の画面の香典返しの欄は、部分だけを取り直せる", async () => {
+		const { taro, koudenId, give } = await setup();
+		await give("高橋 一郎", "10000");
+		const persons = await (await taro.request(`/k/${koudenId}/persons`)).text();
+		const personId = /\/persons\/([0-9a-f-]{36})"/.exec(persons)?.[1] ?? "";
+		const url = `/k/${koudenId}/persons/${personId}?partial=return`;
+		const before = await (await taro.request(url)).text();
+		expect(before).toContain("香典返しを作成");
+		expect(before).not.toContain("<html");
+		await taro.request(`/k/${koudenId}/persons/${personId}/return`, formPost({}));
+		const after = await (await taro.request(url)).text();
+		expect(after).toContain("香典返しを開く");
+		expect(after).toContain('data-live="return"');
+	});
 });
 
 describe("期限のお知らせの設定（E6-5）", () => {

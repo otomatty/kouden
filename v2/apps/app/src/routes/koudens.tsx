@@ -28,6 +28,7 @@ import { PersonCandidates } from "../views/kouden/person-candidates.tsx";
 import {
 	PersonEditRow,
 	PersonPage,
+	PersonReturnPanel,
 	PersonRow,
 	PersonsPage,
 	PersonsTable,
@@ -595,7 +596,21 @@ async function renderPerson(
 	);
 }
 
-k.get("/persons/:personId", (c) => renderPerson(c, c.req.param("personId")));
+k.get("/persons/:personId", async (c) => {
+	// 他の人が香典返しを作成・変更したときは、その欄だけを返す（ledger-live.js）
+	if (c.req.query("partial") === "return") {
+		const person = await ledger(c).getPerson(c.get("caller"), c.req.param("personId"));
+		if (!person.ok) return commonFailure(c, person.error);
+		return c.html(
+			<PersonReturnPanel
+				kouden={c.get("kouden")}
+				person={person.value}
+				canWrite={can(c.get("caller").role, "ledger.write")}
+			/>,
+		);
+	}
+	return renderPerson(c, c.req.param("personId"));
+});
 
 k.post("/persons/:personId", async (c) => {
 	const personId = c.req.param("personId");

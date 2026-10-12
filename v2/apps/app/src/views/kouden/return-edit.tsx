@@ -367,6 +367,10 @@ export const ReturnEditPage: FC<{
 					<dl class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-sm">
 						<dt class="text-muted">渡し方</dt>
 						<dd>{ret.method ? RETURN_METHODS[ret.method] : "未定"}</dd>
+						<dt class="text-muted">当日返しの額</dt>
+						<dd class="tabular-nums">{ret.onDayAmount > 0 ? formatYen(ret.onDayAmount) : "—"}</dd>
+						<dt class="text-muted">期限</dt>
+						<dd>{formatDate(ret.dueDate ?? dueDate) || "—"}</dd>
 						<dt class="text-muted">手配日</dt>
 						<dd>{formatDate(ret.arrangedAt) || "—"}</dd>
 						<dt class="text-muted">発送日</dt>
@@ -376,6 +380,8 @@ export const ReturnEditPage: FC<{
 							{ret.shipName ?? label} {ret.shipPostalCode && `〒${ret.shipPostalCode}`}{" "}
 							{ret.shipAddress ?? person.address ?? ""}
 						</dd>
+						<dt class="text-muted">送付先の電話番号</dt>
+						<dd>{ret.shipPhone ?? person.phone ?? "—"}</dd>
 						{ret.notes && (
 							<>
 								<dt class="text-muted">備考</dt>
