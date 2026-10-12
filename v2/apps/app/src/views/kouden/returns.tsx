@@ -237,7 +237,9 @@ const Proposals: FC<{
 											</label>
 											<select id={`item-${person.id}`} name={`item_${person.id}`} class={ui.input}>
 												<option value="" selected={suggestion.item === null}>
-													{onDay > 0 ? "品なし（当日返しで済み）" : "品なし（後で決める）"}
+													{onDay > 0 && suggestion.target === 0
+														? "品なし（当日返しで済み）"
+														: "品なし（後で決める）"}
 												</option>
 												{activeItems.map((i) => (
 													<option value={i.id} selected={i.id === suggestion.item?.id}>

@@ -9,6 +9,7 @@ import {
 import { env, runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 import { ledgerFor } from "../src/ledger/client.ts";
+import { MIGRATIONS } from "../src/ledger/schema.ts";
 import type { Mail } from "../src/lib/mailer.ts";
 import type { Caller, LedgerResult } from "../src/ledger/types.ts";
 
@@ -99,7 +100,7 @@ describe("香典返し（DO）", () => {
 		const result = unwrap(
 			await ledger.confirmReturns(caller, [
 				{ personId: taro, itemId: towel.id, onDayAmount: 0 },
-				{ personId: jiro, itemId: null, onDayAmount: 2000 },
+				{ personId: jiro, itemId: null, onDayAmount: 2500 },
 			]),
 		);
 		expect(result).toEqual({ created: 2, skipped: 0 });
@@ -113,17 +114,27 @@ describe("香典返し（DO）", () => {
 		expect(taroRow?.ret?.lines).toEqual([
 			expect.objectContaining({ name: "タオル", unitPrice: 5000, quantity: 1 }),
 		]);
-		// 品がなく当日返しを渡していれば、当日返し済み
+		// 品がなく、当日返し（2,500 円）で目安額（5,000 円の半返し）を満たしていれば、当日返し済み
 		expect(board.rows.find((r) => r.person.id === jiro)?.ret).toMatchObject({
 			status: "handed_on_day",
 			method: "on_day",
-			onDayAmount: 2000,
+			onDayAmount: 2500,
 		});
 
 		const again = await ledger.confirmReturns(caller, [
 			{ personId: taro, itemId: towel.id, onDayAmount: 0 },
 		]);
 		expect(again).toMatchObject({ ok: false, error: { code: "invalid" } });
+	});
+
+	it("品なしで確定しても、当日返しで目安額に届かなければ「未対応」にする", async () => {
+		const { caller, ledger, taro } = await withGifts();
+		unwrap(
+			await ledger.confirmReturns(caller, [{ personId: taro, itemId: null, onDayAmount: 2000 }]),
+		);
+		const row = unwrap(await ledger.returnsBoard(caller)).rows.find((r) => r.person.id === taro);
+		// 10,000 円の半返し 5,000 円 − 当日返し 2,000 円 = 残り 3,000 円
+		expect(row?.ret).toMatchObject({ status: "pending", method: null, onDayAmount: 2000 });
 	});
 
 	it("状況の変更: 手配済み・発送済みにすると日付が入り、明細の追加・削除で version が進む", async () => {
@@ -209,6 +220,39 @@ const reminders = (ledger: ReturnType<typeof setup>["ledger"]) =>
 	);
 
 describe("期限のお知らせ（E6-5）", () => {
+	it("スキーマの移行より前に日付を入れた四十九日にも、お知らせを予定してアラームを予約する", async () => {
+		const { caller, ledger } = setup();
+		const date = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
+		// M3 より前（スキーマ 1）の台帳を用意する
+		await runInDurableObject(ledger, (_obj, state) => {
+			const sql = state.storage.sql;
+			sql.exec("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)");
+			sql.exec(MIGRATIONS[0] ?? "");
+			const now = new Date().toISOString();
+			sql.exec(
+				"INSERT INTO meta (key, value) VALUES ('schema_version', '1'), ('kouden_id', ?), ('created_at', ?)",
+				caller.koudenId,
+				now,
+			);
+			sql.exec(
+				`INSERT INTO events (id, kind, name, date, sort_order, created_at, updated_at)
+         VALUES ('ev-49', 'memorial_49', '四十九日', ?, 1, ?, ?)`,
+				date,
+				now,
+				now,
+			);
+		});
+		// 移行後の最初の読み取りで、お知らせの予定とアラームができる
+		unwrap(await ledger.listEvents(caller));
+		const list = await reminders(ledger);
+		expect(list.map((r) => r.kind)).toEqual(["return_due_14d", "return_due_3d"]);
+		expect(list[0]?.fire_at).toBe(
+			new Date(Date.parse(`${date}T00:00:00Z`) - 14 * 86_400_000).toISOString(),
+		);
+		const alarm = await runInDurableObject(ledger, (_obj, state) => state.storage.getAlarm());
+		expect(alarm).toBe(Date.parse(list[0]!.fire_at));
+	});
+
 	it("四十九日の日付から 14 日前・3 日前のお知らせを作り、日付を変えると作り直す", async () => {
 		const ctx = await withGifts();
 		const { id, date } = await addMemorial(ctx);

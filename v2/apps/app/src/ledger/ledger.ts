@@ -21,6 +21,7 @@ import {
 	type ReturnLineInput,
 	type ReturnRuleInput,
 	reminderSchedule,
+	suggestReturn,
 	toSearchKey,
 	uuidv7,
 } from "@kouden/domain";
@@ -214,6 +215,8 @@ const PERSON_COLUMNS = `p.id, p.name, p.name_kana, p.organization, p.position, p
 export class KoudenLedger extends DurableObject<Env> {
 	/** unknown: まだ確認していない / ready: スキーマ適用済み / deleted: 香典帳が削除済み */
 	private state: "unknown" | "ready" | "deleted" = "unknown";
+	/** この起動でスキーマを移行した（移行で作ったお知らせのアラームを予約する必要がある） */
+	private migratedNow = false;
 
 	/** お知らせメールの送信（テストでは差し替える） */
 	mailer: Mailer;
@@ -1132,6 +1135,8 @@ export class KoudenLedger extends DurableObject<Env> {
 			}
 			let created = 0;
 			let skipped = 0;
+			const totals = this.personTotals();
+			const rules = this.returnRules();
 			for (const entry of entries) {
 				const person = this.first<Row>(
 					"SELECT id FROM persons WHERE id = ? AND deleted_at IS NULL",
@@ -1147,8 +1152,15 @@ export class KoudenLedger extends DurableObject<Env> {
 				}
 				const item = entry.itemId === null ? null : this.activeItem(entry.itemId);
 				const onDay = Math.max(0, entry.onDayAmount);
-				// 品がなく当日返しを渡していれば、当日返しで済んだものとして扱う
-				const settledOnDay = item === null && onDay > 0;
+				// 品がなく、当日返しで目安額を満たしていれば、当日返しで済んだものとして扱う
+				// （目安額が残っていれば、品を後で決める「未対応」にする）
+				const target = suggestReturn({
+					total: totals.get(entry.personId)?.kodenTotal ?? 0,
+					onDayAmount: onDay,
+					rules,
+					items: [],
+				}).target;
+				const settledOnDay = item === null && onDay > 0 && target === 0;
 				const id = uuidv7();
 				const record = {
 					status: settledOnDay ? "handed_on_day" : "pending",
@@ -1697,7 +1709,9 @@ export class KoudenLedger extends DurableObject<Env> {
 			if (this.meta("deleted_at") !== null) {
 				this.state = "deleted";
 			} else {
+				const before = this.meta("schema_version");
 				migrate(this.ctx.storage, MIGRATIONS);
+				this.migratedNow = before !== String(MIGRATIONS.length);
 				this.state = "ready";
 			}
 		}
@@ -1735,6 +1749,10 @@ export class KoudenLedger extends DurableObject<Env> {
 	private async read<T>(caller: Caller, fn: () => T): Promise<LedgerResult<T>> {
 		try {
 			this.prepare(caller);
+			if (this.migratedNow) {
+				this.migratedNow = false;
+				await this.scheduleAlarm(false);
+			}
 			if (!can(caller.role, "ledger.read")) return { ok: false, error: { code: "forbidden" } };
 			return { ok: true, value: fn() };
 		} catch (err) {
