@@ -36,11 +36,14 @@ import {
 	personFormValues,
 } from "../views/kouden/persons.tsx";
 import {
+	candidatesAnnouncement,
 	type ReceptionDone,
 	ReceptionPage,
 	ReceptionPanel,
 	type ReceptionProps,
+	receptionAnnouncement,
 } from "../views/kouden/reception.tsx";
+import { SrStatus } from "../views/kouden/shell.tsx";
 import { EventsSection, RelationshipsSection, SettingsPage } from "../views/kouden/settings.tsx";
 import { KoudenTopPage } from "../views/kouden/top.tsx";
 import { Layout } from "../views/layout.tsx";
@@ -192,7 +195,13 @@ k.post("/reception", async (c) => {
 		const props = await receptionProps(c, values.eventId, rest);
 		if (!props) return errorResponse(c, 404);
 		return isHtmx(c)
-			? c.html(<ReceptionPanel {...props} />, status)
+			? c.html(
+					<>
+						<ReceptionPanel {...props} />
+						{rest.done && <SrStatus oob>{receptionAnnouncement(rest.done)}</SrStatus>}
+					</>,
+					status,
+				)
 			: koudenPage(c, "受付", "reception", <ReceptionPage {...props} />, { status });
 	};
 	const candidatesFor = () => candidatesForRetry(c, values);
@@ -252,10 +261,15 @@ k.get("/persons/candidates", async (c) => {
 	]
 		.map((v) => v?.trim())
 		.find((v) => v);
-	if (!q) return c.html("");
+	if (!q) return c.html(<SrStatus oob />);
 	const r = await ledger(c).listPersons(c.get("caller"), { q, limit: 8 });
 	if (!r.ok) return commonFailure(c, r.error);
-	return c.html(<PersonCandidates persons={r.value} />);
+	return c.html(
+		<>
+			<PersonCandidates persons={r.value} />
+			<SrStatus oob>{candidatesAnnouncement(r.value.length)}</SrStatus>
+		</>,
+	);
 });
 
 // ---- いただきもの -------------------------------------------------------------
@@ -555,7 +569,9 @@ k.get("/persons/:personId/row", async (c) => {
 			/>,
 		);
 	}
-	return c.html(<PersonRow kouden={kouden} person={ctx.person} canWrite={canWrite} q={q} />);
+	return c.html(
+		<PersonRow kouden={kouden} person={ctx.person} canWrite={canWrite} q={q} focusEdit />,
+	);
 });
 
 async function renderPerson(
@@ -689,7 +705,8 @@ k.post("/persons/:personId", async (c) => {
 	if (next) hasNextAfterNext = (await personRowContext(c, next.id, q))?.next !== undefined;
 	return c.html(
 		<>
-			<PersonRow kouden={kouden} person={ctx.person} canWrite q={q} />
+			<PersonRow kouden={kouden} person={ctx.person} canWrite q={q} focusEdit={!next} />
+			<SrStatus oob>{`${personLabel(ctx.person)} を保存しました。`}</SrStatus>
 			{next && (
 				<PersonEditRow
 					kouden={kouden}

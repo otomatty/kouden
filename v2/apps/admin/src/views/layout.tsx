@@ -28,6 +28,9 @@ export const AdminLayout: FC<{
 				<link rel="stylesheet" href={`/assets/admin.css?v=${__ASSET_VERSION__}`} />
 			</head>
 			<body class="min-h-dvh bg-paper font-sans text-ink antialiased">
+				<a href="#main" class={ui.skipLink}>
+					本文へ移動
+				</a>
 				<header class="border-b border-line bg-ink text-white">
 					<div class={`${ui.containerWide} flex h-14 items-center justify-between gap-4`}>
 						<span class="font-semibold tracking-widest">香典帳 運営者画面</span>
@@ -53,7 +56,11 @@ export const AdminLayout: FC<{
 						))}
 					</ul>
 				</nav>
-				<main class={`${ui.containerWide} space-y-6 py-8`}>
+				<main
+					id="main"
+					tabindex={-1}
+					class={`${ui.containerWide} space-y-6 py-8 focus:outline-none`}
+				>
 					<h1 class={ui.h1}>{title}</h1>
 					{children}
 				</main>

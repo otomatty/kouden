@@ -49,7 +49,7 @@ const PrintLayout: FC<{
 							印刷する
 						</button>
 					</div>
-					<div class="space-y-6 bg-surface p-6 shadow-sm print:p-0 print:shadow-none">
+					<main class="space-y-6 bg-surface p-6 shadow-sm print:p-0 print:shadow-none">
 						<header class="flex flex-wrap items-end justify-between gap-2 border-b-2 border-ink pb-2">
 							<div>
 								<h1 class="text-xl font-semibold tracking-widest">{title}</h1>
@@ -61,7 +61,7 @@ const PrintLayout: FC<{
 							<p class="text-xs text-muted">{printedLabel(printedAt)} 現在</p>
 						</header>
 						{children}
-					</div>
+					</main>
 				</div>
 			</body>
 		</html>

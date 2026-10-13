@@ -259,6 +259,9 @@
 			.writeText(input.value)
 			.then(() => {
 				button.textContent = "コピーしました";
+				// ボタンの表示が変わっただけでは読み上げられないため、読み上げ領域にも入れる
+				const status = document.getElementById("sr-status");
+				if (status) status.textContent = "招待リンクをコピーしました。";
 				return undefined;
 			})
 			.catch(() => undefined);

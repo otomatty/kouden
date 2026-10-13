@@ -158,7 +158,9 @@ export const PersonRow: FC<{
 	q: string | undefined;
 	/** 他の行の差し替え（htmx の out-of-band swap）として返す場合 */
 	oob?: boolean;
-}> = ({ kouden, person: p, canWrite, q, oob }) => {
+	/** 編集を閉じて戻した行。キーボードの位置を失わないよう「編集」にフォーカスを戻す */
+	focusEdit?: boolean;
+}> = ({ kouden, person: p, canWrite, q, oob, focusEdit }) => {
 	const base = `/k/${kouden.id}`;
 	const query = q ? `&q=${encodeURIComponent(q)}` : "";
 	return (
@@ -192,6 +194,8 @@ export const PersonRow: FC<{
 						hx-target="closest tr"
 						hx-swap="outerHTML"
 						class={ui.buttonSmall}
+						autofocus={focusEdit}
+						aria-label={`${p.name ?? p.organization} を編集`}
 					>
 						編集
 					</a>

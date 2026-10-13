@@ -1,0 +1,104 @@
+import { expect, test } from "@playwright/test";
+import { createKouden, expectAccessible, loginAs, registerKoden } from "./fixtures.ts";
+import { USERS } from "./users.ts";
+
+test.beforeEach(async ({ context }) => {
+	await loginAs(context, USERS.ledger);
+});
+
+test.describe("受付（E4-1）をキーボードだけで操作する", () => {
+	test("登録・入力エラー・既存の差出人の選択", async ({ page }) => {
+		const base = await createKouden(page, "受付 確認");
+		await page.goto(`${base}/reception`);
+		await expectAccessible(page);
+
+		const name = page.getByLabel("氏名");
+		const amount = page.getByLabel("金額");
+		const status = page.locator("#sr-status");
+
+		// 開くと氏名の欄にフォーカスがある。氏名 → Tab → 金額 → Enter で登録できる
+		await expect(name).toBeFocused();
+		await page.keyboard.type("佐藤 一郎");
+		await page.keyboard.press("Tab");
+		await expect(amount).toBeFocused();
+		await page.keyboard.type("10000");
+		await page.keyboard.press("Enter");
+
+		// 結果は画面に大きく出し、読み上げ領域でも知らせる。次の入力のため氏名の欄に戻る
+		await expect(page.getByText("佐藤 一郎 様", { exact: true })).toBeVisible();
+		await expect(status).toHaveText(/^登録しました。通夜 の受付番号 1、佐藤 一郎 様、香典 /);
+		await expect(name).toBeFocused();
+		await expect(name).toHaveValue("");
+
+		// 香典で金額がないとエラー。最初のエラーの欄（金額）にフォーカスが移る
+		await page.keyboard.type("鈴木 花子");
+		await page.keyboard.press("Enter");
+		await expect(page.getByRole("alert")).toContainText("入力内容を確認してください");
+		await expect(amount).toBeFocused();
+		await expect(amount).toHaveAttribute("aria-invalid", "true");
+		await expectAccessible(page, "受付（入力エラー）");
+		await page.keyboard.type("5000");
+		await page.keyboard.press("Enter");
+		await expect(status).toContainText("受付番号 2、鈴木 花子 様");
+
+		// 同じ名前を入れると候補が出て、件数が読み上げられる。矢印キーで既存の差出人を選べる
+		await expect(name).toBeFocused();
+		await page.keyboard.type("佐藤");
+		await expect(page.getByRole("group", { name: "同じ人が登録されていませんか？" })).toBeVisible();
+		await expect(status).toHaveText("同じ人の候補が 1 件あります。");
+		await expectAccessible(page, "受付（候補）");
+		await page.keyboard.press("Tab");
+		await expect(page.getByLabel("新しい差出人として登録する")).toBeFocused();
+		await page.keyboard.press("ArrowDown");
+		await expect(page.getByRole("radio", { name: /佐藤 一郎/ })).toBeChecked();
+		await page.keyboard.press("Tab");
+		await expect(amount).toBeFocused();
+		await page.keyboard.type("3000");
+		await page.keyboard.press("Enter");
+		await expect(status).toContainText("受付番号 3、佐藤 一郎 様");
+
+		// 差出人は 2 人のまま（佐藤 一郎 は 2 件）
+		await page.goto(`${base}/persons`);
+		await expect(page.getByRole("row")).toHaveCount(3);
+		await expect(page.getByRole("row", { name: /佐藤 一郎/ })).toContainText("2");
+	});
+});
+
+test.describe("いただきもの・差出人", () => {
+	test("一覧の検索と、差出人の行の中での編集（フォーカスを失わない）", async ({ page }) => {
+		const base = await createKouden(page, "一覧 確認");
+		await page.goto(`${base}/reception`);
+		await registerKoden(page, "高橋 次郎", 30000);
+		await registerKoden(page, "伊藤 三郎", 5000);
+
+		await page.goto(`${base}/gifts`);
+		await expect(page.getByRole("status").filter({ hasText: "2 件" })).toBeVisible();
+		await page.getByRole("searchbox").fill("高橋");
+		await page.getByRole("searchbox").press("Enter");
+		await expect(page.getByRole("status").filter({ hasText: "1 件" })).toBeVisible();
+		await expect(page.getByRole("cell", { name: /高橋 次郎/ })).toBeVisible();
+		await expectAccessible(page, "いただきもの（検索）");
+
+		await page.goto(`${base}/persons`);
+		await expectAccessible(page);
+		const edit = page.getByRole("link", { name: "伊藤 三郎 を編集" });
+		await edit.focus();
+		await page.keyboard.press("Enter");
+		// 行が編集欄になり、氏名の欄にフォーカスが移る
+		await expect(page.getByRole("textbox", { name: "氏名", exact: true })).toBeFocused();
+		await expectAccessible(page, "差出人（行の編集）");
+		await page.keyboard.press("Tab");
+		await page.keyboard.type("いとう さぶろう");
+		await page.getByRole("button", { name: "保存", exact: true }).press("Enter");
+		// 表示に戻った行の「編集」にフォーカスが戻り、保存したことが読み上げられる
+		await expect(page.locator("#sr-status")).toHaveText("伊藤 三郎 を保存しました。");
+		await expect(page.getByRole("link", { name: "伊藤 三郎 を編集" })).toBeFocused();
+		await expect(page.getByRole("row", { name: /伊藤 三郎/ })).toContainText("いとう さぶろう");
+
+		// 取り消しても「編集」に戻る
+		await page.keyboard.press("Enter");
+		await expect(page.getByRole("textbox", { name: "氏名", exact: true })).toBeFocused();
+		await page.getByRole("button", { name: "取り消す" }).press("Enter");
+		await expect(page.getByRole("link", { name: "伊藤 三郎 を編集" })).toBeFocused();
+	});
+});

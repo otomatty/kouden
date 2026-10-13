@@ -18,7 +18,7 @@ export const ui = {
 	h3: "font-semibold",
 	prose: "space-y-4 leading-relaxed",
 	input:
-		"block w-full rounded-lg border border-line bg-surface px-3 py-2 text-base text-ink placeholder:text-muted/70 focus:border-accent focus:outline-none aria-[invalid=true]:border-danger",
+		"block w-full rounded-lg border border-line bg-surface px-3 py-2 text-base text-ink placeholder:text-muted focus:border-accent aria-[invalid=true]:border-danger",
 	label: "block text-sm font-medium",
 	table: "w-full border-collapse text-sm",
 	th: "border-b border-line px-3 py-2 text-left font-medium whitespace-nowrap text-muted",
@@ -26,4 +26,7 @@ export const ui = {
 	badge: "inline-block rounded-full bg-paper px-2 py-0.5 text-xs text-muted",
 	notice: "rounded-lg border border-line bg-surface px-4 py-3 text-sm",
 	alert: "rounded-lg border border-danger/40 bg-danger/5 px-4 py-3 text-sm text-danger",
+	/** キーボード操作でだけ現れる「本文へ移動」のリンク */
+	skipLink:
+		"sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-surface focus:px-4 focus:py-2 focus:text-ink focus:shadow",
 } as const;

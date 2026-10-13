@@ -13,3 +13,7 @@ apps/*/public/assets/app.css
 # ライブラリからコピーするファイル（scripts/copy-vendor.ts）
 apps/*/public/assets/htmx.min.js
 apps/*/public/assets/admin.css
+# E2E（v2/e2e）の保存先と結果
+e2e/.state/
+e2e/test-results/
+e2e/playwright-report/

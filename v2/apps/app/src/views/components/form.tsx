@@ -21,7 +21,15 @@ export const Field: FC<{
 		<div class={`space-y-1 ${className ?? ""}`}>
 			<label for={id} class={ui.label}>
 				{label}
-				{required && <span class="ml-1 text-xs text-danger">必須</span>}
+				{/* 読み上げでは「氏名（必須）」と続けて読まれるようにする */}
+				{required && (
+					<>
+						<span class="ml-1 text-xs text-danger" aria-hidden="true">
+							必須
+						</span>
+						<span class="sr-only">（必須）</span>
+					</>
+				)}
 			</label>
 			{children}
 			{hint && !error && <p class="text-xs text-muted">{hint}</p>}
@@ -33,6 +41,10 @@ export const Field: FC<{
 		</div>
 	);
 };
+
+/** 項目ごとのエラーがあるか（あれば app.js が最初のエラーの欄にフォーカスを移すので、autofocus は付けない） */
+const hasFieldErrors = (errors: FieldErrors | undefined) =>
+	errors !== undefined && Object.keys(errors).some((k) => k !== "_form");
 
 export const fieldId = (name: string, prefix?: string) =>
 	prefix ? `${prefix}-${name}` : `f-${name}`;
@@ -65,7 +77,7 @@ export const Input: FC<InputProps> = (p) => {
 			inputmode={p.inputmode}
 			autocomplete={p.autocomplete ?? "off"}
 			required={p.required}
-			autofocus={p.autofocus}
+			autofocus={p.autofocus && !hasFieldErrors(p.errors)}
 			placeholder={p.placeholder}
 			maxlength={p.maxlength}
 			class={`${ui.input} ${p.class ?? ""}`}
