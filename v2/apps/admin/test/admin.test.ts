@@ -3,7 +3,7 @@ import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { describe, expect, it } from "vitest";
 import { accessVerifier } from "../src/access.ts";
 import { createAdminApp } from "../src/app.tsx";
-import { linkLegacyUser } from "../src/store.ts";
+import { grantPaid, linkLegacyUser } from "../src/store.ts";
 
 const ORIGIN = "http://localhost:5174";
 const ISSUER = `https://${env.ACCESS_TEAM_DOMAIN}`;
@@ -224,6 +224,38 @@ describe("手動の有料化・購入の取り消し（E10-3）", () => {
 		const again = await request("/koudens/k1/grant", form({ reason: "二度押し" }));
 		expect(again.headers.get("location")).toBe("/koudens/k1?error=already_paid");
 		expect(await audits()).toHaveLength(1);
+	});
+
+	it("削除中の香典帳は有料にしない（確認の後に削除が始まった場合も）", async () => {
+		await user("u1");
+		await kouden("k1", "u1");
+		await env.DB.prepare("UPDATE koudens SET status = 'deleting' WHERE id = 'k1'").run();
+		const res = await request("/koudens/k1/grant", form({ reason: "補償" }));
+		expect(res.status).toBe(404);
+		// 確認（SELECT）の後に削除が始まった場合: 書き込みの条件でも弾く
+		await env.DB.prepare("UPDATE koudens SET status = 'active' WHERE id = 'k1'").run();
+		const original = env.DB.prepare.bind(env.DB);
+		let first = true;
+		const db = {
+			...env.DB,
+			prepare: (sql: string) => original(sql),
+			batch: async (statements: D1PreparedStatement[]) => {
+				if (first) {
+					first = false;
+					await original("UPDATE koudens SET status = 'deleting' WHERE id = 'k1'").run();
+				}
+				return env.DB.batch(statements);
+			},
+			first: undefined,
+		} as unknown as D1Database;
+		const result = await grantPaid(
+			db,
+			{ koudenId: "k1", reason: "補償", adminEmail: ADMIN },
+			new Date(),
+		);
+		expect(result.ok).toBe(false);
+		expect((await env.DB.prepare("SELECT count(*) AS n FROM purchases").first())?.n).toBe(0);
+		expect(await audits()).toEqual([]);
 	});
 
 	it("理由がなければ操作しない", async () => {

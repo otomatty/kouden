@@ -529,13 +529,15 @@ export async function grantPaid(
 			.prepare(
 				`INSERT INTO purchases (id, kouden_id, user_id, amount, currency, source, status, created_at)
          SELECT ?, ?, ?, 0, 'jpy', 'admin', 'paid', ?
-          WHERE EXISTS (SELECT 1 FROM koudens WHERE id = ? AND plan = 'free')`,
+          WHERE EXISTS (SELECT 1 FROM koudens WHERE id = ? AND plan = 'free'
+                          AND status IN ('active', 'archived'))`,
 			)
 			.bind(purchaseId, input.koudenId, kouden.owner_user_id, at, input.koudenId),
 		db
 			.prepare(
 				`UPDATE koudens SET plan = 'paid', updated_at = ?
-          WHERE id = ? AND plan = 'free' AND EXISTS (SELECT 1 FROM purchases WHERE id = ?)`,
+          WHERE id = ? AND plan = 'free' AND status IN ('active', 'archived')
+            AND EXISTS (SELECT 1 FROM purchases WHERE id = ?)`,
 			)
 			.bind(at, input.koudenId, purchaseId),
 		auditStatement(
