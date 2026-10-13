@@ -119,7 +119,8 @@ export function userPayloads(users: ImportUser[]): ImportUsersPayload[] {
 
 /** 「故 山田 一郎 様」→「山田 一郎」。形が違えば香典帳の名前をそのまま使う（05 §3: 初回表示時にオーナーへ確認を促す） */
 export function guessDeceasedName(title: string): string {
-	const m = /^故\s*(.+?)\s*(様|殿)?$/.exec(title.trim());
+	// 敬称まであるときだけ取り出す（「故人を偲ぶ会」のような名前から「人を偲ぶ会」を作らない）
+	const m = /^故\s*(.+?)\s*(様|殿)$/.exec(title.trim());
 	return (m?.[1] ?? title).trim() || title;
 }
 

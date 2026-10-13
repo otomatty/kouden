@@ -377,6 +377,9 @@ describe("香典帳（05 §3）", () => {
 		});
 		expect(guessDeceasedName("山田家")).toBe("山田家");
 		expect(guessDeceasedName("故 田中花子殿")).toBe("田中花子");
+		// 「故 ○○ 様」の形でなければ、香典帳の名前のまま
+		expect(guessDeceasedName("故人を偲ぶ会")).toBe("故人を偲ぶ会");
+		expect(guessDeceasedName("故 山田 一郎")).toBe("故 山田 一郎");
 	});
 
 	it("メンバー: オーナー・編集（edit を含む）・閲覧。いないユーザーは移さない", () => {

@@ -55,7 +55,7 @@ flowchart LR
 
 | 旧 | 新 | 変換ルール |
 |---|---|---|
-| `koudens` | D1 `koudens` + DO `meta` | `deceased_name` は旧データにないので `title` から仮に設定し（「故 ○○ 様」なら ○○、それ以外は `title` のまま）、初回表示時にオーナーへ確認を促す。`plan` はすべて `paid`（ADR-P10）。`status` はそのまま（`active` / `archived` 以外は `active`）。新しい香典帳には説明の欄がないので、`description` は移さず `kouden_description_dropped` として検証レポートに載せる |
+| `koudens` | D1 `koudens` + DO `meta` | `deceased_name` は旧データにないので `title` から仮に設定し（「故 ○○ 様」「故 ○○ 殿」と敬称まであれば ○○、それ以外は `title` のまま。「故人を偲ぶ会」などから名前を作らない）、初回表示時にオーナーへ確認を促す。`plan` はすべて `paid`（ADR-P10）。`status` はそのまま（`active` / `archived` 以外は `active`）。新しい香典帳には説明の欄がないので、`description` は移さず `kouden_description_dropped` として検証レポートに載せる |
 | `kouden_members` + `kouden_roles` | D1 `kouden_members.role` | `koudens.owner_id` の人 → `owner`（メンバーの行がなくても作る）。ロールの `permissions` に `edit`（または `entry.write` など書き込みの権限）を含む → `editor`。それ以外 → `viewer`。`added_by` → `invited_by`。存在しないユーザーのメンバーは移さない |
 | `kouden_invitations` | 移行しない | 保留中の招待は切り替え後に再発行してもらう（告知文に記載） |
 | `kouden_purchases` | D1 `purchases` | `source = 'legacy'`、`status = 'paid'`、`stripe_checkout_session_id` は旧値を保持 |
