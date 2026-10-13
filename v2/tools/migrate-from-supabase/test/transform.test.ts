@@ -6,6 +6,7 @@ import {
 	guessDeceasedName,
 	legacyCounts,
 	MISSING_NAME,
+	returnMethodOf,
 	transformKouden,
 	transformUsers,
 } from "../src/transform.ts";
@@ -576,18 +577,50 @@ describe("香典帳（05 §3）", () => {
 		);
 	});
 
+	it("返礼方法は自由入力の言い方も写像し、写像できなければ備考に残す", () => {
+		expect(
+			["郵送", "宅配便で発送", "直接お渡し", "手渡し", "当日お渡し", "shipping", "", null].map(
+				returnMethodOf,
+			),
+		).toEqual([
+			"shipping",
+			"shipping",
+			"hand_delivery",
+			"hand_delivery",
+			"on_day",
+			"shipping",
+			null,
+			null,
+		]);
+
+		const record = source().returnRecords[2];
+		if (!record) throw new Error("fixture");
+		const { payload: p, warnings } = transformKouden(
+			source({
+				returnRecords: [{ ...record, return_method: "親戚が代わりに", remarks: "辞退あり" }],
+			}),
+			KNOWN,
+		);
+		expect(p.ledger.returns[0]).toMatchObject({
+			method: null,
+			notes: "辞退あり\n返礼方法（旧データ）: 親戚が代わりに",
+		});
+		expect(codes(warnings)).toContain("unknown_return_method");
+	});
+
 	it("何度変換しても同じ結果になる", () => {
 		expect(transformKouden(source(), KNOWN)).toEqual(result);
 	});
 
 	it("検証用の件数は、取り込んだ後の件数と比べられる形にする", () => {
-		expect(legacyCounts(source())).toEqual({
+		expect(legacyCounts(source(), KNOWN)).toEqual({
 			gifts: { koden: 3, kumotsu: 1, kyoka: 1, choden: 2, other: 0 },
 			kodenTotal: 18000,
 			returnItems: 2,
 			// 取り込んだ後の LedgerImportSummary.returns と同じ形（差出人単位・最後の記録の状況）
 			returns: { pending: 0, arranged: 1, shipped: 1, handed_on_day: 0, not_required: 0 },
-			members: 4,
+			// 存在しないユーザー（u-gone）のメンバーは、変換と同じく数えない
+			members: 3,
 		});
 	});
 

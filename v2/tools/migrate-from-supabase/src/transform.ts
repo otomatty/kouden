@@ -143,10 +143,21 @@ const RETURN_STATUS: Record<string, ReturnStatus> = {
 	NOT_REQUIRED: "not_required",
 };
 
-const RETURN_METHOD: Record<string, ReturnMethod> = {
-	shipping: "shipping",
-	hand_delivery: "hand_delivery",
-};
+/**
+ * 旧アプリの返礼方法は自由入力（入力欄の例は「直接お渡し、郵送など」）。よくある言い方を新しい方法に写像する。
+ * 当日返しの言い方を先に見る（「当日お渡し」は手渡しではなく当日返し）
+ */
+const RETURN_METHOD_PATTERNS: [RegExp, ReturnMethod][] = [
+	[/^on_day$|当日/i, "on_day"],
+	[/^hand_delivery$|手渡|直接|持参|お渡し|持って/i, "hand_delivery"],
+	[/^shipping$|郵送|配送|宅配|発送|送付|郵便|ゆうパック|宅急便|mail|delivery/i, "shipping"],
+];
+
+export function returnMethodOf(value: string | null): ReturnMethod | null {
+	const v = value?.trim();
+	if (!v) return null;
+	return RETURN_METHOD_PATTERNS.find(([pattern]) => pattern.test(v))?.[1] ?? null;
+}
 
 type Person = LedgerSnapshot["persons"][number];
 type Gift = LedgerSnapshot["gifts"][number];
@@ -494,11 +505,23 @@ export function transformKouden(
 		const remarks = [
 			...new Set(sorted.map((r) => trimOrNull(r.remarks)).filter((r) => r !== null)),
 		];
+		// 写像できない返礼方法は捨てずに備考に残す
+		const method = returnMethodOf(latest.return_method);
+		const methodText = trimOrNull(latest.return_method);
+		const notes = [...remarks];
+		if (method === null && methodText !== null) {
+			notes.push(`返礼方法（旧データ）: ${methodText}`);
+			warn(
+				"unknown_return_method",
+				latest.id,
+				`返礼方法「${methodText}」を未選択にし、備考に残しました`,
+			);
+		}
 		returns.push({
 			id: returnId,
 			personId,
 			status,
-			method: RETURN_METHOD[latest.return_method ?? ""] ?? null,
+			method,
 			onDayAmount: yen(latest.funeral_gift_amount) ?? 0,
 			arrangedAt: isoDate(latest.arrangement_date),
 			// 旧データには発送日がない。発送済みなら最後に更新した日を発送日にする
@@ -507,7 +530,7 @@ export function transformKouden(
 			shipPostalCode: trimOrNull(latest.shipping_postal_code),
 			shipAddress: trimOrNull(latest.shipping_address),
 			shipPhone: trimOrNull(latest.shipping_phone_number),
-			notes: remarks.length > 0 ? remarks.join("\n") : null,
+			notes: notes.length > 0 ? notes.join("\n") : null,
 			createdBy: newId.user(first.created_by),
 			createdAt: iso(first.created_at),
 			updatedBy: newId.user(latest.created_by),
@@ -666,7 +689,7 @@ function legacyReturnStatuses(source: LegacyKoudenSource): Record<ReturnStatus, 
 }
 
 /** 検証用（05 §5）: 旧データの件数。取り込んだ後の件数（LedgerImportSummary）と比べる */
-export function legacyCounts(source: LegacyKoudenSource) {
+export function legacyCounts(source: LegacyKoudenSource, knownUsers: ReadonlySet<string>) {
 	const kinds = { koden: 0, kumotsu: 0, kyoka: 0, choden: 0, other: 0 };
 	kinds.koden = source.entries.length;
 	for (const o of source.offerings) kinds[OFFERING_KIND[o.type] ?? "other"] += 1;
@@ -676,6 +699,10 @@ export function legacyCounts(source: LegacyKoudenSource) {
 		kodenTotal: source.entries.reduce((sum, e: LegacyEntry) => sum + (yen(e.amount) ?? 0), 0),
 		returnItems: source.returnItems.length,
 		returns: legacyReturnStatuses(source),
-		members: new Set([source.kouden.owner_id, ...source.members.map((m) => m.user_id)]).size,
+		// 変換と同じく、存在しないユーザーのメンバーは数えない（オーナーは必ずいる）
+		members: new Set([
+			source.kouden.owner_id,
+			...source.members.map((m) => m.user_id).filter((id) => knownUsers.has(id)),
+		]).size,
 	};
 }
