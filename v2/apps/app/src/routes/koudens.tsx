@@ -1,5 +1,6 @@
 import {
 	can,
+	confirmDeceasedNameSchema,
 	contributorAddSchema,
 	contributorShareSchema,
 	eventSchema,
@@ -16,7 +17,12 @@ import {
 } from "@kouden/domain";
 import { Hono } from "hono";
 import { paidPurchase } from "../billing/purchases.ts";
-import { createKouden, deleteKouden, updateKoudenInfo } from "../kouden/store.ts";
+import {
+	confirmDeceasedName,
+	createKouden,
+	deleteKouden,
+	updateKoudenInfo,
+} from "../kouden/store.ts";
 import { ledgerFor } from "../ledger/client.ts";
 import { CALLER_HEADER, type LedgerResult, type PersonView } from "../ledger/types.ts";
 import { koudenAccess, writeRateLimit } from "../middleware/kouden-access.tsx";
@@ -724,6 +730,7 @@ k.post("/persons/:personId", async (c) => {
 
 // ---- 設定 ---------------------------------------------------------------------
 
+/** 入力エラー時は送信値を保持して設定を再表示する。初期表示では未確認の補完名を空欄にする */
 async function renderSettings(
 	c: Ctx,
 	options: {
@@ -755,7 +762,13 @@ async function renderSettings(
 			error={options.error}
 			notice={noticeOf(c)}
 			koudenValues={
-				options.koudenValues ?? { title: kouden.title, deceasedName: kouden.deceasedName }
+				options.koudenValues ?? {
+					title: kouden.title,
+					deceasedName:
+						kouden.needsDeceasedNameConfirmation && kouden.deceasedName === "（故人名未確認）"
+							? ""
+							: kouden.deceasedName,
+				}
 			}
 			koudenErrors={options.koudenErrors}
 			deleteError={options.deleteError}
@@ -799,6 +812,32 @@ k.get("/settings", async (c) => {
 		);
 	}
 	return renderSettings(c);
+});
+
+k.post("/settings/confirm-deceased-name", async (c) => {
+	const kouden = c.get("kouden");
+	if (!can(kouden.memberRole, "kouden.manage") || kouden.status !== "active")
+		return errorResponse(c, 403);
+	// 戻るボタンや再送で、確認済みの名前を古い入力に戻さない。
+	if (!kouden.needsDeceasedNameConfirmation) return c.redirect(`${basePath(c)}/settings`, 303);
+	const values = await formValues(c);
+	const parsed = confirmDeceasedNameSchema.safeParse(values);
+	if (!parsed.success) {
+		return renderSettings(c, {
+			koudenValues: values,
+			koudenErrors: toFieldErrors(parsed.error),
+			status: 422,
+		});
+	}
+	const saved = await confirmDeceasedName(
+		c.env.DB,
+		kouden.id,
+		c.get("caller").userId,
+		parsed.data,
+		c.get("now"),
+	);
+	if (!saved) return renderSettings(c, { error: CONFLICT_MESSAGE, status: 409 });
+	return c.redirect(`${basePath(c)}/settings?notice=deceased_name_confirmed#info`, 303);
 });
 
 k.post("/settings/kouden", async (c) => {

@@ -89,6 +89,7 @@ CREATE TABLE koudens (
   id                TEXT PRIMARY KEY,           -- DO 名にも使う
   title             TEXT NOT NULL,
   deceased_name     TEXT NOT NULL,
+  deceased_name_confirmed_at TEXT,              -- 移行した故人名の確認日時。旧IDあり・NULLならオーナーへ確認を促す
   owner_user_id     TEXT NOT NULL REFERENCES users(id),
   plan              TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free','paid')),
   status            TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','archived','deleting')),

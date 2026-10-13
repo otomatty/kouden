@@ -45,6 +45,7 @@ export const SettingsPage: FC<{
 }) => {
 	const base = `/k/${kouden.id}`;
 	const isOwner = kouden.memberRole === "owner";
+	const needsConfirmation = kouden.needsDeceasedNameConfirmation;
 	return (
 		<div class="mx-auto max-w-3xl space-y-8">
 			{error && (
@@ -63,7 +64,17 @@ export const SettingsPage: FC<{
 					香典帳の情報
 				</h2>
 				{isOwner && kouden.status === "active" ? (
-					<form method="post" action={`${base}/settings/kouden`} class="space-y-4" novalidate>
+					<form
+						method="post"
+						action={`${base}/settings/${needsConfirmation ? "confirm-deceased-name" : "kouden"}`}
+						class="space-y-4"
+						novalidate
+					>
+						{needsConfirmation && (
+							<p class="text-sm">
+								故人のお名前を確認し、必要に応じて修正してください。確認して保存すると、確認の案内は表示されなくなります。
+							</p>
+						)}
 						<FormAlert errors={koudenErrors} />
 						<div class="grid gap-4 sm:grid-cols-2">
 							<Field
@@ -72,14 +83,20 @@ export const SettingsPage: FC<{
 								error={koudenErrors.deceasedName}
 								required
 							>
-								<Input name="deceasedName" values={koudenValues} errors={koudenErrors} />
+								<Input
+									name="deceasedName"
+									values={koudenValues}
+									errors={koudenErrors}
+									required
+									maxlength={50}
+								/>
 							</Field>
 							<Field label="香典帳の名前" name="title" error={koudenErrors.title}>
 								<Input name="title" values={koudenValues} errors={koudenErrors} />
 							</Field>
 						</div>
 						<button type="submit" class={ui.buttonSecondary}>
-							保存する
+							{needsConfirmation ? "確認して保存する" : "保存する"}
 						</button>
 					</form>
 				) : (

@@ -26,6 +26,7 @@ export const USERS = {
 	liveEditor: user("live-editor", "鈴木 次郎"),
 	returns: user("returns", "高橋 三郎"),
 	account: user("account", "田中 四郎"),
+	migration: user("migration", "移行 確認"),
 } as const;
 
 /**
@@ -33,3 +34,6 @@ export const USERS = {
  * 使えるよう、試行ごとに別の利用者を用意する（`test.info().retry` 番目を使う）
  */
 export const LEAVING_USERS = [0, 1].map((n) => user(`leaving-${n}`, "退会 予定"));
+
+/** 確認後は状態が変わるため、再試行用にも未確認の移行済み香典帳を用意する */
+export const MIGRATED_KOUDENS = [0, 1].map((n) => `e2e-migrated-${n}`);

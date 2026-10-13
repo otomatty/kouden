@@ -7,6 +7,8 @@ export interface KoudenContext {
 	id: string;
 	title: string;
 	deceasedName: string;
+	/** 旧台帳名から仮設定した故人名が、まだオーナーに確認されていない */
+	needsDeceasedNameConfirmation: boolean;
 	ownerUserId: string;
 	plan: Plan;
 	status: "active" | "archived";
@@ -100,7 +102,8 @@ export async function loadKouden(
 ): Promise<KoudenContext | null> {
 	const row = await db
 		.prepare(
-			`SELECT k.id, k.title, k.deceased_name, k.owner_user_id, k.plan, k.status, m.role
+			`SELECT k.id, k.title, k.deceased_name, k.legacy_kouden_id, k.deceased_name_confirmed_at,
+              k.owner_user_id, k.plan, k.status, m.role
          FROM koudens k JOIN kouden_members m ON m.kouden_id = k.id AND m.user_id = ?
         WHERE k.id = ? AND k.status IN ('active', 'archived')`,
 		)
@@ -109,6 +112,8 @@ export async function loadKouden(
 			id: string;
 			title: string;
 			deceased_name: string;
+			legacy_kouden_id: string | null;
+			deceased_name_confirmed_at: string | null;
 			owner_user_id: string;
 			plan: Plan;
 			status: "active" | "archived";
@@ -119,6 +124,8 @@ export async function loadKouden(
 		id: row.id,
 		title: row.title,
 		deceasedName: row.deceased_name,
+		needsDeceasedNameConfirmation:
+			row.legacy_kouden_id !== null && row.deceased_name_confirmed_at === null,
 		ownerUserId: row.owner_user_id,
 		plan: row.plan,
 		status: row.status,
@@ -136,6 +143,28 @@ export async function updateKoudenInfo(
 		.prepare("UPDATE koudens SET title = ?, deceased_name = ?, updated_at = ? WHERE id = ?")
 		.bind(input.title, input.deceasedName, now.toISOString(), koudenId)
 		.run();
+}
+
+/** 名前と確認日時を同時に保存する。再送や権限変更後の要求で、確認済みの名前を上書きしない */
+export async function confirmDeceasedName(
+	db: D1Database,
+	koudenId: string,
+	userId: string,
+	input: KoudenInput,
+	now: Date,
+): Promise<boolean> {
+	const at = now.toISOString();
+	const result = await db
+		.prepare(
+			`UPDATE koudens SET title = ?, deceased_name = ?, deceased_name_confirmed_at = ?, updated_at = ?
+        WHERE id = ? AND status = 'active' AND owner_user_id = ?
+          AND legacy_kouden_id IS NOT NULL AND deceased_name_confirmed_at IS NULL
+          AND EXISTS (SELECT 1 FROM kouden_members
+                       WHERE kouden_id = koudens.id AND user_id = ? AND role = 'owner')`,
+		)
+		.bind(input.title, input.deceasedName, at, at, koudenId, userId, userId)
+		.run();
+	return result.meta.changes === 1;
 }
 
 export async function setKoudenStatus(

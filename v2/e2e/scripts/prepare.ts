@@ -7,7 +7,7 @@ import { rmSync } from "node:fs";
 import path from "node:path";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { LOCAL_D1_ID } from "../../apps/app/deploy.settings.ts";
-import { LEAVING_USERS, USERS } from "../tests/users.ts";
+import { LEAVING_USERS, MIGRATED_KOUDENS, USERS } from "../tests/users.ts";
 import { STATE_DIR } from "./state.ts";
 
 const appDir = path.resolve(import.meta.dirname, "../../apps/app");
@@ -58,6 +58,19 @@ try {
 		);
 	}
 	await db.batch(statements);
+	for (const id of MIGRATED_KOUDENS) {
+		await db.batch([
+			db
+				.prepare(`INSERT INTO koudens (id, title, deceased_name, owner_user_id, plan, legacy_kouden_id, created_at, updated_at)
+          VALUES (?, '香典帳（故人名未確認）', '（故人名未確認）', ?, 'paid', ?, ?, ?)`)
+				.bind(id, USERS.migration.id, `legacy-${id}`, at, at),
+			db
+				.prepare(
+					"INSERT INTO kouden_members (kouden_id, user_id, role, joined_at) VALUES (?, ?, 'owner', ?)",
+				)
+				.bind(id, USERS.migration.id, at),
+		]);
+	}
 	console.info(`seeded ${statements.length / 2} users`);
 } finally {
 	await mf.dispose();

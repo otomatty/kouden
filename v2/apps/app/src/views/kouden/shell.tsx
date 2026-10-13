@@ -89,6 +89,21 @@ export const KoudenShell: FC<{
 				)}
 			</p>
 		)}
+		{kouden.memberRole === "owner" && kouden.needsDeceasedNameConfirmation && (
+			<aside aria-label="故人のお名前の確認" class={`${ui.notice} space-y-2`}>
+				<p class="font-medium">故人のお名前をご確認ください</p>
+				<p class="text-sm">
+					旧アプリの香典帳の名前をもとに、故人のお名前を仮設定しています。
+					{kouden.status === "archived" && "確認するには、アーカイブを解除してください。"}
+				</p>
+				<a
+					href={`/k/${kouden.id}/settings#${kouden.status === "archived" ? "archive" : "info"}`}
+					class={ui.link}
+				>
+					{kouden.status === "archived" ? "設定でアーカイブを解除する" : "故人のお名前を確認する"}
+				</a>
+			</aside>
+		)}
 		{children}
 		<script
 			src={`/assets/ledger-live.js?v=${__ASSET_VERSION__}`}
