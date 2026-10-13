@@ -174,6 +174,8 @@ export type LedgerSnapshot = z.infer<typeof ledgerSnapshotSchema>;
 // ---- 香典帳 1 冊分（D1 + DO） ----------------------------------------------------
 
 export const importKoudenPayloadSchema = z.object({
+	/** 新しい香典帳の ID（移行ツールが旧 ID から作る）。取り込み口の URL の ID と一致しなければ受け付けない */
+	koudenId: id,
 	kouden: z.object({
 		/** 旧 koudens.id */
 		legacyKoudenId: id,

@@ -590,6 +590,7 @@ export function transformKouden(
 	}
 
 	const payload: ImportKoudenPayload = {
+		koudenId,
 		kouden: {
 			legacyKoudenId: k.id,
 			title: k.title.trim() || `故 ${deceasedName} 様`,

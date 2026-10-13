@@ -46,7 +46,7 @@ export async function importUsers(db: D1Database, users: ImportUser[], at: strin
 export async function importKoudenRows(
 	db: D1Database,
 	koudenId: string,
-	payload: Omit<ImportKoudenPayload, "ledger">,
+	payload: Pick<ImportKoudenPayload, "kouden" | "members" | "purchases">,
 	at: string,
 ): Promise<void> {
 	const k = payload.kouden;

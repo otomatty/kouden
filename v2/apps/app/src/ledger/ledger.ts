@@ -1761,14 +1761,21 @@ export class KoudenLedger extends DurableObject<Env> {
 	 * 旧アプリのデータを取り込む。行事・関係・差出人・いただきもの・香典返し・変更ログ・お知らせを全部消してから
 	 * 入れ直すので、何度実行しても同じ結果になる。統計の投影先として、D1 の koudens の行を先に作っておくこと。
 	 * 変更ログには import の 1 行だけを記録する（旧アプリの変更履歴は移さない）。
-	 * 通常の編集で作られるもの（期限のお知らせの予定・D1 の統計）も、ここで作る
+	 * 通常の編集で作られるもの（期限のお知らせの予定・D1 の統計）も、ここで作る。
+	 * 削除済み（deleteAll）の香典帳にも取り込める
 	 */
 	async importSnapshot(
 		koudenId: string,
 		snapshot: LedgerSnapshot,
 		importedAt: string,
 	): Promise<LedgerImportSummary> {
-		if (!this.ensureSchema()) throw new Error(`ledger ${koudenId} has been deleted`);
+		if (!this.ensureSchema()) {
+			// 削除済みの印（deleteAll）が残っていても、取り込みは明示的な操作なので作り直す
+			// （リハーサルの後片付けで削除した香典帳を、次のリハーサル・切り替えで同じ ID に取り込み直す）
+			this.sql.exec("DELETE FROM meta WHERE key = 'deleted_at'");
+			this.state = "unknown";
+			if (!this.ensureSchema()) throw new Error(`ledger ${koudenId} could not be recreated`);
+		}
 		const current = this.meta("kouden_id");
 		if (current !== null && current !== koudenId) {
 			throw new Error(`ledger belongs to ${current}, import for ${koudenId}`);

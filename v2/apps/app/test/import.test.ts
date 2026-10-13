@@ -81,6 +81,7 @@ function koudenPayload(i: ReturnType<typeof ids>, futureDate: string): ImportKou
 		updatedAt: "2024-03-02T00:00:00.000Z",
 	};
 	return {
+		koudenId: i.kouden,
 		kouden: {
 			legacyKoudenId: `${i.kouden}-legacy`,
 			title: "故 山田 一郎 様",
@@ -461,6 +462,39 @@ describe("旧データの取り込み（05 §2・§3）", () => {
 			error: "kouden_import_failed",
 			message: expect.stringContaining("FOREIGN KEY"),
 		});
+	});
+
+	it("URL の香典帳と取り込みデータの香典帳が違えば、どちらにも書き込まない", async () => {
+		const i = ids();
+		const other = ids();
+		await importAll(i);
+		const res = await call(`/internal/import/koudens/${other.kouden}`, {
+			method: "PUT",
+			headers: TOKEN,
+			json: koudenPayload(i, future()),
+		});
+		expect(res.status).toBe(400);
+		expect(await res.json()).toMatchObject({ error: "kouden_id_mismatch" });
+		const row = await env.DB.prepare("SELECT count(*) AS n FROM koudens WHERE id = ?")
+			.bind(other.kouden)
+			.first();
+		expect(row).toEqual({ n: 0 });
+	});
+
+	it("削除した香典帳（リハーサルの後片付けなど）にも、同じ ID で取り込み直せる", async () => {
+		const i = ids();
+		await importAll(i);
+		await ledgerFor(env, i.kouden).deleteAll();
+		const { ledger } = await importAll(i);
+		expect(ledger).toMatchObject({ persons: 2, gifts: { koden: 1 }, reminders: 2 });
+		const owner = makeApp({
+			sub: i.sub,
+			email: `${i.owner}@gmail.com`,
+			emailVerified: true,
+			name: "x",
+		});
+		await owner.login();
+		expect(await (await owner.request(`/k/${i.kouden}/persons`)).text()).toContain("佐藤 一郎");
 	});
 
 	it("形の合わないデータは受け付けない（香典に金額がない）", async () => {

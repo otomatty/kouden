@@ -31,11 +31,18 @@ export function internalRoutes(deps: AppDeps) {
 		const koudenId = c.req.param("koudenId");
 		const parsed = importKoudenPayloadSchema.safeParse(await c.req.json().catch(() => null));
 		if (!parsed.success) return c.json({ error: "invalid", issues: parsed.error.issues }, 400);
-		const { ledger, ...rows } = parsed.data;
+		// 移行ツールの対応づけの誤りで、別の香典帳の ID に書き込まないようにする
+		if (parsed.data.koudenId !== koudenId) {
+			return c.json(
+				{ error: "kouden_id_mismatch", message: `payload is for ${parsed.data.koudenId}` },
+				400,
+			);
+		}
+		const { kouden, members, purchases, ledger } = parsed.data;
 		const at = c.get("now").toISOString();
 		// 統計の投影先になるので、D1 の行を先に作る
 		try {
-			await importKoudenRows(c.env.DB, koudenId, rows, at);
+			await importKoudenRows(c.env.DB, koudenId, { kouden, members, purchases }, at);
 		} catch (err) {
 			// メンバーのユーザーが未登録（先に users を取り込んでいない）など
 			return failed(c, "kouden_import_failed", err, koudenId);
