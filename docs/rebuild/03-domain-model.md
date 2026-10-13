@@ -317,13 +317,14 @@ CREATE TABLE gift_photos (
   id                TEXT PRIMARY KEY,
   gift_id           TEXT NOT NULL REFERENCES gifts(id),
   r2_key            TEXT NOT NULL,
-  content_type      TEXT NOT NULL,
-  size_bytes        INTEGER NOT NULL,
   caption           TEXT,
   created_by        TEXT NOT NULL,
   created_at        TEXT NOT NULL,
+  updated_at        TEXT NOT NULL,
   deleted_at        TEXT
 );
+
+-- 画像の形式・サイズ・SHA-256 は R2 のメタデータを正として照合する。
 
 -- 返礼品カタログ（画像は R2: koudens/{koudenId}/return-items/{id}）
 CREATE TABLE return_items (

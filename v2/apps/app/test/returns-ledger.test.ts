@@ -9,7 +9,7 @@ import {
 import { env, runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 import { ledgerFor } from "../src/ledger/client.ts";
-import { REMINDER_RETRY_MS } from "../src/ledger/ledger.ts";
+import { MAIL_CONFIG_RECHECK_MS, REMINDER_RETRY_MS } from "../src/ledger/ledger.ts";
 import { MIGRATIONS } from "../src/ledger/schema.ts";
 import type { Mail } from "../src/lib/mailer.ts";
 import type { Caller, LedgerResult } from "../src/ledger/types.ts";
@@ -377,6 +377,35 @@ describe("期限のお知らせ（E6-5）", () => {
 			.bind(ctx.caller.koudenId)
 			.first();
 		expect(stats).toEqual({ return_pending: 2 });
+	});
+
+	it("メール無効中は送らず、設定復帰後は台帳へのアクセスがなくても通知を再開する", async () => {
+		const ctx = await withGifts();
+		await seedD1(ctx.caller.koudenId, [{ id: "owner-1", role: "owner" }]);
+		await addMemorial(ctx);
+		const sent: Mail[] = [];
+		await runInDurableObject(ctx.ledger, (obj, state) => {
+			Reflect.set(obj, "env", { ...env, MAIL_FROM: "" });
+			obj.mailer = { send: async (mail) => void sent.push(mail) };
+			state.storage.sql.exec(
+				"UPDATE reminders SET fire_at = ?",
+				new Date(Date.now() - 1000).toISOString(),
+			);
+		});
+		const before = Date.now();
+		expect(await runDurableObjectAlarm(ctx.ledger)).toBe(true);
+		expect(sent).toEqual([]);
+		expect((await reminders(ctx.ledger)).every((r) => r.sent_at === null)).toBe(true);
+		const alarm = await runInDurableObject(ctx.ledger, (_obj, state) => state.storage.getAlarm());
+		expect(alarm).toBeGreaterThanOrEqual(before + MAIL_CONFIG_RECHECK_MS);
+		expect(alarm).toBeLessThanOrEqual(Date.now() + MAIL_CONFIG_RECHECK_MS);
+		await runInDurableObject(ctx.ledger, (obj) => {
+			Reflect.set(obj, "env", env);
+		});
+		expect(await runDurableObjectAlarm(ctx.ledger)).toBe(true);
+		expect(sent).toHaveLength(1);
+		expect((await reminders(ctx.ledger)).every((r) => r.sent_at !== null)).toBe(true);
+		expect(await runDurableObjectAlarm(ctx.ledger)).toBe(false);
 	});
 
 	it("投影（D1）に失敗しても、少し後にアラームを予約し直す", async () => {

@@ -3,6 +3,7 @@
  * 自動で直せない・判断が要るデータは warnings に入れる（検証レポートに載せる）
  */
 import {
+	giftPhotoKey,
 	type Attendance,
 	type GiftKind,
 	IMPORT_USERS_PER_REQUEST,
@@ -500,6 +501,21 @@ export function transformKouden(
 
 	// ---- 香典返し ----
 	const files: FileCopy[] = [];
+	const giftPhotos = (source.offeringPhotos ?? []).toSorted(byCreated).map((p) => {
+		const id = newId.offeringPhoto(p.id);
+		const giftId = newId.offeringGift(p.offering_id);
+		const r2Key = giftPhotoKey(koudenId, giftId, id);
+		files.push({ source: p.storage_key, key: r2Key });
+		return {
+			id,
+			giftId,
+			r2Key,
+			caption: p.caption,
+			createdBy: newId.user(p.created_by),
+			createdAt: iso(p.created_at),
+			updatedAt: iso(p.updated_at),
+		};
+	});
 	const items = source.returnItems.toSorted(
 		(a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || byCreated(a, b),
 	);
@@ -713,6 +729,7 @@ export function transformKouden(
 			persons,
 			gifts,
 			contributors,
+			giftPhotos,
 			returnItems,
 			returnRules,
 			returns,

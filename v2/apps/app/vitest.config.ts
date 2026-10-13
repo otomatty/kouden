@@ -9,6 +9,9 @@ import { defineConfig } from "vitest/config";
  */
 const TEST_BINDINGS = {
 	APP_ORIGIN: "http://localhost:5173",
+	APP_ACCESS_REQUIRED: "false",
+	APP_ACCESS_TEAM_DOMAIN: "",
+	APP_ACCESS_AUD: "",
 	GOOGLE_CLIENT_ID: "test-client-id",
 	GOOGLE_CLIENT_SECRET: "test-client-secret",
 	SESSION_SECRET: "test-session-secret",
@@ -36,7 +39,7 @@ const TEST_RATE_LIMITS = {
 
 function assertBindingsMatchConfig(): void {
 	const source = readFileSync(path.join(import.meta.dirname, "cloudflare.config.ts"), "utf8");
-	const configKeys = [...source.matchAll(/^\s+([A-Z][A-Z0-9_]*): bindings\./gm)].map((m) => m[1]);
+	const configKeys = [...source.matchAll(/^\s+([A-Z][A-Z0-9_]*): /gm)].map((m) => m[1]);
 	const testKeys = [
 		...Object.keys(TEST_BINDINGS),
 		...TEST_D1,

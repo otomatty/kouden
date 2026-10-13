@@ -64,23 +64,17 @@ jobs:
 
       # シークレットはシェルに直接展開せず、環境変数経由で書き出す
       - name: Write secrets file
+        working-directory: v2/apps/app
         env:
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
-        run: |
-          umask 077
-          {
-            printf 'GOOGLE_CLIENT_SECRET=%s\n' "$GOOGLE_CLIENT_SECRET"
-            printf 'SESSION_SECRET=%s\n' "$SESSION_SECRET"
-            printf 'STRIPE_SECRET_KEY=%s\n' "$STRIPE_SECRET_KEY"
-            printf 'STRIPE_WEBHOOK_SECRET=%s\n' "$STRIPE_WEBHOOK_SECRET"
-          } > "$RUNNER_TEMP/secrets.env"
+        run: bun scripts/write-deploy-secrets.ts "$RUNNER_TEMP/secrets.json"
 
       - name: Deploy
         working-directory: v2/apps/app
-        run: bun run deploy -- --mode "$MODE" --secrets-file "$RUNNER_TEMP/secrets.env"
+        run: bun run deploy -- --mode "$MODE" --secrets-file "$RUNNER_TEMP/secrets.json"
 
       # 初回デプロイで DB が作られた場合に、ここで適用される（2 回目以降は何もしない）
       - name: Apply D1 migrations (after first deploy)
@@ -94,4 +88,4 @@ jobs:
 
       - name: Remove secrets file
         if: always()
-        run: rm -f "$RUNNER_TEMP/secrets.env"
+        run: rm -f "$RUNNER_TEMP/secrets.json"

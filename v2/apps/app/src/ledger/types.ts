@@ -82,6 +82,8 @@ export interface GiftView {
 	updatedAt: string;
 	/** 代表者が先頭 */
 	contributors: ContributorView[];
+	/** 詳細画面でのみ取得する。移行済みの供物写真 */
+	photos?: { id: string; caption: string | null }[];
 }
 
 export interface PersonView {

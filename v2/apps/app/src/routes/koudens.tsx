@@ -6,6 +6,7 @@ import {
 	eventSchema,
 	type FieldErrors,
 	giftSchema,
+	giftPhotoKey,
 	koudenSchema,
 	parseGiftFilter,
 	personLabel,
@@ -17,6 +18,7 @@ import {
 } from "@kouden/domain";
 import { Hono } from "hono";
 import { paidPurchase } from "../billing/purchases.ts";
+import { isObjectId } from "../kouden/files.ts";
 import {
 	confirmDeceasedName,
 	createKouden,
@@ -388,6 +390,26 @@ async function afterGiftWrite(
 }
 
 k.get("/gifts/:giftId", (c) => renderGift(c, c.req.param("giftId")));
+
+// 写真はメンバー限定。削除済みの供物や、別の供物に属する写真は配信しない。
+k.get("/files/gifts/:giftId/:photoId", async (c) => {
+	const { giftId, photoId } = c.req.param();
+	if (!isObjectId(photoId)) return c.notFound();
+	const gift = await ledger(c).getGift(c.get("caller"), giftId);
+	if (!gift.ok || !gift.value.photos?.some((p) => p.id === photoId)) return c.notFound();
+	const object = await c.env.FILES.get(giftPhotoKey(c.get("kouden").id, giftId, photoId));
+	if (!object) return c.notFound();
+	return new Response(object.body, {
+		headers: {
+			"Content-Type": object.httpMetadata?.contentType ?? "application/octet-stream",
+			"Content-Length": String(object.size),
+			"Cache-Control": "private, no-store",
+			ETag: object.httpEtag,
+			"X-Content-Type-Options": "nosniff",
+			"Content-Security-Policy": "default-src 'none'; sandbox",
+		},
+	});
+});
 
 k.post("/gifts/:giftId", async (c) => {
 	const giftId = c.req.param("giftId");

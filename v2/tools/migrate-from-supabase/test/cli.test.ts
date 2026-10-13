@@ -169,6 +169,82 @@ function fakeClient(plan: MigrationPlan, corrupt = false) {
 }
 
 describe("prepare", () => {
+	it("旧供物写真を決定的に紐づけ、画像の保全・投入・再投入・照合を行う", async () => {
+		const input = snapshot();
+		input.data["public.offerings"] = [
+			{
+				id: "o1",
+				kouden_id: "k1",
+				type: "FLOWER",
+				description: "供花",
+				quantity: 1,
+				price: null,
+				provider_name: "試験",
+				notes: null,
+				created_by: "u1",
+				created_at: at,
+				updated_at: at,
+			},
+		];
+		input.data["public.offering_photos"] = [
+			{
+				id: "photo1",
+				offering_id: "o1",
+				storage_key: "offering-photos/old/photo.png",
+				caption: "供花の写真",
+				created_by: "u1",
+				created_at: at,
+				updated_at: at,
+			},
+		];
+		input.row_counts["public.offerings"] = 1;
+		input.row_counts["public.offering_photos"] = 1;
+		const dir = await temp();
+		const source = join(dir, "source.json");
+		const out = join(dir, "prepared");
+		await writeFile(source, JSON.stringify(input));
+		await expect(prepare(source, out)).rejects.toThrow("missing:image_file_map");
+		const image = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+		await writeFile(join(dir, "photo.png"), image);
+		const map = join(dir, "files.json");
+		await writeFile(
+			map,
+			JSON.stringify([{ source: "offering-photos/old/photo.png", path: "photo.png" }]),
+		);
+		const plan = await prepare(source, out, map);
+		expect(await prepare(source, out, map)).toEqual(plan);
+		const book = plan.koudens[0]!;
+		const photo = book.payload.ledger.giftPhotos![0]!;
+		expect(photo.giftId).toBe(book.payload.ledger.gifts.find((g) => g.kind === "kyoka")?.id);
+		expect(photo.r2Key).toBe(`koudens/${book.payload.koudenId}/gifts/${photo.giftId}/${photo.id}`);
+		expect(book.files).toEqual([{ key: photo.r2Key, size: image.length, sha256: digest(image) }]);
+		const remote = fakeClient(plan);
+		for (const [i, mode] of (["import", "import", "verify"] as const).entries()) {
+			const report = await runMigration({
+				mode,
+				plan,
+				planDir: out,
+				reportDir: join(dir, `report-${i}`),
+				client: remote.client,
+			});
+			expect(report.status).toBe("passed");
+			expect(report.filesVerified).toBe(1);
+			expect(JSON.stringify(report)).not.toContain("供花の写真");
+		}
+		remote.books.get(book.payload.koudenId)!.ledger.giftPhotos![0]!.caption = "違う説明";
+		const mismatch = await runMigration({
+			mode: "verify",
+			plan,
+			planDir: out,
+			reportDir: join(dir, "mismatch"),
+			client: remote.client,
+		});
+		expect(mismatch.status).toBe("failed");
+		expect(mismatch.checks.flatMap((c) => c.differences)).toContain(
+			"ledger.giftPhotoRows[0].caption",
+		);
+	});
+
 	it.each([null, 0, 15000])("旧供物の金額 %s を保持して準備・投入・照合できる", async (price) => {
 		const input = snapshot();
 		input.data["public.offerings"] = [
@@ -237,6 +313,22 @@ describe("prepare", () => {
 		expect(JSON.stringify(input)).toBe(before);
 		expect(prepareSnapshot(input)).toEqual(result);
 	});
+	it.each(["gift", "other-book"])(
+		"返礼品画像を %s の保存先へ変えた計画は読み込めない",
+		async (kind) => {
+			const { plan } = prepareSnapshot(snapshot(true));
+			const book = plan.koudens[0]!;
+			const key =
+				kind === "gift"
+					? `koudens/${book.payload.koudenId}/gifts/g1/${crypto.randomUUID()}`
+					: `koudens/other-book/return-items/${crypto.randomUUID()}`;
+			book.payload.ledger.returnItems[0]!.imageR2Key = key;
+			book.files = [{ key, size: 8, sha256: "a".repeat(64) }];
+			const dir = await temp();
+			await writeFile(join(dir, "plan.json"), JSON.stringify(plan));
+			await expect(loadPlan(dir)).rejects.toThrow("返礼品画像の保存先が一致しません");
+		},
+	);
 	it("件数が欠けた抽出、割り当て先のない行、未対応の旧写真を止める", () => {
 		const missing = snapshot();
 		delete missing.data["public.kouden_entries"];
@@ -248,7 +340,7 @@ describe("prepare", () => {
 		const photo = snapshot();
 		photo.data["public.offering_photos"] = [{ id: "p1" }];
 		photo.row_counts["public.offering_photos"] = 1;
-		expect(() => prepareSnapshot(photo)).toThrow("unsupported:offering_photos");
+		expect(() => prepareSnapshot(photo)).toThrow("unassigned_source:public.offering_photos");
 	});
 	it("必要な画像がなければ計画を作らず、保全済み画像はハッシュ付きでコピーする", async () => {
 		const dir = await temp();

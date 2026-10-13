@@ -92,12 +92,26 @@ bun run e2e                        # = scripts/prepare.ts → playwright test
 
 ## 公開までに必要な作業（運営者が行うもの）
 
+### staging
+
+独自ドメインを決めるまでは、利用者向けアプリを `https://kouden-app-staging.saedgewell.workers.dev`、運営者画面を `https://kouden-admin-staging.saedgewell.workers.dev` で運用する。staging と本番は Worker・D1・R2 を分ける。バージョンごとのプレビュー URL は無効にし、本番では `workers.dev` も無効にする。
+
+両ホスト名に Cloudflare Access のアプリケーションを作り、開発者のメールだけを許可する。アプリ側でも Access の JWT を検証する。WebSocket を使うため、Worker 単位ではなくホスト名単位で保護する。設定や AUD を変えるときは Cloudflare 側と `deploy.settings.ts` の両方を更新する。
+
+Google OAuth の staging 用クライアントに登録する URI は `https://kouden-app-staging.saedgewell.workers.dev/auth/google/callback`。シークレットと十分にランダムな `SESSION_SECRET` は Git に含めず、`cf deploy --secrets-file` または GitHub Environment の secrets から渡す。
+
+現在の staging は `mailFrom: ""` と `billingEnabled: false`。お知らせメールを送信・再試行せず、購入は利用できない。未送信のお知らせがある台帳は、期限到達後に最大 1 日間隔でメール設定の復帰を確認する。有効化後は次のアラームで送信を再開するため、期限を過ぎた通知は最大 24 時間遅れる。送信ドメインと Stripe テストキー・Webhook の準備後に有効化し、実サービスで検証する。GitHub Actions は有効な機能のシークレットだけをデプロイに渡す。
+
+移行データを扱う場合は、別途 `/internal/import/*` 用の Access アプリケーションに Service Auth を設定する。`importAccess` は投入・照合の間だけ有効にする。staging 用の OAuth ユーザーで先に登録すると旧ユーザーの決定的 ID と競合する場合があるため、リハーサル開始前に staging の既存データを確認する。
+
+### 本番公開と外部サービス
+
 M0 のコードは揃っていますが、以下は Cloudflare・Google・GitHub のアカウントでの作業が必要です。
 
-1. **ドメインの取得**: Cloudflare Registrar で取得し、`apps/app/deploy.settings.ts` の `DOMAIN` を置き換える。
+1. **本番ドメインの取得**: Cloudflare Registrar で取得し、`apps/app/deploy.settings.ts` の `DOMAIN` を置き換える。staging は上記の `workers.dev` を使える。
 2. **Google OAuth クライアントの作成**（Google Cloud Console）:
    - 種類: ウェブ アプリケーション
-   - 承認済みのリダイレクト URI: `https://<ドメイン>/auth/google/callback`、`https://staging.<ドメイン>/auth/google/callback`、`http://localhost:5173/auth/google/callback`
+   - 承認済みのリダイレクト URI: `https://<ドメイン>/auth/google/callback`、`https://kouden-app-staging.saedgewell.workers.dev/auth/google/callback`、`http://localhost:5173/auth/google/callback`
    - クライアント ID を `apps/app/deploy.settings.ts` の各 mode の `googleClientId` に設定する
    - 同意画面のブランド確認のため、取得したドメインを Search Console で所有確認する
 3. **Cloudflare の API トークン作成**: 権限は Workers Scripts・D1・Workers Routes / Custom Domains の編集。
@@ -107,8 +121,8 @@ M0 のコードは揃っていますが、以下は Cloudflare・Google・GitHub
    - `SESSION_SECRET`（`openssl rand -hex 32`。環境ごとに別の値）
    - `STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`（下の 6.）
    - `production` には承認者（Required reviewers）を設定する
-5. **ステージングを Cloudflare Access で保護**: `staging.<ドメイン>` を Access アプリケーションにし、開発者のメールのみ許可する。
-6. **運営者画面を Cloudflare Access で保護**: Zero Trust で `admin.<ドメイン>` と `admin-staging.<ドメイン>` を Self-hosted アプリケーションにし、ポリシーで運営者のメールアドレスだけを許可する。チームのドメイン（`<team>.cloudflareaccess.com`）と各アプリケーションの AUD タグを `apps/admin/deploy.settings.ts` の `access` に設定する（設定するまで `deployBlockers` がデプロイを止める）
+5. **ステージングを Cloudflare Access で保護**: `kouden-app-staging.saedgewell.workers.dev` を Access アプリケーションにし、開発者のメールのみ許可する。
+6. **運営者画面を Cloudflare Access で保護**: Zero Trust で `admin.<ドメイン>` と `kouden-admin-staging.saedgewell.workers.dev` を Self-hosted アプリケーションにし、ポリシーで運営者のメールアドレスだけを許可する。チームのドメイン（`<team>.cloudflareaccess.com`）と各アプリケーションの AUD タグを `apps/admin/deploy.settings.ts` の `access` に設定する（設定するまで `deployBlockers` がデプロイを止める）
 7. **Stripe の設定**（ステージングはテストモード、本番はライブモード）:
    - Webhook のエンドポイント: `https://<ドメイン>/webhooks/stripe`。送るイベントは `checkout.session.completed`・`checkout.session.async_payment_succeeded`・`checkout.session.async_payment_failed`・`charge.refunded`。表示される署名シークレット（`whsec_...`）を `STRIPE_WEBHOOK_SECRET` に登録する
    - シークレットキー（`sk_...`。制限付きキーなら Checkout Sessions の書き込み権限）を `STRIPE_SECRET_KEY` に登録する

@@ -6,6 +6,7 @@ import { log } from "./lib/logger.ts";
 import { requestContext } from "./middleware/request-context.ts";
 import { csrfProtection, securityHeaders } from "./middleware/security.ts";
 import { session } from "./middleware/session.ts";
+import { stagingAccess } from "./middleware/staging-access.ts";
 import { webhookRoutes } from "./routes/billing.tsx";
 import { koudenRoutes } from "./routes/koudens.tsx";
 import { internalRoutes } from "./routes/internal.ts";
@@ -19,6 +20,7 @@ export function createApp(deps: AppDeps = {}) {
 	const app = new Hono<AppEnv>();
 
 	app.use(requestContext(deps));
+	app.use(stagingAccess(deps));
 	// 招待トークンを含む URL を参照元として送らない。securityHeaders の後（外側）で上書きする
 	app.use("/invite/*", async (c, next) => {
 		await next();

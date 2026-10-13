@@ -1,6 +1,7 @@
 import { env, runInDurableObject } from "cloudflare:test";
 import {
 	IMPORT_USERS_PER_REQUEST,
+	giftPhotoKey,
 	expectedImportState,
 	importDifferences,
 	type ImportKoudenPayload,
@@ -12,6 +13,7 @@ import { createApp } from "../src/app.tsx";
 import { ledgerFor } from "../src/ledger/client.ts";
 import { importAccessVerifier } from "../src/migration/auth.ts";
 import { makeApp } from "./helpers.ts";
+import { deleteKoudenFiles } from "../src/kouden/files.ts";
 
 const TOKEN = { Authorization: "Bearer test-import-token" };
 
@@ -383,6 +385,128 @@ describe("旧データの取り込み（05 §2・§3）", () => {
 				})
 			).status,
 		).toBe(400);
+	});
+
+	it("供物写真を保存・照合・再投入し、メンバーだけに表示する", async () => {
+		const i = ids();
+		await importAll(i);
+		const payload = koudenPayload(i, future());
+		const photoId = crypto.randomUUID();
+		const key = giftPhotoKey(i.kouden, i.g2, photoId);
+		payload.ledger.giftPhotos = [
+			{
+				id: photoId,
+				giftId: i.g2,
+				r2Key: key,
+				caption: "<script>供花</script>",
+				createdBy: i.owner,
+				createdAt: "2024-03-01T00:00:00.000Z",
+				updatedAt: "2024-03-02T00:00:00.000Z",
+			},
+		];
+		const put = () =>
+			call(`/internal/import/koudens/${i.kouden}`, {
+				method: "PUT",
+				headers: TOKEN,
+				json: payload,
+			});
+		// 台帳や名前の更新前に、未転送の写真を拒否する。
+		payload.kouden.title = "写真付きの台帳";
+		expect((await put()).status).toBe(409);
+		expect(
+			await env.DB.prepare("SELECT title FROM koudens WHERE id = ?").bind(i.kouden).first("title"),
+		).toBe("故 山田 一郎 様");
+		const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+		const hash = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)), (b) =>
+			b.toString(16).padStart(2, "0"),
+		).join("");
+		expect(
+			(
+				await call(`/internal/import/files?key=${encodeURIComponent(key)}`, {
+					method: "PUT",
+					headers: { ...TOKEN, "X-Content-SHA256": hash },
+					body: bytes,
+				})
+			).status,
+		).toBe(200);
+		for (let repeat = 0; repeat < 2; repeat++) expect((await put()).status).toBe(200);
+		const state = await (
+			await call(`/internal/import/koudens/${i.kouden}`, { headers: TOKEN })
+		).json();
+		expect(importDifferences(expectedImportState(payload), state)).toEqual([]);
+		const owner = makeApp({
+			sub: i.sub,
+			email: `${i.owner}@gmail.com`,
+			emailVerified: true,
+			name: "写真の所有者",
+		});
+		const imagePath = `/k/${i.kouden}/files/gifts/${i.g2}/${photoId}`;
+		expect((await owner.request(imagePath)).status).toBe(302);
+		await owner.login();
+		const html = await (await owner.request(`/k/${i.kouden}/gifts/${i.g2}`)).text();
+		expect(html).toContain(imagePath);
+		expect(html).toContain("&lt;script&gt;供花&lt;/script&gt;");
+		const image = await owner.request(imagePath);
+		expect(image.status).toBe(200);
+		expect(image.headers.get("content-type")).toBe("image/png");
+		expect(image.headers.get("cache-control")).toBe("private, no-store");
+		expect(new Uint8Array(await image.arrayBuffer())).toEqual(bytes);
+		expect((await owner.request(`/k/${i.kouden}/files/gifts/${i.g1}/${photoId}`)).status).toBe(404);
+		// 閲覧者・アーカイブ中でも閲覧できる。メンバーから外れると配信しない。
+		const viewer = makeApp({
+			sub: `${i.sub}-viewer`,
+			email: i.email,
+			emailVerified: true,
+			name: "閲覧者",
+		});
+		await viewer.login();
+		await env.DB.prepare(
+			"UPDATE kouden_members SET role = 'viewer' WHERE kouden_id = ? AND user_id = ?",
+		)
+			.bind(i.kouden, i.editor)
+			.run();
+		await env.DB.prepare("UPDATE koudens SET status = 'archived' WHERE id = ?")
+			.bind(i.kouden)
+			.run();
+		expect((await viewer.request(imagePath)).status).toBe(200);
+		await env.DB.prepare("DELETE FROM kouden_members WHERE kouden_id = ? AND user_id = ?")
+			.bind(i.kouden, i.editor)
+			.run();
+		expect((await viewer.request(imagePath)).status).toBe(404);
+		// 別台帳への参照や写真の取り違えは、D1 の更新前に拒否する。
+		payload.ledger.giftPhotos[0]!.r2Key = giftPhotoKey("other", i.g2, photoId);
+		expect((await put()).status).toBe(400);
+		payload.ledger.giftPhotos[0]!.r2Key = key;
+		await runInDurableObject(ledgerFor(env, i.kouden), (_instance, ctx) => {
+			ctx.storage.sql.exec(
+				"UPDATE gifts SET deleted_at = ? WHERE id = ?",
+				new Date().toISOString(),
+				i.g2,
+			);
+		});
+		expect((await owner.request(imagePath)).status).toBe(404);
+		expect(await deleteKoudenFiles(env, i.kouden)).toBe(1);
+		expect(await env.FILES.head(key)).toBeNull();
+	});
+
+	it("返礼品画像が供物写真用や別台帳の保存先なら、台帳を書き込む前に拒否する", async () => {
+		const i = ids();
+		const payload = koudenPayload(i, "2030-01-01");
+		for (const key of [
+			giftPhotoKey(i.kouden, i.g2, crypto.randomUUID()),
+			`koudens/other-book/return-items/${crypto.randomUUID()}`,
+		]) {
+			payload.ledger.returnItems[0]!.imageR2Key = key;
+			const res = await call(`/internal/import/koudens/${i.kouden}`, {
+				method: "PUT",
+				headers: TOKEN,
+				json: payload,
+			});
+			expect(res.status).toBe(400);
+		}
+		expect(
+			await env.DB.prepare("SELECT id FROM koudens WHERE id = ?").bind(i.kouden).first(),
+		).toBeNull();
 	});
 
 	it("画像は再投入でき、R2からサイズとSHA-256を読み戻せる", async () => {

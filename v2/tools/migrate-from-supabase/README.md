@@ -33,9 +33,9 @@ bun run migrate prepare \
 
 抽出は Codex の Supabase コネクタで単一の読み取り専用 SELECT として行う。CLI は抽出済みファイルを受け取る。移行時の最終抽出では旧アプリの書き込みを停止し、別途 DB 全体のバックアップを取得する。
 
-### 返礼品画像がある場合
+### 返礼品画像・旧供物写真がある場合
 
-ファイル本体を先に保全し、旧 `image_url` とローカルファイルの対応表を `--files` で渡す。コネクタの Storage メタデータだけでは本体の代わりにならない。
+ファイル本体を先に保全し、返礼品の旧 `image_url` または供物写真の旧 `storage_key` とローカルファイルの対応表を `--files` で渡す。コネクタの Storage メタデータだけでは本体の代わりにならない。供物写真の `source` には `public.offering_photos.storage_key` の値をそのまま使う。
 
 ```json
 [
@@ -54,6 +54,8 @@ bun run migrate prepare \
 ```
 
 パスは対応表のディレクトリを基準に解決し、その外のファイルは受け付けない。必要な画像の対応付けが欠けている場合は停止する。画像は `prepared/files/<SHA-256>.bin` に保存し、計画にコピー先キー・サイズ・SHA-256 を記録する。1 ファイルは 5 MiB 以下。取り込み API は JPEG・PNG・WebP のシグネチャを検査する。
+
+供物写真は `koudens/{koudenId}/gifts/{giftId}/{photoId}` に保存する。元の供物との対応・説明・登録者・日時を DO に保持し、メンバーが「いただきもの」の詳細から閲覧できる。写真の新規追加・削除 UI は [#170](https://github.com/otomatty/kouden/issues/170) の後続作業。DO のスキーマは次回アクセス時に自動更新する。
 
 ## 2. 投入して照合する
 
@@ -105,16 +107,16 @@ bun run migrate verify \
 | ----------------------------------------------- | ------------------------------------------------------ |
 | `snapshot_count:public.kouden_entries`          | 対象テーブルの存在と `row_counts` に記録した件数       |
 | `unassigned_source:public.offering_allocations` | 元データに割り当て先のない行・重複した割り当てがないか |
-| `unsupported:offering_photos`                   | 未対応の旧供物写真が含まれていないか                   |
+| `unassigned_source:public.offering_photos`      | 供物に紐づかない写真や重複した写真がないか             |
 | `source_mismatch:kodenTotal`                    | 変換前後の香典合計が変わるデータがないか               |
 | `missing_access_credentials`                    | Access サービストークンの環境変数を設定したか          |
 | `dev_token_requires_loopback`                   | リモート接続で `IMPORT_DEV_TOKEN` を解除したか         |
 
 `plan.json`、元スナップショット、画像、警告の詳細には個人情報が含まれる。`v2/.migration-data/` は Git・lint・format の対象から除外している。出力はローカルの制限付きフォルダに保存すること。Unix の mode 指定は Windows の ACL を設定するものではない。
 
-- 旧供物写真の保存・表示は未実装。`public.offering_photos` が 1 件でもあれば `prepare` を失敗させ、黙って捨てない。
+- 旧供物写真は件数と DO の対応・説明・登録者・日時、R2 のキー・サイズ・SHA-256 を照合する。R2 に写真がない場合は台帳の取り込み前に停止する。
 - `common` / `gift` / `funeral` スキーマの非空テーブルは移行方針が未確定であり、警告を残す。元スナップショットを保持する。
-- 領収書など、台帳の返礼品画像以外の Storage ファイルの保全は別作業。
+- 領収書など、台帳の返礼品画像・供物写真以外の Storage ファイルの保全は別作業。
 - 照合は上記の集計・D1 行・画像に対する検査であり、DO のすべてのテキスト内容や画面表示まで保証するものではない。切り替え前の 10 冊の目視比較は別途行う。
 - `passed` でも変換警告は残り得る。故人名の確認、移行対象外の説明文・組織情報の扱いを確定してから切り替える。
 - 故人名の確認は、移行済みで未確認の香典帳を開いたオーナーに案内する。設定画面の「確認して保存する」で確認日時を保存する。D1 の `0007_deceased_name_confirmation.sql` の適用が必要。確認は投入・照合と取り込み口の無効化を終えてから行う。再取り込みは元の仮の名前へ戻すため確認状態も未確認に戻り、確認後の名前・更新日時は元の投入計画との照合対象から変わる。

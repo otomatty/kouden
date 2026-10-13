@@ -26,6 +26,7 @@ export const newId = {
 	entryPerson: (legacyEntryId: string) => uuidv5(`person:entry:${legacyEntryId}`),
 	entryGift: (legacyEntryId: string) => uuidv5(`gift:entry:${legacyEntryId}`),
 	offeringGift: (legacyId: string) => uuidv5(`gift:offering:${legacyId}`),
+	offeringPhoto: (legacyId: string) => uuidv5(`photo:offering:${legacyId}`),
 	offeringPerson: (legacyId: string) => uuidv5(`person:offering:${legacyId}`),
 	telegramGift: (legacyId: string) => uuidv5(`gift:telegram:${legacyId}`),
 	telegramPerson: (legacyId: string) => uuidv5(`person:telegram:${legacyId}`),

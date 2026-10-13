@@ -22,10 +22,14 @@ export interface ModeSettings {
 	r2: { name: string };
 	/** お知らせメールの送信元（Email Service に登録したドメインのアドレス） */
 	mailFrom: string;
+	/** staging の購入は Stripe テストキーと Webhook を設定してから有効にする */
+	billingEnabled: boolean;
 	/** Rate Limiting binding の namespace（アカウント内で一意な整数文字列） */
 	rateLimitNamespaces: { auth: string; write: string; invite: string };
 	/** Google OAuth クライアント ID（秘密情報ではない） */
 	googleClientId: string;
+	/** staging 全体を守る Access。取り込み口は importAccess の別の AUD で検証する */
+	access: { teamDomain: string; aud: string };
 	/**
 	 * 旧アプリからのデータ移行の取り込み口（/internal/import/*、05 §2）。Cloudflare Access のサービストークンで守る。
 	 * teamDomain は `<team>.cloudflareaccess.com`、aud は取り込み用の Access アプリケーションの AUD タグ。
@@ -40,6 +44,8 @@ const PLACEHOLDER_DOMAIN = "example.jp";
 const PLACEHOLDER_CLIENT_ID = "REPLACE_ME.apps.googleusercontent.com";
 
 export const DOMAIN = PLACEHOLDER_DOMAIN;
+export const WORKERS_SUBDOMAIN = "saedgewell";
+export const STAGING_ACCESS_TEAM = "black-disk-617a.cloudflareaccess.com";
 
 /** ローカル開発用の D1 の ID（ローカルの永続化ファイル名を決めるためだけに使う） */
 export const LOCAL_D1_ID = "00000000-0000-4000-8000-00000000d1d1";
@@ -51,20 +57,27 @@ export const MODES: Record<Mode, ModeSettings> = {
 		d1: { name: "kouden-db-dev", id: LOCAL_D1_ID },
 		r2: { name: "kouden-files-dev" },
 		mailFrom: "noreply@localhost.test",
+		billingEnabled: true,
 		rateLimitNamespaces: { auth: "9001", write: "9002", invite: "9003" },
 		googleClientId: PLACEHOLDER_CLIENT_ID,
+		access: { teamDomain: "", aud: "" },
 		importAccess: { teamDomain: "", aud: "" },
 		importDevToken: "dev-import-token",
 	},
 	staging: {
 		workerName: "kouden-app-staging",
-		origin: `https://staging.${DOMAIN}`,
-		domain: `staging.${DOMAIN}`,
+		origin: `https://kouden-app-staging.${WORKERS_SUBDOMAIN}.workers.dev`,
 		d1: { name: "kouden-db-staging" },
 		r2: { name: "kouden-files-staging" },
-		mailFrom: `noreply@staging.${DOMAIN}`,
+		// 送信ドメインを用意するまでリハーサル環境からメールは送らない
+		mailFrom: "",
+		billingEnabled: false,
 		rateLimitNamespaces: { auth: "2001", write: "2002", invite: "2003" },
-		googleClientId: PLACEHOLDER_CLIENT_ID,
+		googleClientId: "569940434834-tubk2ub196e34na7e97tqt44ljrn97vq.apps.googleusercontent.com",
+		access: {
+			teamDomain: STAGING_ACCESS_TEAM,
+			aud: "f32cfcbc9bfda4f2aee49b8b1d832542300f77f17c97924bfb7359f9e3ada00d",
+		},
 		importAccess: { teamDomain: "", aud: "" },
 		importDevToken: "",
 	},
@@ -75,8 +88,10 @@ export const MODES: Record<Mode, ModeSettings> = {
 		d1: { name: "kouden-db" },
 		r2: { name: "kouden-files" },
 		mailFrom: `noreply@${DOMAIN}`,
+		billingEnabled: true,
 		rateLimitNamespaces: { auth: "1001", write: "1002", invite: "1003" },
 		googleClientId: PLACEHOLDER_CLIENT_ID,
+		access: { teamDomain: "", aud: "" },
 		importAccess: { teamDomain: "", aud: "" },
 		importDevToken: "",
 	},
@@ -93,6 +108,22 @@ export function deployBlockers(mode: Mode): string[] {
 	if (mode === "development") return ["development はデプロイ先ではありません"];
 	const s = MODES[mode];
 	const blockers: string[] = [];
+	const origin = URL.canParse(s.origin) ? new URL(s.origin) : null;
+	if (!origin || origin.protocol !== "https:" || origin.origin !== s.origin) {
+		blockers.push(`${mode} の origin は HTTPS のオリジンにしてください`);
+	}
+	if (!s.domain && origin?.hostname !== `${s.workerName}.${WORKERS_SUBDOMAIN}.workers.dev`) {
+		blockers.push(`${mode} の origin が workers.dev の Worker 名と一致しません`);
+	}
+	if (s.domain && origin?.hostname !== s.domain) {
+		blockers.push(`${mode} の origin とドメインが一致しません`);
+	}
+	if (
+		mode === "staging" &&
+		(!s.access.teamDomain.endsWith(".cloudflareaccess.com") || !s.access.aud)
+	) {
+		blockers.push("staging の access.teamDomain と access.aud を設定してください");
+	}
 	if (s.domain?.endsWith(PLACEHOLDER_DOMAIN)) {
 		blockers.push(
 			`ドメインが仮の値（${s.domain}）のままです。deploy.settings.ts の DOMAIN を置き換えてください`,

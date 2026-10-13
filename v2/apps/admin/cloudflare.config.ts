@@ -15,10 +15,14 @@ export default defineConfig(({ mode }) => {
 			compatibilityDate: "2026-10-06",
 			entrypoint,
 			domains: s.domain ? [s.domain] : undefined,
+			workersDev: !s.domain,
+			previewUrls: false,
 			assets: { notFoundHandling: "none" },
 			observability: {
 				enabled: true,
+				redactQueryString: true,
 				logs: { enabled: true, invocationLogs: true },
+				traces: { enabled: true, headSamplingRate: 0.1 },
 			},
 			env: {
 				ADMIN_ORIGIN: bindings.text(s.origin),

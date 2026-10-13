@@ -24,6 +24,20 @@ const isoDate = z.iso.date();
 /** 旧データの金額は PostgreSQL の integer。その範囲はすべて受け付ける */
 const yen = z.number().int().min(0).max(2_147_483_647);
 
+/** 移行画像は台帳ごとの既知の保存領域だけに置く。URL・相対パスは受け付けない */
+const objectIdPattern = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+export const importFileKeySchema = z
+	.string()
+	.regex(
+		new RegExp(
+			`^koudens/[a-zA-Z0-9_-]{1,64}/(?:return-items/${objectIdPattern}|gifts/[a-zA-Z0-9_-]{1,64}/${objectIdPattern})$`,
+		),
+	);
+
+/** 供物写真の保存先。元の写真 ID から決定的に生成した ID を使う */
+export const giftPhotoKey = (koudenId: string, giftId: string, photoId: string) =>
+	`koudens/${koudenId}/gifts/${giftId}/${photoId}`;
+
 // ---- D1（ユーザー） --------------------------------------------------------------
 
 export const importUserSchema = z.object({
@@ -125,6 +139,20 @@ export const ledgerSnapshotSchema = z.object({
 			shareAmount: yen.nullable(),
 		}),
 	),
+	/** 旧形式の計画では省略可能。画像の形式・サイズ・ハッシュは R2 のメタデータで管理する */
+	giftPhotos: z
+		.array(
+			z.object({
+				id: z.uuid(),
+				giftId: id,
+				r2Key: importFileKeySchema,
+				caption: text,
+				createdBy: id,
+				createdAt: isoTime,
+				updatedAt: isoTime,
+			}),
+		)
+		.optional(),
 	returnItems: z.array(
 		z.object({
 			id,
@@ -133,7 +161,7 @@ export const ledgerSnapshotSchema = z.object({
 			price: yen,
 			description: text,
 			/** R2 のキー（koudens/{koudenId}/…）。画像のコピーは移行ツールが行う */
-			imageR2Key: z.string().max(500).nullable(),
+			imageR2Key: importFileKeySchema.nullable(),
 			isActive: z.boolean(),
 			sortOrder: z.number().int(),
 			createdAt: isoTime,
@@ -183,42 +211,69 @@ export type LedgerSnapshot = z.infer<typeof ledgerSnapshotSchema>;
 
 // ---- 香典帳 1 冊分（D1 + DO） ----------------------------------------------------
 
-export const importKoudenPayloadSchema = z.object({
-	/** 新しい香典帳の ID（移行ツールが旧 ID から作る）。取り込み口の URL の ID と一致しなければ受け付けない */
-	koudenId: id,
-	kouden: z.object({
-		/** 旧 koudens.id */
-		legacyKoudenId: id,
-		title: name,
-		deceasedName: name,
-		ownerUserId: id,
-		status: z.enum(["active", "archived"]),
-		createdAt: isoTime,
-		updatedAt: isoTime,
-	}),
-	members: z
-		.array(
-			z.object({
-				userId: id,
-				role: z.enum(["owner", "editor", "viewer"]),
-				joinedAt: isoTime,
-				invitedBy: id.nullable(),
-			}),
-		)
-		.max(IMPORT_MEMBERS_MAX),
-	purchases: z
-		.array(
-			z.object({
-				id,
-				userId: id,
-				amount: yen,
-				stripeCheckoutSessionId: z.string().max(255).nullable(),
-				createdAt: isoTime,
-			}),
-		)
-		.max(IMPORT_PURCHASES_MAX),
-	ledger: ledgerSnapshotSchema,
-});
+export const importKoudenPayloadSchema = z
+	.object({
+		/** 新しい香典帳の ID（移行ツールが旧 ID から作る）。取り込み口の URL の ID と一致しなければ受け付けない */
+		koudenId: id,
+		kouden: z.object({
+			/** 旧 koudens.id */
+			legacyKoudenId: id,
+			title: name,
+			deceasedName: name,
+			ownerUserId: id,
+			status: z.enum(["active", "archived"]),
+			createdAt: isoTime,
+			updatedAt: isoTime,
+		}),
+		members: z
+			.array(
+				z.object({
+					userId: id,
+					role: z.enum(["owner", "editor", "viewer"]),
+					joinedAt: isoTime,
+					invitedBy: id.nullable(),
+				}),
+			)
+			.max(IMPORT_MEMBERS_MAX),
+		purchases: z
+			.array(
+				z.object({
+					id,
+					userId: id,
+					amount: yen,
+					stripeCheckoutSessionId: z.string().max(255).nullable(),
+					createdAt: isoTime,
+				}),
+			)
+			.max(IMPORT_PURCHASES_MAX),
+		ledger: ledgerSnapshotSchema,
+	})
+	.superRefine((p, ctx) => {
+		for (const [i, item] of p.ledger.returnItems.entries()) {
+			if (
+				item.imageR2Key !== null &&
+				!item.imageR2Key.startsWith(`koudens/${p.koudenId}/return-items/`)
+			) {
+				ctx.addIssue({
+					code: "custom",
+					path: ["ledger", "returnItems", i, "imageR2Key"],
+					message: "返礼品画像の保存先が一致しません",
+				});
+			}
+		}
+		for (const [i, photo] of (p.ledger.giftPhotos ?? []).entries()) {
+			if (
+				photo.r2Key !== giftPhotoKey(p.koudenId, photo.giftId, photo.id) ||
+				!p.ledger.gifts.some((g) => g.id === photo.giftId)
+			) {
+				ctx.addIssue({
+					code: "custom",
+					path: ["ledger", "giftPhotos", i],
+					message: "写真の供物・保存先が一致しません",
+				});
+			}
+		}
+	});
 /**
  * 旧アプリで最後に香典帳が動いた時刻（香典帳・差出人・いただきもの・香典返しの更新の最も新しいもの）。
  * 一覧の並び順（最近の動き）に使う。取り込んだ時刻にすると、移行の実行順に並んでしまう
@@ -230,6 +285,7 @@ export function importLastActivityAt(payload: ImportKoudenPayload): string {
 		...ledger.persons.map((p) => p.updatedAt),
 		...ledger.gifts.map((g) => g.updatedAt),
 		...ledger.returns.map((r) => r.updatedAt),
+		...(ledger.giftPhotos ?? []).map((p) => p.updatedAt),
 	];
 	return times.reduce((latest, t) => (Date.parse(t) > Date.parse(latest) ? t : latest));
 }
@@ -238,6 +294,8 @@ export type ImportKoudenPayload = z.infer<typeof importKoudenPayloadSchema>;
 
 /** 取り込んだ後の件数（05 §5 の検証で旧データと比べる） */
 export interface LedgerImportSummary {
+	giftPhotos: number;
+	giftPhotoRows: NonNullable<LedgerSnapshot["giftPhotos"]>;
 	events: number;
 	relationships: number;
 	persons: number;

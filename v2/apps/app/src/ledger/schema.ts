@@ -180,6 +180,20 @@ SELECT lower(hex(randomblob(16))), o.kind, e.id, strftime('%Y-%m-%dT00:00:00.000
                 ORDER BY date, sort_order LIMIT 1)
    AND strftime('%Y-%m-%dT00:00:00.000Z', e.date, o.offset) > strftime('%Y-%m-%dT%H:%M:%fZ', 'now');
 `,
+	// 3: 旧供物写真。バイナリの形式・サイズ・ハッシュは R2 を正とする。
+	`
+CREATE TABLE gift_photos (
+  id TEXT PRIMARY KEY,
+  gift_id TEXT NOT NULL REFERENCES gifts(id),
+  r2_key TEXT NOT NULL UNIQUE,
+  caption TEXT,
+  created_by TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  deleted_at TEXT
+);
+CREATE INDEX idx_gift_photos_gift ON gift_photos(gift_id);
+`,
 ];
 
 /**

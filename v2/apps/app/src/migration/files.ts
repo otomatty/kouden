@@ -1,16 +1,10 @@
 import { Hono } from "hono";
-import { detectImageType, isObjectId, MAX_IMAGE_BYTES } from "../kouden/files.ts";
+import { importFileKeySchema } from "@kouden/domain";
+import { detectImageType, MAX_IMAGE_BYTES } from "../kouden/files.ts";
 import type { AppEnv } from "../types.ts";
 
 function validKey(key: string): boolean {
-	const parts = key.split("/");
-	return (
-		parts.length === 4 &&
-		parts[0] === "koudens" &&
-		/^[a-zA-Z0-9_-]{1,64}$/.test(parts[1] ?? "") &&
-		parts[2] === "return-items" &&
-		isObjectId(parts[3] ?? "")
-	);
+	return importFileKeySchema.safeParse(key).success;
 }
 
 const hex = (bytes: ArrayBuffer) =>

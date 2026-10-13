@@ -43,7 +43,6 @@ export function prepareSnapshot(input: unknown): {
 	};
 	const users = legacyUsersSchema.parse(rows("auth.users"));
 	const profiles = legacyProfilesSchema.parse(rows("public.profiles"));
-	if (rows("public.offering_photos").length) throw new Error("unsupported:offering_photos");
 	const transformedUsers = transformUsers(users, profiles);
 	const known = new Set(users.map((u) => u.id));
 	const newUsers = transformedUsers.users.map((u) => importUserSchema.parse(u));
@@ -66,6 +65,7 @@ export function prepareSnapshot(input: unknown): {
 		"relationships",
 		"kouden_entries",
 		"offerings",
+		"offering_photos",
 		"offering_allocations",
 		"offering_entries",
 		"telegrams",
@@ -96,6 +96,7 @@ export function prepareSnapshot(input: unknown): {
 			relationships: take("relationships", own),
 			entries,
 			offerings,
+			offeringPhotos: take("offering_photos", (r) => offeringIds.has(r.offering_id)),
 			offeringAllocations: take("offering_allocations", (r) => offeringIds.has(r.offering_id)),
 			offeringEntries: take("offering_entries", (r) => offeringIds.has(r.offering_id)),
 			telegrams: take("telegrams", own),
@@ -119,10 +120,7 @@ export function prepareSnapshot(input: unknown): {
 		return { payload, files: [] as PreparedFile[] };
 	});
 	for (const table of usedTables) {
-		if (
-			["auth.users", "public.profiles", "public.koudens", "public.offering_photos"].includes(table)
-		)
-			continue;
+		if (["auth.users", "public.profiles", "public.koudens"].includes(table)) continue;
 		if (rows(table).some((row) => taken.get(row) !== 1))
 			throw new Error(`unassigned_source:${table}`);
 	}
@@ -148,18 +146,20 @@ export function validatePlan(plan: MigrationPlan, withFiles = true): void {
 	for (const group of [ids, legacyIds, purchaseIds])
 		if (new Set(group).size !== group.length) throw new Error("duplicate:plan_id");
 	for (const k of plan.koudens) {
+		importKoudenPayloadSchema.parse(k.payload);
 		validatePayload(k.payload, known);
 		if (Buffer.byteLength(JSON.stringify(k.payload)) > 10 * 1024 * 1024)
 			throw new Error("payload_too_large");
 		if (!withFiles) continue;
-		const keys = k.payload.ledger.returnItems
-			.flatMap((r) => (r.imageR2Key ? [r.imageR2Key] : []))
-			.toSorted();
+		const keys = [
+			...k.payload.ledger.returnItems.flatMap((r) => (r.imageR2Key ? [r.imageR2Key] : [])),
+			...(k.payload.ledger.giftPhotos ?? []).map((p) => p.r2Key),
+		].toSorted();
 		if (JSON.stringify(keys) !== JSON.stringify(k.files.map((f) => f.key).toSorted()))
 			throw new Error("file_manifest_mismatch");
 		if (
 			new Set(keys).size !== keys.length ||
-			keys.some((key) => !key.startsWith(`koudens/${k.payload.koudenId}/return-items/`))
+			keys.some((key) => !key.startsWith(`koudens/${k.payload.koudenId}/`))
 		)
 			throw new Error("invalid_file_key");
 	}

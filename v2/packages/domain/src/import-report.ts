@@ -65,6 +65,8 @@ export function expectedImportState(p: ImportKoudenPayload) {
 				.toSorted((a, b) => a.id.localeCompare(b.id)),
 		},
 		ledger: {
+			giftPhotos: l.giftPhotos?.length ?? 0,
+			giftPhotoRows: (l.giftPhotos ?? []).toSorted((a, b) => a.id.localeCompare(b.id)),
 			events: l.events.length,
 			relationships: l.relationships.length,
 			persons: l.persons.length,

@@ -5,7 +5,7 @@ describe("公開できるエラーの診断", () => {
 	it.each([
 		"snapshot_count:public.kouden_entries",
 		"unassigned_source:public.offering_allocations",
-		"unsupported:offering_photos",
+		"duplicate:giftPhotos",
 		"source_mismatch:kodenTotal",
 		"source_mismatch:gifts.koden,returns.pending,kodenTotal,members",
 		"dev_token_requires_loopback",

@@ -27,6 +27,7 @@ export const USERS = {
 	returns: user("returns", "高橋 三郎"),
 	account: user("account", "田中 四郎"),
 	migration: user("migration", "移行 確認"),
+	photos: user("photos", "写真 確認"),
 } as const;
 
 /**
