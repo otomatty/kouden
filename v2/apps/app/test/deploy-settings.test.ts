@@ -39,6 +39,25 @@ describe("deployBlockers", () => {
 	it("development はデプロイ先にできない", () => {
 		expect(deployBlockers("development")).not.toEqual([]);
 	});
+	it("rehearsal は専用の Access と保存先が必要で、メールと決済を有効にできない", () => {
+		const original = structuredClone(MODES.rehearsal);
+		expect(deployBlockers("rehearsal")).not.toEqual([]);
+		try {
+			MODES.rehearsal.access = { teamDomain: "test.cloudflareaccess.com", aud: "service-aud" };
+			MODES.rehearsal.importAccess = { ...MODES.rehearsal.access };
+			expect(deployBlockers("rehearsal")).toEqual([]);
+			MODES.rehearsal.d1 = MODES.staging.d1;
+			expect(deployBlockers("rehearsal").some((b) => b.includes("分離"))).toBe(true);
+			MODES.rehearsal.d1 = { ...original.d1, id: "existing-database-id" };
+			expect(deployBlockers("rehearsal").some((b) => b.includes("ID を指定せず"))).toBe(true);
+			MODES.rehearsal.d1 = original.d1;
+			MODES.rehearsal.mailFrom = "sender@example.test";
+			MODES.rehearsal.billingEnabled = true;
+			expect(deployBlockers("rehearsal").some((b) => b.includes("無効"))).toBe(true);
+		} finally {
+			MODES.rehearsal = original;
+		}
+	});
 
 	it("mode ごとに Worker 名と D1 名が分かれている", () => {
 		const names = Object.values(MODES).map((m) => m.workerName);
