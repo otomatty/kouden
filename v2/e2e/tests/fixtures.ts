@@ -8,6 +8,8 @@ export async function loginAs(context: BrowserContext, user: E2EUser) {
 		{
 			name: "__Host-kouden_session",
 			value: user.token,
+			// 先頭に「.」のない domain は host-only の Cookie になる（__Host- の条件）。
+			// url で指定すると http の URL に Secure の Cookie を付けることになり、Chromium が受け付けない
 			domain: "localhost",
 			path: "/",
 			secure: true,

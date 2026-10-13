@@ -102,3 +102,85 @@ test.describe("いただきもの・差出人", () => {
 		await expect(page.getByRole("link", { name: "伊藤 三郎 を編集" })).toBeFocused();
 	});
 });
+
+test.describe("通信が遅いとき", () => {
+	test("差出人の候補は最新の入力で出し、登録と重なった候補の検索は取り消す", async ({ page }) => {
+		const base = await createKouden(page, "遅延 確認");
+		await page.goto(`${base}/reception`);
+		await registerKoden(page, "佐藤 一郎", 10000);
+		await registerKoden(page, "鈴木 花子", 5000);
+
+		// 候補の応答を遅らせる（取り消された要求は続けられないので無視する）
+		await page.route("**/persons/candidates*", async (route) => {
+			await new Promise((resolve) => setTimeout(resolve, 1500));
+			await route.continue().catch(() => undefined);
+		});
+		const candidatesRequest = (text: string) =>
+			page.waitForRequest(
+				(r) =>
+					r.url().includes("/persons/candidates") && decodeURIComponent(r.url()).includes(text),
+			);
+		const name = page.getByRole("textbox", { name: "氏名", exact: true });
+		const status = page.locator("#sr-status");
+		const candidates = page.getByRole("group", { name: "同じ人が登録されていませんか？" });
+
+		// 「佐藤」の検索の応答を待つ間に「鈴木」に変えると、「鈴木」の候補が出る
+		const first = candidatesRequest("佐藤");
+		await name.fill("佐藤");
+		await first;
+		await name.fill("鈴木");
+		await expect(candidates.getByRole("radio", { name: /鈴木 花子/ })).toBeVisible();
+		await expect(candidates.getByRole("radio", { name: /佐藤 一郎/ })).toHaveCount(0);
+		await expect(status).toHaveText("同じ人の候補が 1 件あります。");
+
+		// 候補の検索の応答を待つ間に登録しても、登録後の入力欄に古い候補は出ない
+		const pending = candidatesRequest("一郎");
+		await name.fill("佐藤 一郎");
+		await pending;
+		await page.getByLabel("金額").fill("1000");
+		await page.getByRole("button", { name: "登録する" }).click();
+		await expect(status).toContainText("受付番号 3、佐藤 一郎 様");
+		await page.waitForTimeout(2000);
+		await expect(candidates).toHaveCount(0);
+		await expect(status).toContainText("受付番号 3、佐藤 一郎 様");
+	});
+});
+
+test("複数の行を編集中でも、エラーのフォーカスは保存した行の欄に移る", async ({ page }) => {
+	const base = await createKouden(page, "複数行 確認");
+	await page.goto(`${base}/reception`);
+	await registerKoden(page, "山本 九郎", 3000);
+	await registerKoden(page, "中村 十郎", 3000);
+	await page.goto(`${base}/persons`);
+
+	// 一覧の上から 1 行目・2 行目の順に編集する（上の行のエラーが文書の中で先に見つかる配置にする）
+	const editLinks = page.getByRole("link", { name: / を編集$/ });
+	await expect(editLinks).toHaveCount(2);
+	const hrefs = await editLinks.evaluateAll((links) => links.map((a) => a.getAttribute("href")));
+	const editRow = async (index: number) => {
+		const id = hrefs[index]?.split("/").pop() ?? "";
+		await page
+			.locator(`#person-${id}`)
+			.getByRole("link", { name: / を編集$/ })
+			.click();
+		const field = page.locator(`#p-${id}-name`);
+		await expect(field).toBeFocused();
+		return field;
+	};
+
+	// 上の行を空の氏名で保存してエラーを残す
+	const first = await editRow(0);
+	await first.fill("");
+	await first.press("Enter");
+	await expect(first).toHaveAttribute("aria-invalid", "true");
+	await expect(first).toBeFocused();
+
+	// 下の行も同じようにすると、フォーカスは上の行ではなく、保存した行の欄に移る
+	const second = await editRow(1);
+	await second.fill("");
+	await second.press("Enter");
+	await expect(second).toHaveAttribute("aria-invalid", "true");
+	// フォーカスの移動は htmx の差し替えの後（settle）に行われるので、それを待ってから確かめる
+	await page.waitForTimeout(500);
+	await expect(second).toBeFocused();
+});

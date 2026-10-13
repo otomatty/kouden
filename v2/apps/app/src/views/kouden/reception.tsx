@@ -168,8 +168,8 @@ export const ReceptionPanel: FC<ReceptionProps> = ({
 							"hx-trigger": "input changed delay:300ms",
 							"hx-target": "#candidates",
 							"hx-swap": "innerHTML",
-							// 登録の送信と重なった候補の要求は捨てる（登録後の空の入力欄に古い候補が出ないように）
-							"hx-sync": "closest form:abort",
+							// 候補の要求は新しい入力で置き換える。登録の送信と重なった候補の要求は app.js が取り消す
+							"hx-sync": "this:replace",
 						}}
 					/>
 				</Field>
@@ -221,7 +221,7 @@ export const ReceptionPanel: FC<ReceptionProps> = ({
 								"hx-trigger": "input changed delay:300ms",
 								"hx-target": "#candidates",
 								"hx-swap": "innerHTML",
-								"hx-sync": "closest form:abort",
+								"hx-sync": "this:replace",
 							}}
 						/>
 					</Field>
