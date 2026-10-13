@@ -100,7 +100,7 @@ bun run e2e                        # = scripts/prepare.ts → playwright test
 
 Google OAuth の staging 用クライアントに登録する URI は `https://kouden-app-staging.saedgewell.workers.dev/auth/google/callback`。シークレットと十分にランダムな `SESSION_SECRET` は Git に含めず、`cf deploy --secrets-file` または GitHub Environment の secrets から渡す。
 
-現在の staging は `mailFrom: ""` と `billingEnabled: false`。お知らせメールを送信・再試行せず、購入は利用できない。送信ドメインと Stripe テストキー・Webhook の準備後に有効化し、実サービスで検証する。GitHub Actions は有効な機能のシークレットだけをデプロイに渡す。
+現在の staging は `mailFrom: ""` と `billingEnabled: false`。お知らせメールを送信・再試行せず、購入は利用できない。未送信のお知らせがある台帳は、期限到達後に最大 1 日間隔でメール設定の復帰を確認する。有効化後は次のアラームで送信を再開するため、期限を過ぎた通知は最大 24 時間遅れる。送信ドメインと Stripe テストキー・Webhook の準備後に有効化し、実サービスで検証する。GitHub Actions は有効な機能のシークレットだけをデプロイに渡す。
 
 移行データを扱う場合は、別途 `/internal/import/*` 用の Access アプリケーションに Service Auth を設定する。`importAccess` は投入・照合の間だけ有効にする。staging 用の OAuth ユーザーで先に登録すると旧ユーザーの決定的 ID と競合する場合があるため、リハーサル開始前に staging の既存データを確認する。
 

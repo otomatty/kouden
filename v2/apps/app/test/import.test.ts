@@ -489,6 +489,26 @@ describe("旧データの取り込み（05 §2・§3）", () => {
 		expect(await env.FILES.head(key)).toBeNull();
 	});
 
+	it("返礼品画像が供物写真用や別台帳の保存先なら、台帳を書き込む前に拒否する", async () => {
+		const i = ids();
+		const payload = koudenPayload(i, "2030-01-01");
+		for (const key of [
+			giftPhotoKey(i.kouden, i.g2, crypto.randomUUID()),
+			`koudens/other-book/return-items/${crypto.randomUUID()}`,
+		]) {
+			payload.ledger.returnItems[0]!.imageR2Key = key;
+			const res = await call(`/internal/import/koudens/${i.kouden}`, {
+				method: "PUT",
+				headers: TOKEN,
+				json: payload,
+			});
+			expect(res.status).toBe(400);
+		}
+		expect(
+			await env.DB.prepare("SELECT id FROM koudens WHERE id = ?").bind(i.kouden).first(),
+		).toBeNull();
+	});
+
 	it("画像は再投入でき、R2からサイズとSHA-256を読み戻せる", async () => {
 		const key = `koudens/${crypto.randomUUID()}/return-items/${crypto.randomUUID()}`;
 		const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);

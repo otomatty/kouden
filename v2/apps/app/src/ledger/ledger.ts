@@ -95,6 +95,7 @@ const IMPORT_TABLES = [
 
 /** お知らせの送信に全員分失敗したときに、送り直す間隔 */
 export const REMINDER_RETRY_MS = 30 * 60 * 1000;
+export const MAIL_CONFIG_RECHECK_MS = 24 * 60 * 60 * 1000;
 
 /** 香典返しを一度に確定できる件数 */
 const MAX_CONFIRM_ENTRIES = 2000;
@@ -2913,7 +2914,14 @@ export class KoudenLedger extends DurableObject<Env> {
 		const next = this.first<{ at: string | null }>(
 			"SELECT min(fire_at) AS at FROM reminders WHERE sent_at IS NULL",
 		)?.at;
-		if (next && this.env.MAIL_FROM) candidates.push(Date.parse(next));
+		if (next) {
+			// 無効中も将来の通知を失わない。期限を過ぎた分は最大 1 日ごとに設定の復帰を確認する。
+			candidates.push(
+				this.env.MAIL_FROM
+					? Date.parse(next)
+					: Math.max(Date.parse(next), Date.now() + MAIL_CONFIG_RECHECK_MS),
+			);
+		}
 		if (candidates.length === 0) return;
 		const wanted = Math.min(...candidates);
 		const current = await this.ctx.storage.getAlarm();

@@ -313,6 +313,22 @@ describe("prepare", () => {
 		expect(JSON.stringify(input)).toBe(before);
 		expect(prepareSnapshot(input)).toEqual(result);
 	});
+	it.each(["gift", "other-book"])(
+		"返礼品画像を %s の保存先へ変えた計画は読み込めない",
+		async (kind) => {
+			const { plan } = prepareSnapshot(snapshot(true));
+			const book = plan.koudens[0]!;
+			const key =
+				kind === "gift"
+					? `koudens/${book.payload.koudenId}/gifts/g1/${crypto.randomUUID()}`
+					: `koudens/other-book/return-items/${crypto.randomUUID()}`;
+			book.payload.ledger.returnItems[0]!.imageR2Key = key;
+			book.files = [{ key, size: 8, sha256: "a".repeat(64) }];
+			const dir = await temp();
+			await writeFile(join(dir, "plan.json"), JSON.stringify(plan));
+			await expect(loadPlan(dir)).rejects.toThrow("返礼品画像の保存先が一致しません");
+		},
+	);
 	it("件数が欠けた抽出、割り当て先のない行、未対応の旧写真を止める", () => {
 		const missing = snapshot();
 		delete missing.data["public.kouden_entries"];

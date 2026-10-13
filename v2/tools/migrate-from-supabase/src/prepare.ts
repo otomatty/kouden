@@ -146,6 +146,7 @@ export function validatePlan(plan: MigrationPlan, withFiles = true): void {
 	for (const group of [ids, legacyIds, purchaseIds])
 		if (new Set(group).size !== group.length) throw new Error("duplicate:plan_id");
 	for (const k of plan.koudens) {
+		importKoudenPayloadSchema.parse(k.payload);
 		validatePayload(k.payload, known);
 		if (Buffer.byteLength(JSON.stringify(k.payload)) > 10 * 1024 * 1024)
 			throw new Error("payload_too_large");

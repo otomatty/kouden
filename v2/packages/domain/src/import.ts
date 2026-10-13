@@ -161,7 +161,7 @@ export const ledgerSnapshotSchema = z.object({
 			price: yen,
 			description: text,
 			/** R2 のキー（koudens/{koudenId}/…）。画像のコピーは移行ツールが行う */
-			imageR2Key: z.string().max(500).nullable(),
+			imageR2Key: importFileKeySchema.nullable(),
 			isActive: z.boolean(),
 			sortOrder: z.number().int(),
 			createdAt: isoTime,
@@ -249,6 +249,18 @@ export const importKoudenPayloadSchema = z
 		ledger: ledgerSnapshotSchema,
 	})
 	.superRefine((p, ctx) => {
+		for (const [i, item] of p.ledger.returnItems.entries()) {
+			if (
+				item.imageR2Key !== null &&
+				!item.imageR2Key.startsWith(`koudens/${p.koudenId}/return-items/`)
+			) {
+				ctx.addIssue({
+					code: "custom",
+					path: ["ledger", "returnItems", i, "imageR2Key"],
+					message: "返礼品画像の保存先が一致しません",
+				});
+			}
+		}
 		for (const [i, photo] of (p.ledger.giftPhotos ?? []).entries()) {
 			if (
 				photo.r2Key !== giftPhotoKey(p.koudenId, photo.giftId, photo.id) ||
