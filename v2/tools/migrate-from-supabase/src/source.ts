@@ -71,6 +71,11 @@ export interface LegacyEntry extends Audited {
 	attendance_type: string;
 	notes: string | null;
 	last_modified_by: string | null;
+	/**
+	 * 旧アプリの古い形式の「返礼済み」の印。香典返しの記録（return_entry_records）がなければ、旧画面はこの印で判定していた。
+	 * 本番のスキーマから列が消えていることもあるので任意
+	 */
+	is_return_completed?: boolean | null;
 }
 
 export interface LegacyOffering extends Audited {

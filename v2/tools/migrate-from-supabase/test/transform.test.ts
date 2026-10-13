@@ -5,6 +5,7 @@ import type { LegacyEntry, LegacyKoudenSource } from "../src/source.ts";
 import {
 	guessDeceasedName,
 	legacyCounts,
+	COMPLETED_FLAG_NOTE,
 	MISSING_NAME,
 	returnMethodOf,
 	transformKouden,
@@ -74,6 +75,7 @@ function source(overrides: Partial<LegacyKoudenSource> = {}): LegacyKoudenSource
 		entries: [
 			entry("e1", {
 				name: " 佐藤 一郎 ",
+				is_return_completed: true,
 				relationship_id: "rel-a",
 				postal_code: "100-0001",
 				address: "東京都千代田区1-1",
@@ -87,6 +89,12 @@ function source(overrides: Partial<LegacyKoudenSource> = {}): LegacyKoudenSource
 				amount: 5000,
 			}),
 			entry("e3", { amount: 3000, attendance_type: "ABSENT", relationship_id: "rel-missing" }),
+			// 古い形式: 記録はなく「返礼済み」の印だけ（e1 は記録があるので、印があっても記録に従う）
+			entry("e4", {
+				name: "古い 形式",
+				is_return_completed: true,
+				updated_at: "2024-04-01T16:00:00Z",
+			}),
 		],
 		offerings: [
 			{
@@ -421,6 +429,7 @@ describe("香典帳（05 §3）", () => {
 			[10000, "attended", "受付で確認"],
 			[5000, "condolence_visit", null],
 			[3000, "absent", null],
+			[10000, "attended", null],
 		]);
 		expect(codes(result.warnings)).toEqual(
 			expect.arrayContaining(["person_without_name", "unknown_relationship"]),
@@ -620,17 +629,38 @@ describe("香典帳（05 §3）", () => {
 		expect(codes(warnings)).toContain("unknown_return_method");
 	});
 
+	it("記録がなく「返礼済み」の印だけがある香典は、発送済みの香典返しにする", () => {
+		expect(ledger.returns.find((r) => r.personId === newId.entryPerson("e4"))).toMatchObject({
+			id: newId.return("e4"),
+			status: "shipped",
+			shippedAt: "2024-04-02",
+			notes: COMPLETED_FLAG_NOTE,
+		});
+		// 記録がある香典は、印より記録に従う（1 件だけ）
+		expect(ledger.returns.filter((r) => r.personId === newId.entryPerson("e1"))).toHaveLength(1);
+	});
+
+	it("表示名は切り詰めない", () => {
+		const long = "長".repeat(80);
+		const { users } = transformUsers(
+			[{ id: "u-long", email: "long@example.com", created_at: T, identities: [] }],
+			[{ id: "u-long", display_name: long }],
+		);
+		expect(users[0]?.displayName).toBe(long);
+		expect(importUsersPayloadSchema.safeParse({ users }).success).toBe(true);
+	});
+
 	it("何度変換しても同じ結果になる", () => {
 		expect(transformKouden(source(), KNOWN)).toEqual(result);
 	});
 
 	it("検証用の件数は、取り込んだ後の件数と比べられる形にする", () => {
 		expect(legacyCounts(source(), KNOWN)).toEqual({
-			gifts: { koden: 3, kumotsu: 1, kyoka: 1, choden: 2, other: 0 },
-			kodenTotal: 18000,
+			gifts: { koden: 4, kumotsu: 1, kyoka: 1, choden: 2, other: 0 },
+			kodenTotal: 28000,
 			returnItems: 2,
 			// 取り込んだ後の LedgerImportSummary.returns と同じ形（差出人単位・最後の記録の状況）
-			returns: { pending: 0, arranged: 1, shipped: 1, handed_on_day: 0, not_required: 0 },
+			returns: { pending: 0, arranged: 1, shipped: 2, handed_on_day: 0, not_required: 0 },
 			// 存在しないユーザー（u-gone）のメンバーは、変換と同じく数えない
 			members: 3,
 		});

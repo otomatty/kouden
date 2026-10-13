@@ -46,8 +46,9 @@ export interface KoudenTransform {
 /** 氏名・団体名のどちらもない差出人に入れる名前（差出人の必須条件、05 §3） */
 export const MISSING_NAME = "（氏名未記入）";
 export const MISSING_NAME_NOTE = "移行時に補完: 旧データに氏名・団体名がありませんでした";
-
-const MAX_DISPLAY_NAME = 50;
+/** 旧データの「返礼済み」の印から作った香典返しの備考 */
+export const COMPLETED_FLAG_NOTE =
+	"移行時に作成: 旧データで返礼済みになっていました（品・送付先の記録はありません）";
 
 const iso = (value: string) => new Date(value).toISOString();
 
@@ -94,7 +95,8 @@ export function transformUsers(
 			id: newId.user(u.id),
 			legacyUserId: u.id,
 			email,
-			displayName: displayName.slice(0, MAX_DISPLAY_NAME),
+			// 旧データの表示名は切り詰めない（画面の上限は、本人が表示名を変えるときに検証される）
+			displayName,
 			googleSub: google?.provider_id ?? null,
 			createdAt: iso(u.created_at),
 		};
@@ -589,6 +591,29 @@ export function transformKouden(
 		}
 	}
 
+	// 旧アプリの古い形式: 香典返しの記録がなく、香典に「返礼済み」の印（is_return_completed）だけがある。
+	// 旧画面は記録がなければこの印で返礼済みと表示していたので、発送済みの香典返しとして作る
+	const recorded = returnRecordsByEntry(source);
+	for (const e of source.entries) {
+		if (e.is_return_completed !== true || recorded.has(e.id)) continue;
+		const personId = entryPerson.get(e.id) as string;
+		returns.push({
+			id: newId.return(e.id),
+			personId,
+			status: "shipped",
+			method: null,
+			onDayAmount: 0,
+			arrangedAt: null,
+			shippedAt: isoDate(e.updated_at),
+			shipName: null,
+			shipPostalCode: null,
+			shipAddress: null,
+			shipPhone: null,
+			notes: COMPLETED_FLAG_NOTE,
+			...audit(e, e.last_modified_by),
+		});
+	}
+
 	const payload: ImportKoudenPayload = {
 		koudenId,
 		kouden: {
@@ -682,9 +707,14 @@ function legacyReturnStatuses(source: LegacyKoudenSource): Record<ReturnStatus, 
 		not_required: 0,
 	};
 	const entries = new Set(source.entries.map((e) => e.id));
-	for (const [entryId, records] of returnRecordsByEntry(source)) {
+	const recorded = returnRecordsByEntry(source);
+	for (const [entryId, records] of recorded) {
 		const latest = records[records.length - 1];
 		if (entries.has(entryId) && latest) counts[returnStatusOf(latest)] += 1;
+	}
+	// 記録がなく「返礼済み」の印だけがある香典（変換と同じく発送済みとして数える）
+	for (const e of source.entries) {
+		if (e.is_return_completed === true && !recorded.has(e.id)) counts.shipped += 1;
 	}
 	return counts;
 }
