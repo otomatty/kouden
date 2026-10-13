@@ -233,6 +233,34 @@ describe("手動の有料化・購入の取り消し（E10-3）", () => {
 		expect(await planOf("k1")).toBe("free");
 	});
 
+	it("同じ時刻に二度送られても、取り消しの監査ログは 1 件だけ", async () => {
+		await user("u1");
+		await kouden("k1", "u1", "paid");
+		await purchase("p1", "k1", "u1");
+		const fixed = new Date("2026-10-01T00:00:00.000Z");
+		const frozen = createAdminApp({
+			now: () => fixed,
+			verifyAccess: (e) =>
+				accessVerifier({ teamDomain: e.ACCESS_TEAM_DOMAIN, aud: e.ACCESS_AUD, keys }),
+		});
+		const send = async () =>
+			frozen.request(
+				"/purchases/p1/revoke",
+				{
+					...form({ reason: "二度押し" }),
+					headers: {
+						"content-type": "application/x-www-form-urlencoded",
+						origin: ORIGIN,
+						"Cf-Access-Jwt-Assertion": await token(),
+					},
+				},
+				env,
+			);
+		expect((await send()).headers.get("location")).toBe("/koudens/k1?notice=revoked_downgraded");
+		expect((await send()).headers.get("location")).toBe("/koudens/k1?error=already_refunded");
+		expect(await audits()).toHaveLength(1);
+	});
+
 	it("取り消すと、有効な購入が残っていなければ無料に戻す。二度目は何もしない", async () => {
 		await user("u1");
 		await kouden("k1", "u1", "paid");
@@ -280,6 +308,17 @@ async function setupLegacy() {
 	await user("other", { email: "other@example.com" });
 	await kouden("k-both", "new-u");
 	await member("k-both", "legacy-u", "editor");
+	// 両方が参加している香典帳（旧アカウントが閲覧者、新しいアカウントが編集者）
+	await kouden("k-shared", "other");
+	await member("k-shared", "legacy-u", "viewer");
+	await member("k-shared", "new-u", "editor");
+	// 旧アカウントに残っているセッション（あれば消す）
+	await env.DB.prepare(
+		`INSERT INTO sessions (token_hash, user_id, created_at, expires_at, last_seen_at)
+     VALUES ('h-legacy', 'legacy-u', ?, '2099-01-01T00:00:00Z', ?)`,
+	)
+		.bind(NOW, NOW)
+		.run();
 }
 
 describe("旧ユーザーの手動紐づけ（E10-2）", () => {
@@ -313,15 +352,24 @@ describe("旧ユーザーの手動紐づけ（E10-2）", () => {
 			{ kouden_id: "k-both", user_id: "legacy-u", role: "owner" },
 			{ kouden_id: "k-new", user_id: "legacy-u", role: "owner" },
 			{ kouden_id: "k-old", user_id: "legacy-u", role: "owner" },
+			{ kouden_id: "k-shared", user_id: "legacy-u", role: "editor" },
+			{ kouden_id: "k-shared", user_id: "other", role: "owner" },
 		]);
 		const owners = (await env.DB.prepare("SELECT id, owner_user_id FROM koudens ORDER BY id").all())
 			.results;
-		expect(owners.every((k) => k.owner_user_id === "legacy-u")).toBe(true);
+		expect(owners).toEqual([
+			{ id: "k-both", owner_user_id: "legacy-u" },
+			{ id: "k-new", owner_user_id: "legacy-u" },
+			{ id: "k-old", owner_user_id: "legacy-u" },
+			{ id: "k-shared", owner_user_id: "other" },
+		]);
 		expect(
 			await env.DB.prepare("SELECT user_id FROM purchases WHERE id = 'p-new'").first(),
 		).toEqual({ user_id: "legacy-u" });
 		expect(
-			await env.DB.prepare("SELECT count(*) AS n FROM sessions WHERE user_id = 'new-u'").first(),
+			await env.DB.prepare(
+				"SELECT count(*) AS n FROM sessions WHERE user_id IN ('new-u', 'legacy-u')",
+			).first(),
 		).toEqual({ n: 0 });
 		expect(
 			await env.DB.prepare(

@@ -47,6 +47,9 @@ function auditStatement(
 		.bind(...values, ...guard.params);
 }
 
+/** 直前の文（同じ batch の 1 つ前）が 1 行を変更した場合だけ、という条件 */
+const CHANGED_JUST_NOW = { sql: "changes() = 1", params: [] };
+
 export interface AuditLog {
 	id: string;
 	adminEmail: string;
@@ -573,20 +576,13 @@ export async function revokePurchase(
 		sql: "EXISTS (SELECT 1 FROM purchases WHERE id = ? AND status = 'refunded' AND refunded_at = ?)",
 		params: [input.purchaseId, at],
 	};
-	const [revoked, downgraded] = await db.batch([
+	const [revoked, , downgraded] = await db.batch([
 		db
 			.prepare(
 				"UPDATE purchases SET status = 'refunded', refunded_at = ? WHERE id = ? AND status = 'paid'",
 			)
 			.bind(at, input.purchaseId),
-		db
-			.prepare(
-				`UPDATE koudens SET plan = 'free', updated_at = ?
-          WHERE id = ? AND plan = 'paid'
-            AND NOT EXISTS (SELECT 1 FROM purchases WHERE kouden_id = ? AND status = 'paid')
-            AND ${revokedNow.sql}`,
-			)
-			.bind(at, purchase.kouden_id, purchase.kouden_id, ...revokedNow.params),
+		// 監査ログは、直前の文でこの要求が取り消した場合だけ書く（同じ時刻の二度押しでも重ならない）
 		auditStatement(
 			db,
 			{
@@ -597,8 +593,16 @@ export async function revokePurchase(
 				detail: { reason: input.reason, koudenId: purchase.kouden_id },
 			},
 			at,
-			revokedNow,
+			CHANGED_JUST_NOW,
 		),
+		db
+			.prepare(
+				`UPDATE koudens SET plan = 'free', updated_at = ?
+          WHERE id = ? AND plan = 'paid'
+            AND NOT EXISTS (SELECT 1 FROM purchases WHERE kouden_id = ? AND status = 'paid')
+            AND ${revokedNow.sql}`,
+			)
+			.bind(at, purchase.kouden_id, purchase.kouden_id, ...revokedNow.params),
 	]);
 	if ((revoked?.meta.changes ?? 0) === 0) return { ok: false, reason: "already_refunded" };
 	return {
@@ -755,6 +759,19 @@ export async function linkLegacyUser(
           WHERE legacy_user_id = ? AND linked_user_id IS NULL`,
 			)
 			.bind(L, at, input.adminEmail, input.legacyUserId),
+		// 監査ログは、直前の文でこの要求が紐づけた場合だけ書く
+		auditStatement(
+			db,
+			{
+				adminEmail: input.adminEmail,
+				action: "legacy_user.link",
+				targetType: "legacy_user",
+				targetId: input.legacyUserId,
+				detail: { userId: L, mergedUserId: N, email: n.email },
+			},
+			at,
+			CHANGED_JUST_NOW,
+		),
 		// 両方が参加している香典帳: N がオーナーなら L をオーナーにする（オーナーは 1 冊に 1 人なので、先に N を外す）
 		step(
 			`UPDATE kouden_members SET role = 'editor'
@@ -766,6 +783,14 @@ export async function linkLegacyUser(
 		step(
 			`UPDATE kouden_members SET role = 'owner'
         WHERE user_id = ? AND kouden_id IN (SELECT id FROM koudens WHERE owner_user_id = ?)`,
+			L,
+			N,
+		),
+		// 両方が参加している香典帳: N が編集者で L が閲覧者なら、L を編集者にする（強い方のロールを残す）
+		step(
+			`UPDATE kouden_members SET role = 'editor'
+        WHERE user_id = ? AND role = 'viewer'
+          AND kouden_id IN (SELECT kouden_id FROM kouden_members WHERE user_id = ? AND role = 'editor')`,
 			L,
 			N,
 		),
@@ -789,7 +814,8 @@ export async function linkLegacyUser(
 		step("UPDATE invitations SET created_by = ? WHERE created_by = ?", L, N),
 		step("UPDATE kouden_members SET invited_by = ? WHERE invited_by = ?", L, N),
 		step("UPDATE purchases SET user_id = ? WHERE user_id = ?", L, N),
-		step("DELETE FROM sessions WHERE user_id = ?", N),
+		// N のセッションは使えなくなる（次のログインで L になる）。L に残っているものもあれば消し、ログインし直させる
+		step("DELETE FROM sessions WHERE user_id IN (?, ?)", N, L),
 		// sub の一意制約に当たらないよう、先に N から外してから L に付ける
 		step(
 			`UPDATE users SET google_sub = NULL, deleted_at = ?, email = '', display_name = '（旧アカウントに統合）',
@@ -808,18 +834,6 @@ export async function linkLegacyUser(
 			n.avatar_url,
 			at,
 			L,
-		),
-		auditStatement(
-			db,
-			{
-				adminEmail: input.adminEmail,
-				action: "legacy_user.link",
-				targetType: "legacy_user",
-				targetId: input.legacyUserId,
-				detail: { userId: L, mergedUserId: N, email: n.email },
-			},
-			at,
-			{ sql: linked, params: guard },
 		),
 	]);
 	if ((first?.meta.changes ?? 0) === 0) return { ok: false, reason: "already_linked" };
