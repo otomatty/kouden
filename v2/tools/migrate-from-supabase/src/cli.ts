@@ -1,6 +1,7 @@
 import { parseArgs } from "node:util";
 import { resolve } from "node:path";
 import { createImportClient } from "./client.ts";
+import { cliFailureMessage } from "./diagnostics.ts";
 import { loadPlan, prepare } from "./prepare.ts";
 import { runMigration } from "./run.ts";
 
@@ -74,9 +75,7 @@ async function main(): Promise<void> {
 }
 
 // 入力の値や秘密情報が例外メッセージに含まれる可能性があるため、生の例外は表示しない。
-await main().catch(() => {
-	process.stderr.write(
-		"移行CLIに失敗しました。引数・入力形式・保存先・認証設定を確認してください。\n",
-	);
+await main().catch((error: unknown) => {
+	process.stderr.write(cliFailureMessage(error));
 	process.exitCode = 1;
 });

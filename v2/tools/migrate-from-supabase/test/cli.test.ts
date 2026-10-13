@@ -1,6 +1,8 @@
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { expectedImportState, type ImportKoudenPayload, type ImportUser } from "@kouden/domain";
 import { createImportClient, type ImportClient } from "../src/client.ts";
@@ -167,6 +169,26 @@ function fakeClient(plan: MigrationPlan, corrupt = false) {
 }
 
 describe("prepare", () => {
+	it("CLIの失敗時は安全な原因だけをstderrに表示し、終了コード1を返す", async () => {
+		const dir = await temp();
+		const input = snapshot();
+		delete input.data["public.kouden_entries"];
+		const source = join(dir, "source.json");
+		const cli = fileURLToPath(new URL("../src/cli.ts", import.meta.url));
+		const args = [cli, "prepare", "--source", source, "--out", join(dir, "prepared")];
+		await writeFile(source, JSON.stringify(input));
+		const missing = spawnSync("bun", args, { encoding: "utf8", timeout: 10_000 });
+		expect(missing.status).toBe(1);
+		expect(missing.stderr).toContain("snapshot_count:public.kouden_entries");
+		expect(missing.stdout).toBe("");
+		await writeFile(source, JSON.stringify({ private: "private@example.test" }));
+		const invalid = spawnSync("bun", args, { encoding: "utf8", timeout: 10_000 });
+		expect(invalid.status).toBe(1);
+		expect(invalid.stderr).toBe(
+			"移行CLIに失敗しました。引数・入力形式・保存先・認証設定を確認してください。\n",
+		);
+		expect(invalid.stdout).toBe("");
+	});
 	it("全台帳を変換し、元のJSONを変更しない", () => {
 		const input = snapshot();
 		const before = JSON.stringify(input);
@@ -348,25 +370,28 @@ describe("投入と読み戻し", () => {
 		expect(totals.status).toBe("failed");
 		expect(totals.checks.at(-1)?.scope).toBe("totals");
 	});
-	it("通信エラーの本文を保存しない", async () => {
-		const dir = await temp();
-		const { plan } = prepareSnapshot(snapshot());
-		const client: ImportClient = {
-			origin: "https://staging.example.test",
-			request: async () => {
-				throw new Error("private@example.test secret");
-			},
-		};
-		const report = await runMigration({
-			mode: "verify",
-			plan,
-			planDir: dir,
-			reportDir: dir,
-			client,
-		});
-		expect(report.error).toBe("migration_failed");
-		expect(JSON.stringify(report)).not.toContain("private@example.test");
-	});
+	it.each(["private@example.test secret", "secret_token"])(
+		"通信エラーの本文を保存しない (%#)",
+		async (message) => {
+			const dir = await temp();
+			const { plan } = prepareSnapshot(snapshot());
+			const client: ImportClient = {
+				origin: "https://staging.example.test",
+				request: async () => {
+					throw new Error(message);
+				},
+			};
+			const report = await runMigration({
+				mode: "verify",
+				plan,
+				planDir: dir,
+				reportDir: dir,
+				client,
+			});
+			expect(report.error).toBe("migration_failed");
+			expect(JSON.stringify(report)).not.toContain(message);
+		},
+	);
 	it("ユーザーの不一致の場所を残し、台帳の処理へ進まない", async () => {
 		const dir = await temp();
 		const { plan } = prepareSnapshot(snapshot());

@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { z } from "zod";
 import { expectedImportState, importDifferences } from "@kouden/domain";
 import type { ImportClient } from "./client.ts";
+import { publicErrorCode } from "./diagnostics.ts";
 import { digest, privateJson, validatePlan } from "./prepare.ts";
 import { planSchema, type MigrationPlan } from "./schemas.ts";
 import { userPayloads } from "./transform.ts";
@@ -237,8 +238,7 @@ export async function runMigration(options: {
 	} catch (error) {
 		report.status = "failed";
 		// ネットワークや Zod の生のメッセージを CLI に出さない。
-		const code = error instanceof Error ? error.message : "";
-		report.error = /^[a-z_]+(?:_\d{3})?$/.test(code) ? code : "migration_failed";
+		report.error = publicErrorCode(error) ?? "migration_failed";
 	}
 	report.finishedAt = new Date().toISOString();
 	await save();
