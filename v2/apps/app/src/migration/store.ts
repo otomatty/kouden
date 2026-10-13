@@ -47,7 +47,6 @@ export async function importKoudenRows(
 	db: D1Database,
 	koudenId: string,
 	payload: Pick<ImportKoudenPayload, "kouden" | "members" | "purchases">,
-	at: string,
 ): Promise<void> {
 	const k = payload.kouden;
 	await db.batch([
@@ -69,7 +68,8 @@ export async function importKoudenRows(
 				k.status,
 				k.legacyKoudenId,
 				k.createdAt,
-				at,
+				// 旧アプリの更新時刻のまま（取り込んだ時刻にしない）
+				k.updatedAt,
 			),
 		db.prepare("DELETE FROM kouden_members WHERE kouden_id = ?").bind(koudenId),
 		...payload.members.map((m) =>

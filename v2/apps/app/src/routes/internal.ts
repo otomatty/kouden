@@ -1,4 +1,8 @@
-import { importKoudenPayloadSchema, importUsersPayloadSchema } from "@kouden/domain";
+import {
+	importKoudenPayloadSchema,
+	importLastActivityAt,
+	importUsersPayloadSchema,
+} from "@kouden/domain";
 import { type Context, Hono } from "hono";
 import { log } from "../lib/logger.ts";
 import { ledgerFor } from "../ledger/client.ts";
@@ -49,17 +53,23 @@ export function internalRoutes(deps: AppDeps) {
 		// 統計の投影先になるので、D1 の行を先に作る。台帳の取り込みに失敗したら取り込み前に戻す
 		const before = await koudenRowsBefore(c.env.DB, koudenId);
 		try {
-			await importKoudenRows(c.env.DB, koudenId, { kouden, members, purchases }, at);
+			await importKoudenRows(c.env.DB, koudenId, { kouden, members, purchases });
 		} catch (err) {
 			// メンバーのユーザーが未登録（先に users を取り込んでいない）など
 			return failed(c, "kouden_import_failed", err, koudenId);
 		}
 		try {
-			const summary = await ledgerFor(c.env, koudenId).importSnapshot(koudenId, ledger, at);
+			const summary = await ledgerFor(c.env, koudenId).importSnapshot(
+				koudenId,
+				ledger,
+				at,
+				importLastActivityAt(parsed.data),
+			);
 			log("info", "import_kouden", { koudenId, persons: summary.persons });
 			return c.json({ koudenId, ledger: summary });
 		} catch (err) {
 			// 台帳は 1 トランザクションで入れ直すので、失敗しても前回の取り込み結果のまま。D1 の行も戻す
+			// （importSnapshot は台帳を入れ替えた後の失敗では例外にしない）
 			try {
 				await restoreKoudenRows(c.env.DB, koudenId, before);
 			} catch (restoreErr) {

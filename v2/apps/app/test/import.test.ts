@@ -610,6 +610,54 @@ describe("旧データの取り込み（05 §2・§3）", () => {
 		expect(ledger).toMatchObject({ persons: 2, gifts: { koden: 1 } });
 	});
 
+	it("一覧の「最近の動き」は旧アプリで最後に動いた時刻にする（取り込んだ時刻にしない）", async () => {
+		const i = ids();
+		const payload = koudenPayload(i, future());
+		const [koden] = payload.ledger.gifts;
+		if (koden) koden.updatedAt = "2024-03-09T10:00:00.000Z";
+		await importAll(i, payload);
+		const row = await env.DB.prepare(
+			`SELECT k.updated_at, s.last_activity_at FROM koudens k
+       JOIN kouden_stats s ON s.kouden_id = k.id WHERE k.id = ?`,
+		)
+			.bind(i.kouden)
+			.first();
+		expect(row).toEqual({
+			updated_at: "2024-03-02T00:00:00.000Z",
+			last_activity_at: "2024-03-09T10:00:00.000Z",
+		});
+	});
+
+	it("台帳を入れ替えた後のアラームの予約に失敗しても、取り込みは成功とし D1 の行を戻さない", async () => {
+		const i = ids();
+		await importAll(i);
+		const stub = ledgerFor(env, i.kouden);
+		const restore = await runInDurableObject(stub, (instance) => {
+			const target = instance as unknown as { scheduleAlarm: (soon: boolean) => Promise<void> };
+			const original = target.scheduleAlarm;
+			target.scheduleAlarm = () => Promise.reject(new Error("alarm storage is unavailable"));
+			return () => {
+				target.scheduleAlarm = original;
+			};
+		});
+		try {
+			const payload = koudenPayload(i, future());
+			payload.kouden.title = "変えた名前";
+			const res = await call(`/internal/import/koudens/${i.kouden}`, {
+				method: "PUT",
+				headers: TOKEN,
+				json: payload,
+			});
+			expect(res.status).toBe(200);
+			const row = await env.DB.prepare("SELECT title FROM koudens WHERE id = ?")
+				.bind(i.kouden)
+				.first();
+			expect(row).toEqual({ title: "変えた名前" });
+		} finally {
+			await runInDurableObject(stub, () => restore());
+		}
+	});
+
 	it("形の合わないデータは受け付けない（香典に金額がない）", async () => {
 		const i = ids();
 		const payload = koudenPayload(i, future());

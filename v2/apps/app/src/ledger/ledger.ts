@@ -1768,6 +1768,7 @@ export class KoudenLedger extends DurableObject<Env> {
 		koudenId: string,
 		snapshot: LedgerSnapshot,
 		importedAt: string,
+		lastActivityAt: string = importedAt,
 	): Promise<LedgerImportSummary> {
 		/** 削除済みの台帳を作り直すときの、元の削除済みの印（取り込みに失敗したら戻す） */
 		let deletedAt: string | null = null;
@@ -1784,7 +1785,7 @@ export class KoudenLedger extends DurableObject<Env> {
 			if (current !== null && current !== koudenId) {
 				throw new Error(`ledger belongs to ${current}, import for ${koudenId}`);
 			}
-			this.replaceWithSnapshot(koudenId, snapshot, importedAt);
+			this.replaceWithSnapshot(koudenId, snapshot, importedAt, lastActivityAt);
 		} catch (err) {
 			// 失敗したら削除済みのまま（空の台帳を開けるようにしない）
 			if (deletedAt !== null) {
@@ -1796,24 +1797,30 @@ export class KoudenLedger extends DurableObject<Env> {
 			}
 			throw err;
 		}
-		// 開いている画面は読み込み直させる（kouden の変更は画面全体に影響する）
-		this.broadcastChanges(this.lastSeq() - 1);
-		// 台帳はもう入れ替わっている。投影（D1）が一時的に失敗しても取り込みは成功として返し、アラームで投影し直す
-		let projected: boolean;
+		// ここから先は台帳がもう入れ替わっている。後始末（画面への通知・D1 への投影・アラームの予約）が失敗しても
+		// 例外にしない（取り込み口が失敗とみなして D1 の行を戻すと、台帳と食い違う）。投影はアラームでやり直す
 		try {
-			projected = await this.project(koudenId);
+			// 開いている画面は読み込み直させる（kouden の変更は画面全体に影響する）
+			this.broadcastChanges(this.lastSeq() - 1);
+			if (!(await this.project(koudenId))) {
+				log("error", "ledger_import_orphan", { koudenId });
+			}
+			await this.scheduleAlarm(false);
 		} catch (err) {
-			log("error", "ledger_import_projection_failed", {
+			log("error", "ledger_import_followup_failed", {
 				koudenId,
 				error: err instanceof Error ? err.message : String(err),
 			});
-			await this.scheduleAlarm(true);
-			return this.importSummary();
+			try {
+				await this.scheduleAlarm(true);
+			} catch (alarmErr) {
+				// 次の編集の投影でも上書きされる（projection_replace の印は残っている）
+				log("error", "ledger_import_alarm_failed", {
+					koudenId,
+					error: alarmErr instanceof Error ? alarmErr.message : String(alarmErr),
+				});
+			}
 		}
-		if (!projected) {
-			throw new Error(`kouden ${koudenId} is not in D1; create it before importing the ledger`);
-		}
-		await this.scheduleAlarm(false);
 		return this.importSummary();
 	}
 
@@ -1822,6 +1829,7 @@ export class KoudenLedger extends DurableObject<Env> {
 		koudenId: string,
 		snapshot: LedgerSnapshot,
 		importedAt: string,
+		lastActivityAt: string,
 	): void {
 		this.ctx.storage.transactionSync(() => {
 			// 参照される側を後に消す
@@ -1973,6 +1981,11 @@ export class KoudenLedger extends DurableObject<Env> {
 			// 作り直した台帳の変更ログは 1 から数え直すので、前の台帳の投影（seq が大きい）より古く見える。
 			// 次の投影は seq を比べずに上書きする（ここで失敗しても、アラームの再試行で上書きされる）
 			this.sql.exec("INSERT OR REPLACE INTO meta (key, value) VALUES ('projection_replace', '1')");
+			// 一覧の「最近の動き」は旧アプリで最後に動いた時刻にする（取り込んだ時刻だと移行の実行順に並ぶ）
+			this.sql.exec(
+				"INSERT OR REPLACE INTO meta (key, value) VALUES ('imported_activity_at', ?)",
+				lastActivityAt,
+			);
 			this.sql.exec(
 				`INSERT INTO change_log (at, actor_user_id, actor_name, entity, entity_id, op, diff)
          VALUES (?, ?, ?, 'kouden', ?, 'import', NULL)`,
@@ -2880,10 +2893,13 @@ export class KoudenLedger extends DurableObject<Env> {
 			`SELECT count(*) AS gift_count, coalesce(sum(CASE WHEN kind = 'koden' THEN amount END), 0) AS total_amount
          FROM gifts WHERE deleted_at IS NULL`,
 		);
-		const last = this.first<{ seq: number; at: string }>(
-			"SELECT seq, at FROM change_log ORDER BY seq DESC LIMIT 1",
+		const last = this.first<{ seq: number; at: string; op: string }>(
+			"SELECT seq, at, op FROM change_log ORDER BY seq DESC LIMIT 1",
 		);
 		if (!stats || !last) return true;
+		// 取り込みの後まだ編集がなければ、旧アプリで最後に動いた時刻
+		const activityAt =
+			last.op === "import" ? (this.meta("imported_activity_at") ?? last.at) : last.at;
 		try {
 			await this.env.DB.prepare(
 				`INSERT INTO kouden_stats (kouden_id, gift_count, total_amount, person_count, return_pending,
@@ -2901,7 +2917,7 @@ export class KoudenLedger extends DurableObject<Env> {
 					stats.total_amount,
 					this.activePersonCount(),
 					this.pendingReturnCount(),
-					last.at,
+					activityAt,
 					last.seq,
 					replace ? 1 : 0,
 				)

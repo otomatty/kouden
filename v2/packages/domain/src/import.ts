@@ -219,6 +219,21 @@ export const importKoudenPayloadSchema = z.object({
 		.max(IMPORT_PURCHASES_MAX),
 	ledger: ledgerSnapshotSchema,
 });
+/**
+ * 旧アプリで最後に香典帳が動いた時刻（香典帳・差出人・いただきもの・香典返しの更新の最も新しいもの）。
+ * 一覧の並び順（最近の動き）に使う。取り込んだ時刻にすると、移行の実行順に並んでしまう
+ */
+export function importLastActivityAt(payload: ImportKoudenPayload): string {
+	const { kouden, ledger } = payload;
+	const times = [
+		kouden.updatedAt,
+		...ledger.persons.map((p) => p.updatedAt),
+		...ledger.gifts.map((g) => g.updatedAt),
+		...ledger.returns.map((r) => r.updatedAt),
+	];
+	return times.reduce((latest, t) => (Date.parse(t) > Date.parse(latest) ? t : latest));
+}
+
 export type ImportKoudenPayload = z.infer<typeof importKoudenPayloadSchema>;
 
 /** 取り込んだ後の件数（05 §5 の検証で旧データと比べる） */
