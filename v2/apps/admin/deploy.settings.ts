@@ -8,14 +8,20 @@
 import {
 	DOMAIN,
 	MODES as APP_MODES,
-	type Mode,
-	resolveMode,
+	type Mode as AppMode,
+	resolveMode as resolveAppMode,
 	WORKERS_SUBDOMAIN,
 	STAGING_ACCESS_TEAM,
 } from "../app/deploy.settings.ts";
 
-export { resolveMode };
-export type { Mode };
+export type Mode = Exclude<AppMode, "rehearsal">;
+
+/** 一時リハーサルに運営者画面は配置しない。通常の staging 設定にフォールバックさせない。 */
+export function resolveMode(value: string | undefined): Mode {
+	const mode = resolveAppMode(value);
+	if (mode === "rehearsal") throw new Error("運営者画面は rehearsal にデプロイできません");
+	return mode;
+}
 
 export interface AdminModeSettings {
 	workerName: string;

@@ -4,7 +4,7 @@
  * TODO(M0): ドメインと Google OAuth クライアントを用意したら、`DOMAIN` と各 mode の
  * `googleClientId` を実際の値に置き換える。置き換えるまでは `deployBlockers` がデプロイを止める。
  */
-export type Mode = "development" | "staging" | "production";
+export type Mode = "development" | "staging" | "rehearsal" | "production";
 
 export interface ModeSettings {
 	/** Worker 名。DO の名前空間も Worker ごとに分かれる */
@@ -28,7 +28,7 @@ export interface ModeSettings {
 	rateLimitNamespaces: { auth: string; write: string; invite: string };
 	/** Google OAuth クライアント ID（秘密情報ではない） */
 	googleClientId: string;
-	/** staging 全体を守る Access。取り込み口は importAccess の別の AUD で検証する */
+	/** staging / rehearsal 全体を守る Access。rehearsal だけは取り込み口と同じ専用 AUD を使う */
 	access: { teamDomain: string; aud: string };
 	/**
 	 * 旧アプリからのデータ移行の取り込み口（/internal/import/*、05 §2）。Cloudflare Access のサービストークンで守る。
@@ -81,6 +81,21 @@ export const MODES: Record<Mode, ModeSettings> = {
 		importAccess: { teamDomain: "", aud: "" },
 		importDevToken: "",
 	},
+	// 本番スナップショットを投入して削除する一時環境。通常の staging のユーザーやセッションを変更しない。
+	rehearsal: {
+		workerName: "kouden-app-rehearsal",
+		origin: `https://kouden-app-rehearsal.${WORKERS_SUBDOMAIN}.workers.dev`,
+		d1: { name: "kouden-db-rehearsal" },
+		r2: { name: "kouden-files-rehearsal" },
+		mailFrom: "",
+		billingEnabled: false,
+		rateLimitNamespaces: { auth: "3001", write: "3002", invite: "3003" },
+		// API 検証専用。Google ログイン用クライアントは使わない。
+		googleClientId: "disabled-for-rehearsal",
+		access: { teamDomain: "", aud: "" },
+		importAccess: { teamDomain: "", aud: "" },
+		importDevToken: "",
+	},
 	production: {
 		workerName: "kouden-app",
 		origin: `https://${DOMAIN}`,
@@ -97,10 +112,13 @@ export const MODES: Record<Mode, ModeSettings> = {
 	},
 };
 
+/** 未指定は development とし、未知の mode は設定を選ぶ前に拒否する。 */
 export function resolveMode(mode: string | undefined): Mode {
 	if (mode === undefined || mode === "development") return "development";
-	if (mode === "staging" || mode === "production") return mode;
-	throw new Error(`Unknown mode: ${mode}（development / staging / production のいずれか）`);
+	if (mode === "staging" || mode === "rehearsal" || mode === "production") return mode;
+	throw new Error(
+		`Unknown mode: ${mode}（development / staging / rehearsal / production のいずれか）`,
+	);
 }
 
 /** デプロイしてはいけない理由（仮の値が残っているなど）。空ならデプロイしてよい */
@@ -119,10 +137,34 @@ export function deployBlockers(mode: Mode): string[] {
 		blockers.push(`${mode} の origin とドメインが一致しません`);
 	}
 	if (
-		mode === "staging" &&
+		(mode === "staging" || mode === "rehearsal") &&
 		(!s.access.teamDomain.endsWith(".cloudflareaccess.com") || !s.access.aud)
 	) {
-		blockers.push("staging の access.teamDomain と access.aud を設定してください");
+		blockers.push(`${mode} の access.teamDomain と access.aud を設定してください`);
+	}
+	if (mode === "rehearsal") {
+		if (s.d1.id !== undefined)
+			blockers.push("rehearsal の D1 は ID を指定せず専用の名前で作成してください");
+		if (!s.importAccess.teamDomain.endsWith(".cloudflareaccess.com") || !s.importAccess.aud)
+			blockers.push("rehearsal の importAccess を設定してください");
+		if (s.access.teamDomain !== s.importAccess.teamDomain || s.access.aud !== s.importAccess.aud)
+			blockers.push("rehearsal の access と importAccess は同じ teamDomain・aud にしてください");
+		if (s.mailFrom || s.billingEnabled)
+			blockers.push("rehearsal のメール・決済は無効にしてください");
+		for (const live of [MODES.staging, MODES.production]) {
+			if (
+				[live.access.aud, live.importAccess.aud].some(
+					(aud) => aud !== "" && (aud === s.access.aud || aud === s.importAccess.aud),
+				)
+			)
+				blockers.push("rehearsal の Access AUD は通常環境と分離してください");
+			if (
+				s.workerName === live.workerName ||
+				s.d1.name === live.d1.name ||
+				s.r2.name === live.r2.name
+			)
+				blockers.push("rehearsal の Worker・D1・R2 は通常環境と分離してください");
+		}
 	}
 	if (s.domain?.endsWith(PLACEHOLDER_DOMAIN)) {
 		blockers.push(

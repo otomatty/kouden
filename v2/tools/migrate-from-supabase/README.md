@@ -72,7 +72,7 @@ bun run migrate import \
 
 ローカルでは Worker と CLI に同じ `IMPORT_DEV_TOKEN` を設定し、`--url http://localhost:5173` を使う。開発トークンはループバック接続専用なので、リモートへの投入時には CLI 側の `IMPORT_DEV_TOKEN` を解除する。
 
-投入は新旧両方のアプリへの書き込みを止めた状態で、1 プロセスだけで行う。ユーザーを最大 200 人ずつ投入・照合し、各台帳について返礼品画像の転送、D1・DO への投入、読み戻しの順に実行する。開始前に全ローカル画像のハッシュを確認する。台帳の JSON は 10 MiB 以下。
+本番投入は新旧両方のアプリへの書き込みを止めた状態で、1 プロセスだけで行う。固定スナップショットを使うリハーサルでは旧アプリを停止する必要はないが、投入先には利用者から書き込めないようにする。ユーザーを最大 200 人ずつ投入・照合し、各台帳について画像の転送、D1・DO への投入、読み戻しの順に実行する。開始前に全ローカル画像のハッシュを確認する。台帳の JSON は 10 MiB 以下。
 
 通信障害と HTTP 429 / 502 / 503 / 504 は最大 3 回試行する。再実行時は全件を再送し、台帳を計画の内容に入れ替えて再照合する。途中まで投入されたデータを自動削除する処理や、全台帳をまたぐトランザクションはない。失敗後に原因を確認して再実行する場合は、新しいレポートディレクトリを指定する。利用者が v2 に書き込み始めた後に古い計画を再投入してはいけない。
 
@@ -120,7 +120,22 @@ bun run migrate verify \
 - 照合は上記の集計・D1 行・画像に対する検査であり、DO のすべてのテキスト内容や画面表示まで保証するものではない。切り替え前の 10 冊の目視比較は別途行う。
 - `passed` でも変換警告は残り得る。故人名の確認、移行対象外の説明文・組織情報の扱いを確定してから切り替える。
 - 故人名の確認は、移行済みで未確認の香典帳を開いたオーナーに案内する。設定画面の「確認して保存する」で確認日時を保存する。D1 の `0007_deceased_name_confirmation.sql` の適用が必要。確認は投入・照合と取り込み口の無効化を終えてから行う。再取り込みは元の仮の名前へ戻すため確認状態も未確認に戻り、確認後の名前・更新日時は元の投入計画との照合対象から変わる。
-- Supabase への逆変換・切り戻し、staging での 2 回以上のリハーサル、本番切り替えは [#168](https://github.com/otomatty/kouden/issues/168) の残作業。
+- Supabase への逆変換・切り戻し、画面比較を含むリハーサル、本番切り替えは [#168](https://github.com/otomatty/kouden/issues/168) の残作業。初回投入・再投入と自動照合の実測結果は [2026-10-13 の記録](../../../docs/rebuild/06-migration-rehearsal-20261013.md) を参照。
+
+## 一時環境でのリハーサル
+
+通常の staging に先に Google ログインすると、旧ユーザーと同じ Google sub に別の内部 ID が作られる。現在の投入 API はこの衝突を一意制約で拒否する。既存ユーザーの削除や Google sub の書き換えで回避せず、app の `--mode rehearsal` を使う。
+
+`rehearsal` は Worker `kouden-app-rehearsal`、D1 `kouden-db-rehearsal`、R2 `kouden-files-rehearsal` を使う。DO の名前空間も専用 Worker に属する。メール・決済は無効で、Google ログインと運営者画面は使わない。これは CLI の転送・再投入・照合を検証する環境であり、画面比較や実ログインの試験とは分ける。
+
+1. 通常の staging のユーザーと関連データの件数を読み取り、Git 除外フォルダへ記録する。上記の一時リソースが既存の用途で使われていないことを確認する。
+2. 専用ホスト `kouden-app-rehearsal.saedgewell.workers.dev` 全体に Access を設定する。有効期限の短い専用サービストークンを発行し、再利用可能な Service Auth ポリシーにそのトークンだけを含める。
+3. `apps/app/deploy.settings.ts` の `rehearsal.access` と `rehearsal.importAccess` に専用アプリの teamDomain・AUD を一時設定する。ホスト全体を1つの Access アプリで保護するため、両設定は同じ値を必須とし、不一致ならデプロイを止める。staging・production の `access` / `importAccess` に設定した AUD の再利用も拒否する。同じ Access チームを使うことはできるが、専用アプリの AUD を使う。通常の staging の値を変えない。
+4. Git 除外の secrets ファイルに専用のランダムな `SESSION_SECRET` を用意する。Google ログインを使わないため `GOOGLE_CLIENT_SECRET` は `disabled-for-rehearsal` とする。app を `bun run deploy -- --mode rehearsal --secrets-file <ファイル>` で配置し、`bun run db:migrate -- --mode rehearsal` を実行する。
+5. 未認証と誤ったサービストークンが拒否され、正しいトークンだけが `/internal/import/summary` の件数 0 を読めることを確認する。その後に固定スナップショットを `prepare` し、専用 URL へ `import` → `verify` → 再 `import` → 再 `verify` を実行する。各実行のレポートディレクトリを分ける。
+6. 終了コード・レポートの `passed`・不一致 0・開始終了時刻を確認し、件数と所要時間だけを共有する。警告の確認、画像本体がある場合の実転送、10冊の画面比較、切り戻し試験は別途必要。
+7. [サービストークンを `enabled: false` で無効化](https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/)してから、今回作成した Worker と DO 名前空間、D1、R2 を削除する。ポリシーが参照しているトークンは直接削除できない。削除前に名前と作成時の ID が一致することを確認し、通常の staging を対象にしない。Worker の削除は他 Worker からの参照があれば止める。R2 に画像がある場合は先に専用バケット内の本体を削除する。
+8. リソースが一覧から消えたことを確認してから、専用 Access アプリ、ポリシー、サービストークンの順に削除する。通常の staging のユーザーとセッションが維持されていることを確認する。`rehearsal` の Access 設定は空へ戻し、秘密を含まない手順・結果だけをコミットする。
 
 ## 検証
 

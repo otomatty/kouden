@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { MODES as APP_MODES } from "../../app/deploy.settings.ts";
-import { deployBlockers, MODES } from "../deploy.settings.ts";
+import { deployBlockers, MODES, resolveMode } from "../deploy.settings.ts";
 
 describe("deployBlockers（運営者画面）", () => {
+	it("rehearsal を staging として解釈せず、デプロイ前に拒否する", () => {
+		expect(() => resolveMode("rehearsal")).toThrow("rehearsal にデプロイできません");
+	});
 	it("本番の Access が仮の値の間はデプロイを止める", () => {
 		const blockers = deployBlockers("production");
 		expect(blockers.some((b) => b.includes("access.teamDomain"))).toBe(true);
