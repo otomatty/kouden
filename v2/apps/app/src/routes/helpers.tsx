@@ -16,6 +16,7 @@ export type Ctx = Context<AppEnv>;
 /** リダイレクト後に表示するお知らせ（URL には既知のキーだけを載せる） */
 export const NOTICES = {
 	saved: "保存しました。",
+	deceased_name_confirmed: "故人のお名前を確認しました。",
 	deleted: "削除しました。",
 	archived: "アーカイブしました。",
 	unarchived: "アーカイブを解除しました。",

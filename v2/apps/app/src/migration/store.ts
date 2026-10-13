@@ -62,6 +62,7 @@ export async function importKoudenRows(
          VALUES (?, ?, ?, ?, 'paid', ?, ?, ?, ?)
          ON CONFLICT (id) DO UPDATE SET
            title = excluded.title, deceased_name = excluded.deceased_name,
+           deceased_name_confirmed_at = NULL,
            owner_user_id = excluded.owner_user_id, plan = 'paid', status = excluded.status,
            legacy_kouden_id = excluded.legacy_kouden_id, updated_at = excluded.updated_at`,
 			)

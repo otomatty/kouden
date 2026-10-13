@@ -124,6 +124,12 @@ export const koudenSchema = z
 	}));
 export type KoudenInput = z.output<typeof koudenSchema>;
 
+/** 移行時の補完値を、実際の故人名として確認済みにしない */
+export const confirmDeceasedNameSchema = koudenSchema.refine(
+	(v) => v.deceasedName !== "（故人名未確認）",
+	{ path: ["deceasedName"], message: "仮のお名前を、正しい故人のお名前に修正してください" },
+);
+
 // ---- アカウント ------------------------------------------------------------
 
 /** 表示名（E1-5）。変更履歴や編集中表示に出る名前 */
