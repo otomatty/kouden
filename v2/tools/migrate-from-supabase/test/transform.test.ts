@@ -45,6 +45,7 @@ function source(overrides: Partial<LegacyKoudenSource> = {}): LegacyKoudenSource
 		kouden: {
 			id: "k1",
 			title: "故 山田 一郎 様",
+			description: "父の葬儀",
 			owner_id: OWNER,
 			status: "active",
 			created_at: T,
@@ -135,6 +136,7 @@ function source(overrides: Partial<LegacyKoudenSource> = {}): LegacyKoudenSource
 				kouden_entry_id: "e1",
 				allocated_amount: 7500,
 				is_primary_contributor: false,
+				contribution_notes: "花代を半分",
 				created_at: T,
 			},
 			{
@@ -142,6 +144,7 @@ function source(overrides: Partial<LegacyKoudenSource> = {}): LegacyKoudenSource
 				kouden_entry_id: "e2",
 				allocated_amount: 7500,
 				is_primary_contributor: true,
+				contribution_notes: "請求書あり",
 				created_at: T,
 			},
 		],
@@ -276,6 +279,7 @@ function source(overrides: Partial<LegacyKoudenSource> = {}): LegacyKoudenSource
 				return_item_master_id: "i-gone",
 				price: 1500,
 				quantity: 0,
+				notes: "のし付き",
 			},
 		],
 		...overrides,
@@ -393,6 +397,10 @@ describe("香典帳（05 §3）", () => {
 			{ userId: newId.user(VIEWER), role: "viewer", joinedAt: expect.any(String), invitedBy: null },
 		]);
 		expect(codes(result.warnings)).toContain("member_without_user");
+		// 新しい香典帳には説明の欄がないので、移さずに検証レポートで知らせる
+		expect(result.warnings.filter((w) => w.code === "kouden_description_dropped")).toEqual([
+			expect.objectContaining({ legacyId: "k1", message: expect.stringContaining("父の葬儀") }),
+		]);
 		expect(payload.purchases).toEqual([
 			{
 				id: newId.purchase("pur1"),
@@ -458,6 +466,8 @@ describe("香典帳（05 §3）", () => {
 			amount: 15000,
 			itemName: "供花一対",
 			quantity: 2,
+			// 按分ごとの備考は、連名の差出人に欄がないので供物の備考に足す（団体だけの差出人は団体名）
+			notes: "佐藤 一郎: 花代を半分\n株式会社サンプル: 請求書あり",
 		});
 		expect(ledger.contributors.filter((c) => c.giftId === o1)).toEqual([
 			{ giftId: o1, personId: newId.entryPerson("e1"), isPrimary: false, shareAmount: 7500 },
@@ -564,7 +574,7 @@ describe("香典帳（05 §3）", () => {
 			shippedAt: "2024-03-11",
 			shipAddress: "東京都千代田区1-1",
 			// 品ごとの備考（return_items 列の notes）も、明細に欄がないので香典返しの備考に残す
-			notes: "最初のメモ\n発送済み\n線香: 手渡し",
+			notes: "最初のメモ\n発送済み\n（品名不明）: のし付き\n線香: 手渡し",
 			createdBy: newId.user(OWNER),
 			updatedBy: newId.user(EDITOR),
 		});

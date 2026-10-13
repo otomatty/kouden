@@ -72,9 +72,6 @@ export async function importKoudenRows(
 				at,
 			),
 		db.prepare("DELETE FROM kouden_members WHERE kouden_id = ?").bind(koudenId),
-		// 統計は取り込んだ台帳から投影し直す。削除して作り直した台帳の変更ログは 1 から数え直すので、
-		// 前の台帳の投影（seq が大きい）が残っていると上書きされない
-		db.prepare("DELETE FROM kouden_stats WHERE kouden_id = ?").bind(koudenId),
 		...payload.members.map((m) =>
 			db
 				.prepare(

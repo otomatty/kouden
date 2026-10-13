@@ -199,6 +199,15 @@ export function transformKouden(
 		k.id,
 		`故人のお名前を香典帳の名前から「${deceasedName}」としました`,
 	);
+	// 新しい香典帳には説明の欄がない。作成時に書かれた説明は移さず、検証レポートで知らせる
+	const koudenDescription = trimOrNull(k.description);
+	if (koudenDescription !== null) {
+		warn(
+			"kouden_description_dropped",
+			k.id,
+			`香典帳の説明「${koudenDescription}」は移しませんでした（新しい画面に説明の欄がありません）`,
+		);
+	}
 	let koudenStatus: "active" | "archived" = "active";
 	if (k.status === "archived") koudenStatus = "archived";
 	else if (k.status !== "active")
@@ -377,7 +386,7 @@ export function transformKouden(
 		if (!(o.type in OFFERING_KIND))
 			warn("unknown_offering_type", o.id, `種類「${o.type}」をその他にしました`);
 		const amount = yen(o.price);
-		gifts.push({
+		const gift: Gift = {
 			...giftBase,
 			id: giftId,
 			kind,
@@ -386,7 +395,10 @@ export function transformKouden(
 			quantity: Math.max(0, Math.round(o.quantity)),
 			notes: trimOrNull(o.notes),
 			...audit(o),
-		});
+		};
+		gifts.push(gift);
+		/** 按分ごとの備考。連名の差出人には備考の欄がないので、供物の備考に「差出人: 備考」として足す */
+		const allocationNotes: string[] = [];
 
 		// 紐づく香典の差出人を供物の差出人にする（負担額は按分の記録、代表者は 1 人）
 		const linked = new Map<string, Contributor>();
@@ -398,6 +410,13 @@ export function transformKouden(
 			if (!personId) {
 				warn("allocation_without_entry", o.id, "存在しない香典への按分を移しませんでした");
 				continue;
+			}
+			const contributionNotes = trimOrNull(x.contribution_notes);
+			if (contributionNotes !== null) {
+				const person = persons.find((p) => p.id === personId);
+				const named = person?.name === MISSING_NAME ? null : (person?.name ?? null);
+				const label = named ?? person?.organization ?? person?.name ?? "差出人";
+				allocationNotes.push(`${label}: ${contributionNotes}`);
 			}
 			if (linked.has(personId)) continue;
 			linked.set(personId, {
@@ -437,6 +456,9 @@ export function transformKouden(
 			);
 		}
 		contributors.push(...list);
+		if (allocationNotes.length > 0) {
+			gift.notes = [gift.notes, ...new Set(allocationNotes)].filter((n) => n !== null).join("\n");
+		}
 	}
 
 	for (const t of source.telegrams.toSorted(byCreated)) {
@@ -596,6 +618,9 @@ export function transformKouden(
 						unitPrice: yen(l.price) ?? 0,
 						quantity: Math.max(1, Math.round(l.quantity)),
 					});
+					// 明細には備考の欄がないので、香典返しの備考に残す（列の品と同じ扱い）
+					const lineNotes = trimOrNull(l.notes);
+					if (lineNotes !== null) notes.push(`${name?.trim() || "（品名不明）"}: ${lineNotes}`);
 				}
 				continue;
 			}

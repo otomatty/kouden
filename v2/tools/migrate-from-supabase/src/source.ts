@@ -19,6 +19,7 @@ export interface LegacyProfile {
 export interface LegacyKouden {
 	id: string;
 	title: string;
+	description?: string | null;
 	owner_id: string;
 	status: string;
 	created_at: string;
@@ -94,6 +95,7 @@ export interface LegacyOfferingAllocation {
 	kouden_entry_id: string | null;
 	allocated_amount: number;
 	is_primary_contributor: boolean | null;
+	contribution_notes?: string | null;
 	created_at: string | null;
 }
 
@@ -148,6 +150,7 @@ export interface LegacyReturnRecordItem {
 	return_item_master_id: string;
 	price: number;
 	quantity: number;
+	notes?: string | null;
 }
 
 /** 香典帳 1 冊分の旧データ（抽出の単位） */

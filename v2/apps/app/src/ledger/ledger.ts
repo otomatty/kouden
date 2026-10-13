@@ -1939,7 +1939,9 @@ export class KoudenLedger extends DurableObject<Env> {
 		});
 		// 開いている画面は読み込み直させる（kouden の変更は画面全体に影響する）
 		this.broadcastChanges(this.lastSeq() - 1);
-		if (!(await this.project(koudenId))) {
+		// 削除して作り直した台帳の変更ログは 1 から数え直すので、前の台帳の投影（seq が大きい）より古く見える。
+		// 取り込みが成功した後だけ、seq を比べずに上書きする（失敗したときは前の投影が残る）
+		if (!(await this.project(koudenId, true))) {
 			throw new Error(`kouden ${koudenId} is not in D1; create it before importing the ledger`);
 		}
 		await this.scheduleAlarm(false);
@@ -2832,9 +2834,10 @@ export class KoudenLedger extends DurableObject<Env> {
 
 	/**
 	 * 統計の投影（03 §7）。香典帳が D1 から削除済みなら false。
-	 * 同じ seq でも上書きする（スキーマの移行で増えた項目を、変更ログが進む前に埋めるため。同じ seq なら中身も同じ）
+	 * 同じ seq でも上書きする（スキーマの移行で増えた項目を、変更ログが進む前に埋めるため。同じ seq なら中身も同じ）。
+	 * replace は取り込み用で、seq が小さくても上書きする
 	 */
-	private async project(koudenId: string): Promise<boolean> {
+	private async project(koudenId: string, replace = false): Promise<boolean> {
 		const stats = this.first<{ gift_count: number; total_amount: number }>(
 			`SELECT count(*) AS gift_count, coalesce(sum(CASE WHEN kind = 'koden' THEN amount END), 0) AS total_amount
          FROM gifts WHERE deleted_at IS NULL`,
@@ -2852,7 +2855,7 @@ export class KoudenLedger extends DurableObject<Env> {
            gift_count = excluded.gift_count, total_amount = excluded.total_amount,
            person_count = excluded.person_count, return_pending = excluded.return_pending,
            last_activity_at = excluded.last_activity_at, projected_seq = excluded.projected_seq
-         WHERE excluded.projected_seq >= kouden_stats.projected_seq`,
+         WHERE ? OR excluded.projected_seq >= kouden_stats.projected_seq`,
 			)
 				.bind(
 					koudenId,
@@ -2862,6 +2865,7 @@ export class KoudenLedger extends DurableObject<Env> {
 					this.pendingReturnCount(),
 					last.at,
 					last.seq,
+					replace ? 1 : 0,
 				)
 				.run();
 			return true;

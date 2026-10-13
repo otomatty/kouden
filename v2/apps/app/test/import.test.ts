@@ -577,5 +577,12 @@ describe("旧データの取り込み（05 §2・§3）", () => {
 		});
 		const check = await call(`/internal/import/koudens/${i.kouden}`, { headers: TOKEN });
 		expect(await check.json()).toMatchObject({ ledger: { persons: 2, gifts: { koden: 1 } } });
+		// 一覧の統計も前回の取り込み結果のまま
+		const stats = await env.DB.prepare(
+			"SELECT gift_count, total_amount FROM kouden_stats WHERE kouden_id = ?",
+		)
+			.bind(i.kouden)
+			.first();
+		expect(stats).toEqual({ gift_count: 3, total_amount: 10000 });
 	});
 });
