@@ -628,16 +628,21 @@ describe("旧データの取り込み（05 §2・§3）", () => {
 		});
 	});
 
-	it("台帳を入れ替えた後のアラームの予約に失敗しても、取り込みは成功とし D1 の行を戻さない", async () => {
+	it("台帳を入れ替えた後のアラームの予約・読み直しに失敗しても、取り込みは成功とし D1 の行を戻さない", async () => {
 		const i = ids();
 		await importAll(i);
 		const stub = ledgerFor(env, i.kouden);
 		const restore = await runInDurableObject(stub, (instance) => {
-			const target = instance as unknown as { scheduleAlarm: (soon: boolean) => Promise<void> };
-			const original = target.scheduleAlarm;
+			const target = instance as unknown as {
+				scheduleAlarm: (soon: boolean) => Promise<void>;
+				importSummary: () => Promise<unknown>;
+			};
+			const { scheduleAlarm, importSummary } = target;
 			target.scheduleAlarm = () => Promise.reject(new Error("alarm storage is unavailable"));
+			target.importSummary = () => Promise.reject(new Error("storage is unavailable"));
 			return () => {
-				target.scheduleAlarm = original;
+				target.scheduleAlarm = scheduleAlarm;
+				target.importSummary = importSummary;
 			};
 		});
 		try {
@@ -649,6 +654,8 @@ describe("旧データの取り込み（05 §2・§3）", () => {
 				json: payload,
 			});
 			expect(res.status).toBe(200);
+			// 件数は入れ替えと同じトランザクションの中で数えたもの
+			expect(await res.json()).toMatchObject({ ledger: { persons: 2, gifts: { koden: 1 } } });
 			const row = await env.DB.prepare("SELECT title FROM koudens WHERE id = ?")
 				.bind(i.kouden)
 				.first();

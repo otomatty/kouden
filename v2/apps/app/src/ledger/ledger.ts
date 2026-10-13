@@ -1772,6 +1772,7 @@ export class KoudenLedger extends DurableObject<Env> {
 	): Promise<LedgerImportSummary> {
 		/** 削除済みの台帳を作り直すときの、元の削除済みの印（取り込みに失敗したら戻す） */
 		let deletedAt: string | null = null;
+		let summary: LedgerImportSummary;
 		if (!this.ensureSchema()) {
 			// 削除済みの印（deleteAll）が残っていても、取り込みは明示的な操作なので作り直す
 			// （リハーサルの後片付けで削除した香典帳を、次のリハーサル・切り替えで同じ ID に取り込み直す）
@@ -1785,7 +1786,7 @@ export class KoudenLedger extends DurableObject<Env> {
 			if (current !== null && current !== koudenId) {
 				throw new Error(`ledger belongs to ${current}, import for ${koudenId}`);
 			}
-			this.replaceWithSnapshot(koudenId, snapshot, importedAt, lastActivityAt);
+			summary = this.replaceWithSnapshot(koudenId, snapshot, importedAt, lastActivityAt);
 		} catch (err) {
 			// 失敗したら削除済みのまま（空の台帳を開けるようにしない）
 			if (deletedAt !== null) {
@@ -1821,17 +1822,20 @@ export class KoudenLedger extends DurableObject<Env> {
 				});
 			}
 		}
-		return this.importSummary();
+		return summary;
 	}
 
-	/** 台帳の中身を取り込みデータで入れ替える（1 トランザクション。失敗すれば何も変わらない） */
+	/**
+	 * 台帳の中身を取り込みデータで入れ替える（1 トランザクション。失敗すれば何も変わらない）。
+	 * 件数は同じトランザクションの中で数える（入れ替えた後に読み直すと、その失敗で取り込みが失敗に見える）
+	 */
 	private replaceWithSnapshot(
 		koudenId: string,
 		snapshot: LedgerSnapshot,
 		importedAt: string,
 		lastActivityAt: string,
-	): void {
-		this.ctx.storage.transactionSync(() => {
+	): LedgerImportSummary {
+		return this.ctx.storage.transactionSync(() => {
 			// 参照される側を後に消す
 			for (const table of IMPORT_TABLES) this.sql.exec(`DELETE FROM ${table}`);
 			this.sql.exec(
@@ -1995,12 +1999,17 @@ export class KoudenLedger extends DurableObject<Env> {
 				koudenId,
 			);
 			this.syncReminders(new Date().toISOString());
+			return this.countForImport();
 		});
 	}
 
 	/** 取り込んだ内容の件数（05 §5 の検証で旧データと比べる） */
 	async importSummary(): Promise<LedgerImportSummary> {
 		if (!this.ensureSchema()) throw new Error("ledger has been deleted");
+		return this.countForImport();
+	}
+
+	private countForImport(): LedgerImportSummary {
 		const count = (table: string) => this.scalar(`SELECT count(*) AS n FROM ${table}`);
 		const gifts = Object.fromEntries(
 			GIFT_KIND_VALUES.map((k) => [k, 0]),
