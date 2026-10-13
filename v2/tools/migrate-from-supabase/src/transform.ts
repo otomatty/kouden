@@ -475,26 +475,18 @@ export function transformKouden(
 
 	const returns: LedgerSnapshot["returns"] = [];
 	const returnLines: LedgerSnapshot["returnLines"] = [];
-	const recordsByEntry = new Map<string, LegacyReturnRecord[]>();
-	for (const r of source.returnRecords) {
-		recordsByEntry.set(r.kouden_entry_id, [...(recordsByEntry.get(r.kouden_entry_id) ?? []), r]);
-	}
-	for (const [entryId, records] of recordsByEntry) {
+	for (const [entryId, sorted] of returnRecordsByEntry(source)) {
 		const personId = entryPerson.get(entryId);
 		if (!personId) {
 			warn("return_without_entry", entryId, "存在しない香典の香典返しを移しませんでした");
 			continue;
 		}
-		// 差出人単位に集約する（旧データは香典 1 件に複数の記録がありうる）。状況などは最後に更新した記録に従う
-		const sorted = records.toSorted(
-			(a, b) => a.updated_at.localeCompare(b.updated_at) || a.id.localeCompare(b.id),
-		);
 		const first = sorted[0] as LegacyReturnRecord;
 		const latest = sorted[sorted.length - 1] as LegacyReturnRecord;
 		if (sorted.length > 1) {
 			warn("returns_merged", entryId, `${sorted.length} 件の香典返しの記録を 1 件にまとめました`);
 		}
-		const status = RETURN_STATUS[latest.return_status] ?? "pending";
+		const status = returnStatusOf(latest);
 		if (!(latest.return_status in RETURN_STATUS)) {
 			warn("unknown_return_status", latest.id, `状況「${latest.return_status}」を未対応にしました`);
 		}
@@ -521,26 +513,55 @@ export function transformKouden(
 			updatedBy: newId.user(latest.created_by),
 			updatedAt: iso(latest.updated_at),
 		});
-		const recordIds = new Set(sorted.map((r) => r.id));
-		const lines = source.returnRecordItems.filter((l) => recordIds.has(l.return_record_id));
-		if (lines.length === 0 && sorted.some((r) => hasEmbeddedItems(r.return_items))) {
-			warn(
-				"embedded_return_items",
-				entryId,
-				"明細の表にない返礼品（return_items 列）は移していません",
-			);
-		}
-		for (const l of lines) {
-			const name = itemNames.get(l.return_item_master_id);
-			if (name === undefined)
-				warn("line_without_item", l.id, "存在しない返礼品の明細を「（品名不明）」にしました");
-			returnLines.push({
-				id: newId.returnLine(l.id),
-				returnId,
-				returnItemId: name === undefined ? null : newId.returnItem(l.return_item_master_id),
-				name: name?.trim() || "（品名不明）",
-				unitPrice: yen(l.price) ?? 0,
-				quantity: Math.max(1, Math.round(l.quantity)),
+		// 明細は記録ごとに、表（return_record_items）の行と、記録の return_items 列（旧画面の一括更新などは
+		// こちらにだけ書く）の両方から作る。両方にある品（返礼品の ID、または品名と単価が同じ）は 1 つにする
+		for (const record of sorted) {
+			const rows = source.returnRecordItems.filter((l) => l.return_record_id === record.id);
+			const fromRows = new Set<string>();
+			for (const l of rows) {
+				const name = itemNames.get(l.return_item_master_id);
+				if (name === undefined) {
+					warn("line_without_item", l.id, "存在しない返礼品の明細を「（品名不明）」にしました");
+				}
+				const line = {
+					id: newId.returnLine(l.id),
+					returnId,
+					returnItemId: name === undefined ? null : newId.returnItem(l.return_item_master_id),
+					name: name?.trim() || "（品名不明）",
+					unitPrice: yen(l.price) ?? 0,
+					quantity: Math.max(1, Math.round(l.quantity)),
+				};
+				returnLines.push(line);
+				fromRows.add(`id:${l.return_item_master_id}`);
+				fromRows.add(`name:${line.name}:${line.unitPrice}`);
+			}
+			embeddedItems(record.return_items).forEach((item, index) => {
+				if (item === null) {
+					warn(
+						"invalid_embedded_item",
+						record.id,
+						"形の合わない返礼品（return_items 列）を移しませんでした",
+					);
+					return;
+				}
+				const masterId = item.masterId ?? item.id;
+				const name = item.name.trim() || "（品名不明）";
+				const unitPrice = yen(item.price) ?? 0;
+				if (
+					(masterId !== undefined && fromRows.has(`id:${masterId}`)) ||
+					fromRows.has(`name:${name}:${unitPrice}`)
+				) {
+					return;
+				}
+				returnLines.push({
+					id: newId.embeddedReturnLine(record.id, index),
+					returnId,
+					returnItemId:
+						masterId !== undefined && itemNames.has(masterId) ? newId.returnItem(masterId) : null,
+					name,
+					unitPrice,
+					quantity: Math.max(1, Math.round(item.quantity)),
+				});
 			});
 		}
 	}
@@ -573,8 +594,75 @@ export function transformKouden(
 	return { koudenId, payload, files, warnings };
 }
 
-function hasEmbeddedItems(value: unknown): boolean {
-	return Array.isArray(value) ? value.length > 0 : value !== null && typeof value === "object";
+/** 香典返しの記録を香典（= 差出人）ごとにまとめ、更新順に並べる。状況などは最後に更新した記録に従う */
+function returnRecordsByEntry(source: LegacyKoudenSource): Map<string, LegacyReturnRecord[]> {
+	const byEntry = new Map<string, LegacyReturnRecord[]>();
+	for (const r of source.returnRecords) {
+		byEntry.set(r.kouden_entry_id, [...(byEntry.get(r.kouden_entry_id) ?? []), r]);
+	}
+	for (const [entryId, records] of byEntry) {
+		byEntry.set(
+			entryId,
+			records.toSorted(
+				(a, b) => a.updated_at.localeCompare(b.updated_at) || a.id.localeCompare(b.id),
+			),
+		);
+	}
+	return byEntry;
+}
+
+const returnStatusOf = (record: LegacyReturnRecord): ReturnStatus =>
+	RETURN_STATUS[record.return_status] ?? "pending";
+
+/** 記録の return_items 列の 1 品（旧アプリの ReturnItem 型。一括更新は masterId・id も書く） */
+interface EmbeddedItem {
+	name: string;
+	price: number;
+	quantity: number;
+	id?: string;
+	masterId?: string;
+}
+
+const nonEmptyString = (x: unknown) => (typeof x === "string" && x !== "" ? x : undefined);
+
+/** return_items 列の品。形の合わない要素は null */
+function embeddedItems(value: unknown): (EmbeddedItem | null)[] {
+	if (!Array.isArray(value)) return [];
+	return value.map((v: unknown) => {
+		if (v === null || typeof v !== "object") return null;
+		const o = v as Record<string, unknown>;
+		if (
+			typeof o.name !== "string" ||
+			typeof o.price !== "number" ||
+			typeof o.quantity !== "number"
+		) {
+			return null;
+		}
+		return {
+			name: o.name,
+			price: o.price,
+			quantity: o.quantity,
+			id: nonEmptyString(o.id),
+			masterId: nonEmptyString(o.masterId),
+		};
+	});
+}
+
+/** 香典返しの状況ごとの件数（差出人単位にまとめた後。変換と同じ規則） */
+function legacyReturnStatuses(source: LegacyKoudenSource): Record<ReturnStatus, number> {
+	const counts: Record<ReturnStatus, number> = {
+		pending: 0,
+		arranged: 0,
+		shipped: 0,
+		handed_on_day: 0,
+		not_required: 0,
+	};
+	const entries = new Set(source.entries.map((e) => e.id));
+	for (const [entryId, records] of returnRecordsByEntry(source)) {
+		const latest = records[records.length - 1];
+		if (entries.has(entryId) && latest) counts[returnStatusOf(latest)] += 1;
+	}
+	return counts;
 }
 
 /** 検証用（05 §5）: 旧データの件数。取り込んだ後の件数（LedgerImportSummary）と比べる */
@@ -587,12 +675,7 @@ export function legacyCounts(source: LegacyKoudenSource) {
 		gifts: kinds,
 		kodenTotal: source.entries.reduce((sum, e: LegacyEntry) => sum + (yen(e.amount) ?? 0), 0),
 		returnItems: source.returnItems.length,
-		/** 香典返しは差出人（香典 1 件）単位にまとめるので、記録のある香典の数 */
-		returns: new Set(
-			source.returnRecords
-				.filter((r) => source.entries.some((e) => e.id === r.kouden_entry_id))
-				.map((r) => r.kouden_entry_id),
-		).size,
+		returns: legacyReturnStatuses(source),
 		members: new Set([source.kouden.owner_id, ...source.members.map((m) => m.user_id)]).size,
 	};
 }

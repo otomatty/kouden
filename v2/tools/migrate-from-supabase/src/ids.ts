@@ -35,4 +35,7 @@ export const newId = {
 	/** 香典返しは差出人（= 旧の香典 1 件）ごとに 1 件 */
 	return: (legacyEntryId: string) => uuidv5(`return:${legacyEntryId}`),
 	returnLine: (legacyId: string) => uuidv5(`return_line:${legacyId}`),
+	/** 記録の return_items 列（JSON）の品。列の中の位置で決める */
+	embeddedReturnLine: (legacyRecordId: string, index: number) =>
+		uuidv5(`return_line:embedded:${legacyRecordId}:${index}`),
 };

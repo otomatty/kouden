@@ -214,7 +214,18 @@ function source(overrides: Partial<LegacyKoudenSource> = {}): LegacyKoudenSource
 				shipping_address: "東京都千代田区1-1",
 				shipping_phone_number: null,
 				remarks: "発送済み",
-				return_items: null,
+				// 表の行（l1）と同じ品は 1 つにし、列にだけある品は明細に加える
+				return_items: [
+					{
+						id: "i1",
+						name: "タオルセット",
+						price: 3000,
+						quantity: 1,
+						masterId: "i1",
+						isFromMaster: true,
+					},
+					{ name: "線香", price: 1000, quantity: 2, notes: "手渡し" },
+				],
 				created_by: EDITOR,
 				created_at: "2024-03-03T00:00:00Z",
 				updated_at: "2024-03-10T20:00:00Z",
@@ -230,7 +241,11 @@ function source(overrides: Partial<LegacyKoudenSource> = {}): LegacyKoudenSource
 				shipping_address: null,
 				shipping_phone_number: null,
 				remarks: null,
-				return_items: [{ name: "古い形式" }],
+				// 旧画面の一括更新は、表に行を作らず列にだけ書く
+				return_items: [
+					{ id: "i2", name: "お茶", price: 2000, quantity: 1, masterId: "i2", isFromMaster: true },
+					{ name: "形が違う" },
+				],
 				created_by: OWNER,
 				created_at: T,
 				updated_at: T,
@@ -522,6 +537,15 @@ describe("香典帳（05 §3）", () => {
 			arrangedAt: "2024-03-07",
 		});
 		expect(ledger.returnLines).toEqual([
+			// 記録の更新順（rr1 → rr2）、記録の中では表の行 → 列の品
+			{
+				id: newId.returnLine("l2"),
+				returnId: newId.return("e1"),
+				returnItemId: null,
+				name: "（品名不明）",
+				unitPrice: 1500,
+				quantity: 1,
+			},
 			{
 				id: newId.returnLine("l1"),
 				returnId: newId.return("e1"),
@@ -531,16 +555,24 @@ describe("香典帳（05 §3）", () => {
 				quantity: 1,
 			},
 			{
-				id: newId.returnLine("l2"),
+				id: newId.embeddedReturnLine("rr2", 1),
 				returnId: newId.return("e1"),
 				returnItemId: null,
-				name: "（品名不明）",
-				unitPrice: 1500,
+				name: "線香",
+				unitPrice: 1000,
+				quantity: 2,
+			},
+			{
+				id: newId.embeddedReturnLine("rr3", 0),
+				returnId: newId.return("e2"),
+				returnItemId: newId.returnItem("i2"),
+				name: "お茶",
+				unitPrice: 2000,
 				quantity: 1,
 			},
 		]);
 		expect(codes(result.warnings)).toEqual(
-			expect.arrayContaining(["returns_merged", "line_without_item", "embedded_return_items"]),
+			expect.arrayContaining(["returns_merged", "line_without_item", "invalid_embedded_item"]),
 		);
 	});
 
@@ -553,7 +585,8 @@ describe("香典帳（05 §3）", () => {
 			gifts: { koden: 3, kumotsu: 1, kyoka: 1, choden: 2, other: 0 },
 			kodenTotal: 18000,
 			returnItems: 2,
-			returns: 2,
+			// 取り込んだ後の LedgerImportSummary.returns と同じ形（差出人単位・最後の記録の状況）
+			returns: { pending: 0, arranged: 1, shipped: 1, handed_on_day: 0, not_required: 0 },
 			members: 4,
 		});
 	});
