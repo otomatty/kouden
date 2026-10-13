@@ -627,6 +627,9 @@ describe("旧データの取り込み（05 §2・§3）", () => {
 		const i = ids();
 		await importAll(i);
 		const payload = koudenPayload(i, future());
+		// D1 側の変更（名前・メンバー）も、台帳の取り込みに失敗したら戻す
+		payload.kouden.title = "変えた名前";
+		payload.members = payload.members.filter((m) => m.role === "owner");
 		payload.ledger.contributors.push({
 			giftId: i.g1,
 			personId: "missing",
@@ -644,7 +647,11 @@ describe("旧データの取り込み（05 §2・§3）", () => {
 			message: expect.stringContaining("FOREIGN KEY"),
 		});
 		const check = await call(`/internal/import/koudens/${i.kouden}`, { headers: TOKEN });
-		expect(await check.json()).toMatchObject({ ledger: { persons: 2, gifts: { koden: 1 } } });
+		const state = await check.json();
+		expect(state).toMatchObject({
+			ledger: { persons: 2, gifts: { koden: 1 } },
+			d1: { members: { owner: 1, editor: 1 }, paidPurchases: 1 },
+		});
 		// 一覧の統計も前回の取り込み結果のまま
 		const stats = await env.DB.prepare(
 			"SELECT gift_count, total_amount FROM kouden_stats WHERE kouden_id = ?",
@@ -652,5 +659,37 @@ describe("旧データの取り込み（05 §2・§3）", () => {
 			.bind(i.kouden)
 			.first();
 		expect(stats).toEqual({ gift_count: 3, total_amount: 10000 });
+		const row = await env.DB.prepare("SELECT title FROM koudens WHERE id = ?")
+			.bind(i.kouden)
+			.first();
+		expect(row).toEqual({ title: koudenPayload(i, future()).kouden.title });
+	});
+
+	it("初めての取り込みで台帳に失敗したら、D1 に香典帳を残さない", async () => {
+		const i = ids();
+		await call("/internal/import/users", {
+			method: "POST",
+			headers: TOKEN,
+			json: { users: users(i) },
+		});
+		const payload = koudenPayload(i, future());
+		payload.ledger.contributors.push({
+			giftId: i.g1,
+			personId: "missing",
+			isPrimary: false,
+			shareAmount: null,
+		});
+		const res = await call(`/internal/import/koudens/${i.kouden}`, {
+			method: "PUT",
+			headers: TOKEN,
+			json: payload,
+		});
+		expect(res.status).toBe(500);
+		const rows = await env.DB.batch([
+			env.DB.prepare("SELECT count(*) AS n FROM koudens WHERE id = ?").bind(i.kouden),
+			env.DB.prepare("SELECT count(*) AS n FROM kouden_members WHERE kouden_id = ?").bind(i.kouden),
+			env.DB.prepare("SELECT count(*) AS n FROM purchases WHERE kouden_id = ?").bind(i.kouden),
+		]);
+		expect(rows.map((r) => r.results[0])).toEqual([{ n: 0 }, { n: 0 }, { n: 0 }]);
 	});
 });

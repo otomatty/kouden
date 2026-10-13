@@ -94,6 +94,75 @@ export async function importKoudenRows(
 	]);
 }
 
+type Row = Record<string, unknown>;
+
+/** 取り込み前の D1 の行（台帳の取り込みに失敗したら restoreKoudenRows で戻す） */
+export interface KoudenRowsBefore {
+	kouden: Row | null;
+	members: Row[];
+	purchases: Row[];
+}
+
+export async function koudenRowsBefore(
+	db: D1Database,
+	koudenId: string,
+): Promise<KoudenRowsBefore> {
+	const [kouden, members, purchases] = await db.batch<Row>([
+		db.prepare("SELECT * FROM koudens WHERE id = ?").bind(koudenId),
+		db.prepare("SELECT * FROM kouden_members WHERE kouden_id = ?").bind(koudenId),
+		db.prepare("SELECT * FROM purchases WHERE kouden_id = ?").bind(koudenId),
+	]);
+	return {
+		kouden: kouden?.results[0] ?? null,
+		members: members?.results ?? [],
+		purchases: purchases?.results ?? [],
+	};
+}
+
+/**
+ * 台帳の取り込みに失敗したとき、D1 の香典帳・メンバー・購入を取り込み前に戻す（失敗した取り込みで、
+ * 名前やメンバーだけが変わって前の台帳が見えるようにしない）。初めての取り込みなら香典帳の行ごと消す
+ */
+export async function restoreKoudenRows(
+	db: D1Database,
+	koudenId: string,
+	before: KoudenRowsBefore,
+): Promise<void> {
+	const removeImported = [
+		db.prepare("DELETE FROM purchases WHERE kouden_id = ?").bind(koudenId),
+		db.prepare("DELETE FROM kouden_members WHERE kouden_id = ?").bind(koudenId),
+	];
+	if (before.kouden === null) {
+		// メンバーと統計は ON DELETE CASCADE で消える
+		await db.batch([
+			...removeImported,
+			db.prepare("DELETE FROM koudens WHERE id = ?").bind(koudenId),
+		]);
+		return;
+	}
+	// 香典帳の行は消さずに書き戻す（消すと統計・招待まで ON DELETE CASCADE で消える）
+	const columns = Object.keys(before.kouden).filter((c) => c !== "id");
+	const kouden = before.kouden;
+	await db.batch([
+		...removeImported,
+		db
+			.prepare(`UPDATE koudens SET ${columns.map((c) => `${c} = ?`).join(", ")} WHERE id = ?`)
+			.bind(...columns.map((c) => kouden[c]), koudenId),
+		...before.members.map((m) => insertRow(db, "kouden_members", m)),
+		...before.purchases.map((p) => insertRow(db, "purchases", p)),
+	]);
+}
+
+/** 読み出した行をそのまま書き戻す（列名は SELECT * で読んだものだけ） */
+function insertRow(db: D1Database, table: string, row: Row) {
+	const columns = Object.keys(row);
+	return db
+		.prepare(
+			`INSERT INTO ${table} (${columns.join(", ")}) VALUES (${columns.map(() => "?").join(", ")})`,
+		)
+		.bind(...columns.map((c) => row[c]));
+}
+
 /** 検証用（05 §5）: D1 側の香典帳の内容 */
 export async function koudenImportState(db: D1Database, koudenId: string) {
 	const kouden = await db

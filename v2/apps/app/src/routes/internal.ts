@@ -3,7 +3,13 @@ import { type Context, Hono } from "hono";
 import { log } from "../lib/logger.ts";
 import { ledgerFor } from "../ledger/client.ts";
 import { importAuth } from "../migration/auth.ts";
-import { importKoudenRows, importUsers, koudenImportState } from "../migration/store.ts";
+import {
+	importKoudenRows,
+	importUsers,
+	koudenImportState,
+	koudenRowsBefore,
+	restoreKoudenRows,
+} from "../migration/store.ts";
 import type { AppDeps, AppEnv } from "../types.ts";
 
 /**
@@ -40,7 +46,8 @@ export function internalRoutes(deps: AppDeps) {
 		}
 		const { kouden, members, purchases, ledger } = parsed.data;
 		const at = c.get("now").toISOString();
-		// 統計の投影先になるので、D1 の行を先に作る
+		// 統計の投影先になるので、D1 の行を先に作る。台帳の取り込みに失敗したら取り込み前に戻す
+		const before = await koudenRowsBefore(c.env.DB, koudenId);
 		try {
 			await importKoudenRows(c.env.DB, koudenId, { kouden, members, purchases }, at);
 		} catch (err) {
@@ -52,7 +59,15 @@ export function internalRoutes(deps: AppDeps) {
 			log("info", "import_kouden", { koudenId, persons: summary.persons });
 			return c.json({ koudenId, ledger: summary });
 		} catch (err) {
-			// 台帳は 1 トランザクションで入れ直すので、失敗しても前回の取り込み結果のまま
+			// 台帳は 1 トランザクションで入れ直すので、失敗しても前回の取り込み結果のまま。D1 の行も戻す
+			try {
+				await restoreKoudenRows(c.env.DB, koudenId, before);
+			} catch (restoreErr) {
+				log("error", "kouden_import_restore_failed", {
+					koudenId,
+					error: restoreErr instanceof Error ? restoreErr.message : String(restoreErr),
+				});
+			}
 			return failed(c, "ledger_import_failed", err, koudenId);
 		}
 	});
