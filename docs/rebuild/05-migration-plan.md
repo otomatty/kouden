@@ -65,7 +65,7 @@ flowchart LR
 | 旧 | 新 | 変換ルール |
 |---|---|---|
 | — | `events` | 香典帳ごとに既定の行事「葬儀」を 1 件作成し、旧データはすべてここに入れる。受付番号は付けない（`receipt_no = NULL`） |
-| `relationships` | `relationships` | そのまま |
+| `relationships` | `relationships` | 名前と表示・非表示はそのまま。新しい関係には説明の欄がないので、`description` は移さず `relationship_description_dropped` として検証レポートに載せる |
 | `kouden_entries` | `persons` + `gifts`（`kind = 'koden'`）+ `gift_contributors` | **1 件 = 1 人**として差出人を作る（自動での名寄せはしない。誤った統合を避けるため）。`name` と `organization` がどちらも NULL の行は、差出人の必須条件を満たさないため `name = '（氏名未記入）'` とし、`notes` に移行時の補完であることを記録する（件数は §4 の事前調査で確認する）。`attendance_type`: `FUNERAL` → `attended`、`CONDOLENCE_VISIT` → `condolence_visit`、`ABSENT` → `absent`。香典の `notes` は `gifts.notes` に移す |
 | `offerings` | `gifts`（`kind` は `type` から写像: `FLOWER` → `kyoka`、`INCENSE` / `FOOD` → `kumotsu`、`MONEY` / `OTHER` → `other`） | `description` → `item_name`（空なら種類の名前）、`quantity`、`price`（→ `amount`）、`notes` を移す |
 | `offering_allocations` / `offering_entries` | `gift_contributors` | 紐づく香典の差出人を供物の差出人にする。`allocated_amount` → `share_amount`、`is_primary_contributor` → `is_primary`（代表者がいなければ先頭、複数なら最初の 1 人）。紐づきがなければ `provider_name` で差出人を新規作成 |
@@ -73,7 +73,7 @@ flowchart LR
 | `telegrams` | `gifts`（`kind = 'choden'`） | `message` → `message`。`kouden_entry_id` があればその差出人に、なければ `sender_*` から差出人を新規作成 |
 | `return_items` | `return_items` | 画像を R2 にコピー。`recommended_amount_min/max` は `return_rules` の初期値にする（比率は 1/2） |
 | `return_entry_records` | `returns` | 差出人単位に集約（同じ香典に複数の記録があれば、状況などは最後に更新した記録に従い、備考はつなげる）。`return_status`: `PENDING` → `pending`、`PARTIAL_RETURNED` → `arranged`、`COMPLETED` → `shipped`、`NOT_REQUIRED` → `not_required`。`return_method`（旧アプリでは自由入力。「郵送」「発送」など → `shipping`、「直接お渡し」「手渡し」など → `hand_delivery`、「当日」 → `on_day`。写像できなければ未選択にして備考に残す）、`funeral_gift_amount` → `on_day_amount`（当日返し）、送付先・手配日・備考を移す。発送日は旧データにないので、`shipped` なら最後に更新した日にする。記録がなく `kouden_entries.is_return_completed`（旧アプリの古い形式の「返礼済み」の印）だけがある香典は、発送済みの香典返しを作る（備考に移行時に作成したことを残す） |
-| `return_record_items` + `return_entry_records.return_items`（JSON） | `return_lines` | 旧画面が表示・編集するのは JSON の列（一括更新などはこちらにだけ書き、表の行は古いまま残る）なので、記録ごとに JSON の列が配列ならそれを正とする（品をすべて消すと空の配列になるので、空でも正とする。返礼品の ID がカタログにあればその品に紐づける）。JSON の列がない（null）か、品がすべて形の合わない記録だけ表の行から作る（品名・単価はカタログからのスナップショット）。JSON の列にない表の行は移さず、`stale_table_item` として検証レポートに載せる |
+| `return_record_items` + `return_entry_records.return_items`（JSON） | `return_lines` | 旧画面が表示・編集するのは JSON の列（一括更新などはこちらにだけ書き、表の行は古いまま残る）なので、記録ごとに JSON の列が配列ならそれを正とする（品をすべて消すと空の配列になるので、空でも正とする。返礼品の ID がカタログにあればその品に紐づける）。JSON の列がない（null）か、品がすべて形の合わない記録だけ表の行から作る（品名・単価はカタログからのスナップショット）。JSON の列にない表の行は移さず、`stale_table_item` として検証レポートに載せる。明細には備考の欄がないので、JSON の品ごとの `notes` は「品名: 備考」として香典返しの備考に足す |
 | `kouden_entry_audit_logs` | 移行しない | 変更ログには `op = 'import'` の 1 行だけを記録する |
 
 ### 移行しないもの

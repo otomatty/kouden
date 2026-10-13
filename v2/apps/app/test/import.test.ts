@@ -488,8 +488,21 @@ describe("旧データの取り込み（05 §2・§3）", () => {
 	it("削除した香典帳（リハーサルの後片付けなど）にも、同じ ID で取り込み直せる", async () => {
 		const i = ids();
 		await importAll(i);
+		// 前の台帳で編集が進んでいた（変更ログの seq が大きい）投影を残しておく
+		await env.DB.prepare(
+			"UPDATE kouden_stats SET gift_count = 99, total_amount = 999999, projected_seq = 500 WHERE kouden_id = ?",
+		)
+			.bind(i.kouden)
+			.run();
 		await ledgerFor(env, i.kouden).deleteAll();
 		const { ledger } = await importAll(i);
+		// 作り直した台帳の変更ログは 1 から数え直すが、統計は取り込んだ台帳のものになる
+		const stats = await env.DB.prepare(
+			"SELECT gift_count, total_amount FROM kouden_stats WHERE kouden_id = ?",
+		)
+			.bind(i.kouden)
+			.first();
+		expect(stats).toEqual({ gift_count: 3, total_amount: 10000 });
 		expect(ledger).toMatchObject({ persons: 2, gifts: { koden: 1 }, reminders: 2 });
 		const owner = makeApp({
 			sub: i.sub,

@@ -70,7 +70,13 @@ function source(overrides: Partial<LegacyKoudenSource> = {}): LegacyKoudenSource
 			},
 		],
 		relationships: [
-			{ id: "rel-b", name: "友人", is_enabled: false, created_at: "2024-01-02T00:00:00Z" },
+			{
+				id: "rel-b",
+				name: "友人",
+				description: "学生時代の友人",
+				is_enabled: false,
+				created_at: "2024-01-02T00:00:00Z",
+			},
 			{ id: "rel-a", name: "親族", is_enabled: true, created_at: "2024-01-01T00:00:00Z" },
 		],
 		entries: [
@@ -406,6 +412,13 @@ describe("香典帳（05 §3）", () => {
 			{ id: newId.relationship("rel-a"), name: "親族", sortOrder: 1, isHidden: false },
 			{ id: newId.relationship("rel-b"), name: "友人", sortOrder: 2, isHidden: true },
 		]);
+		// 新しい関係には説明の欄がないので、移さずに検証レポートで知らせる
+		expect(result.warnings.filter((w) => w.code === "relationship_description_dropped")).toEqual([
+			expect.objectContaining({
+				legacyId: "rel-b",
+				message: expect.stringContaining("学生時代の友人"),
+			}),
+		]);
 	});
 
 	it("香典 1 件 = 差出人 1 人。氏名も団体名もなければ補い、参列は写像する", () => {
@@ -550,7 +563,8 @@ describe("香典帳（05 §3）", () => {
 			// 発送日は最後に更新した日（日本時間）
 			shippedAt: "2024-03-11",
 			shipAddress: "東京都千代田区1-1",
-			notes: "最初のメモ\n発送済み",
+			// 品ごとの備考（return_items 列の notes）も、明細に欄がないので香典返しの備考に残す
+			notes: "最初のメモ\n発送済み\n線香: 手渡し",
 			createdBy: newId.user(OWNER),
 			updatedBy: newId.user(EDITOR),
 		});

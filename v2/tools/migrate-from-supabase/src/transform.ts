@@ -262,6 +262,17 @@ export function transformKouden(
 			sortOrder: i + 1,
 			isHidden: !r.is_enabled,
 		}));
+	// 新しい関係には説明の欄がない。旧画面で書かれた説明は移さず、検証レポートで知らせる
+	for (const r of source.relationships) {
+		const description = trimOrNull(r.description);
+		if (description !== null) {
+			warn(
+				"relationship_description_dropped",
+				r.id,
+				`関係「${r.name}」の説明「${description}」は移しませんでした（新しい画面に説明の欄がありません）`,
+			);
+		}
+	}
 	const relationshipIds = new Set(source.relationships.map((r) => r.id));
 
 	const persons: Person[] = [];
@@ -530,7 +541,7 @@ export function transformKouden(
 				`返礼方法「${methodText}」を未選択にし、備考に残しました`,
 			);
 		}
-		returns.push({
+		const ret: LedgerSnapshot["returns"][number] = {
 			id: returnId,
 			personId,
 			status,
@@ -548,7 +559,8 @@ export function transformKouden(
 			createdAt: iso(first.created_at),
 			updatedBy: newId.user(latest.created_by),
 			updatedAt: iso(latest.updated_at),
-		});
+		};
+		returns.push(ret);
 		// 明細は記録ごとに作る。旧画面が表示・編集するのは記録の return_items 列（一括更新などはこちらにだけ書く）
 		// なので、列が配列ならそれを正とする（品をすべて消すと空の配列になる）。表（return_record_items）は古い
 		// 書き込み口の名残で、列と食い違うことがある。列がない（null）か、品がすべて形の合わない記録だけ表の行から
@@ -594,6 +606,8 @@ export function transformKouden(
 				const unitPrice = yen(item.price) ?? 0;
 				if (masterId !== undefined) inEmbedded.add(`id:${masterId}`);
 				inEmbedded.add(`name:${name}:${unitPrice}`);
+				// 明細には備考の欄がないので、品ごとの備考は香典返しの備考に残す
+				if (item.notes !== undefined) notes.push(`${name}: ${item.notes}`);
 				returnLines.push({
 					id: newId.embeddedReturnLine(record.id, index),
 					returnId,
@@ -619,6 +633,8 @@ export function transformKouden(
 				);
 			}
 		}
+		const allNotes = [...new Set(notes)];
+		ret.notes = allNotes.length > 0 ? allNotes.join("\n") : null;
 	}
 
 	// 旧アプリの古い形式: 香典返しの記録がなく、香典に「返礼済み」の印（is_return_completed）だけがある。
@@ -700,6 +716,7 @@ interface EmbeddedItem {
 	quantity: number;
 	id?: string;
 	masterId?: string;
+	notes?: string;
 }
 
 const nonEmptyString = (x: unknown) => (typeof x === "string" && x !== "" ? x : undefined);
@@ -723,6 +740,7 @@ function embeddedItems(value: unknown): (EmbeddedItem | null)[] {
 			quantity: o.quantity,
 			id: nonEmptyString(o.id),
 			masterId: nonEmptyString(o.masterId),
+			notes: typeof o.notes === "string" ? nonEmptyString(o.notes.trim()) : undefined,
 		};
 	});
 }

@@ -48,6 +48,7 @@ export interface LegacyPurchase {
 export interface LegacyRelationship {
 	id: string;
 	name: string;
+	description?: string | null;
 	is_enabled: boolean;
 	created_at: string;
 }
