@@ -81,6 +81,17 @@
         "typescript": "7.0.2",
       },
     },
+    "tools/migrate-from-supabase": {
+      "name": "@kouden/migrate-from-supabase",
+      "dependencies": {
+        "@kouden/domain": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/node": "22.20.5",
+        "typescript": "7.0.2",
+        "vitest": "5.0.4",
+      },
+    },
   },
   "packages": {
     "@axe-core/playwright": ["@axe-core/playwright@4.13.0", "", { "dependencies": { "axe-core": "~4.13.0" }, "peerDependencies": { "playwright-core": ">= 1.0.0" } }, "sha512-6YLx+kxXu5GJceG4ozFg+33a2EMTdjYwWGloJ3sb9Kta5pp+ZNS53uxGVog5JetIY8s++P5UrtX+cri+u0VAVg=="],
@@ -238,6 +249,8 @@
     "@kouden/domain": ["@kouden/domain@workspace:packages/domain"],
 
     "@kouden/e2e": ["@kouden/e2e@workspace:e2e"],
+
+    "@kouden/migrate-from-supabase": ["@kouden/migrate-from-supabase@workspace:tools/migrate-from-supabase"],
 
     "@kouden/ui": ["@kouden/ui@workspace:packages/ui"],
 

@@ -10,6 +10,21 @@ describe("deployBlockers", () => {
 		}
 	});
 
+	it("取り込み用の開発トークンが残っていたり、Access の設定が片方だけだったりするとデプロイを止める", () => {
+		const original = structuredClone(MODES.staging);
+		try {
+			MODES.staging.importDevToken = "x";
+			expect(deployBlockers("staging").some((b) => b.includes("importDevToken"))).toBe(true);
+			MODES.staging.importDevToken = "";
+			MODES.staging.importAccess = { teamDomain: "team.cloudflareaccess.com", aud: "" };
+			expect(deployBlockers("staging").some((b) => b.includes("importAccess"))).toBe(true);
+			MODES.staging.importAccess = { teamDomain: "team.cloudflareaccess.com", aud: "aud" };
+			expect(deployBlockers("staging").some((b) => b.includes("import"))).toBe(false);
+		} finally {
+			MODES.staging = original;
+		}
+	});
+
 	it("development はデプロイ先にできない", () => {
 		expect(deployBlockers("development")).not.toEqual([]);
 	});

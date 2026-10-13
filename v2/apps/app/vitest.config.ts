@@ -16,6 +16,10 @@ const TEST_BINDINGS = {
 	STRIPE_SECRET_KEY: "sk_test_dummy",
 	STRIPE_WEBHOOK_SECRET: "whsec_test_secret",
 	MAIL_FROM: "noreply@localhost.test",
+	// 取り込み口（/internal/import/*）。テストでは開発用のトークンで通す（Access の検証は差し替えて確かめる）
+	IMPORT_ACCESS_TEAM_DOMAIN: "",
+	IMPORT_ACCESS_AUD: "",
+	IMPORT_DEV_TOKEN: "test-import-token",
 } as const;
 const TEST_D1 = ["DB"] as const;
 const TEST_R2 = ["FILES"] as const;

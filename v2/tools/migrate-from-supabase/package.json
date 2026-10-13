@@ -1,0 +1,17 @@
+{
+	"name": "@kouden/migrate-from-supabase",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"typecheck": "tsc",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@kouden/domain": "workspace:*"
+	},
+	"devDependencies": {
+		"@types/node": "22.20.5",
+		"typescript": "7.0.2",
+		"vitest": "5.0.4"
+	}
+}

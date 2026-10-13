@@ -14,7 +14,7 @@
 | M5 | 運営・仕上げ | 運営者 Worker（Access）、統計の投影・ダッシュボード、旧ユーザーの手動紐づけ、アカウント削除、アクセシビリティ確認、E2E | E1-4, E1-5, E10 |
 | M6 | 移行 | 移行ツール、ステージングでのリハーサル（2 回以上）、本番の切り替え | E1-2 |
 
-**進捗**: M0 完了（otomatty/kouden#161）。M1 完了（otomatty/kouden#162）。M2 完了（otomatty/kouden#163）。M3 完了（otomatty/kouden#164。カタログ・金額帯ルールは設定とは別の `/k/:id/returns/settings` に置いた）。M4 完了（otomatty/kouden#172。Excel のライブラリの PoC の結果は 04 §8。Stripe は SDK を使わず REST API を呼ぶ（04 §7））。M5 完了。2 回に分けた。1 回目（otomatty/kouden#173）: アカウント（表示名の変更・アカウントの削除）、運営者画面（`apps/admin`。Access の検証・ダッシュボード・検索・手動の有料化と購入の取り消し・旧ユーザーの手動紐づけ・監査ログ。DO には接続しない（04 §4））、共通のクラス名と色を `packages/ui` に切り出し。2 回目: アクセシビリティの確認（方針は 04 §6）と Playwright による E2E（`v2/e2e`。CI で実行する。04 §10）。残りの作業は otomatty/kouden#165 にまとめている。オフライン警告（E4-8）は WebSocket の接続状態と合わせて M2 で実装した。
+**進捗**: M0 完了（otomatty/kouden#161）。M1 完了（otomatty/kouden#162）。M2 完了（otomatty/kouden#163）。M3 完了（otomatty/kouden#164。カタログ・金額帯ルールは設定とは別の `/k/:id/returns/settings` に置いた）。M4 完了（otomatty/kouden#172。Excel のライブラリの PoC の結果は 04 §8。Stripe は SDK を使わず REST API を呼ぶ（04 §7））。M5 完了。2 回に分けた。1 回目（otomatty/kouden#173）: アカウント（表示名の変更・アカウントの削除）、運営者画面（`apps/admin`。Access の検証・ダッシュボード・検索・手動の有料化と購入の取り消し・旧ユーザーの手動紐づけ・監査ログ。DO には接続しない（04 §4））、共通のクラス名と色を `packages/ui` に切り出し。2 回目: アクセシビリティの確認（方針は 04 §6）と Playwright による E2E（`v2/e2e`。CI で実行する。04 §10）。M6 は 3 回に分ける。1 回目: 取り込み口（04 §4）と DO の `importSnapshot`、移行ツールの変換（`v2/tools/migrate-from-supabase`。§3 の対応表を `src/transform.ts` に実装し、自動で直せないデータは警告として残す）。2 回目: Supabase からの抽出・画像の R2 へのコピー（供物写真の表示を含む）・取り込みの実行・検証レポート・故人のお名前の確認の案内。3 回目: 書き戻しツール。残りの作業は otomatty/kouden#165 にまとめている。オフライン警告（E4-8）は WebSocket の接続状態と合わせて M2 で実装した。
 
 切り替え後に「後続」のストーリー（E4-7 供物の写真の新規追加、E5-2 差出人の統合）を実装する。ただし、旧データの供物写真は M6 で移行する。
 
@@ -36,8 +36,8 @@ flowchart LR
 |---|---|
 | 1. 抽出 | Supabase の service key で全テーブルを読み、香典帳ごとの JSON にまとめる。Storage のオブジェクト一覧も取る |
 | 2. 変換 | §3 の対応表に従って新しい形に変換する。ID は旧 UUID から決定的に生成（UUIDv5）し、再実行しても同じ ID になるようにする |
-| 3a. D1 投入 | `cf d1 query`（または D1 の HTTP API）で `users` / `legacy_users` / `koudens` / `kouden_members` / `purchases` を投入。再実行で既存行を消さないよう `INSERT ... ON CONFLICT DO UPDATE` を使う（`INSERT OR REPLACE` は行を削除して入れ直すため、`ON DELETE CASCADE` で関連行まで消える） |
-| 3b. DO 投入 | 移行専用の内部エンドポイント `POST /internal/import/:koudenId`（Access サービストークンで保護。移行完了後に無効化）経由で `stub.importSnapshot(json)` を呼ぶ。DO は中身を全消去してから入れ直す |
+| 3a. D1 投入 | 移行専用の内部エンドポイント（04 §4「データ移行の取り込み口」。Access サービストークンで保護し、移行完了後に無効化）で `users` / `legacy_users` / `koudens` / `kouden_members` / `purchases` を投入。再実行で既存行を消さないよう `INSERT ... ON CONFLICT DO UPDATE` を使う（`INSERT OR REPLACE` は行を削除して入れ直すため、`ON DELETE CASCADE` で関連行まで消える）。当初は `cf d1 query` を使う予定だったが、DO と同じ認証・同じ検証（Zod）で書け、Workers ランタイム上のテストで SQL を確かめられるため、エンドポイントにした |
+| 3b. DO 投入 | 同じ取り込み口（`PUT /internal/import/koudens/:koudenId`）が D1 の行を書いた後に `stub.importSnapshot(json)` を呼ぶ。DO は中身を全消去してから入れ直す |
 | 3c. 画像 | Supabase Storage（`return-items`、供物写真）から R2 の `koudens/{koudenId}/…` へコピー |
 | 4. 検証 | §5 の項目を香典帳ごとに比較し、1 件でも不一致があれば失敗にする |
 
@@ -55,8 +55,8 @@ flowchart LR
 
 | 旧 | 新 | 変換ルール |
 |---|---|---|
-| `koudens` | D1 `koudens` + DO `meta` | `deceased_name` は旧データにないので `title` から仮に設定し、初回表示時にオーナーへ確認を促す。`plan` はすべて `paid`（ADR-P10）。`status` はそのまま |
-| `kouden_members` + `kouden_roles` | D1 `kouden_members.role` | `koudens.owner_id` の人 → `owner`。ロールの `permissions` に `edit` を含む → `editor`。それ以外 → `viewer` |
+| `koudens` | D1 `koudens` + DO `meta` | `deceased_name` は旧データにないので `title` から仮に設定し（「故 ○○ 様」なら ○○、それ以外は `title` のまま）、初回表示時にオーナーへ確認を促す。`plan` はすべて `paid`（ADR-P10）。`status` はそのまま（`active` / `archived` 以外は `active`） |
+| `kouden_members` + `kouden_roles` | D1 `kouden_members.role` | `koudens.owner_id` の人 → `owner`（メンバーの行がなくても作る）。ロールの `permissions` に `edit`（または `entry.write` など書き込みの権限）を含む → `editor`。それ以外 → `viewer`。`added_by` → `invited_by`。存在しないユーザーのメンバーは移さない |
 | `kouden_invitations` | 移行しない | 保留中の招待は切り替え後に再発行してもらう（告知文に記載） |
 | `kouden_purchases` | D1 `purchases` | `source = 'legacy'`、`status = 'paid'`、`stripe_checkout_session_id` は旧値を保持 |
 
@@ -66,13 +66,13 @@ flowchart LR
 |---|---|---|
 | — | `events` | 香典帳ごとに既定の行事「葬儀」を 1 件作成し、旧データはすべてここに入れる。受付番号は付けない（`receipt_no = NULL`） |
 | `relationships` | `relationships` | そのまま |
-| `kouden_entries` | `persons` + `gifts`（`kind = 'koden'`）+ `gift_contributors` | **1 件 = 1 人**として差出人を作る（自動での名寄せはしない。誤った統合を避けるため）。`name` と `organization` がどちらも NULL の行は、差出人の必須条件を満たさないため `name = '（氏名未記入）'` とし、`notes` に移行時の補完であることを記録する（件数は §4 の事前調査で確認する）。`attendance_type`: `FUNERAL` → `attended`、`CONDOLENCE_VISIT` → `condolence_visit`、`ABSENT` → `absent` |
-| `offerings` | `gifts`（`kind` は `type` から `kumotsu` / `kyoka` / `other` に写像） | `provider_name`、`description`、`quantity`、`price`（→ `amount`）、`notes` を移す |
-| `offering_allocations` / `offering_entries` | `gift_contributors` | 紐づく香典の差出人を供物の差出人にする。`allocated_amount` → `share_amount`、`is_primary_contributor` → `is_primary`。紐づきがなければ `provider_name` で差出人を新規作成 |
+| `kouden_entries` | `persons` + `gifts`（`kind = 'koden'`）+ `gift_contributors` | **1 件 = 1 人**として差出人を作る（自動での名寄せはしない。誤った統合を避けるため）。`name` と `organization` がどちらも NULL の行は、差出人の必須条件を満たさないため `name = '（氏名未記入）'` とし、`notes` に移行時の補完であることを記録する（件数は §4 の事前調査で確認する）。`attendance_type`: `FUNERAL` → `attended`、`CONDOLENCE_VISIT` → `condolence_visit`、`ABSENT` → `absent`。香典の `notes` は `gifts.notes` に移す |
+| `offerings` | `gifts`（`kind` は `type` から写像: `FLOWER` → `kyoka`、`INCENSE` / `FOOD` → `kumotsu`、`MONEY` / `OTHER` → `other`） | `description` → `item_name`（空なら種類の名前）、`quantity`、`price`（→ `amount`）、`notes` を移す |
+| `offering_allocations` / `offering_entries` | `gift_contributors` | 紐づく香典の差出人を供物の差出人にする。`allocated_amount` → `share_amount`、`is_primary_contributor` → `is_primary`（代表者がいなければ先頭、複数なら最初の 1 人）。紐づきがなければ `provider_name` で差出人を新規作成 |
 | `offering_photos` | `gift_photos` + R2 | 画像を R2 にコピーし、キーを書き換える |
 | `telegrams` | `gifts`（`kind = 'choden'`） | `message` → `message`。`kouden_entry_id` があればその差出人に、なければ `sender_*` から差出人を新規作成 |
 | `return_items` | `return_items` | 画像を R2 にコピー。`recommended_amount_min/max` は `return_rules` の初期値にする（比率は 1/2） |
-| `return_entry_records` | `returns` | 差出人単位に集約。`return_status`: `PENDING` → `pending`、`PARTIAL_RETURNED` → `arranged`、`COMPLETED` → `shipped`、`NOT_REQUIRED` → `not_required`。送付先・手配日・備考を移す |
+| `return_entry_records` | `returns` | 差出人単位に集約（同じ香典に複数の記録があれば、状況などは最後に更新した記録に従い、備考はつなげる）。`return_status`: `PENDING` → `pending`、`PARTIAL_RETURNED` → `arranged`、`COMPLETED` → `shipped`、`NOT_REQUIRED` → `not_required`。`return_method`（`shipping` / `hand_delivery`）、`funeral_gift_amount` → `on_day_amount`（当日返し）、送付先・手配日・備考を移す。発送日は旧データにないので、`shipped` なら最後に更新した日にする |
 | `return_record_items` | `return_lines` | 品名・単価はカタログからのスナップショット |
 | `kouden_entry_audit_logs` | 移行しない | 変更ログには `op = 'import'` の 1 行だけを記録する |
 

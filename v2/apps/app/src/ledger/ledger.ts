@@ -12,6 +12,9 @@ import {
 	type ContributorRef,
 	type GiftFilter,
 	type GiftInput,
+	GIFT_KIND_VALUES,
+	type LedgerImportSummary,
+	type LedgerSnapshot,
 	type PersonInput,
 	personLabel,
 	type ReceptionInput,
@@ -20,6 +23,7 @@ import {
 	type ReturnItemInput,
 	type ReturnLineInput,
 	type ReturnRuleInput,
+	RETURN_STATUS_VALUES,
 	reminderSchedule,
 	suggestReturn,
 	toSearchKey,
@@ -71,6 +75,22 @@ const EDITABLE_ENTITIES = new Set(["gift", "person", "return"]);
 export const PROJECTION_DELAY_MS = 5_000;
 
 const SYSTEM_ACTOR = { userId: "system", displayName: "システム" } as const;
+/** 旧アプリからの取り込み（05 §2）の変更ログの記録者 */
+const IMPORT_ACTOR = { userId: "system", displayName: "データ移行" } as const;
+/** 取り込みの前に中身を消すテーブル（参照する側から順に） */
+const IMPORT_TABLES = [
+	"return_lines",
+	"returns",
+	"return_rules",
+	"return_items",
+	"reminders",
+	"gift_contributors",
+	"gifts",
+	"persons",
+	"relationships",
+	"events",
+	"change_log",
+] as const;
 
 /** お知らせの送信に全員分失敗したときに、送り直す間隔 */
 export const REMINDER_RETRY_MS = 30 * 60 * 1000;
@@ -1733,6 +1753,226 @@ export class KoudenLedger extends DurableObject<Env> {
 			new Date().toISOString(),
 		);
 		this.state = "deleted";
+	}
+
+	// ---- 移行（05 §2 の 3b） -------------------------------------------------
+
+	/**
+	 * 旧アプリのデータを取り込む。行事・関係・差出人・いただきもの・香典返し・変更ログ・お知らせを全部消してから
+	 * 入れ直すので、何度実行しても同じ結果になる。統計の投影先として、D1 の koudens の行を先に作っておくこと。
+	 * 変更ログには import の 1 行だけを記録する（旧アプリの変更履歴は移さない）。
+	 * 通常の編集で作られるもの（期限のお知らせの予定・D1 の統計）も、ここで作る
+	 */
+	async importSnapshot(
+		koudenId: string,
+		snapshot: LedgerSnapshot,
+		importedAt: string,
+	): Promise<LedgerImportSummary> {
+		if (!this.ensureSchema()) throw new Error(`ledger ${koudenId} has been deleted`);
+		const current = this.meta("kouden_id");
+		if (current !== null && current !== koudenId) {
+			throw new Error(`ledger belongs to ${current}, import for ${koudenId}`);
+		}
+		this.ctx.storage.transactionSync(() => {
+			// 参照される側を後に消す
+			for (const table of IMPORT_TABLES) this.sql.exec(`DELETE FROM ${table}`);
+			this.sql.exec(
+				`INSERT INTO meta (key, value) VALUES ('kouden_id', ?), ('created_at', ?)
+         ON CONFLICT (key) DO NOTHING`,
+				koudenId,
+				importedAt,
+			);
+			for (const e of snapshot.events) {
+				this.insertEvent(e.id, e, e.sortOrder, importedAt);
+			}
+			for (const r of snapshot.relationships) {
+				this.sql.exec(
+					`INSERT INTO relationships (id, name, sort_order, is_hidden, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+					r.id,
+					r.name,
+					r.sortOrder,
+					r.isHidden ? 1 : 0,
+					importedAt,
+					importedAt,
+				);
+			}
+			for (const p of snapshot.persons) {
+				this.sql.exec(
+					`INSERT INTO persons (id, name, name_kana, organization, position, relationship_id, postal_code,
+                                 address, phone, notes, search_text, created_by, created_at, updated_by, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+					p.id,
+					p.name,
+					p.nameKana,
+					p.organization,
+					p.position,
+					p.relationshipId,
+					p.postalCode,
+					p.address,
+					p.phone,
+					p.notes,
+					this.searchText({
+						name: p.name,
+						name_kana: p.nameKana,
+						organization: p.organization,
+						address: p.address,
+					}),
+					p.createdBy,
+					p.createdAt,
+					p.updatedBy,
+					p.updatedAt,
+				);
+			}
+			for (const g of snapshot.gifts) {
+				this.sql.exec(
+					`INSERT INTO gifts (id, event_id, kind, amount, item_name, quantity, message, attendance, notes,
+                               created_by, created_at, updated_by, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+					g.id,
+					g.eventId,
+					g.kind,
+					g.amount,
+					g.itemName,
+					g.quantity,
+					g.message,
+					g.attendance,
+					g.notes,
+					g.createdBy,
+					g.createdAt,
+					g.updatedBy,
+					g.updatedAt,
+				);
+			}
+			for (const c of snapshot.contributors) {
+				this.sql.exec(
+					"INSERT INTO gift_contributors (gift_id, person_id, is_primary, share_amount) VALUES (?, ?, ?, ?)",
+					c.giftId,
+					c.personId,
+					c.isPrimary ? 1 : 0,
+					c.shareAmount,
+				);
+			}
+			for (const i of snapshot.returnItems) {
+				this.sql.exec(
+					`INSERT INTO return_items (id, name, category, price, description, image_r2_key, is_active, sort_order,
+                                      created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+					i.id,
+					i.name,
+					i.category,
+					i.price,
+					i.description,
+					i.imageR2Key,
+					i.isActive ? 1 : 0,
+					i.sortOrder,
+					i.createdAt,
+					i.updatedAt,
+				);
+			}
+			for (const r of snapshot.returnRules) {
+				this.sql.exec(
+					`INSERT INTO return_rules (id, min_amount, max_amount, ratio_numerator, ratio_denominator,
+                                      suggested_item_id, sort_order)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+					r.id,
+					r.minAmount,
+					r.maxAmount,
+					r.ratioNumerator,
+					r.ratioDenominator,
+					r.suggestedItemId,
+					r.sortOrder,
+				);
+			}
+			for (const r of snapshot.returns) {
+				this.sql.exec(
+					`INSERT INTO returns (id, person_id, status, method, on_day_amount, arranged_at, shipped_at, ship_name,
+                                 ship_postal_code, ship_address, ship_phone, notes,
+                                 created_by, created_at, updated_by, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+					r.id,
+					r.personId,
+					r.status,
+					r.method,
+					r.onDayAmount,
+					r.arrangedAt,
+					r.shippedAt,
+					r.shipName,
+					r.shipPostalCode,
+					r.shipAddress,
+					r.shipPhone,
+					r.notes,
+					r.createdBy,
+					r.createdAt,
+					r.updatedBy,
+					r.updatedAt,
+				);
+			}
+			for (const l of snapshot.returnLines) {
+				this.sql.exec(
+					`INSERT INTO return_lines (id, return_id, return_item_id, name, unit_price, quantity)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+					l.id,
+					l.returnId,
+					l.returnItemId,
+					l.name,
+					l.unitPrice,
+					l.quantity,
+				);
+			}
+			this.sql.exec(
+				`INSERT INTO change_log (at, actor_user_id, actor_name, entity, entity_id, op, diff)
+         VALUES (?, ?, ?, 'kouden', ?, 'import', NULL)`,
+				importedAt,
+				IMPORT_ACTOR.userId,
+				IMPORT_ACTOR.displayName,
+				koudenId,
+			);
+			this.syncReminders(new Date().toISOString());
+		});
+		// 開いている画面は読み込み直させる（kouden の変更は画面全体に影響する）
+		this.broadcastChanges(this.lastSeq() - 1);
+		if (!(await this.project(koudenId))) {
+			throw new Error(`kouden ${koudenId} is not in D1; create it before importing the ledger`);
+		}
+		await this.scheduleAlarm(false);
+		return this.importSummary();
+	}
+
+	/** 取り込んだ内容の件数（05 §5 の検証で旧データと比べる） */
+	async importSummary(): Promise<LedgerImportSummary> {
+		if (!this.ensureSchema()) throw new Error("ledger has been deleted");
+		const count = (table: string) => this.scalar(`SELECT count(*) AS n FROM ${table}`);
+		const gifts = Object.fromEntries(
+			GIFT_KIND_VALUES.map((k) => [k, 0]),
+		) as LedgerImportSummary["gifts"];
+		for (const r of this.all<{ kind: keyof LedgerImportSummary["gifts"]; n: number }>(
+			"SELECT kind, count(*) AS n FROM gifts WHERE deleted_at IS NULL GROUP BY kind",
+		)) {
+			gifts[r.kind] = r.n;
+		}
+		const returns = Object.fromEntries(
+			RETURN_STATUS_VALUES.map((s) => [s, 0]),
+		) as LedgerImportSummary["returns"];
+		for (const r of this.all<{ status: keyof LedgerImportSummary["returns"]; n: number }>(
+			"SELECT status, count(*) AS n FROM returns GROUP BY status",
+		)) {
+			returns[r.status] = r.n;
+		}
+		return {
+			events: this.scalar("SELECT count(*) AS n FROM events WHERE deleted_at IS NULL"),
+			relationships: count("relationships"),
+			persons: this.scalar("SELECT count(*) AS n FROM persons WHERE deleted_at IS NULL"),
+			gifts,
+			kodenTotal: this.scalar(
+				"SELECT coalesce(sum(amount), 0) AS n FROM gifts WHERE kind = 'koden' AND deleted_at IS NULL",
+			),
+			returns,
+			returnLines: count("return_lines"),
+			returnItems: count("return_items"),
+			returnRules: count("return_rules"),
+			reminders: count("reminders"),
+		};
 	}
 
 	/**

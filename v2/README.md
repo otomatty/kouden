@@ -24,6 +24,7 @@ v2/
 ├── apps/admin/        # 運営者画面（kouden-admin）。Cloudflare Access の背後に置き、D1 だけを使う（DO には接続しない）
 ├── packages/domain/   # 業務ルール（入力検証・権限・検索の正規化・金額の按分など。純粋な TypeScript）
 ├── packages/ui/       # app と admin で共有するクラス名（ui.ts）と色・フォント（theme.css）
+├── tools/migrate-from-supabase/  # 旧アプリ（Supabase）からのデータ移行（docs/rebuild/05。変換は src/transform.ts）
 └── e2e/               # Playwright の E2E とアクセシビリティの検査（axe）
 ```
 

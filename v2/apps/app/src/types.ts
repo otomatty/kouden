@@ -3,6 +3,7 @@ import type { OidcProvider } from "./auth/google.ts";
 import type { StripeClient } from "./billing/stripe.ts";
 import type { KoudenContext } from "./kouden/store.ts";
 import type { Caller } from "./ledger/types.ts";
+import type { ImportAccessVerifier } from "./migration/auth.ts";
 
 /** アプリ全体で使う依存。テストでは差し替える */
 export interface AppDeps {
@@ -11,6 +12,8 @@ export interface AppDeps {
 	now?: () => Date;
 	/** Stripe の実装。省略時は STRIPE_SECRET_KEY で本物の API を呼ぶ（未設定なら null） */
 	stripe?: (env: Env) => StripeClient | null;
+	/** データ移行の取り込み口の Access の検証。省略時は Access の公開鍵で検証する */
+	verifyImportAccess?: (env: Env) => ImportAccessVerifier;
 }
 
 export interface AppEnv {

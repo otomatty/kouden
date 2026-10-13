@@ -148,6 +148,17 @@ GET /k/:koudenId/gifts
 - 書き込み（手動の有料化・購入の取り消し・旧ユーザーの紐づけ）は、操作と監査ログ（`admin_audit_logs`）を同じ `db.batch()` で記録する。監査ログは操作が実際に行われた場合だけ残す。
 - 応答は `Cache-Control: private, no-store`、CSP は `script-src 'none'`（運営者画面にスクリプトはない）。GET 以外は `Origin` が運営者画面のオリジンと一致する場合だけ受け付ける。
 
+### データ移行の取り込み口（M6）
+
+旧アプリからのデータ移行（05 §2）は、移行ツールが利用者向けアプリの内部エンドポイント `/internal/import/*` を呼んで書き込む。
+
+- `POST /internal/import/users`（ユーザーと `legacy_users`）→ `PUT /internal/import/koudens/:koudenId`（香典帳・メンバー・購入を D1 に、台帳を DO の `importSnapshot` に）の順に呼ぶ。`GET /internal/import/koudens/:koudenId` は検証用の件数を返す。入力は `packages/domain` の `import.ts` の Zod スキーマで検証する
+- 認証は Cloudflare Access のサービストークン。運営者画面と同じく `Cf-Access-Jwt-Assertion` を検証する（`iss`・`aud`・RS256）。設定は `deploy.settings.ts` の `importAccess`（チームのドメインと取り込み用のアプリケーションの AUD タグ）で、**空なら取り込み口は 404 になる**。リハーサル・切り替えの間だけ設定し、終わったら空に戻してデプロイし直す
+- ローカルだけは `importDevToken`（`Authorization: Bearer`）で通す。staging / production で空でなければ `deployBlockers` が止める
+- ブラウザからの要求ではないので、`Origin` の検査（CSRF 対策）からは外す
+- D1 の行は ID で上書きする（`INSERT … ON CONFLICT DO UPDATE`）。取り込みの後にログインで紐づいた `google_sub` と、運営者による手動の紐づけは、再実行で消さない
+- DO は 1 トランザクションで中身を全部消してから入れ直す。失敗すれば前回の取り込み結果のまま。変更ログには `op = 'import'` の 1 行だけを記録し、期限のお知らせの予定と統計の投影（`kouden_stats`）もこの時に作る
+
 ### 旧ユーザーの手動紐づけ（E10-2）
 
 旧サービスのメールログインで、自動で紐づかなかった人（ADR-P17）は、本人に新しい Google アカウントで一度ログインしてもらい（空のアカウント N ができる）、運営者が本人確認のうえ旧アカウント（移行で作った行 L）に紐づける。1 つの `db.batch()` で次を行う。

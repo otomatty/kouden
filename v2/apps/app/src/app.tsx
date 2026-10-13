@@ -8,6 +8,7 @@ import { csrfProtection, securityHeaders } from "./middleware/security.ts";
 import { session } from "./middleware/session.ts";
 import { webhookRoutes } from "./routes/billing.tsx";
 import { koudenRoutes } from "./routes/koudens.tsx";
+import { internalRoutes } from "./routes/internal.ts";
 import { inviteRoutes } from "./routes/members.tsx";
 import { pageRoutes } from "./routes/pages.tsx";
 import type { AppDeps, AppEnv } from "./types.ts";
@@ -34,6 +35,7 @@ export function createApp(deps: AppDeps = {}) {
 	app.route("/", koudenRoutes);
 	app.route("/", inviteRoutes);
 	app.route("/", webhookRoutes);
+	app.route("/", internalRoutes(deps));
 
 	app.notFound((c) =>
 		c.html(
