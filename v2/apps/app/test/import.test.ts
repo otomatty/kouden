@@ -1,5 +1,9 @@
 import { env, runInDurableObject } from "cloudflare:test";
-import type { ImportKoudenPayload, ImportUser } from "@kouden/domain";
+import {
+	IMPORT_USERS_PER_REQUEST,
+	type ImportKoudenPayload,
+	type ImportUser,
+} from "@kouden/domain";
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { describe, expect, it } from "vitest";
 import { createApp } from "../src/app.tsx";
@@ -495,6 +499,34 @@ describe("旧データの取り込み（05 §2・§3）", () => {
 		});
 		await owner.login();
 		expect(await (await owner.request(`/k/${i.kouden}/persons`)).text()).toContain("佐藤 一郎");
+	});
+
+	it("D1 の 1 回の実行あたりの文の上限を超える人数は、書き込む前に断る", async () => {
+		const i = ids();
+		const [owner] = users(i);
+		if (!owner) throw new Error("no user");
+		const many = Array.from({ length: IMPORT_USERS_PER_REQUEST + 1 }, (_, n) => ({
+			...owner,
+			id: `${i.owner}-${n}`,
+			legacyUserId: `${i.owner}-${n}-legacy`,
+			googleSub: null,
+		}));
+		const res = await call("/internal/import/users", {
+			method: "POST",
+			headers: TOKEN,
+			json: { users: many },
+		});
+		expect(res.status).toBe(400);
+		const ok = await call("/internal/import/users", {
+			method: "POST",
+			headers: TOKEN,
+			json: { users: many.slice(0, IMPORT_USERS_PER_REQUEST) },
+		});
+		expect(ok.status).toBe(200);
+		const row = await env.DB.prepare("SELECT count(*) AS n FROM users WHERE id LIKE ?")
+			.bind(`${i.owner}-%`)
+			.first();
+		expect(row).toEqual({ n: IMPORT_USERS_PER_REQUEST });
 	});
 
 	it("形の合わないデータは受け付けない（香典に金額がない）", async () => {

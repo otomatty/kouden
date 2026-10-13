@@ -10,6 +10,7 @@ import {
 	returnMethodOf,
 	transformKouden,
 	transformUsers,
+	userPayloads,
 } from "../src/transform.ts";
 
 const T = "2024-03-01T10:00:00.123456+00:00";
@@ -648,6 +649,22 @@ describe("香典帳（05 §3）", () => {
 		);
 		expect(users[0]?.displayName).toBe(long);
 		expect(importUsersPayloadSchema.safeParse({ users }).success).toBe(true);
+	});
+
+	it("ユーザーは D1 の 1 回の要求に収まる人数ずつに分けて送る", () => {
+		const legacy = Array.from({ length: 450 }, (_, n) => ({
+			id: `u-${n}`,
+			email: `u${n}@example.com`,
+			created_at: T,
+			identities: [],
+		}));
+		const { users } = transformUsers(legacy, []);
+		const payloads = userPayloads(users);
+		expect(payloads.map((p) => p.users.length)).toEqual([200, 200, 50]);
+		expect(payloads.flatMap((p) => p.users)).toEqual(users);
+		for (const p of payloads) expect(importUsersPayloadSchema.safeParse(p).success).toBe(true);
+		expect(importUsersPayloadSchema.safeParse({ users }).success).toBe(false);
+		expect(userPayloads([])).toEqual([]);
 	});
 
 	it("何度変換しても同じ結果になる", () => {

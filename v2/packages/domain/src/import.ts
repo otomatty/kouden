@@ -38,8 +38,18 @@ export const importUserSchema = z.object({
 });
 export type ImportUser = z.infer<typeof importUserSchema>;
 
+/**
+ * 1 回の要求で D1 に送る文の数を、Workers の 1 回の実行あたりの上限（有料プランで 1,000）より十分少なくする。
+ * バッチの中の文も 1 件ずつ数えられる。ユーザーは 1 人につき 2 文（users と legacy_users）なので、
+ * 移行ツールはこの人数ずつに分けて送る
+ */
+export const IMPORT_USERS_PER_REQUEST = 200;
+/** 香典帳 1 冊のメンバーと購入の上限（どちらも 1 件 1 文）。実際の香典帳はこれよりずっと少ない */
+export const IMPORT_MEMBERS_MAX = 200;
+export const IMPORT_PURCHASES_MAX = 200;
+
 export const importUsersPayloadSchema = z.object({
-	users: z.array(importUserSchema).max(1000),
+	users: z.array(importUserSchema).max(IMPORT_USERS_PER_REQUEST),
 });
 export type ImportUsersPayload = z.infer<typeof importUsersPayloadSchema>;
 
@@ -186,23 +196,27 @@ export const importKoudenPayloadSchema = z.object({
 		createdAt: isoTime,
 		updatedAt: isoTime,
 	}),
-	members: z.array(
-		z.object({
-			userId: id,
-			role: z.enum(["owner", "editor", "viewer"]),
-			joinedAt: isoTime,
-			invitedBy: id.nullable(),
-		}),
-	),
-	purchases: z.array(
-		z.object({
-			id,
-			userId: id,
-			amount: yen,
-			stripeCheckoutSessionId: z.string().max(255).nullable(),
-			createdAt: isoTime,
-		}),
-	),
+	members: z
+		.array(
+			z.object({
+				userId: id,
+				role: z.enum(["owner", "editor", "viewer"]),
+				joinedAt: isoTime,
+				invitedBy: id.nullable(),
+			}),
+		)
+		.max(IMPORT_MEMBERS_MAX),
+	purchases: z
+		.array(
+			z.object({
+				id,
+				userId: id,
+				amount: yen,
+				stripeCheckoutSessionId: z.string().max(255).nullable(),
+				createdAt: isoTime,
+			}),
+		)
+		.max(IMPORT_PURCHASES_MAX),
 	ledger: ledgerSnapshotSchema,
 });
 export type ImportKoudenPayload = z.infer<typeof importKoudenPayloadSchema>;

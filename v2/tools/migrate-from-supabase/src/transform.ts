@@ -5,8 +5,10 @@
 import {
 	type Attendance,
 	type GiftKind,
+	IMPORT_USERS_PER_REQUEST,
 	type ImportKoudenPayload,
 	type ImportUser,
+	type ImportUsersPayload,
 	type LedgerSnapshot,
 	type ReturnMethod,
 	type ReturnStatus,
@@ -102,6 +104,15 @@ export function transformUsers(
 		};
 	});
 	return { users: out, warnings };
+}
+
+/** ユーザーの取り込みは、D1 への 1 回の要求の上限に収まる人数ずつに分けて送る */
+export function userPayloads(users: ImportUser[]): ImportUsersPayload[] {
+	const out: ImportUsersPayload[] = [];
+	for (let i = 0; i < users.length; i += IMPORT_USERS_PER_REQUEST) {
+		out.push({ users: users.slice(i, i + IMPORT_USERS_PER_REQUEST) });
+	}
+	return out;
 }
 
 // ---- 香典帳 -----------------------------------------------------------------------

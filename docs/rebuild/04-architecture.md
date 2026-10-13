@@ -152,7 +152,7 @@ GET /k/:koudenId/gifts
 
 旧アプリからのデータ移行（05 §2）は、移行ツールが利用者向けアプリの内部エンドポイント `/internal/import/*` を呼んで書き込む。
 
-- `POST /internal/import/users`（ユーザーと `legacy_users`）→ `PUT /internal/import/koudens/:koudenId`（香典帳・メンバー・購入を D1 に、台帳を DO の `importSnapshot` に）の順に呼ぶ。`GET /internal/import/koudens/:koudenId` は検証用の件数を返す。入力は `packages/domain` の `import.ts` の Zod スキーマで検証する
+- `POST /internal/import/users`（ユーザーと `legacy_users`）→ `PUT /internal/import/koudens/:koudenId`（香典帳・メンバー・購入を D1 に、台帳を DO の `importSnapshot` に）の順に呼ぶ。`GET /internal/import/koudens/:koudenId` は検証用の件数を返す。入力は `packages/domain` の `import.ts` の Zod スキーマで検証する。D1 は Workers の 1 回の実行で送れる文の数に上限がある（有料プランで 1,000。バッチの中の文も 1 件ずつ数える）ので、ユーザーは 1 回 200 人まで（1 人 2 文。移行ツールの `userPayloads` が分けて送る）、香典帳のメンバーと購入はそれぞれ 200 件までにする
 - 認証は Cloudflare Access のサービストークン。運営者画面と同じく `Cf-Access-Jwt-Assertion` を検証する（`iss`・`aud`・RS256）。設定は `deploy.settings.ts` の `importAccess`（チームのドメインと取り込み用のアプリケーションの AUD タグ）で、**空なら取り込み口は 404 になる**。リハーサル・切り替えの間だけ設定し、終わったら空に戻してデプロイし直す
 - ローカルだけは `importDevToken`（`Authorization: Bearer`）で通す。staging / production で空でなければ `deployBlockers` が止める
 - ブラウザからの要求ではないので、`Origin` の検査（CSRF 対策）からは外す
