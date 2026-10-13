@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { authRoutes } from "./auth/routes.tsx";
+import { accountRoutes } from "./routes/account.tsx";
 import { log } from "./lib/logger.ts";
 import { requestContext } from "./middleware/request-context.ts";
 import { csrfProtection, securityHeaders } from "./middleware/security.ts";
@@ -29,6 +30,7 @@ export function createApp(deps: AppDeps = {}) {
 	app.get("/healthz", (c) => c.text("ok"));
 	app.route("/", authRoutes(deps));
 	app.route("/", pageRoutes);
+	app.route("/", accountRoutes);
 	app.route("/", koudenRoutes);
 	app.route("/", inviteRoutes);
 	app.route("/", webhookRoutes);

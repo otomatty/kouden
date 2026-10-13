@@ -426,6 +426,26 @@ describe("有料版の購入（E9-2）", () => {
 		);
 	});
 
+	it("Checkout Session の作成に失敗したら、設定画面に戻して案内する", async () => {
+		const failing: StripeClient = {
+			createCheckoutSession: async () => {
+				throw new StripeApiError(500, "api_error");
+			},
+			retrieveCheckoutSession: async () => {
+				throw new StripeApiError(500, "api_error");
+			},
+		};
+		const taro = makeApp(TARO, undefined, { stripe: () => failing });
+		await taro.login();
+		const created = await taro.request("/k", formPost({ deceasedName: "山田 一郎" }));
+		const koudenId = created.headers.get("location")?.split("/").pop() ?? "";
+		const res = await taro.request(`/k/${koudenId}/billing/checkout`, formPost({}));
+		expect(res.status).toBe(303);
+		expect(res.headers.get("location")).toBe(
+			`/k/${koudenId}/settings?notice=purchase_unavailable#billing`,
+		);
+	});
+
 	it("有料の香典帳も削除でき、購入の記録は残る", async () => {
 		const { taro, koudenId, webhook, checkoutAndPay } = await setup();
 		const session = await checkoutAndPay();

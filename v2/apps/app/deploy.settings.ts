@@ -31,7 +31,7 @@ export interface ModeSettings {
 const PLACEHOLDER_DOMAIN = "example.jp";
 const PLACEHOLDER_CLIENT_ID = "REPLACE_ME.apps.googleusercontent.com";
 
-const DOMAIN = PLACEHOLDER_DOMAIN;
+export const DOMAIN = PLACEHOLDER_DOMAIN;
 
 /** ローカル開発用の D1 の ID（ローカルの永続化ファイル名を決めるためだけに使う） */
 export const LOCAL_D1_ID = "00000000-0000-4000-8000-00000000d1d1";

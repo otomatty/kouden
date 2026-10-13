@@ -34,7 +34,6 @@ flowchart TB
   hono <-->|Checkout / Webhook| stripe
   admin --> access --> adminw
   adminw --> d1
-  adminw -->|RPC（script_name 経由）| ledger
   cron --> hono
 ```
 
@@ -50,7 +49,7 @@ flowchart TB
 | Rate Limiting | `AUTH_RATE_LIMITER` / `WRITE_RATE_LIMITER` ほか | ログイン・書き込み・招待受諾の回数制限 |
 | Cron Triggers | 毎日 03:00 JST | 期限切れセッション・招待の削除、`deleting` の香典帳の再処理、統計の整合確認 |
 
-**ドメイン**: `example.jp`（本番）、`admin.example.jp`（運営者）、`staging.example.jp`（ステージング、Access で保護）。
+**ドメイン**: `example.jp`（本番）、`admin.example.jp`（運営者）、`staging.example.jp`（ステージング、Access で保護）、`admin-staging.example.jp`（ステージングの運営者画面。Universal SSL の証明書は 1 階層のサブドメインまでなので `admin.staging.` にしない）。
 
 ## 2. リポジトリ構成
 
@@ -78,10 +77,10 @@ v2/                              # 切り替えまでの間、旧実装と同居
 │   │   │   ├── output/          # 印刷用ページ・Excel の行の組み立て、.xlsx の生成（M4〜）
 │   │   │   └── billing/         # Stripe（Checkout・Webhook の署名検証）と購入の記録（M4〜）
 │   │   └── test/
-│   └── admin/                   # kouden-admin Worker（M5〜）
+│   └── admin/                   # kouden-admin Worker（M5〜）。D1 は apps/app と共有し、マイグレーションは apps/app に置く
 ├── packages/
 │   ├── domain/                  # 純粋な TS: ID 生成、料金、金額計算、香典返し提案、バリデーション
-│   └── ui/                      # 共通 JSX コンポーネント（admin を作る M5 で切り出す）
+│   └── ui/                      # 共通のクラス名（ui.ts）と色・フォント（theme.css）。app と admin の CSS がここも走査する
 └── tools/
     └── migrate-from-supabase/   # 移行ツール（M6、05 参照）
 ```
@@ -142,8 +141,22 @@ GET /k/:koudenId/gifts
 ### Cloudflare Access（運営者）
 
 - `admin.example.jp` 全体を Access アプリケーションにし、ポリシーで運営者のメールアドレスだけを許可する。
-- `kouden-admin` は `Cf-Access-Jwt-Assertion` を Access の公開鍵で検証し（`aud` = アプリケーションの AUD タグ）、`email` を監査ログに記録する。
-- `kouden-admin` は `kouden-app` の DO を `script_name` 指定の binding で参照する。**香典帳の中身（個人情報）を読む RPC は運営者画面に公開しない**。
+- `kouden-admin` は `Cf-Access-Jwt-Assertion` を Access の公開鍵（`https://<team>.cloudflareaccess.com/cdn-cgi/access/certs`）で検証し（`iss` = チームのドメイン、`aud` = アプリケーションの AUD タグ、RS256）、`email` を監査ログに記録する。JWT がない・検証できない場合は 403、Access の設定（チームのドメイン・AUD）がない場合は 500 で、迂回しない。
+- ローカル（`development`）だけは Access を通らないので、設定の `devEmail` を運営者として扱う。staging / production の `devEmail` は空で、空でなければ `deployBlockers` がデプロイを止める。
+- **`kouden-admin` は DO に接続しない**（M5 で決定。当初は `script_name` 指定の binding で参照する予定だった）。運営者画面の機能（検索・購入・紐づけ・ダッシュボード）は D1 だけで足り、香典帳の中身（個人情報）に届く経路を最初から持たない方が安全なため。件数は統計の投影（`kouden_stats`）を使う。運営者が `plan` を変えても DO には知らせないので、利用者が開いている画面の残り件数の表示は次の読み込みまで古いまま（上限の判定は毎回 D1 の値を使うので正しい）。
+- 書き込み（手動の有料化・購入の取り消し・旧ユーザーの紐づけ）は、操作と監査ログ（`admin_audit_logs`）を同じ `db.batch()` で記録する。監査ログは操作が実際に行われた場合だけ残す。
+- 応答は `Cache-Control: private, no-store`、CSP は `script-src 'none'`（運営者画面にスクリプトはない）。GET 以外は `Origin` が運営者画面のオリジンと一致する場合だけ受け付ける。
+
+### 旧ユーザーの手動紐づけ（E10-2）
+
+旧サービスのメールログインで、自動で紐づかなかった人（ADR-P17）は、本人に新しい Google アカウントで一度ログインしてもらい（空のアカウント N ができる）、運営者が本人確認のうえ旧アカウント（移行で作った行 L）に紐づける。1 つの `db.batch()` で次を行う。
+
+1. `legacy_users` を L に紐づけ済みにする（未紐づけの場合だけ。以降の文はこれが成功したことを条件にする）
+2. N の参加・所有を L に寄せる（両方が参加している香典帳で N がオーナーなら L をオーナーにする。オーナーは 1 冊に 1 人なので、先に N を外す）。招待の作成者・購入者も L にする。承諾待ちの譲渡は取り消す
+3. N のセッションを消し、N の Google の `sub` を外して削除済みにしてから、L に `sub`・メールを付ける（`sub` の一意制約に当たらない順序）
+4. 監査ログを書く
+
+本人は次のログインから L として扱われ、N で作っていた香典帳もそのまま使える。
 
 ## 5. リアルタイム同期と編集中表示
 
@@ -233,6 +246,7 @@ htmx 本体と、WebSocket を扱う小さな自前スクリプト（`public/ass
 | パス | 画面 | 主な端末 |
 |---|---|---|
 | `/` | LP（未ログイン）/ 香典帳一覧（ログイン済み） | 両方 |
+| `/account` | アカウント（表示名・すべての端末からログアウト・アカウントの削除） | 両方 |
 | `/k/:id` | 香典帳トップ（合計・行事別サマリー・最近の登録） | 両方 |
 | `/k/:id/reception?event=…` | 受付入力（大きな受付番号、連続入力） | スマホ |
 | `/k/:id/gifts` | いただきもの一覧（絞り込み・連続編集） | PC |
@@ -312,15 +326,15 @@ class CloudflareMailer implements Mailer { /* env.EMAIL.send(...) */ }
 
 | 環境 | Worker 名 | D1 / R2 | 公開範囲 |
 |---|---|---|---|
-| ローカル（`development`） | `bun run dev`（`cf dev` + Tailwind の監視） | `.cloudflare/state` の模擬環境 | 開発者のみ |
-| ステージング | `kouden-app-staging` / `kouden-admin-staging` | `kouden-db-staging` / `kouden-files-staging` | `staging.example.jp`。Access で開発者のみ |
+| ローカル（`development`） | `bun run dev`（`cf dev` + Tailwind の監視）。運営者画面は `apps/admin` の `bun run dev`（ポート 5174。`apps/app` と同じローカル D1 を見る） | `.cloudflare/state` の模擬環境 | 開発者のみ |
+| ステージング | `kouden-app-staging` / `kouden-admin-staging` | `kouden-db-staging` / `kouden-files-staging` | `staging.example.jp`・`admin-staging.example.jp`。Access で開発者・運営者のみ |
 | 本番 | `kouden-app` / `kouden-admin` | `kouden-db` / `kouden-files` | `example.jp` |
 
 環境は `cf` の mode で切り替える（`--mode staging` など）。Worker 名・ドメイン・D1 名は `deploy.settings.ts` に集約している。DO の名前空間は Worker ごとに独立するため、Worker 名を分ければ環境ごとに自動で分離される。
 
 **GitHub Actions**
 1. `v2-ci.yml`（PR と `main` への push、`v2/` 配下の変更時）: `oxfmt --check` → `oxlint` → 型チェック → `vitest`（`@cloudflare/vitest-plugin` で D1・DO を含めて Workers ランタイム上で実行）→ `cf build`
-2. `v2-deploy.yml`（手動実行。`staging` / `production` を選ぶ）: テスト → D1 マイグレーション → `cf deploy --secrets-file` → （初回のみ）D1 マイグレーション。GitHub の Environments でシークレットと承認ルールを管理する
+2. `v2-deploy.yml`（手動実行。`staging` / `production` を選ぶ）: 設定の検査（app・admin）→ テスト → D1 マイグレーション → `cf deploy --secrets-file` → （初回のみ）D1 マイグレーション → 運営者画面の `cf deploy`。GitHub の Environments でシークレットと承認ルールを管理する
 3. ステージングへのデプロイ後の Playwright による E2E は M1 以降で追加する
 
 ## 11. 運用

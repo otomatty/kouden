@@ -21,7 +21,9 @@ v2/
 │       ├── kouden/    # D1 の香典帳・メンバーシップ
 │       ├── routes/    # 画面（pages: 公開ページ、koudens: 香典帳の中）
 │       └── views/     # JSX
-└── packages/domain/   # 業務ルール（入力検証・権限・検索の正規化・金額の按分など。純粋な TypeScript）
+├── apps/admin/        # 運営者画面（kouden-admin）。Cloudflare Access の背後に置き、D1 だけを使う（DO には接続しない）
+├── packages/domain/   # 業務ルール（入力検証・権限・検索の正規化・金額の按分など。純粋な TypeScript）
+└── packages/ui/       # app と admin で共有するクラス名（ui.ts）と色・フォント（theme.css）
 ```
 
 ## ローカル開発
@@ -36,6 +38,13 @@ cd apps/app
 cp .dev.vars.example .dev.vars   # SESSION_SECRET に `openssl rand -hex 32` の値を入れる
 bun run db:migrate:local         # ローカル D1 にマイグレーションを適用
 bun run dev                      # http://localhost:5173
+```
+
+運営者画面は別のターミナルで起動します（`apps/app` と同じローカル D1 を見ます。Access は通さず、`deploy.settings.ts` の `devEmail` を運営者として扱います）。
+
+```sh
+cd v2/apps/admin
+bun run dev                      # http://localhost:5174
 ```
 
 Google ログインを試すには、OAuth クライアントの値を `.dev.vars` の `GOOGLE_CLIENT_SECRET` と `apps/app/deploy.settings.ts` の `development` の `googleClientId` に設定してください（承認済みのリダイレクト URI に `http://localhost:5173/auth/google/callback` を追加しておく）。
@@ -79,12 +88,13 @@ M0 のコードは揃っていますが、以下は Cloudflare・Google・GitHub
    - `STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`（下の 6.）
    - `production` には承認者（Required reviewers）を設定する
 5. **ステージングを Cloudflare Access で保護**: `staging.<ドメイン>` を Access アプリケーションにし、開発者のメールのみ許可する。
-6. **Stripe の設定**（ステージングはテストモード、本番はライブモード）:
+6. **運営者画面を Cloudflare Access で保護**: Zero Trust で `admin.<ドメイン>` と `admin-staging.<ドメイン>` を Self-hosted アプリケーションにし、ポリシーで運営者のメールアドレスだけを許可する。チームのドメイン（`<team>.cloudflareaccess.com`）と各アプリケーションの AUD タグを `apps/admin/deploy.settings.ts` の `access` に設定する（設定するまで `deployBlockers` がデプロイを止める）
+7. **Stripe の設定**（ステージングはテストモード、本番はライブモード）:
    - Webhook のエンドポイント: `https://<ドメイン>/webhooks/stripe`。送るイベントは `checkout.session.completed`・`checkout.session.async_payment_succeeded`・`checkout.session.async_payment_failed`・`charge.refunded`。表示される署名シークレット（`whsec_...`）を `STRIPE_WEBHOOK_SECRET` に登録する
    - シークレットキー（`sk_...`。制限付きキーなら Checkout Sessions の書き込み権限）を `STRIPE_SECRET_KEY` に登録する
    - 「カスタマーメール」で支払い成功時の領収書の送信を有効にする（E9-3）
    - ローカルで試す場合は `.dev.vars` にテストモードのキーを入れ、`stripe listen --forward-to localhost:5173/webhooks/stripe` が表示する `whsec_...` を `STRIPE_WEBHOOK_SECRET` に入れる
-7. **デプロイ**: GitHub Actions の「v2 Deploy」を手動実行する。初回は D1 がデプロイ時に作成され、続けてマイグレーションが適用される。
+8. **デプロイ**: GitHub Actions の「v2 Deploy」を手動実行する（利用者向けアプリの後に運営者画面もデプロイされる）。初回は D1 がデプロイ時に作成され、続けてマイグレーションが適用される。
 
 ## `cf`（ベータ）の注意点
 

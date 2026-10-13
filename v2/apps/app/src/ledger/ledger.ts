@@ -1631,6 +1631,22 @@ export class KoudenLedger extends DurableObject<Env> {
 		this.broadcastPresence();
 	}
 
+	/**
+	 * 表示名の変更（E1-5）を、この香典帳を開いている本人の接続に反映する（閲覧中・編集中の表示）。
+	 * 接続の情報は接続時の名前を保存しているので、画面を開き直さなくても新しい名前で表示されるようにする
+	 */
+	async renamePresence(caller: Caller): Promise<void> {
+		let changed = false;
+		for (const ws of this.ctx.getWebSockets(caller.userId)) {
+			const a = ws.deserializeAttachment() as Attachment | null;
+			if (a && a.name !== caller.displayName) {
+				ws.serializeAttachment({ ...a, name: caller.displayName });
+				changed = true;
+			}
+		}
+		if (changed) this.broadcastPresence();
+	}
+
 	private revokeSocket(ws: WebSocket): void {
 		try {
 			ws.send(JSON.stringify({ type: "revoked" }));

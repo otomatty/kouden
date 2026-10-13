@@ -1,0 +1,26 @@
+/* 利用者向けアプリ（apps/app）と運営者画面（apps/admin）で共有する色・フォント */
+@theme {
+	--font-sans:
+		"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", Meiryo, system-ui,
+		sans-serif;
+
+	--color-paper: #f7f5f0;
+	--color-surface: #ffffff;
+	--color-ink: #23262b;
+	--color-muted: #6b6f76;
+	--color-line: #e2ded4;
+	/* 紫紺 */
+	--color-accent: #3b3a6b;
+	--color-accent-strong: #2d2c55;
+	--color-danger: #9b2c2c;
+}
+
+@layer base {
+	html {
+		-webkit-text-size-adjust: 100%;
+	}
+	:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
+	}
+}

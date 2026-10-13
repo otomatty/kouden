@@ -124,6 +124,14 @@ export const koudenSchema = z
 	}));
 export type KoudenInput = z.output<typeof koudenSchema>;
 
+// ---- アカウント ------------------------------------------------------------
+
+/** 表示名（E1-5）。変更履歴や編集中表示に出る名前 */
+export const profileSchema = z.object({
+	displayName: requiredText("表示名", 50),
+});
+export type ProfileInput = z.output<typeof profileSchema>;
+
 // ---- 行事・関係 ------------------------------------------------------------
 
 export const eventSchema = z

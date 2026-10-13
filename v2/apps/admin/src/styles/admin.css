@@ -1,0 +1,5 @@
+@import "tailwindcss";
+/* 色・フォントと共通のクラス名は利用者向けアプリと共有する（packages/ui） */
+@import "../../../../packages/ui/src/theme.css";
+@source "../";
+@source "../../../../packages/ui/src";

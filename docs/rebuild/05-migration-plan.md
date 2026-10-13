@@ -14,7 +14,7 @@
 | M5 | 運営・仕上げ | 運営者 Worker（Access）、統計の投影・ダッシュボード、旧ユーザーの手動紐づけ、アカウント削除、アクセシビリティ確認、E2E | E1-4, E1-5, E10 |
 | M6 | 移行 | 移行ツール、ステージングでのリハーサル（2 回以上）、本番の切り替え | E1-2 |
 
-**進捗**: M0 完了（otomatty/kouden#161）。M1 完了（otomatty/kouden#162）。M2 完了（otomatty/kouden#163）。M3 完了（otomatty/kouden#164。カタログ・金額帯ルールは設定とは別の `/k/:id/returns/settings` に置いた）。M4 実装済み（印刷用ページ・Excel・Stripe の購入。Excel のライブラリの PoC の結果は 04 §8。Stripe は SDK を使わず REST API を呼ぶ（04 §7））。残りの作業は otomatty/kouden#165 にまとめている。オフライン警告（E4-8）は WebSocket の接続状態と合わせて M2 で実装した。
+**進捗**: M0 完了（otomatty/kouden#161）。M1 完了（otomatty/kouden#162）。M2 完了（otomatty/kouden#163）。M3 完了（otomatty/kouden#164。カタログ・金額帯ルールは設定とは別の `/k/:id/returns/settings` に置いた）。M4 完了（otomatty/kouden#172。Excel のライブラリの PoC の結果は 04 §8。Stripe は SDK を使わず REST API を呼ぶ（04 §7））。M5 は 2 回に分ける。1 回目（実装済み）: アカウント（表示名の変更・アカウントの削除）、運営者画面（`apps/admin`。Access の検証・ダッシュボード・検索・手動の有料化と購入の取り消し・旧ユーザーの手動紐づけ・監査ログ。DO には接続しない（04 §4））、共通のクラス名と色を `packages/ui` に切り出し。2 回目: アクセシビリティの確認と Playwright による E2E。残りの作業は otomatty/kouden#165 にまとめている。オフライン警告（E4-8）は WebSocket の接続状態と合わせて M2 で実装した。
 
 切り替え後に「後続」のストーリー（E4-7 供物の写真の新規追加、E5-2 差出人の統合）を実装する。ただし、旧データの供物写真は M6 で移行する。
 
