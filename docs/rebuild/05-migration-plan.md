@@ -23,7 +23,7 @@
 ```mermaid
 flowchart LR
   sb[("Supabase<br/>PostgreSQL + Storage")] -->|1. 抽出| snap["スナップショット<br/>（JSON / 香典帳ごと）"]
-  snap -->|2. 変換<br/>packages/domain を使用| plan["移行データ<br/>D1 用 SQL + DO 用 JSON"]
+  snap -->|2. 変換<br/>packages/domain を使用| plan["移行データ<br/>plan.json + 画像"]
   plan -->|3a. D1 へ投入| d1[("D1")]
   plan -->|3b. 取り込み API| do["KoudenLedger DO"]
   sb -->|3c. 画像コピー| r2[("R2")]
@@ -34,12 +34,20 @@ flowchart LR
 
 | 段階 | 処理 |
 |---|---|
-| 1. 抽出 | Supabase の service key で全テーブルを読み、香典帳ごとの JSON にまとめる。Storage のオブジェクト一覧も取る |
+| 1. 抽出 | Codex の Supabase コネクタから単一の読み取り専用 SELECT で移行対象のテーブル・必要な認証項目・Storage のメタデータを取得し、全件スナップショットに保存する。画像本体は別途保全する。最終抽出時は旧アプリの書き込みを止める |
 | 2. 変換 | §3 の対応表に従って新しい形に変換する。ID は旧 UUID から決定的に生成（UUIDv5）し、再実行しても同じ ID になるようにする |
 | 3a. D1 投入 | 移行専用の内部エンドポイント（04 §4「データ移行の取り込み口」。Access サービストークンで保護し、移行完了後に無効化）で `users` / `legacy_users` / `koudens` / `kouden_members` / `purchases` を投入。再実行で既存行を消さないよう `INSERT ... ON CONFLICT DO UPDATE` を使う（`INSERT OR REPLACE` は行を削除して入れ直すため、`ON DELETE CASCADE` で関連行まで消える）。当初は `cf d1 query` を使う予定だったが、DO と同じ認証・同じ検証（Zod）で書け、Workers ランタイム上のテストで SQL を確かめられるため、エンドポイントにした |
 | 3b. DO 投入 | 同じ取り込み口（`PUT /internal/import/koudens/:koudenId`）が D1 の行を書いた後に `stub.importSnapshot(json)` を呼ぶ。DO は中身を全消去してから入れ直す |
 | 3c. 画像 | Supabase Storage（`return-items`、供物写真）から R2 の `koudens/{koudenId}/…` へコピー |
 | 4. 検証 | §5 の項目を香典帳ごとに比較し、1 件でも不一致があれば失敗にする |
+
+### 移行 CLI（第2回の実装）
+
+[`v2/tools/migrate-from-supabase/README.md`](../../v2/tools/migrate-from-supabase/README.md) に実行手順・入力形式・認証・レポートをまとめた。`prepare` がコネクタの抽出結果を検証・変換し、`import` がユーザーを最大200人ずつ、続いて台帳単位で投入して保存先を読み戻す。`verify` は書き込みをせずに同じ照合を行う。JSON / Markdown に件数・香典合計の予定値と実測値を記録し、メンバー・購入などの不一致は項目の場所で示す。
+
+返礼品画像は保全済みの本体と URL 対応表を使い、R2 へ転送後にキー・サイズ・SHA-256 を照合する。各台帳で画像を先に転送し、D1・DO を投入する。供物写真の保存・表示は未実装のため、元スナップショットに供物写真があれば準備を停止する。`common` / `gift` / `funeral` の非空テーブルは警告として残し、領収書の本体保全も別作業として追跡する。
+
+全件の原子的な切り替えは行わない。途中で失敗した場合は原因を直して同じ計画を全件再実行する。再実行は新旧アプリへの書き込み停止中に限る。投入予定外の移行済みユーザー・台帳・台帳配下の画像も不一致として検出する。照合の合格は集計・D1 行・画像の一致を示すもので、DO の全テキスト項目や画面表示の一致までは保証しない。§5 の目視確認、故人名確認 UI、切り戻しツール、staging リハーサルは引き続き必要。
 
 ## 3. 対応表（旧 → 新）
 
@@ -59,6 +67,8 @@ flowchart LR
 | `kouden_members` + `kouden_roles` | D1 `kouden_members.role` | `koudens.owner_id` の人 → `owner`（メンバーの行がなくても作る）。ロールの `permissions` に `edit`（または `entry.write` など書き込みの権限）を含む → `editor`。それ以外 → `viewer`。`added_by` → `invited_by`。存在しないユーザーのメンバーは移さない |
 | `kouden_invitations` | 移行しない | 保留中の招待は切り替え後に再発行してもらう（告知文に記載） |
 | `kouden_purchases` | D1 `purchases` | `source = 'legacy'`、`status = 'paid'`、`stripe_checkout_session_id` は旧値を保持 |
+
+旧台帳名が空文字・空白のみの場合は、故人名を「（故人名未確認）」、台帳名を「香典帳（故人名未確認）」にする。`deceased_name_missing` の警告を残し、オーナーによる確認対象とする。空の故人名では取り込み API の必須条件を満たさないための補完であり、抽出済みの元データは変更しない。
 
 ### 台帳（DO）
 

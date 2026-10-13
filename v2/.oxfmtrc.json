@@ -3,6 +3,7 @@
 	"useTabs": true,
 	"printWidth": 100,
 	"ignorePatterns": [
+		".migration-data/**",
 		"**/.cloudflare/**",
 		"**/node_modules/**",
 		"bun.lock",

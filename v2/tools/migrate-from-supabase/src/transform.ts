@@ -117,11 +117,11 @@ export function userPayloads(users: ImportUser[]): ImportUsersPayload[] {
 
 // ---- 香典帳 -----------------------------------------------------------------------
 
-/** 「故 山田 一郎 様」→「山田 一郎」。形が違えば香典帳の名前をそのまま使う（05 §3: 初回表示時にオーナーへ確認を促す） */
+/** 「故 山田 一郎 様」→「山田 一郎」。形が違えば台帳名、空なら未確認の仮名にする（05 §3） */
 export function guessDeceasedName(title: string): string {
 	// 敬称まであるときだけ取り出す（「故人を偲ぶ会」のような名前から「人を偲ぶ会」を作らない）
 	const m = /^故\s*(.+?)\s*(様|殿)$/.exec(title.trim());
-	return (m?.[1] ?? title).trim() || title;
+	return (m?.[1] ?? title).trim() || "（故人名未確認）";
 }
 
 /** ロールの権限に編集を含めば編集者、なければ閲覧者（05 §3） */
@@ -195,6 +195,13 @@ export function transformKouden(
 
 	// ---- D1 ----
 	const deceasedName = guessDeceasedName(k.title);
+	if (k.title.trim() === "") {
+		warn(
+			"deceased_name_missing",
+			k.id,
+			"旧台帳名が空のため、故人名を未確認の仮名にしました。オーナーによる確認が必要です",
+		);
+	}
 	warn(
 		"deceased_name_guessed",
 		k.id,
@@ -690,7 +697,7 @@ export function transformKouden(
 		koudenId,
 		kouden: {
 			legacyKoudenId: k.id,
-			title: k.title.trim() || `故 ${deceasedName} 様`,
+			title: k.title.trim() || "香典帳（故人名未確認）",
 			deceasedName,
 			ownerUserId: newId.user(k.owner_id),
 			status: koudenStatus,

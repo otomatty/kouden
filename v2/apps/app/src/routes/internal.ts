@@ -4,15 +4,19 @@ import {
 	importUsersPayloadSchema,
 } from "@kouden/domain";
 import { type Context, Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { log } from "../lib/logger.ts";
 import { ledgerFor } from "../ledger/client.ts";
 import { importAuth } from "../migration/auth.ts";
+import { importFileRoutes } from "../migration/files.ts";
 import {
 	importKoudenRows,
 	importUsers,
 	koudenImportState,
 	koudenRowsBefore,
 	restoreKoudenRows,
+	verifyImportedUsers,
+	importTotals,
 } from "../migration/store.ts";
 import type { AppDeps, AppEnv } from "../types.ts";
 
@@ -23,6 +27,14 @@ import type { AppDeps, AppEnv } from "../types.ts";
 export function internalRoutes(deps: AppDeps) {
 	const r = new Hono<AppEnv>();
 	r.use("/internal/*", importAuth(deps));
+	r.use("/internal/*", bodyLimit({ maxSize: 10 * 1024 * 1024 }));
+	r.route("/internal/import", importFileRoutes());
+	r.get("/internal/import/summary", async (c) => c.json(await importTotals(c.env.DB)));
+	r.post("/internal/import/users/verify", async (c) => {
+		const parsed = importUsersPayloadSchema.safeParse(await c.req.json().catch(() => null));
+		if (!parsed.success) return c.json({ error: "invalid" }, 400);
+		return c.json(await verifyImportedUsers(c.env.DB, parsed.data.users));
+	});
 
 	r.post("/internal/import/users", async (c) => {
 		const parsed = importUsersPayloadSchema.safeParse(await c.req.json().catch(() => null));

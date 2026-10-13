@@ -23,6 +23,7 @@
 		]
 	},
 	"ignorePatterns": [
+		".migration-data/**",
 		"**/.cloudflare/**",
 		"**/node_modules/**",
 		"**/dist/**",

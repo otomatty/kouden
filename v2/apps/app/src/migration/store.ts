@@ -1,4 +1,9 @@
-import type { ImportKoudenPayload, ImportUser } from "@kouden/domain";
+import {
+	expectedImportUser,
+	importDifferences,
+	type ImportKoudenPayload,
+	type ImportUser,
+} from "@kouden/domain";
 
 /**
  * 旧アプリからのデータ移行の D1 への書き込み（05 §2 の 3a）。
@@ -186,6 +191,21 @@ export async function koudenImportState(db: D1Database, koudenId: string) {
 			.bind(koudenId),
 	]);
 	const roles = Object.fromEntries((members?.results ?? []).map((r) => [r.role, r.n]));
+	const rows = await db.batch([
+		db
+			.prepare(`SELECT legacy_kouden_id AS legacyKoudenId, title, deceased_name AS deceasedName,
+      owner_user_id AS ownerUserId, status, created_at AS createdAt, updated_at AS updatedAt
+      FROM koudens WHERE id = ?`)
+			.bind(koudenId),
+		db
+			.prepare(`SELECT user_id AS userId, role, joined_at AS joinedAt, invited_by AS invitedBy
+      FROM kouden_members WHERE kouden_id = ? ORDER BY user_id`)
+			.bind(koudenId),
+		db
+			.prepare(`SELECT id, user_id AS userId, amount, stripe_checkout_session_id AS stripeCheckoutSessionId,
+      created_at AS createdAt, source, status FROM purchases WHERE kouden_id = ? ORDER BY id`)
+			.bind(koudenId),
+	]);
 	return {
 		ownerUserId: kouden.owner_user_id,
 		plan: kouden.plan,
@@ -193,5 +213,49 @@ export async function koudenImportState(db: D1Database, koudenId: string) {
 		legacyKoudenId: kouden.legacy_kouden_id,
 		members: { owner: roles.owner ?? 0, editor: roles.editor ?? 0, viewer: roles.viewer ?? 0 },
 		paidPurchases: purchases?.results[0]?.n ?? 0,
+		kouden: rows[0]?.results[0] ?? null,
+		memberRows: rows[1]?.results ?? [],
+		purchaseRows: rows[2]?.results ?? [],
 	};
+}
+
+/** 全移行ユーザーをバッチ単位で読み戻す。メールアドレスなどの値は返さない。 */
+export async function verifyImportedUsers(db: D1Database, users: ImportUser[]) {
+	if (users.length === 0) return { checked: 0, differences: [] as string[] };
+	const rows = await db.batch(
+		users.flatMap((u) => [
+			db
+				.prepare(`SELECT id, legacy_user_id AS legacyUserId, email, display_name AS displayName,
+      google_sub AS googleSub, created_at AS createdAt FROM users WHERE id = ?`)
+				.bind(u.id),
+			db
+				.prepare(`SELECT legacy_user_id AS legacyUserId, email, display_name AS displayName,
+      auth_provider AS authProvider FROM legacy_users WHERE legacy_user_id = ?`)
+				.bind(u.legacyUserId),
+		]),
+	);
+	return {
+		checked: users.length,
+		differences: users.flatMap((u, i) =>
+			importDifferences(
+				expectedImportUser(u),
+				{
+					user: rows[i * 2]?.results[0] ?? null,
+					legacy: rows[i * 2 + 1]?.results[0] ?? null,
+				},
+				`users[${i}]`,
+			),
+		),
+	};
+}
+
+/** 新規の一般ユーザーは含めず、旧データからの取り込み件数を照合する。 */
+export async function importTotals(db: D1Database) {
+	const row = await db
+		.prepare(`SELECT
+    (SELECT count(*) FROM users WHERE legacy_user_id IS NOT NULL) AS users,
+    (SELECT count(*) FROM legacy_users) AS legacyUsers,
+    (SELECT count(*) FROM koudens WHERE legacy_kouden_id IS NOT NULL) AS koudens`)
+		.first();
+	return row;
 }

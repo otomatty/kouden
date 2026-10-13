@@ -1,6 +1,8 @@
 import { env, runInDurableObject } from "cloudflare:test";
 import {
 	IMPORT_USERS_PER_REQUEST,
+	expectedImportState,
+	importDifferences,
 	type ImportKoudenPayload,
 	type ImportUser,
 } from "@kouden/domain";
@@ -329,6 +331,106 @@ describe("取り込み口の認証（05 §2）", () => {
 });
 
 describe("旧データの取り込み（05 §2・§3）", () => {
+	it("読み戻しでユーザー・メンバーの権限変更と金額の差を検出できる", async () => {
+		const i = ids();
+		const payload = koudenPayload(i, future());
+		await importAll(i, payload);
+		const verifyUsers = () =>
+			call("/internal/import/users/verify", {
+				method: "POST",
+				headers: TOKEN,
+				json: { users: users(i) },
+			});
+		expect(await (await verifyUsers()).json()).toEqual({ checked: 2, differences: [] });
+		const state = async () =>
+			(await call(`/internal/import/koudens/${i.kouden}`, { headers: TOKEN })).json();
+		expect(importDifferences(expectedImportState(payload), await state())).toEqual([]);
+		await env.DB.prepare("UPDATE users SET display_name = ? WHERE id = ?")
+			.bind("変更済み", i.owner)
+			.run();
+		expect(await (await verifyUsers()).json()).toEqual({
+			checked: 2,
+			differences: ["users[0].user.displayName"],
+		});
+		await env.DB.prepare(
+			"UPDATE kouden_members SET role = 'viewer' WHERE kouden_id = ? AND user_id = ?",
+		)
+			.bind(i.kouden, i.editor)
+			.run();
+		await env.DB.prepare("UPDATE purchases SET amount = 1 WHERE id = ?").bind(i.purchase).run();
+		const diff = importDifferences(expectedImportState(payload), await state());
+		expect(diff).toContain("d1.purchaseRows[0].amount");
+		expect(diff.some((path) => path.startsWith("d1.memberRows") && path.endsWith(".role"))).toBe(
+			true,
+		);
+	});
+
+	it("確認用 API も認証で保護し、不正なユーザー入力は拒否する", async () => {
+		for (const path of [
+			"/internal/import/summary",
+			"/internal/import/files?key=x",
+			"/internal/import/koudens/k1/files",
+		]) {
+			expect((await call(path)).status).toBe(403);
+			expect((await call(path, {}, { IMPORT_DEV_TOKEN: "" })).status).toBe(404);
+		}
+		expect(
+			(
+				await call("/internal/import/users/verify", {
+					method: "POST",
+					headers: TOKEN,
+					json: { users: [{}] },
+				})
+			).status,
+		).toBe(400);
+	});
+
+	it("画像は再投入でき、R2からサイズとSHA-256を読み戻せる", async () => {
+		const key = `koudens/${crypto.randomUUID()}/return-items/${crypto.randomUUID()}`;
+		const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+		const hash = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)), (b) =>
+			b.toString(16).padStart(2, "0"),
+		).join("");
+		const path = `/internal/import/files?key=${encodeURIComponent(key)}`;
+		for (let repeat = 0; repeat < 2; repeat++) {
+			const result = await call(path, {
+				method: "PUT",
+				headers: { ...TOKEN, "X-Content-SHA256": hash },
+				body: bytes,
+			});
+			expect(result.status).toBe(200);
+		}
+		expect(await (await call(path, { headers: TOKEN })).json()).toEqual({
+			key,
+			size: bytes.length,
+			sha256: hash,
+		});
+		const listing = await call(`/internal/import/koudens/${key.split("/")[1]}/files`, {
+			headers: TOKEN,
+		});
+		expect(await listing.json()).toEqual({ objects: [{ key, size: bytes.length }], cursor: null });
+		expect(
+			(
+				await call(path, {
+					method: "PUT",
+					headers: { ...TOKEN, "X-Content-SHA256": "0".repeat(64) },
+					body: bytes,
+				})
+			).status,
+		).toBe(400);
+		expect(
+			(
+				await call("/internal/import/files?key=outside/path", {
+					method: "PUT",
+					headers: { ...TOKEN, "X-Content-SHA256": hash },
+					body: bytes,
+				})
+			).status,
+		).toBe(400);
+		// チェックサムが異なる要求は既存の画像を上書きしない。
+		expect(await (await call(path, { headers: TOKEN })).json()).toMatchObject({ sha256: hash });
+	});
+
 	it("D1 と台帳に入り、件数・統計・期限のお知らせが揃う", async () => {
 		const i = ids();
 		const { ledger } = await importAll(i);
