@@ -169,6 +169,45 @@ function fakeClient(plan: MigrationPlan, corrupt = false) {
 }
 
 describe("prepare", () => {
+	it.each([null, 0, 15000])("旧供物の金額 %s を保持して準備・投入・照合できる", async (price) => {
+		const input = snapshot();
+		input.data["public.offerings"] = [
+			{
+				id: "o1",
+				kouden_id: "k1",
+				type: "FLOWER",
+				description: "供花一対",
+				quantity: 1,
+				price,
+				provider_name: "試験差出人",
+				notes: null,
+				created_by: "u1",
+				created_at: at,
+				updated_at: at,
+			},
+		];
+		input.row_counts["public.offerings"] = 1;
+		const { plan } = prepareSnapshot(input);
+		const book = plan.koudens[0];
+		if (!book) throw new Error("fixture");
+		expect(book.payload.ledger.gifts.find((g) => g.kind === "kyoka")).toMatchObject({
+			amount: price,
+			quantity: 1,
+		});
+		const dir = await temp();
+		const remote = fakeClient(plan);
+		const report = await runMigration({
+			mode: "import",
+			plan,
+			planDir: dir,
+			reportDir: dir,
+			client: remote.client,
+		});
+		expect(report.status).toBe("passed");
+		expect(
+			remote.books.get(book.payload.koudenId)?.ledger.gifts.find((g) => g.kind === "kyoka")?.amount,
+		).toBe(price);
+	});
 	it("CLIの失敗時は安全な原因だけをstderrに表示し、終了コード1を返す", async () => {
 		const dir = await temp();
 		const input = snapshot();

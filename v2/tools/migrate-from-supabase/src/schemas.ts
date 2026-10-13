@@ -70,7 +70,7 @@ export const legacySourceSchema: z.ZodType<LegacyKoudenSource> = z.object({
 			type: str,
 			description: nullable,
 			quantity: number,
-			price: number,
+			price: number.nullable(),
 			provider_name: str,
 			notes: nullable,
 			...audit,
