@@ -308,6 +308,7 @@ export const GiftEditPage: FC<{
 										"hx-trigger": "input changed delay:300ms",
 										"hx-target": "#contributor-candidates",
 										"hx-swap": "innerHTML",
+										"hx-sync": "this:replace",
 									}}
 								/>
 							</Field>

@@ -23,7 +23,8 @@ v2/
 │       └── views/     # JSX
 ├── apps/admin/        # 運営者画面（kouden-admin）。Cloudflare Access の背後に置き、D1 だけを使う（DO には接続しない）
 ├── packages/domain/   # 業務ルール（入力検証・権限・検索の正規化・金額の按分など。純粋な TypeScript）
-└── packages/ui/       # app と admin で共有するクラス名（ui.ts）と色・フォント（theme.css）
+├── packages/ui/       # app と admin で共有するクラス名（ui.ts）と色・フォント（theme.css）
+└── e2e/               # Playwright の E2E とアクセシビリティの検査（axe）
 ```
 
 ## ローカル開発
@@ -40,7 +41,7 @@ bun run db:migrate:local         # ローカル D1 にマイグレーション�
 bun run dev                      # http://localhost:5173
 ```
 
-運営者画面は別のターミナルで起動します（`apps/app` と同じローカル D1 を見ます。Access は通さず、`deploy.settings.ts` の `devEmail` を運営者として扱います）。
+運営者画面は別のターミナルで起動します（`apps/app` と同じローカル D1 を見ます。Access は通さず、`deploy.settings.ts` の `devEmail` を運営者として扱います）。2 つの `cf dev` が同じ SQLite ファイルを開くため、両方で同時に書き込むと `database is locked`（SQLITE_BUSY）になることがあります（ローカルだけの現象です）。
 
 ```sh
 cd v2/apps/admin
@@ -57,6 +58,7 @@ Google ログインを試すには、OAuth クライアントの値を `.dev.var
 | `bun run typecheck`            | 型チェック（`cf workers types` で binding の型を生成してから `tsc`） |
 | `bun run lint` / `bun run fmt` | Oxlint / oxfmt                                                       |
 | `bun run build`                | 本番用ビルド（`apps/app/.cloudflare/output`）                        |
+| `bun run e2e`                  | E2E とアクセシビリティの検査（下記）                                 |
 
 `apps/app` で実行するもの:
 
@@ -69,6 +71,21 @@ Google ログインを試すには、OAuth クライアントの値を `.dev.var
 
 D1 のマイグレーションファイルは `cf d1 migrations create` で作成するか、`apps/app/migrations/` に連番で追加します。
 DO（KoudenLedger）のスキーマは `apps/app/src/ledger/schema.ts` の `MIGRATIONS` の末尾に追加します（各 DO が次に呼ばれたときに適用されます。適用済みの要素は変更しないでください）。
+
+## E2E（`v2/e2e`）
+
+Playwright で、利用者向けアプリ（:5173）と運営者画面（:5174）の `cf dev` を起動して画面を操作し、各画面を axe（WCAG 2.1 A/AA）で検査します。
+
+```sh
+cd v2/e2e
+bunx playwright install chromium   # 初回のみ
+bun run e2e                        # = scripts/prepare.ts → playwright test
+```
+
+- `scripts/prepare.ts` が専用の保存先（`e2e/.state`）を作り直し、D1 にマイグレーションを当てて、`tests/users.ts` の利用者とセッションを入れます。テストはセッションの Cookie を付けてログイン済みとして操作します（Google のログインは通しません）。開発中のデータ（`apps/app/.cloudflare/state`）には触れません
+- 5173・5174 番を使うため、`bun run dev` を止めてから実行してください
+- 手元の Chromium を使う場合は `PLAYWRIGHT_CHROMIUM_PATH` に実行ファイルのパスを入れます
+- 失敗したテストのトレースは `e2e/test-results/` に残ります（`bunx playwright show-trace …`）
 
 ## 公開までに必要な作業（運営者が行うもの）
 

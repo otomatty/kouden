@@ -2,5 +2,12 @@
 	"$schema": "./node_modules/oxfmt/configuration_schema.json",
 	"useTabs": true,
 	"printWidth": 100,
-	"ignorePatterns": ["**/.cloudflare/**", "**/node_modules/**", "bun.lock"]
+	"ignorePatterns": [
+		"**/.cloudflare/**",
+		"**/node_modules/**",
+		"bun.lock",
+		"e2e/.state/**",
+		"e2e/test-results/**",
+		"e2e/playwright-report/**"
+	]
 }

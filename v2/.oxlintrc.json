@@ -22,7 +22,14 @@
 			}
 		]
 	},
-	"ignorePatterns": ["**/.cloudflare/**", "**/node_modules/**", "**/dist/**"],
+	"ignorePatterns": [
+		"**/.cloudflare/**",
+		"**/node_modules/**",
+		"**/dist/**",
+		"e2e/.state/**",
+		"e2e/test-results/**",
+		"e2e/playwright-report/**"
+	],
 	"overrides": [
 		{
 			"files": ["**/scripts/**"],

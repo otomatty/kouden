@@ -7,6 +7,7 @@
 		"css": "tailwindcss -i src/styles/app.css -o public/assets/app.css --minify",
 		"css:watch": "tailwindcss -i src/styles/app.css -o public/assets/app.css --watch=always",
 		"dev": "bun run assets && (bun run css:watch & cf dev)",
+		"serve": "bun run assets && cf dev",
 		"build": "bun run assets && cf build",
 		"deploy": "bun scripts/deploy.ts",
 		"db:migrate:local": "bun scripts/d1-local-migrate.ts",

@@ -56,6 +56,7 @@ export const KoudenShell: FC<{
 			</div>
 			<p data-presence aria-live="polite" class="min-h-5 text-xs text-muted"></p>
 		</div>
+		<SrStatus />
 		<nav aria-label="香典帳のメニュー" class="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
 			<ul class="flex min-w-max gap-1 border-b border-line">
 				{TABS.map((t) => (
@@ -97,6 +98,17 @@ export const KoudenShell: FC<{
 			data-seq={renderSeq?.toString()}
 		></script>
 	</div>
+);
+
+/**
+ * スクリーンリーダー向けの読み上げ領域。画面を開いたときから置いておき（後から足した領域は読み上げられないことがある）、
+ * htmx の応答に `<SrStatus oob>…</SrStatus>` を含めると中身だけが差し替わって読み上げられる。
+ * 受付の登録結果・差出人の候補の件数など、フォーカスの外で変わる内容を知らせる。
+ */
+export const SrStatus: FC<{ oob?: boolean; children?: Child }> = ({ oob, children }) => (
+	<p id="sr-status" role="status" class="sr-only" hx-swap-oob={oob ? "innerHTML" : undefined}>
+		{children}
+	</p>
 );
 
 /**

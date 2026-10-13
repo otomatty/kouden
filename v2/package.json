@@ -3,7 +3,8 @@
 	"private": true,
 	"workspaces": [
 		"apps/*",
-		"packages/*"
+		"packages/*",
+		"e2e"
 	],
 	"type": "module",
 	"scripts": {
@@ -12,7 +13,8 @@
 		"fmt:check": "oxfmt --check",
 		"typecheck": "bun run --filter '*' typecheck",
 		"test": "bun run --filter '*' test",
-		"build": "bun run --filter '*' build"
+		"build": "bun run --filter '*' build",
+		"e2e": "bun run --filter @kouden/e2e e2e"
 	},
 	"devDependencies": {
 		"oxfmt": "0.72.0",

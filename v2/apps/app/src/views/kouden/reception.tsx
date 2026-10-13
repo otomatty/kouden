@@ -63,6 +63,16 @@ export const ReceptionPage: FC<ReceptionProps> = (props) => {
 	);
 };
 
+/** 登録したことの読み上げ（htmx の応答で SrStatus に入れる） */
+export const receptionAnnouncement = (done: ReceptionDone) =>
+	`登録しました。${done.eventName} の受付番号 ${done.receiptNo ?? "なし"}、${done.personLabel} 様、${
+		GIFT_KINDS[done.kind]
+	}${done.amount !== null ? ` ${yen(done.amount)}` : ""}。`;
+
+/** 差出人の候補の件数の読み上げ（候補は入力欄の外に出るため） */
+export const candidatesAnnouncement = (count: number) =>
+	count > 0 ? `同じ人の候補が ${count} 件あります。` : "";
+
 /** htmx で丸ごと差し替える部分（登録結果 + 次の入力欄） */
 export const ReceptionPanel: FC<ReceptionProps> = ({
 	kouden,
@@ -90,11 +100,9 @@ export const ReceptionPanel: FC<ReceptionProps> = ({
 	const openDetails = detailKeys.some((k) => errors[k] || values[k]);
 	return (
 		<div id="reception-panel" class="space-y-4">
+			{/* 読み上げは画面の上の SrStatus が行う（receptionAnnouncement） */}
 			{done && (
-				<div
-					role="status"
-					class="rounded-xl border-2 border-accent bg-surface p-5 text-center shadow-sm"
-				>
+				<div class="rounded-xl border-2 border-accent bg-surface p-5 text-center shadow-sm">
 					<p class="text-sm text-muted">{done.eventName} の受付番号</p>
 					<p class="text-7xl leading-tight font-bold tabular-nums text-accent">
 						{done.receiptNo ?? "—"}
@@ -160,6 +168,8 @@ export const ReceptionPanel: FC<ReceptionProps> = ({
 							"hx-trigger": "input changed delay:300ms",
 							"hx-target": "#candidates",
 							"hx-swap": "innerHTML",
+							// 候補の要求は新しい入力で置き換える。登録の送信と重なった候補の要求は app.js が取り消す
+							"hx-sync": "this:replace",
 						}}
 					/>
 				</Field>
@@ -175,7 +185,7 @@ export const ReceptionPanel: FC<ReceptionProps> = ({
 							errors={errors}
 							inputmode="numeric"
 							class="text-right text-lg tabular-nums"
-							placeholder="10000"
+							placeholder="例: 10000"
 						/>
 						<span>円</span>
 					</div>
@@ -211,6 +221,7 @@ export const ReceptionPanel: FC<ReceptionProps> = ({
 								"hx-trigger": "input changed delay:300ms",
 								"hx-target": "#candidates",
 								"hx-swap": "innerHTML",
+								"hx-sync": "this:replace",
 							}}
 						/>
 					</Field>

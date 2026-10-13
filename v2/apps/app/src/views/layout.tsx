@@ -47,10 +47,16 @@ export const Layout: FC<{
 				{/* htmx の設定: 自分のオリジンにだけ要求する / eval を使わない（CSP）/ 422・409 も差し替える */}
 				<meta name="htmx-config" content={HTMX_CONFIG} />
 				<script src={`/assets/htmx.min.js?v=${__ASSET_VERSION__}`} defer></script>
+				<script src={`/assets/app.js?v=${__ASSET_VERSION__}`} defer></script>
 			</head>
 			<body class="flex min-h-dvh flex-col bg-paper font-sans text-ink antialiased">
+				<a href="#main" class={ui.skipLink}>
+					本文へ移動
+				</a>
 				<Header user={user} />
-				<main class="flex-1 py-8 sm:py-12">{children}</main>
+				<main id="main" tabindex={-1} class="flex-1 py-8 focus:outline-none sm:py-12">
+					{children}
+				</main>
 				<Footer />
 			</body>
 		</html>
@@ -63,7 +69,7 @@ const Header: FC<{ user: SessionUser | null }> = ({ user }) => (
 			<a href="/" class="text-lg font-semibold tracking-widest text-ink">
 				{SITE_NAME}
 			</a>
-			<nav class="flex items-center gap-4 text-sm">
+			<nav aria-label="アカウント" class="flex items-center gap-4 text-sm">
 				{user ? (
 					<>
 						<a href="/account" class="hidden text-muted hover:text-ink sm:inline">
@@ -98,7 +104,7 @@ const Footer: FC = () => (
 		<div
 			class={`${ui.container} flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between`}
 		>
-			<nav class="flex flex-wrap gap-x-6 gap-y-2">
+			<nav aria-label="サイトの案内" class="flex flex-wrap gap-x-6 gap-y-2">
 				<a href="/terms" class="hover:text-ink">
 					利用規約
 				</a>

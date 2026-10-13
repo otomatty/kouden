@@ -3,6 +3,7 @@
  *
  * `cf d1 migrations apply --local` はベータ版で動作が不安定なため、Miniflare を直接使う。
  * 適用履歴は wrangler / cf と同じ形式の `d1_migrations` テーブルに記録する。
+ * 環境変数 KOUDEN_LOCAL_STATE で保存先を変えられる（E2E 用。vite.config.ts と合わせる）。
  */
 import path from "node:path";
 import { readD1Migrations } from "@cloudflare/vitest-plugin";
@@ -10,6 +11,7 @@ import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { LOCAL_D1_ID } from "../deploy.settings.ts";
 
 const appDir = path.resolve(import.meta.dirname, "..");
+const stateDir = process.env.KOUDEN_LOCAL_STATE ?? path.join(appDir, ".cloudflare/state");
 
 const mf = new Miniflare({
 	...convertV4MiniflareOptions({
@@ -18,7 +20,7 @@ const mf = new Miniflare({
 		d1Databases: { DB: LOCAL_D1_ID },
 	}),
 	// `cf dev`（Cloudflare Vite plugin）と同じ保存先
-	resourcePersistencePath: path.join(appDir, ".cloudflare/state/v3"),
+	resourcePersistencePath: path.join(stateDir, "v3"),
 	resourceTmpPath: path.join(appDir, ".cloudflare/tmp"),
 	telemetry: { enabled: false },
 });
