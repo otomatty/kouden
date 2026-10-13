@@ -26,5 +26,10 @@ export const USERS = {
 	liveEditor: user("live-editor", "鈴木 次郎"),
 	returns: user("returns", "高橋 三郎"),
 	account: user("account", "田中 四郎"),
-	leaving: user("leaving", "退会 予定"),
 } as const;
+
+/**
+ * アカウントの削除のテストで使う利用者。削除すると元に戻せないので、CI の再試行（retries: 1）でも
+ * 使えるよう、試行ごとに別の利用者を用意する（`test.info().retry` 番目を使う）
+ */
+export const LEAVING_USERS = [0, 1].map((n) => user(`leaving-${n}`, "退会 予定"));

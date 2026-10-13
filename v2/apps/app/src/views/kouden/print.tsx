@@ -40,6 +40,9 @@ const PrintLayout: FC<{
 				<script src={`/assets/print.js?v=${__ASSET_VERSION__}`} defer></script>
 			</head>
 			<body class="bg-paper font-sans text-ink print:bg-white">
+				<a href="#main" class={ui.skipLink}>
+					本文へ移動
+				</a>
 				<div class="mx-auto max-w-[210mm] space-y-4 p-4 print:max-w-none print:p-0">
 					<div class="flex flex-wrap items-center justify-between gap-3 print:hidden">
 						<a href={`/k/${kouden.id}/output`} class={ui.link}>
@@ -49,7 +52,11 @@ const PrintLayout: FC<{
 							印刷する
 						</button>
 					</div>
-					<main class="space-y-6 bg-surface p-6 shadow-sm print:p-0 print:shadow-none">
+					<main
+						id="main"
+						tabindex={-1}
+						class="space-y-6 bg-surface p-6 shadow-sm focus:outline-none print:p-0 print:shadow-none"
+					>
 						<header class="flex flex-wrap items-end justify-between gap-2 border-b-2 border-ink pb-2">
 							<div>
 								<h1 class="text-xl font-semibold tracking-widest">{title}</h1>

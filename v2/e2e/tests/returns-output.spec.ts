@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test";
-import { createKouden, expectAccessible, loginAs, registerKoden } from "./fixtures.ts";
+import {
+	createKouden,
+	expectAccessible,
+	expectSkipLink,
+	loginAs,
+	registerKoden,
+} from "./fixtures.ts";
 import { USERS } from "./users.ts";
 
 test.beforeEach(async ({ context }) => {
@@ -37,6 +43,7 @@ test("カタログの登録・一括提案の確定（E6）と、印刷・Excel 
 		await expect(page.getByRole("button", { name: "印刷する" })).toBeVisible();
 		await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 		await expectAccessible(page);
+		await expectSkipLink(page);
 	}
 
 	// Excel のダウンロード（ファイル名は Content-Disposition の filename* で日本語を渡す）

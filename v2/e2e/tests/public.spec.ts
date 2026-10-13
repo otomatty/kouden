@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { expectAccessible } from "./fixtures.ts";
+import { expectAccessible, expectSkipLink } from "./fixtures.ts";
 
 const PAGES = [
 	{ path: "/", heading: /香典帳/ },
@@ -35,10 +35,5 @@ test.describe("公開ページ（E11）", () => {
 
 test("キーボードで最初に「本文へ移動」が現れ、本文へ移動できる", async ({ page }) => {
 	await page.goto("/pricing");
-	await page.keyboard.press("Tab");
-	const skip = page.getByRole("link", { name: "本文へ移動" });
-	await expect(skip).toBeFocused();
-	await expect(skip).toBeVisible();
-	await page.keyboard.press("Enter");
-	await expect(page.locator("#main")).toBeFocused();
+	await expectSkipLink(page);
 });

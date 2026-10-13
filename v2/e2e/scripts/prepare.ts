@@ -7,7 +7,7 @@ import { rmSync } from "node:fs";
 import path from "node:path";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { LOCAL_D1_ID } from "../../apps/app/deploy.settings.ts";
-import { USERS } from "../tests/users.ts";
+import { LEAVING_USERS, USERS } from "../tests/users.ts";
 import { STATE_DIR } from "./state.ts";
 
 const appDir = path.resolve(import.meta.dirname, "../../apps/app");
@@ -41,14 +41,14 @@ try {
 	const at = now.toISOString();
 	const expires = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
 	const statements = [];
-	for (const [key, u] of Object.entries(USERS)) {
+	for (const u of [...Object.values(USERS), ...LEAVING_USERS]) {
 		statements.push(
 			db
 				.prepare(
 					`INSERT INTO users (id, google_sub, email, display_name, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?)`,
 				)
-				.bind(u.id, `e2e-sub-${key}`, u.email, u.name, at, at),
+				.bind(u.id, `${u.id}-sub`, u.email, u.name, at, at),
 			db
 				.prepare(
 					`INSERT INTO sessions (token_hash, user_id, created_at, expires_at, last_seen_at)
@@ -58,7 +58,7 @@ try {
 		);
 	}
 	await db.batch(statements);
-	console.info(`seeded ${Object.keys(USERS).length} users`);
+	console.info(`seeded ${statements.length / 2} users`);
 } finally {
 	await mf.dispose();
 }

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { expectAccessible, loginAs } from "./fixtures.ts";
-import { USERS } from "./users.ts";
+import { LEAVING_USERS, USERS } from "./users.ts";
 
 test("表示名を変えると、ヘッダーに反映される。空欄はエラーの欄にフォーカスが移る（E1-5）", async ({
 	page,
@@ -24,7 +24,10 @@ test("表示名を変えると、ヘッダーに反映される。空欄はエ�
 });
 
 test("アカウントを削除すると、ログアウトした状態になる（E1-4）", async ({ page, context }) => {
-	await loginAs(context, USERS.leaving);
+	// 削除は元に戻せないので、再試行のたびに別の利用者を使う
+	const leaving = LEAVING_USERS[test.info().retry];
+	if (!leaving) throw new Error("再試行の回数に対して LEAVING_USERS が足りません");
+	await loginAs(context, leaving);
 	await page.goto("/account");
 	await page.getByLabel("上記を確認しました").check();
 	await page.getByRole("button", { name: "アカウントを削除する" }).click();

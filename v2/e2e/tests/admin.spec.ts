@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { expectAccessible } from "./fixtures.ts";
+import { expectAccessible, expectSkipLink } from "./fixtures.ts";
 import { USERS } from "./users.ts";
 
 // 運営者画面（apps/admin）。ローカルでは Access を通らず、devEmail を運営者として扱う
@@ -25,7 +25,5 @@ test("運営者画面: ダッシュボード・検索・ユーザーの詳細・
 		await expectAccessible(page);
 	}
 
-	// 本文へ移動
-	await page.keyboard.press("Tab");
-	await expect(page.getByRole("link", { name: "本文へ移動" })).toBeFocused();
+	await expectSkipLink(page);
 });

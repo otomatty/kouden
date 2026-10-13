@@ -52,3 +52,13 @@ export async function registerKoden(page: Page, name: string, amount: number) {
 	await page.getByRole("button", { name: "登録する" }).click();
 	await expect(page.locator("#sr-status")).toContainText(`${name} 様`);
 }
+
+/** 先頭の Tab で「本文へ移動」が現れ、Enter で本文（#main）へ移る（04 §6） */
+export async function expectSkipLink(page: Page) {
+	await page.keyboard.press("Tab");
+	const skip = page.getByRole("link", { name: "本文へ移動" });
+	await expect(skip).toBeFocused();
+	await expect(skip).toBeVisible();
+	await page.keyboard.press("Enter");
+	await expect(page.locator("#main")).toBeFocused();
+}
