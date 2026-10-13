@@ -582,6 +582,34 @@ describe("旧データの取り込み（05 §2・§3）", () => {
 		expect(stats).toEqual({ gift_count: 3, total_amount: 10000 });
 	});
 
+	it("削除した香典帳への取り込みに失敗したら、削除済みのまま（空の台帳を開けるようにしない）", async () => {
+		const i = ids();
+		await importAll(i);
+		await ledgerFor(env, i.kouden).deleteAll();
+		const payload = koudenPayload(i, future());
+		payload.ledger.contributors.push({
+			giftId: i.g1,
+			personId: "missing",
+			isPrimary: false,
+			shareAmount: null,
+		});
+		const res = await call(`/internal/import/koudens/${i.kouden}`, {
+			method: "PUT",
+			headers: TOKEN,
+			json: payload,
+		});
+		expect(res.status).toBe(500);
+		const deletedAt = await runInDurableObject(ledgerFor(env, i.kouden), (_obj, state) =>
+			state.storage.sql
+				.exec<{ value: string }>("SELECT value FROM meta WHERE key = 'deleted_at'")
+				.toArray(),
+		);
+		expect(deletedAt).toHaveLength(1);
+		// 直したデータなら取り込み直せる
+		const { ledger } = await importAll(i);
+		expect(ledger).toMatchObject({ persons: 2, gifts: { koden: 1 } });
+	});
+
 	it("形の合わないデータは受け付けない（香典に金額がない）", async () => {
 		const i = ids();
 		const payload = koudenPayload(i, future());

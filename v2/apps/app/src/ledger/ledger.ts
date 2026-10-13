@@ -1769,17 +1769,60 @@ export class KoudenLedger extends DurableObject<Env> {
 		snapshot: LedgerSnapshot,
 		importedAt: string,
 	): Promise<LedgerImportSummary> {
+		/** 削除済みの台帳を作り直すときの、元の削除済みの印（取り込みに失敗したら戻す） */
+		let deletedAt: string | null = null;
 		if (!this.ensureSchema()) {
 			// 削除済みの印（deleteAll）が残っていても、取り込みは明示的な操作なので作り直す
 			// （リハーサルの後片付けで削除した香典帳を、次のリハーサル・切り替えで同じ ID に取り込み直す）
+			deletedAt = this.meta("deleted_at");
 			this.sql.exec("DELETE FROM meta WHERE key = 'deleted_at'");
 			this.state = "unknown";
+		}
+		try {
 			if (!this.ensureSchema()) throw new Error(`ledger ${koudenId} could not be recreated`);
+			const current = this.meta("kouden_id");
+			if (current !== null && current !== koudenId) {
+				throw new Error(`ledger belongs to ${current}, import for ${koudenId}`);
+			}
+			this.replaceWithSnapshot(koudenId, snapshot, importedAt);
+		} catch (err) {
+			// 失敗したら削除済みのまま（空の台帳を開けるようにしない）
+			if (deletedAt !== null) {
+				this.sql.exec(
+					"INSERT OR REPLACE INTO meta (key, value) VALUES ('deleted_at', ?)",
+					deletedAt,
+				);
+				this.state = "deleted";
+			}
+			throw err;
 		}
-		const current = this.meta("kouden_id");
-		if (current !== null && current !== koudenId) {
-			throw new Error(`ledger belongs to ${current}, import for ${koudenId}`);
+		// 開いている画面は読み込み直させる（kouden の変更は画面全体に影響する）
+		this.broadcastChanges(this.lastSeq() - 1);
+		// 台帳はもう入れ替わっている。投影（D1）が一時的に失敗しても取り込みは成功として返し、アラームで投影し直す
+		let projected: boolean;
+		try {
+			projected = await this.project(koudenId);
+		} catch (err) {
+			log("error", "ledger_import_projection_failed", {
+				koudenId,
+				error: err instanceof Error ? err.message : String(err),
+			});
+			await this.scheduleAlarm(true);
+			return this.importSummary();
 		}
+		if (!projected) {
+			throw new Error(`kouden ${koudenId} is not in D1; create it before importing the ledger`);
+		}
+		await this.scheduleAlarm(false);
+		return this.importSummary();
+	}
+
+	/** 台帳の中身を取り込みデータで入れ替える（1 トランザクション。失敗すれば何も変わらない） */
+	private replaceWithSnapshot(
+		koudenId: string,
+		snapshot: LedgerSnapshot,
+		importedAt: string,
+	): void {
 		this.ctx.storage.transactionSync(() => {
 			// 参照される側を後に消す
 			for (const table of IMPORT_TABLES) this.sql.exec(`DELETE FROM ${table}`);
@@ -1940,25 +1983,6 @@ export class KoudenLedger extends DurableObject<Env> {
 			);
 			this.syncReminders(new Date().toISOString());
 		});
-		// 開いている画面は読み込み直させる（kouden の変更は画面全体に影響する）
-		this.broadcastChanges(this.lastSeq() - 1);
-		// 台帳はもう入れ替わっている。投影（D1）が一時的に失敗しても取り込みは成功として返し、アラームで投影し直す
-		let projected: boolean;
-		try {
-			projected = await this.project(koudenId);
-		} catch (err) {
-			log("error", "ledger_import_projection_failed", {
-				koudenId,
-				error: err instanceof Error ? err.message : String(err),
-			});
-			await this.scheduleAlarm(true);
-			return this.importSummary();
-		}
-		if (!projected) {
-			throw new Error(`kouden ${koudenId} is not in D1; create it before importing the ledger`);
-		}
-		await this.scheduleAlarm(false);
-		return this.importSummary();
 	}
 
 	/** 取り込んだ内容の件数（05 §5 の検証で旧データと比べる） */
