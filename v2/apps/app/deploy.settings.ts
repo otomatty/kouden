@@ -28,7 +28,7 @@ export interface ModeSettings {
 	rateLimitNamespaces: { auth: string; write: string; invite: string };
 	/** Google OAuth クライアント ID（秘密情報ではない） */
 	googleClientId: string;
-	/** staging 全体を守る Access。取り込み口は importAccess の別の AUD で検証する */
+	/** staging / rehearsal 全体を守る Access。rehearsal だけは取り込み口と同じ専用 AUD を使う */
 	access: { teamDomain: string; aud: string };
 	/**
 	 * 旧アプリからのデータ移行の取り込み口（/internal/import/*、05 §2）。Cloudflare Access のサービストークンで守る。
@@ -112,6 +112,7 @@ export const MODES: Record<Mode, ModeSettings> = {
 	},
 };
 
+/** 未指定は development とし、未知の mode は設定を選ぶ前に拒否する。 */
 export function resolveMode(mode: string | undefined): Mode {
 	if (mode === undefined || mode === "development") return "development";
 	if (mode === "staging" || mode === "rehearsal" || mode === "production") return mode;
@@ -151,6 +152,12 @@ export function deployBlockers(mode: Mode): string[] {
 		if (s.mailFrom || s.billingEnabled)
 			blockers.push("rehearsal のメール・決済は無効にしてください");
 		for (const live of [MODES.staging, MODES.production]) {
+			if (
+				[live.access.aud, live.importAccess.aud].some(
+					(aud) => aud !== "" && (aud === s.access.aud || aud === s.importAccess.aud),
+				)
+			)
+				blockers.push("rehearsal の Access AUD は通常環境と分離してください");
 			if (
 				s.workerName === live.workerName ||
 				s.d1.name === live.d1.name ||

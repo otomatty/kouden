@@ -71,6 +71,37 @@ describe("deployBlockers", () => {
 		}
 	});
 
+	it.each([
+		["staging", "access"],
+		["staging", "importAccess"],
+		["production", "access"],
+		["production", "importAccess"],
+	] as const)("rehearsal に %s.%s の AUD を流用できない", (mode, accessKey) => {
+		const original = structuredClone(MODES.rehearsal);
+		const liveAccess = MODES[mode][accessKey];
+		try {
+			MODES[mode][accessKey] = {
+				teamDomain: "test.cloudflareaccess.com",
+				aud: `${mode}-${accessKey}-aud`,
+			};
+			MODES.rehearsal.access = {
+				teamDomain: MODES[mode][accessKey].teamDomain,
+				aud: "dedicated-rehearsal-aud",
+			};
+			MODES.rehearsal.importAccess = { ...MODES.rehearsal.access };
+			expect(deployBlockers("rehearsal")).toEqual([]);
+
+			MODES.rehearsal.access = { ...MODES[mode][accessKey] };
+			MODES.rehearsal.importAccess = { ...MODES.rehearsal.access };
+			expect(deployBlockers("rehearsal")).toContain(
+				"rehearsal の Access AUD は通常環境と分離してください",
+			);
+		} finally {
+			MODES.rehearsal = original;
+			MODES[mode][accessKey] = liveAccess;
+		}
+	});
+
 	it("mode ごとに Worker 名と D1 名が分かれている", () => {
 		const names = Object.values(MODES).map((m) => m.workerName);
 		const dbs = Object.values(MODES).map((m) => m.d1.name);

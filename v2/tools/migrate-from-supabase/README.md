@@ -130,7 +130,7 @@ bun run migrate verify \
 
 1. 通常の staging のユーザーと関連データの件数を読み取り、Git 除外フォルダへ記録する。上記の一時リソースが既存の用途で使われていないことを確認する。
 2. 専用ホスト `kouden-app-rehearsal.saedgewell.workers.dev` 全体に Access を設定する。有効期限の短い専用サービストークンを発行し、再利用可能な Service Auth ポリシーにそのトークンだけを含める。
-3. `apps/app/deploy.settings.ts` の `rehearsal.access` と `rehearsal.importAccess` に専用アプリの teamDomain・AUD を一時設定する。ホスト全体を1つの Access アプリで保護するため、両設定は同じ値を必須とし、不一致ならデプロイを止める。通常の staging の値を変えない。
+3. `apps/app/deploy.settings.ts` の `rehearsal.access` と `rehearsal.importAccess` に専用アプリの teamDomain・AUD を一時設定する。ホスト全体を1つの Access アプリで保護するため、両設定は同じ値を必須とし、不一致ならデプロイを止める。staging・production の `access` / `importAccess` に設定した AUD の再利用も拒否する。同じ Access チームを使うことはできるが、専用アプリの AUD を使う。通常の staging の値を変えない。
 4. Git 除外の secrets ファイルに専用のランダムな `SESSION_SECRET` を用意する。Google ログインを使わないため `GOOGLE_CLIENT_SECRET` は `disabled-for-rehearsal` とする。app を `bun run deploy -- --mode rehearsal --secrets-file <ファイル>` で配置し、`bun run db:migrate -- --mode rehearsal` を実行する。
 5. 未認証と誤ったサービストークンが拒否され、正しいトークンだけが `/internal/import/summary` の件数 0 を読めることを確認する。その後に固定スナップショットを `prepare` し、専用 URL へ `import` → `verify` → 再 `import` → 再 `verify` を実行する。各実行のレポートディレクトリを分ける。
 6. 終了コード・レポートの `passed`・不一致 0・開始終了時刻を確認し、件数と所要時間だけを共有する。警告の確認、画像本体がある場合の実転送、10冊の画面比較、切り戻し試験は別途必要。
