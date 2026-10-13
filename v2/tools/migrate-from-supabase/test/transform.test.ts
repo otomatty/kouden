@@ -334,6 +334,18 @@ describe("香典帳（05 §3）", () => {
 		expect(parsed.error?.issues ?? []).toEqual([]);
 	});
 
+	it("旧データの長い文字列（TEXT に上限はない）も切り詰めずに取り込める", () => {
+		const long = "長".repeat(5000);
+		const src = source({ kouden: { ...source().kouden, title: `故 ${"名".repeat(300)} 様` } });
+		const [first, ...rest] = src.entries;
+		if (!first) throw new Error("fixture");
+		src.entries = [{ ...first, notes: long, address: long }, ...rest];
+		const { payload: p } = transformKouden(src, KNOWN);
+		const parsed = importKoudenPayloadSchema.safeParse(p);
+		expect(parsed.error?.issues ?? []).toEqual([]);
+		expect(p.ledger.gifts[0]?.notes).toHaveLength(5000);
+	});
+
 	it("香典帳は有料版のまま移し、故人のお名前は香典帳の名前から仮に決める", () => {
 		expect(result.koudenId).toBe(newId.kouden("k1"));
 		expect(payload.kouden).toMatchObject({

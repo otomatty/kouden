@@ -13,12 +13,16 @@ import {
 } from "./labels.ts";
 
 const id = z.string().min(1).max(64);
-/** 旧データは画面の入力欄より長いことがあるので、取り込みでは切り詰めずに受け付ける（画面での編集時に検証される） */
-const name = z.string().min(1).max(200);
-const text = z.string().max(2000).nullable();
+/**
+ * 旧データの文字列（PostgreSQL の TEXT）には長さの上限がない。1 件の長い備考で香典帳ごと取り込めなくならないよう、
+ * 取り込みでは長さを制限しない（画面の入力欄の上限は、取り込んだ後に編集するときに検証される）
+ */
+const name = z.string().min(1);
+const text = z.string().nullable();
 const isoTime = z.iso.datetime({ offset: true });
 const isoDate = z.iso.date();
-const yen = z.number().int().min(0).max(999_999_999);
+/** 旧データの金額は PostgreSQL の integer。その範囲はすべて受け付ける */
+const yen = z.number().int().min(0).max(2_147_483_647);
 
 // ---- D1（ユーザー） --------------------------------------------------------------
 
@@ -26,7 +30,7 @@ export const importUserSchema = z.object({
 	id,
 	/** 旧 auth.users.id */
 	legacyUserId: id,
-	email: z.string().max(320),
+	email: z.string(),
 	displayName: name,
 	/** Google でログインしていた人の sub。メールログインだった人は null（ADR-P17） */
 	googleSub: z.string().min(1).max(255).nullable(),
