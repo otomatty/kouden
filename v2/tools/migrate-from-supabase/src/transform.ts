@@ -549,46 +549,47 @@ export function transformKouden(
 			updatedBy: newId.user(latest.created_by),
 			updatedAt: iso(latest.updated_at),
 		});
-		// 明細は記録ごとに、表（return_record_items）の行と、記録の return_items 列（旧画面の一括更新などは
-		// こちらにだけ書く）の両方から作る。両方にある品（返礼品の ID、または品名と単価が同じ）は 1 つにする
+		// 明細は記録ごとに作る。旧画面が表示・編集するのは記録の return_items 列（一括更新などはこちらにだけ書く）
+		// なので、列に品があればそれを正とする。表（return_record_items）は古い書き込み口の名残で、列と食い違う
+		// ことがある。列に品がない記録だけ表の行から作り、列にない表の行は移さずに警告する
 		for (const record of sorted) {
 			const rows = source.returnRecordItems.filter((l) => l.return_record_id === record.id);
-			const fromRows = new Set<string>();
-			for (const l of rows) {
-				const name = itemNames.get(l.return_item_master_id);
-				if (name === undefined) {
-					warn("line_without_item", l.id, "存在しない返礼品の明細を「（品名不明）」にしました");
-				}
-				const line = {
-					id: newId.returnLine(l.id),
-					returnId,
-					returnItemId: name === undefined ? null : newId.returnItem(l.return_item_master_id),
-					name: name?.trim() || "（品名不明）",
-					unitPrice: yen(l.price) ?? 0,
-					quantity: Math.max(1, Math.round(l.quantity)),
-				};
-				returnLines.push(line);
-				fromRows.add(`id:${l.return_item_master_id}`);
-				fromRows.add(`name:${line.name}:${line.unitPrice}`);
-			}
-			embeddedItems(record.return_items).forEach((item, index) => {
+			const embedded: EmbeddedItem[] = [];
+			for (const item of embeddedItems(record.return_items)) {
 				if (item === null) {
 					warn(
 						"invalid_embedded_item",
 						record.id,
 						"形の合わない返礼品（return_items 列）を移しませんでした",
 					);
-					return;
+				} else {
+					embedded.push(item);
 				}
+			}
+			if (embedded.length === 0) {
+				for (const l of rows) {
+					const name = itemNames.get(l.return_item_master_id);
+					if (name === undefined) {
+						warn("line_without_item", l.id, "存在しない返礼品の明細を「（品名不明）」にしました");
+					}
+					returnLines.push({
+						id: newId.returnLine(l.id),
+						returnId,
+						returnItemId: name === undefined ? null : newId.returnItem(l.return_item_master_id),
+						name: name?.trim() || "（品名不明）",
+						unitPrice: yen(l.price) ?? 0,
+						quantity: Math.max(1, Math.round(l.quantity)),
+					});
+				}
+				continue;
+			}
+			const inEmbedded = new Set<string>();
+			embedded.forEach((item, index) => {
 				const masterId = item.masterId ?? item.id;
 				const name = item.name.trim() || "（品名不明）";
 				const unitPrice = yen(item.price) ?? 0;
-				if (
-					(masterId !== undefined && fromRows.has(`id:${masterId}`)) ||
-					fromRows.has(`name:${name}:${unitPrice}`)
-				) {
-					return;
-				}
+				if (masterId !== undefined) inEmbedded.add(`id:${masterId}`);
+				inEmbedded.add(`name:${name}:${unitPrice}`);
 				returnLines.push({
 					id: newId.embeddedReturnLine(record.id, index),
 					returnId,
@@ -599,6 +600,20 @@ export function transformKouden(
 					quantity: Math.max(1, Math.round(item.quantity)),
 				});
 			});
+			for (const l of rows) {
+				const name = itemNames.get(l.return_item_master_id)?.trim() || "（品名不明）";
+				if (
+					inEmbedded.has(`id:${l.return_item_master_id}`) ||
+					inEmbedded.has(`name:${name}:${yen(l.price) ?? 0}`)
+				) {
+					continue;
+				}
+				warn(
+					"stale_table_item",
+					l.id,
+					`旧画面に表示されていない返礼品の明細（${name}）を移しませんでした（return_items 列を正としました）`,
+				);
+			}
 		}
 	}
 

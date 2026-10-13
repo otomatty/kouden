@@ -73,7 +73,7 @@ flowchart LR
 | `telegrams` | `gifts`（`kind = 'choden'`） | `message` → `message`。`kouden_entry_id` があればその差出人に、なければ `sender_*` から差出人を新規作成 |
 | `return_items` | `return_items` | 画像を R2 にコピー。`recommended_amount_min/max` は `return_rules` の初期値にする（比率は 1/2） |
 | `return_entry_records` | `returns` | 差出人単位に集約（同じ香典に複数の記録があれば、状況などは最後に更新した記録に従い、備考はつなげる）。`return_status`: `PENDING` → `pending`、`PARTIAL_RETURNED` → `arranged`、`COMPLETED` → `shipped`、`NOT_REQUIRED` → `not_required`。`return_method`（旧アプリでは自由入力。「郵送」「発送」など → `shipping`、「直接お渡し」「手渡し」など → `hand_delivery`、「当日」 → `on_day`。写像できなければ未選択にして備考に残す）、`funeral_gift_amount` → `on_day_amount`（当日返し）、送付先・手配日・備考を移す。発送日は旧データにないので、`shipped` なら最後に更新した日にする。記録がなく `kouden_entries.is_return_completed`（旧アプリの古い形式の「返礼済み」の印）だけがある香典は、発送済みの香典返しを作る（備考に移行時に作成したことを残す） |
-| `return_record_items` + `return_entry_records.return_items`（JSON） | `return_lines` | 品名・単価はカタログからのスナップショット。旧画面の一括更新などは明細を JSON の列にだけ書くので、記録ごとに表の行と JSON の品の両方から作る（返礼品の ID、または品名と単価が同じ品は 1 つにする） |
+| `return_record_items` + `return_entry_records.return_items`（JSON） | `return_lines` | 旧画面が表示・編集するのは JSON の列（一括更新などはこちらにだけ書き、表の行は古いまま残る）なので、記録ごとに JSON の列に品があればそれを正とする（返礼品の ID がカタログにあればその品に紐づける）。JSON の列に品がない記録だけ表の行から作る（品名・単価はカタログからのスナップショット）。JSON の列にない表の行は移さず、`stale_table_item` として検証レポートに載せる |
 | `kouden_entry_audit_logs` | 移行しない | 変更ログには `op = 'import'` の 1 行だけを記録する |
 
 ### 移行しないもの

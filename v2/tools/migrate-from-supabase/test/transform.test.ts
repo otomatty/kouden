@@ -224,13 +224,13 @@ function source(overrides: Partial<LegacyKoudenSource> = {}): LegacyKoudenSource
 				shipping_address: "東京都千代田区1-1",
 				shipping_phone_number: null,
 				remarks: "発送済み",
-				// 表の行（l1）と同じ品は 1 つにし、列にだけある品は明細に加える
+				// 旧画面が表示する列を正とする。表の行（l1 は古い数量、l3 は列から消した品）は使わない
 				return_items: [
 					{
 						id: "i1",
 						name: "タオルセット",
 						price: 3000,
-						quantity: 1,
+						quantity: 2,
 						masterId: "i1",
 						isFromMaster: true,
 					},
@@ -263,6 +263,7 @@ function source(overrides: Partial<LegacyKoudenSource> = {}): LegacyKoudenSource
 		],
 		returnRecordItems: [
 			{ id: "l1", return_record_id: "rr2", return_item_master_id: "i1", price: 3000, quantity: 1 },
+			{ id: "l3", return_record_id: "rr2", return_item_master_id: "i2", price: 2000, quantity: 1 },
 			{
 				id: "l2",
 				return_record_id: "rr1",
@@ -560,7 +561,7 @@ describe("香典帳（05 §3）", () => {
 			arrangedAt: "2024-03-07",
 		});
 		expect(ledger.returnLines).toEqual([
-			// 記録の更新順（rr1 → rr2）、記録の中では表の行 → 列の品
+			// 記録の更新順（rr1 → rr2）。rr1 は列に品がないので表の行、rr2 は列の品
 			{
 				id: newId.returnLine("l2"),
 				returnId: newId.return("e1"),
@@ -570,12 +571,12 @@ describe("香典帳（05 §3）", () => {
 				quantity: 1,
 			},
 			{
-				id: newId.returnLine("l1"),
+				id: newId.embeddedReturnLine("rr2", 0),
 				returnId: newId.return("e1"),
 				returnItemId: newId.returnItem("i1"),
 				name: "タオルセット",
 				unitPrice: 3000,
-				quantity: 1,
+				quantity: 2,
 			},
 			{
 				id: newId.embeddedReturnLine("rr2", 1),
@@ -597,6 +598,10 @@ describe("香典帳（05 §3）", () => {
 		expect(codes(result.warnings)).toEqual(
 			expect.arrayContaining(["returns_merged", "line_without_item", "invalid_embedded_item"]),
 		);
+		// 列から消した品（l3）は移さずに警告する。古い数量の行（l1）は列の品と同じ品なので警告しない
+		expect(result.warnings.filter((w) => w.code === "stale_table_item")).toEqual([
+			expect.objectContaining({ legacyId: "l3" }),
+		]);
 	});
 
 	it("返礼方法は自由入力の言い方も写像し、写像できなければ備考に残す", () => {
