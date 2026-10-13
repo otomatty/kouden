@@ -4,6 +4,7 @@
 	"type": "module",
 	"scripts": {
 		"migrate": "bun src/cli.ts",
+		"rollback": "bun src/rollback-cli.ts",
 		"typecheck": "tsc",
 		"test": "vitest run"
 	},
@@ -12,6 +13,7 @@
 		"zod": "4.6.5"
 	},
 	"devDependencies": {
+		"@electric-sql/pglite": "0.5.9",
 		"@types/node": "22.20.5",
 		"typescript": "7.0.2",
 		"vitest": "5.0.4"
