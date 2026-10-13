@@ -763,10 +763,15 @@ export async function linkLegacyUser(
 	const [first] = await db.batch([
 		db
 			.prepare(
+				// 確認の後に L・N の状態が変わっていないことも、同じ文で確かめる
+				// （N が削除された・別の Google アカウントに変わった場合などは紐づけない）
 				`UPDATE legacy_users SET linked_user_id = ?, linked_at = ?, linked_by = ?
-          WHERE legacy_user_id = ? AND linked_user_id IS NULL`,
+          WHERE legacy_user_id = ? AND linked_user_id IS NULL
+            AND EXISTS (SELECT 1 FROM users WHERE id = ? AND google_sub IS NULL AND deleted_at IS NULL)
+            AND EXISTS (SELECT 1 FROM users WHERE id = ? AND google_sub = ? AND deleted_at IS NULL
+                          AND legacy_user_id IS NULL)`,
 			)
-			.bind(L, at, input.adminEmail, input.legacyUserId),
+			.bind(L, at, input.adminEmail, input.legacyUserId, L, N, n.google_sub),
 		// 監査ログは、直前の文でこの要求が紐づけた場合だけ書く
 		auditStatement(
 			db,
@@ -853,6 +858,13 @@ export async function linkLegacyUser(
 			L,
 		),
 	]);
-	if ((first?.meta.changes ?? 0) === 0) return { ok: false, reason: "already_linked" };
+	if ((first?.meta.changes ?? 0) === 0) {
+		// 他の要求が先に紐づけたか、確認の後に L・N の状態が変わった
+		const current = await db
+			.prepare("SELECT linked_user_id FROM legacy_users WHERE legacy_user_id = ?")
+			.bind(input.legacyUserId)
+			.first<{ linked_user_id: string | null }>();
+		return { ok: false, reason: current?.linked_user_id ? "already_linked" : "target_invalid" };
+	}
 	return { ok: true, userId: L };
 }

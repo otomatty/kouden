@@ -456,6 +456,42 @@ describe("旧ユーザーの手動紐づけ（E10-2）", () => {
 		expect(await audits()).toHaveLength(1);
 	});
 
+	it("確認の後に紐づけ先のアカウントが削除されたら、紐づけない", async () => {
+		await setupLegacy();
+		const original = env.DB.prepare.bind(env.DB);
+		let first = true;
+		const db = {
+			prepare: (sql: string) => original(sql),
+			batch: async (statements: D1PreparedStatement[]) => {
+				if (first) {
+					first = false;
+					// 確認（SELECT）の後、書き込みの前に N が自分のアカウントを削除した
+					await original(
+						"UPDATE users SET deleted_at = ?, google_sub = NULL, email = '' WHERE id = 'new-u'",
+					)
+						.bind(NOW)
+						.run();
+				}
+				return env.DB.batch(statements);
+			},
+		} as unknown as D1Database;
+		const result = await linkLegacyUser(
+			db,
+			{ legacyUserId: "old-1", targetUserId: "new-u", adminEmail: ADMIN },
+			new Date(),
+		);
+		expect(result).toEqual({ ok: false, reason: "target_invalid" });
+		expect(
+			await env.DB.prepare("SELECT google_sub FROM users WHERE id = 'legacy-u'").first(),
+		).toEqual({ google_sub: null });
+		expect(
+			await env.DB.prepare(
+				"SELECT linked_user_id FROM legacy_users WHERE legacy_user_id = 'old-1'",
+			).first(),
+		).toEqual({ linked_user_id: null });
+		expect(await audits()).toEqual([]);
+	});
+
 	it("紐づけ済み・紐づけできない相手には何もしない", async () => {
 		await setupLegacy();
 		// 旧アカウント自身・存在しないアカウントは紐づけ先にできない
