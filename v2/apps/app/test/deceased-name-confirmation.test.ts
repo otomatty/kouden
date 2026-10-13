@@ -8,6 +8,7 @@ const AT = new Date("2026-10-13T08:00:00.000Z");
 const NOTICE = "故人のお名前をご確認ください";
 const INPUT = { deceasedName: "山田 一郎", title: "一郎の香典帳" };
 
+/** オーナーと香典帳を作る。imported が true なら実際の取り込み処理で未確認の移行台帳にする */
 async function setup(imported = true, deceasedName = "仮のお名前") {
 	const owner = makeApp(TARO, () => AT);
 	await owner.login();
@@ -34,12 +35,15 @@ async function setup(imported = true, deceasedName = "仮のお名前") {
 		purchases: [],
 	};
 	if (imported) await importKoudenRows(env.DB, id, payload);
+	/** 操作後の D1 を読み直し、名前・確認日時を含む保存状態を検証する */
 	const row = () => env.DB.prepare("SELECT * FROM koudens WHERE id = ?").bind(id).first();
+	/** ログイン済みオーナーとして確認フォームを送信し、認可と入力検証を通す */
 	const confirm = (values = INPUT) =>
 		owner.request(`${base}/settings/confirm-deceased-name`, formPost(values));
 	return { owner, ownerId, id, base, payload, row, confirm };
 }
 
+/** 別の利用者を指定ロールで参加させ、オーナー以外の操作と権限移譲を検証できるようにする */
 async function addOther(id: string, role: "editor" | "viewer") {
 	const member = makeApp(HANAKO, () => AT);
 	await member.login();
