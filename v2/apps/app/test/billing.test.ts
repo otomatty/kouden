@@ -190,57 +190,71 @@ describe("Webhook の署名検証（04 §7）", () => {
 	});
 });
 
+/**
+ * 無料版の上限（FREE_GIFT_LIMIT 件）まで 1 件ずつ登録するテストは要求の数が多い。手元では 1 秒かからないが、
+ * CI ではテストファイルを並行に動かすので既定の 5 秒を超えることがある
+ */
+const LONG_TEST_TIMEOUT_MS = 30_000;
+
 describe("有料版の購入（E9-2）", () => {
-	it("上限に達するとオーナーには購入の案内を出し、Webhook で購入が確定すると上限がなくなる", async () => {
-		const { stripe, taro, koudenId, give, webhook, checkoutAndPay } = await setup();
-		for (let i = 1; i <= FREE_GIFT_LIMIT; i++) expect((await give(`差出人 ${i}`)).status).toBe(303);
-		const over = await give("上限を超える人");
-		expect(over.status).toBe(422);
-		const message = await over.text();
-		expect(message).toContain(`無料版で登録できる ${FREE_GIFT_LIMIT} 件に達しました`);
-		expect(message).toContain(`/k/${koudenId}/settings#billing`);
+	it(
+		"上限に達するとオーナーには購入の案内を出し、Webhook で購入が確定すると上限がなくなる",
+		async () => {
+			const { stripe, taro, koudenId, give, webhook, checkoutAndPay } = await setup();
+			for (let i = 1; i <= FREE_GIFT_LIMIT; i++)
+				expect((await give(`差出人 ${i}`)).status).toBe(303);
+			const over = await give("上限を超える人");
+			expect(over.status).toBe(422);
+			const message = await over.text();
+			expect(message).toContain(`無料版で登録できる ${FREE_GIFT_LIMIT} 件に達しました`);
+			expect(message).toContain(`/k/${koudenId}/settings#billing`);
 
-		const session = await checkoutAndPay();
-		const [input] = stripe.created;
-		expect(input).toMatchObject({
-			koudenId,
-			email: TARO.email,
-			amount: PAID_PRICE_JPY,
-			cancelUrl: `http://localhost:5173/k/${koudenId}/settings?notice=purchase_cancelled#billing`,
-		});
-		expect(input?.successUrl).toBe(
-			`http://localhost:5173/k/${koudenId}/billing/done?session_id={CHECKOUT_SESSION_ID}`,
-		);
-		expect(await plan(koudenId)).toBe("free");
-
-		const res = await webhook({ type: "checkout.session.completed", object: sessionJson(session) });
-		expect(res.status).toBe(200);
-		expect(await plan(koudenId)).toBe("paid");
-		expect(await purchases(koudenId)).toEqual([
-			{
+			const session = await checkoutAndPay();
+			const [input] = stripe.created;
+			expect(input).toMatchObject({
+				koudenId,
+				email: TARO.email,
 				amount: PAID_PRICE_JPY,
-				status: "paid",
-				source: "stripe",
-				stripe_payment_intent_id: session.paymentIntentId,
-			},
-		]);
-		expect((await give("上限を超える人")).status).toBe(303);
+				cancelUrl: `http://localhost:5173/k/${koudenId}/settings?notice=purchase_cancelled#billing`,
+			});
+			expect(input?.successUrl).toBe(
+				`http://localhost:5173/k/${koudenId}/billing/done?session_id={CHECKOUT_SESSION_ID}`,
+			);
+			expect(await plan(koudenId)).toBe("free");
 
-		const settings = await (await taro.request(`/k/${koudenId}/settings`)).text();
-		expect(settings).toContain("有料版です。");
-		expect(settings).toContain("山田 太郎さんが購入しました");
-		expect(settings).not.toContain("有料版を購入する");
+			const res = await webhook({
+				type: "checkout.session.completed",
+				object: sessionJson(session),
+			});
+			expect(res.status).toBe(200);
+			expect(await plan(koudenId)).toBe("paid");
+			expect(await purchases(koudenId)).toEqual([
+				{
+					amount: PAID_PRICE_JPY,
+					status: "paid",
+					source: "stripe",
+					stripe_payment_intent_id: session.paymentIntentId,
+				},
+			]);
+			expect((await give("上限を超える人")).status).toBe(303);
 
-		// 開いている画面の残り件数を取り直せるよう、変更を記録して知らせる
-		const logged = await runInDurableObject(ledgerFor(env, koudenId), (_obj, state) =>
-			state.storage.sql
-				.exec<{ entity: string; diff: string }>(
-					"SELECT entity, diff FROM change_log WHERE entity = 'plan'",
-				)
-				.toArray(),
-		);
-		expect(logged).toEqual([{ entity: "plan", diff: '{"plan":["free","paid"]}' }]);
-	});
+			const settings = await (await taro.request(`/k/${koudenId}/settings`)).text();
+			expect(settings).toContain("有料版です。");
+			expect(settings).toContain("山田 太郎さんが購入しました");
+			expect(settings).not.toContain("有料版を購入する");
+
+			// 開いている画面の残り件数を取り直せるよう、変更を記録して知らせる
+			const logged = await runInDurableObject(ledgerFor(env, koudenId), (_obj, state) =>
+				state.storage.sql
+					.exec<{ entity: string; diff: string }>(
+						"SELECT entity, diff FROM change_log WHERE entity = 'plan'",
+					)
+					.toArray(),
+			);
+			expect(logged).toEqual([{ entity: "plan", diff: '{"plan":["free","paid"]}' }]);
+		},
+		LONG_TEST_TIMEOUT_MS,
+	);
 
 	it("同じイベントの再送・完了画面と Webhook の両方からの確定でも、購入は 1 件だけ", async () => {
 		const { taro, koudenId, webhook, checkoutAndPay } = await setup();

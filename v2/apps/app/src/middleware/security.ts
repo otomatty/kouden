@@ -31,7 +31,10 @@ const sameOrigin = csrf({
 
 /**
  * GET 以外の要求は Origin が自分のオリジンと一致する場合のみ許可する。
- * Stripe の Webhook はブラウザからの要求ではなく、署名で検証するので除く
+ * Stripe の Webhook と、移行ツールが呼ぶ取り込み口（/internal/）はブラウザからの要求ではなく、
+ * それぞれ署名・Access で検証するので除く
  */
 export const csrfProtection: MiddlewareHandler<AppEnv> = (c, next) =>
-	c.req.path === "/webhooks/stripe" ? next() : sameOrigin(c, next);
+	c.req.path === "/webhooks/stripe" || c.req.path.startsWith("/internal/")
+		? next()
+		: sameOrigin(c, next);

@@ -42,6 +42,10 @@ export default defineConfig(({ mode }) => {
 				// 香典返しの期限のお知らせ（04 §9）
 				EMAIL: bindings.sendEmail({ allowedSenderAddresses: [s.mailFrom] }),
 				MAIL_FROM: bindings.text(s.mailFrom),
+				// 旧アプリからのデータ移行の取り込み口（05 §2）。空なら無効
+				IMPORT_ACCESS_TEAM_DOMAIN: bindings.text(s.importAccess.teamDomain),
+				IMPORT_ACCESS_AUD: bindings.text(s.importAccess.aud),
+				IMPORT_DEV_TOKEN: bindings.text(s.importDevToken),
 				LEDGER: bindings.durableObject({ worker: s.workerName, exportName: "KoudenLedger" }),
 				AUTH_RATE_LIMITER: bindings.rateLimit({
 					namespace: s.rateLimitNamespaces.auth,

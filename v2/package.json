@@ -4,6 +4,7 @@
 	"workspaces": [
 		"apps/*",
 		"packages/*",
+		"tools/*",
 		"e2e"
 	],
 	"type": "module",

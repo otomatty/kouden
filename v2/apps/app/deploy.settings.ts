@@ -26,6 +26,14 @@ export interface ModeSettings {
 	rateLimitNamespaces: { auth: string; write: string; invite: string };
 	/** Google OAuth クライアント ID（秘密情報ではない） */
 	googleClientId: string;
+	/**
+	 * 旧アプリからのデータ移行の取り込み口（/internal/import/*、05 §2）。Cloudflare Access のサービストークンで守る。
+	 * teamDomain は `<team>.cloudflareaccess.com`、aud は取り込み用の Access アプリケーションの AUD タグ。
+	 * 空なら取り込み口は無効（404）。リハーサル・切り替えの間だけ設定し、終わったら空に戻してデプロイし直す
+	 */
+	importAccess: { teamDomain: string; aud: string };
+	/** development でだけ使う取り込み用のトークン（Authorization: Bearer）。staging / production では必ず空 */
+	importDevToken: string;
 }
 
 const PLACEHOLDER_DOMAIN = "example.jp";
@@ -45,6 +53,8 @@ export const MODES: Record<Mode, ModeSettings> = {
 		mailFrom: "noreply@localhost.test",
 		rateLimitNamespaces: { auth: "9001", write: "9002", invite: "9003" },
 		googleClientId: PLACEHOLDER_CLIENT_ID,
+		importAccess: { teamDomain: "", aud: "" },
+		importDevToken: "dev-import-token",
 	},
 	staging: {
 		workerName: "kouden-app-staging",
@@ -55,6 +65,8 @@ export const MODES: Record<Mode, ModeSettings> = {
 		mailFrom: `noreply@staging.${DOMAIN}`,
 		rateLimitNamespaces: { auth: "2001", write: "2002", invite: "2003" },
 		googleClientId: PLACEHOLDER_CLIENT_ID,
+		importAccess: { teamDomain: "", aud: "" },
+		importDevToken: "",
 	},
 	production: {
 		workerName: "kouden-app",
@@ -65,6 +77,8 @@ export const MODES: Record<Mode, ModeSettings> = {
 		mailFrom: `noreply@${DOMAIN}`,
 		rateLimitNamespaces: { auth: "1001", write: "1002", invite: "1003" },
 		googleClientId: PLACEHOLDER_CLIENT_ID,
+		importAccess: { teamDomain: "", aud: "" },
+		importDevToken: "",
 	},
 };
 
@@ -86,6 +100,16 @@ export function deployBlockers(mode: Mode): string[] {
 	}
 	if (s.googleClientId === PLACEHOLDER_CLIENT_ID) {
 		blockers.push(`${mode} の googleClientId が仮の値のままです`);
+	}
+	if (s.importDevToken !== "") {
+		blockers.push(
+			`${mode} に importDevToken が設定されています（取り込み口を Access なしで開けます）`,
+		);
+	}
+	if ((s.importAccess.teamDomain === "") !== (s.importAccess.aud === "")) {
+		blockers.push(
+			`${mode} の importAccess は teamDomain と aud の両方を設定するか、両方を空にしてください`,
+		);
 	}
 	return blockers;
 }
