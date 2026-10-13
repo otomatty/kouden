@@ -46,6 +46,18 @@ describe("deployBlockers", () => {
 			MODES.rehearsal.access = { teamDomain: "test.cloudflareaccess.com", aud: "service-aud" };
 			MODES.rehearsal.importAccess = { ...MODES.rehearsal.access };
 			expect(deployBlockers("rehearsal")).toEqual([]);
+			MODES.rehearsal.importAccess.aud = "another-service-aud";
+			expect(deployBlockers("rehearsal").some((b) => b.includes("同じ teamDomain・aud"))).toBe(
+				true,
+			);
+			MODES.rehearsal.importAccess = {
+				...MODES.rehearsal.access,
+				teamDomain: "another.cloudflareaccess.com",
+			};
+			expect(deployBlockers("rehearsal").some((b) => b.includes("同じ teamDomain・aud"))).toBe(
+				true,
+			);
+			MODES.rehearsal.importAccess = { ...MODES.rehearsal.access };
 			MODES.rehearsal.d1 = MODES.staging.d1;
 			expect(deployBlockers("rehearsal").some((b) => b.includes("分離"))).toBe(true);
 			MODES.rehearsal.d1 = { ...original.d1, id: "existing-database-id" };

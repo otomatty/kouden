@@ -146,6 +146,8 @@ export function deployBlockers(mode: Mode): string[] {
 			blockers.push("rehearsal の D1 は ID を指定せず専用の名前で作成してください");
 		if (!s.importAccess.teamDomain.endsWith(".cloudflareaccess.com") || !s.importAccess.aud)
 			blockers.push("rehearsal の importAccess を設定してください");
+		if (s.access.teamDomain !== s.importAccess.teamDomain || s.access.aud !== s.importAccess.aud)
+			blockers.push("rehearsal の access と importAccess は同じ teamDomain・aud にしてください");
 		if (s.mailFrom || s.billingEnabled)
 			blockers.push("rehearsal のメール・決済は無効にしてください");
 		for (const live of [MODES.staging, MODES.production]) {
