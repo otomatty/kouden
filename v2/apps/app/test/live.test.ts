@@ -199,4 +199,19 @@ describe("リアルタイム同期", () => {
 		};
 		expect(after.changes.map((c) => c.entity)).toEqual(["person", "gift"]);
 	});
+
+	it("表示名を変えると、開いている画面の閲覧中の表示も新しい名前になる", async () => {
+		const { taro, hanako, koudenId } = await setupPair();
+		const t = await connect(taro, koudenId);
+		await connect(hanako, koudenId);
+		await t.waitFor((m) => m.type === "presence" && (m.users as unknown[]).length === 2);
+		const saved = await hanako.request(
+			"/account/profile",
+			formPost({ displayName: "佐藤（次女）" }),
+		);
+		expect(saved.status).toBe(303);
+		await t.waitFor(
+			(m) => m.type === "presence" && JSON.stringify(m.users).includes("佐藤（次女）"),
+		);
+	});
 });

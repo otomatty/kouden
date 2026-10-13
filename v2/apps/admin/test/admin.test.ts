@@ -312,6 +312,9 @@ async function setupLegacy() {
 	await kouden("k-shared", "other");
 	await member("k-shared", "legacy-u", "viewer");
 	await member("k-shared", "new-u", "editor");
+	await env.DB.prepare(
+		"UPDATE kouden_members SET notify_reminders = 1 WHERE kouden_id = 'k-shared' AND user_id = 'new-u'",
+	).run();
 	// 旧アカウントに残っているセッション（あれば消す）
 	await env.DB.prepare(
 		`INSERT INTO sessions (token_hash, user_id, created_at, expires_at, last_seen_at)
@@ -357,6 +360,12 @@ describe("旧ユーザーの手動紐づけ（E10-2）", () => {
 		]);
 		const owners = (await env.DB.prepare("SELECT id, owner_user_id FROM koudens ORDER BY id").all())
 			.results;
+		// 新しいアカウントで選んでいた期限のお知らせも引き継ぐ
+		expect(
+			await env.DB.prepare(
+				"SELECT notify_reminders FROM kouden_members WHERE kouden_id = 'k-shared' AND user_id = 'legacy-u'",
+			).first(),
+		).toEqual({ notify_reminders: 1 });
 		expect(owners).toEqual([
 			{ id: "k-both", owner_user_id: "legacy-u" },
 			{ id: "k-new", owner_user_id: "legacy-u" },

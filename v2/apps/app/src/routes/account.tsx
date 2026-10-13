@@ -1,6 +1,7 @@
 import { profileSchema, toFieldErrors } from "@kouden/domain";
 import { Hono } from "hono";
 import { deleteAccount, membershipsOf, ownedKoudens, updateDisplayName } from "../auth/account.ts";
+import { ledgerFor } from "../ledger/client.ts";
 import { log } from "../lib/logger.ts";
 import { clearSessionCookie, requireUser } from "../middleware/session.ts";
 import type { AppEnv } from "../types.ts";
@@ -55,7 +56,25 @@ accountRoutes.post("/account/profile", async (c) => {
 	if (!parsed.success) {
 		return renderAccount(c, { values, errors: toFieldErrors(parsed.error), status: 422 });
 	}
-	await updateDisplayName(c.env.DB, user.id, parsed.data.displayName, c.get("now"));
+	const displayName = parsed.data.displayName;
+	await updateDisplayName(c.env.DB, user.id, displayName, c.get("now"));
+	// 開いている香典帳の画面の「閲覧中・編集中」の名前も変える。失敗しても次に開いたときに直る
+	for (const m of await membershipsOf(c.env.DB, user.id)) {
+		try {
+			await ledgerFor(c.env, m.koudenId).renamePresence({
+				koudenId: m.koudenId,
+				userId: user.id,
+				displayName,
+				role: m.role,
+				plan: m.plan,
+			});
+		} catch (err) {
+			log("warn", "presence_rename_failed", {
+				koudenId: m.koudenId,
+				error: err instanceof Error ? err.message : String(err),
+			});
+		}
+	}
 	return c.redirect("/account?notice=saved", 303);
 });
 

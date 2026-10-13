@@ -794,7 +794,15 @@ export async function linkLegacyUser(
 			L,
 			N,
 		),
-		// N だけが参加している香典帳は、参加を L に移す
+		// 両方が参加している香典帳: N が期限のお知らせを受け取る設定なら、L も受け取るようにする
+		step(
+			`UPDATE kouden_members SET notify_reminders = 1
+        WHERE user_id = ?
+          AND kouden_id IN (SELECT kouden_id FROM kouden_members WHERE user_id = ? AND notify_reminders = 1)`,
+			L,
+			N,
+		),
+		// N だけが参加している香典帳は、参加を L に移す（お知らせの設定もそのまま移る）
 		step(
 			`UPDATE kouden_members SET user_id = ?
         WHERE user_id = ? AND kouden_id NOT IN (SELECT kouden_id FROM kouden_members WHERE user_id = ?)`,
