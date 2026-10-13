@@ -604,6 +604,26 @@ describe("香典帳（05 §3）", () => {
 		]);
 	});
 
+	it("品をすべて消した記録（列が空の配列）は、表に残った行を移さない", () => {
+		const base = source();
+		const cleared = transformKouden(
+			{
+				...base,
+				// rr1 には表の行（l2）がある。旧画面で品をすべて消すと、列は空の配列になり表の行は残る
+				returnRecords: base.returnRecords.map((r) =>
+					r.id === "rr1" ? { ...r, return_items: [] } : r,
+				),
+			},
+			KNOWN,
+		);
+		expect(cleared.payload.ledger.returnLines.map((l) => l.id)).not.toContain(
+			newId.returnLine("l2"),
+		);
+		expect(
+			cleared.warnings.filter((w) => w.code === "stale_table_item").map((w) => w.legacyId),
+		).toEqual(expect.arrayContaining(["l2"]));
+	});
+
 	it("返礼方法は自由入力の言い方も写像し、写像できなければ備考に残す", () => {
 		expect(
 			["郵送", "宅配便で発送", "直接お渡し", "手渡し", "当日お渡し", "shipping", "", null].map(

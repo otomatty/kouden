@@ -550,8 +550,9 @@ export function transformKouden(
 			updatedAt: iso(latest.updated_at),
 		});
 		// 明細は記録ごとに作る。旧画面が表示・編集するのは記録の return_items 列（一括更新などはこちらにだけ書く）
-		// なので、列に品があればそれを正とする。表（return_record_items）は古い書き込み口の名残で、列と食い違う
-		// ことがある。列に品がない記録だけ表の行から作り、列にない表の行は移さずに警告する
+		// なので、列が配列ならそれを正とする（品をすべて消すと空の配列になる）。表（return_record_items）は古い
+		// 書き込み口の名残で、列と食い違うことがある。列がない（null）か、品がすべて形の合わない記録だけ表の行から
+		// 作り、それ以外で列にない表の行は移さずに警告する
 		for (const record of sorted) {
 			const rows = source.returnRecordItems.filter((l) => l.return_record_id === record.id);
 			const embedded: EmbeddedItem[] = [];
@@ -566,7 +567,10 @@ export function transformKouden(
 					embedded.push(item);
 				}
 			}
-			if (embedded.length === 0) {
+			const fromColumn =
+				Array.isArray(record.return_items) &&
+				(record.return_items.length === 0 || embedded.length > 0);
+			if (!fromColumn) {
 				for (const l of rows) {
 					const name = itemNames.get(l.return_item_master_id);
 					if (name === undefined) {
