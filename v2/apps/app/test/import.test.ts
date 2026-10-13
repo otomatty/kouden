@@ -542,6 +542,46 @@ describe("旧データの取り込み（05 §2・§3）", () => {
 		expect(row).toEqual({ n: IMPORT_USERS_PER_REQUEST });
 	});
 
+	it("台帳を入れ替えた後に統計の投影（D1）が失敗しても取り込みは成功とし、アラームで前の投影を上書きする", async () => {
+		const i = ids();
+		await importAll(i);
+		// 前の台帳の投影（seq が大きい）を残しておく
+		await env.DB.prepare(
+			"UPDATE kouden_stats SET gift_count = 99, total_amount = 999999, projected_seq = 500 WHERE kouden_id = ?",
+		)
+			.bind(i.kouden)
+			.run();
+		const { ledger } = koudenPayload(i, future());
+		await runInDurableObject(ledgerFor(env, i.kouden), async (instance, state) => {
+			const target = instance as unknown as { env: Env; alarm(): Promise<void> };
+			const original = target.env;
+			// 投影の書き込みだけ一時的に失敗させる
+			target.env = {
+				...original,
+				DB: new Proxy(original.DB, {
+					get(db, key) {
+						if (key !== "prepare") return Reflect.get(db, key, db);
+						return (sql: string) => {
+							if (sql.includes("kouden_stats")) throw new Error("D1 is temporarily unavailable");
+							return db.prepare(sql);
+						};
+					},
+				}),
+			};
+			const summary = await instance.importSnapshot(i.kouden, ledger, new Date().toISOString());
+			expect(summary).toMatchObject({ persons: 2, gifts: { koden: 1 } });
+			expect(await state.storage.getAlarm()).not.toBeNull();
+			target.env = original;
+			await target.alarm();
+		});
+		const stats = await env.DB.prepare(
+			"SELECT gift_count, total_amount FROM kouden_stats WHERE kouden_id = ?",
+		)
+			.bind(i.kouden)
+			.first();
+		expect(stats).toEqual({ gift_count: 3, total_amount: 10000 });
+	});
+
 	it("形の合わないデータは受け付けない（香典に金額がない）", async () => {
 		const i = ids();
 		const payload = koudenPayload(i, future());

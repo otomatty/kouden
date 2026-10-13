@@ -1927,6 +1927,9 @@ export class KoudenLedger extends DurableObject<Env> {
 					l.quantity,
 				);
 			}
+			// 作り直した台帳の変更ログは 1 から数え直すので、前の台帳の投影（seq が大きい）より古く見える。
+			// 次の投影は seq を比べずに上書きする（ここで失敗しても、アラームの再試行で上書きされる）
+			this.sql.exec("INSERT OR REPLACE INTO meta (key, value) VALUES ('projection_replace', '1')");
 			this.sql.exec(
 				`INSERT INTO change_log (at, actor_user_id, actor_name, entity, entity_id, op, diff)
          VALUES (?, ?, ?, 'kouden', ?, 'import', NULL)`,
@@ -1939,9 +1942,19 @@ export class KoudenLedger extends DurableObject<Env> {
 		});
 		// 開いている画面は読み込み直させる（kouden の変更は画面全体に影響する）
 		this.broadcastChanges(this.lastSeq() - 1);
-		// 削除して作り直した台帳の変更ログは 1 から数え直すので、前の台帳の投影（seq が大きい）より古く見える。
-		// 取り込みが成功した後だけ、seq を比べずに上書きする（失敗したときは前の投影が残る）
-		if (!(await this.project(koudenId, true))) {
+		// 台帳はもう入れ替わっている。投影（D1）が一時的に失敗しても取り込みは成功として返し、アラームで投影し直す
+		let projected: boolean;
+		try {
+			projected = await this.project(koudenId);
+		} catch (err) {
+			log("error", "ledger_import_projection_failed", {
+				koudenId,
+				error: err instanceof Error ? err.message : String(err),
+			});
+			await this.scheduleAlarm(true);
+			return this.importSummary();
+		}
+		if (!projected) {
 			throw new Error(`kouden ${koudenId} is not in D1; create it before importing the ledger`);
 		}
 		await this.scheduleAlarm(false);
@@ -2835,9 +2848,10 @@ export class KoudenLedger extends DurableObject<Env> {
 	/**
 	 * 統計の投影（03 §7）。香典帳が D1 から削除済みなら false。
 	 * 同じ seq でも上書きする（スキーマの移行で増えた項目を、変更ログが進む前に埋めるため。同じ seq なら中身も同じ）。
-	 * replace は取り込み用で、seq が小さくても上書きする
+	 * 取り込みの後（meta の projection_replace）は、seq が小さくても上書きする
 	 */
-	private async project(koudenId: string, replace = false): Promise<boolean> {
+	private async project(koudenId: string): Promise<boolean> {
+		const replace = this.meta("projection_replace") !== null;
 		const stats = this.first<{ gift_count: number; total_amount: number }>(
 			`SELECT count(*) AS gift_count, coalesce(sum(CASE WHEN kind = 'koden' THEN amount END), 0) AS total_amount
          FROM gifts WHERE deleted_at IS NULL`,
@@ -2868,6 +2882,7 @@ export class KoudenLedger extends DurableObject<Env> {
 					replace ? 1 : 0,
 				)
 				.run();
+			if (replace) this.sql.exec("DELETE FROM meta WHERE key = 'projection_replace'");
 			return true;
 		} catch (err) {
 			// 香典帳が D1 から削除済みなら投影先がない。再試行しても成功しないので終える
