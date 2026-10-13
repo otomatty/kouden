@@ -21,9 +21,11 @@ function auditStatement(
 	entry: AuditEntry,
 	at: string,
 	guard?: { sql: string; params: unknown[] },
+	/** 監査ログの ID。後続の文が「この操作で書いた監査ログがある」ことを条件にするときに渡す */
+	id: string = uuidv7(Date.parse(at)),
 ): D1PreparedStatement {
 	const values = [
-		uuidv7(Date.parse(at)),
+		id,
 		entry.adminEmail,
 		entry.action,
 		entry.targetType,
@@ -572,9 +574,11 @@ export async function revokePurchase(
 		.first<{ kouden_id: string; status: string }>();
 	if (!purchase) return { ok: false, reason: "not_found" };
 	const at = now.toISOString();
+	// この要求で取り消したことの確認。監査ログはこの要求が取り消した場合だけ書かれるので、その ID で判定する
+	const opId = uuidv7(now.getTime());
 	const revokedNow = {
-		sql: "EXISTS (SELECT 1 FROM purchases WHERE id = ? AND status = 'refunded' AND refunded_at = ?)",
-		params: [input.purchaseId, at],
+		sql: "EXISTS (SELECT 1 FROM admin_audit_logs WHERE id = ?)",
+		params: [opId],
 	};
 	const [revoked, , downgraded] = await db.batch([
 		db
@@ -594,6 +598,7 @@ export async function revokePurchase(
 			},
 			at,
 			CHANGED_JUST_NOW,
+			opId,
 		),
 		db
 			.prepare(
@@ -745,10 +750,11 @@ export async function linkLegacyUser(
 	const at = now.toISOString();
 	const L = l.id;
 	const N = n.id;
-	// この操作で紐づけたことの確認（以降の文の条件）
-	const linked =
-		"EXISTS (SELECT 1 FROM legacy_users WHERE legacy_user_id = ? AND linked_user_id = ? AND linked_at = ?)";
-	const guard = [input.legacyUserId, L, at];
+	// この操作で紐づけたことの確認（以降の文の条件）。監査ログは 1 文目でこの要求が紐づけた場合だけ書かれるので、
+	// その ID で判定する（同じ時刻に別の運営者が別のアカウントを紐づけようとしても、負けた側は何もしない）
+	const opId = uuidv7(now.getTime());
+	const linked = "EXISTS (SELECT 1 FROM admin_audit_logs WHERE id = ?)";
+	const guard = [opId];
 	const step = (sql: string, ...params: unknown[]) =>
 		db.prepare(`${sql} AND ${linked}`).bind(...params, ...guard);
 
@@ -771,6 +777,7 @@ export async function linkLegacyUser(
 			},
 			at,
 			CHANGED_JUST_NOW,
+			opId,
 		),
 		// 両方が参加している香典帳: N がオーナーなら L をオーナーにする（オーナーは 1 冊に 1 人なので、先に N を外す）
 		step(

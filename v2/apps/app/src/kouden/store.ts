@@ -36,15 +36,18 @@ export async function createKouden(
 	await db.batch([
 		db
 			.prepare(
+				// 削除したアカウントでは作らない（削除と同時に送られた要求が、削除の後に届いた場合）
 				`INSERT INTO koudens (id, title, deceased_name, owner_user_id, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+         SELECT ?, ?, ?, ?, ?, ?
+          WHERE EXISTS (SELECT 1 FROM users WHERE id = ? AND deleted_at IS NULL)`,
 			)
-			.bind(id, input.title, input.deceasedName, userId, at, at),
+			.bind(id, input.title, input.deceasedName, userId, at, at, userId),
 		db
 			.prepare(
-				"INSERT INTO kouden_members (kouden_id, user_id, role, joined_at) VALUES (?, ?, 'owner', ?)",
+				`INSERT INTO kouden_members (kouden_id, user_id, role, joined_at)
+         SELECT ?, ?, 'owner', ? WHERE EXISTS (SELECT 1 FROM koudens WHERE id = ?)`,
 			)
-			.bind(id, userId, at),
+			.bind(id, userId, at, id),
 	]);
 	return id;
 }

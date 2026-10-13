@@ -3,6 +3,7 @@ import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { describe, expect, it } from "vitest";
 import { accessVerifier } from "../src/access.ts";
 import { createAdminApp } from "../src/app.tsx";
+import { linkLegacyUser } from "../src/store.ts";
 
 const ORIGIN = "http://localhost:5174";
 const ISSUER = `https://${env.ACCESS_TEAM_DOMAIN}`;
@@ -393,6 +394,34 @@ describe("旧ユーザーの手動紐づけ（E10-2）", () => {
 				target_id: "old-1",
 			},
 		]);
+	});
+
+	it("同じ時刻に別のアカウントへの紐づけが重なっても、負けた側のアカウントには触らない", async () => {
+		await setupLegacy();
+		await user("new-2", { email: "taro.other@gmail.com", sub: "google-sub-other" });
+		const at = new Date("2026-10-01T00:00:00.000Z");
+		const results = await Promise.all([
+			linkLegacyUser(
+				env.DB,
+				{ legacyUserId: "old-1", targetUserId: "new-u", adminEmail: ADMIN },
+				at,
+			),
+			linkLegacyUser(
+				env.DB,
+				{ legacyUserId: "old-1", targetUserId: "new-2", adminEmail: "b@x" },
+				at,
+			),
+		]);
+		expect(results.filter((r) => r.ok)).toHaveLength(1);
+		const losers = (
+			await env.DB.prepare(
+				"SELECT id, google_sub, deleted_at FROM users WHERE id IN ('new-u', 'new-2') AND deleted_at IS NULL",
+			).all()
+		).results;
+		// 負けた側は削除されず、Google の sub も残る
+		expect(losers).toHaveLength(1);
+		expect(losers[0]?.google_sub).toEqual(expect.stringMatching(/^google-sub-/));
+		expect(await audits()).toHaveLength(1);
 	});
 
 	it("紐づけ済み・紐づけできない相手には何もしない", async () => {

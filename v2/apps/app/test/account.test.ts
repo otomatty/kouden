@@ -1,6 +1,7 @@
 import { env, runInDurableObject } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
-import { DELETED_USER_NAME } from "../src/auth/account.ts";
+import { DELETED_USER_NAME, deleteAccount } from "../src/auth/account.ts";
+import { acceptInvitation, createInvitation } from "../src/kouden/members.ts";
 import { ledgerFor } from "../src/ledger/client.ts";
 import { formPost, HANAKO, makeApp, TARO } from "./helpers.ts";
 
@@ -124,6 +125,31 @@ describe("アカウントの削除（E1-4）", () => {
 		const newId = await userIdOf(HANAKO.email);
 		expect(newId).not.toBe(hanakoId);
 		expect((await again.request(`/k/${koudenId}`)).status).toBe(404);
+	});
+
+	it("削除と同時に受けた招待が削除の後に届いても、参加させない", async () => {
+		const taro = makeApp(TARO);
+		await taro.login();
+		const koudenId = await createKouden(taro, "山田 一郎");
+		const hanako = makeApp(HANAKO);
+		await hanako.login();
+		const hanakoId = await userIdOf(HANAKO.email);
+		const taroId = await userIdOf(TARO.email);
+		const now = new Date();
+		const invite = await createInvitation(env.DB, {
+			koudenId,
+			role: "editor",
+			maxUses: null,
+			expiresInDays: 7,
+			createdBy: taroId,
+			now,
+		});
+		expect(await deleteAccount(env.DB, hanakoId, now)).toBe(true);
+		expect(await acceptInvitation(env.DB, invite.id, hanakoId, now)).toBe(false);
+		const row = await env.DB.prepare("SELECT count(*) AS n FROM kouden_members WHERE user_id = ?")
+			.bind(hanakoId)
+			.first();
+		expect(row).toEqual({ n: 0 });
 	});
 
 	it("香典帳を削除・譲渡するとアカウントを削除できる", async () => {

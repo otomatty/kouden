@@ -269,9 +269,11 @@ export async function acceptInvitation(
            FROM invitations i JOIN koudens k ON k.id = i.kouden_id
           WHERE i.id = ? AND i.revoked_at IS NULL AND i.expires_at > ?
             AND (i.max_uses IS NULL OR i.used_count < i.max_uses) AND k.status = 'active'
+            -- 削除したアカウントは参加させない（削除と同時に受けた要求が、削除の後に届いた場合）
+            AND EXISTS (SELECT 1 FROM users u WHERE u.id = ? AND u.deleted_at IS NULL)
          ON CONFLICT DO NOTHING`,
 			)
-			.bind(userId, at, invitationId, at),
+			.bind(userId, at, invitationId, at, userId),
 		// 直前の INSERT が実際に 1 行を挿入した場合だけ加算する（changes() は同じ接続の直前の文の件数）。
 		// 同じ人が同時に受けて、もう一方の INSERT が ON CONFLICT で何もしなかった場合は加算しない
 		db
