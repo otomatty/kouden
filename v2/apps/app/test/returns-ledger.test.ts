@@ -379,6 +379,27 @@ describe("期限のお知らせ（E6-5）", () => {
 		expect(stats).toEqual({ return_pending: 2 });
 	});
 
+	it("メール未設定の環境では、期限が来ても送信・再試行・送信済みへの更新を行わない", async () => {
+		const ctx = await withGifts();
+		await seedD1(ctx.caller.koudenId, [{ id: "owner-1", role: "owner" }]);
+		await addMemorial(ctx);
+		const sent: Mail[] = [];
+		await runInDurableObject(ctx.ledger, (obj, state) => {
+			Reflect.set(obj, "env", { ...env, MAIL_FROM: "" });
+			obj.mailer = { send: async (mail) => void sent.push(mail) };
+			state.storage.sql.exec(
+				"UPDATE reminders SET fire_at = ?",
+				new Date(Date.now() - 1000).toISOString(),
+			);
+		});
+		expect(await runDurableObjectAlarm(ctx.ledger)).toBe(true);
+		expect(sent).toEqual([]);
+		expect((await reminders(ctx.ledger)).every((r) => r.sent_at === null)).toBe(true);
+		expect(
+			await runInDurableObject(ctx.ledger, (_obj, state) => state.storage.getAlarm()),
+		).toBeNull();
+	});
+
 	it("投影（D1）に失敗しても、少し後にアラームを予約し直す", async () => {
 		const ctx = await withGifts();
 		await addMemorial(ctx);

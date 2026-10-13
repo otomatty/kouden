@@ -58,6 +58,7 @@ export function validatePayload(p: ImportKoudenPayload, users: ReadonlySet<strin
 	};
 	for (const r of l.persons) ref("relationships", r.relationshipId);
 	for (const r of l.gifts) ref("events", r.eventId);
+	for (const r of l.giftPhotos ?? []) ref("gifts", r.giftId);
 	for (const r of l.contributors) {
 		ref("gifts", r.giftId);
 		ref("persons", r.personId);
@@ -94,6 +95,7 @@ export function validateSourceComparison(
 			gifts: counts.gifts,
 			returns: counts.returns,
 			returnItems: counts.returnItems,
+			giftPhotos: source.offeringPhotos?.length ?? 0,
 			// 正規化前の金額とも比較し、負の値の切り上げなどで金額が変わる移行を止める。
 			kodenTotal: source.entries.reduce((sum, e) => sum + e.amount, 0),
 		},

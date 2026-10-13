@@ -15,6 +15,7 @@ export interface Mailer {
 export function cloudflareMailer(env: Env): Mailer {
 	return {
 		async send(mail) {
+			if (!env.MAIL_FROM || !env.EMAIL) throw new Error("Email is not configured");
 			await env.EMAIL.send({
 				from: { name: "香典帳", email: env.MAIL_FROM },
 				to: mail.to,

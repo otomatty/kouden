@@ -3,12 +3,11 @@ import { MODES as APP_MODES } from "../../app/deploy.settings.ts";
 import { deployBlockers, MODES } from "../deploy.settings.ts";
 
 describe("deployBlockers（運営者画面）", () => {
-	it("Access の設定が仮の値の間は staging / production へのデプロイを止める", () => {
-		for (const mode of ["staging", "production"] as const) {
-			const blockers = deployBlockers(mode);
-			expect(blockers.some((b) => b.includes("access.teamDomain"))).toBe(true);
-			expect(blockers.some((b) => b.includes("access.aud"))).toBe(true);
-		}
+	it("本番の Access が仮の値の間はデプロイを止める", () => {
+		const blockers = deployBlockers("production");
+		expect(blockers.some((b) => b.includes("access.teamDomain"))).toBe(true);
+		expect(blockers.some((b) => b.includes("access.aud"))).toBe(true);
+		expect(deployBlockers("staging")).toEqual([]);
 	});
 
 	it("Access を迂回する devEmail は development にだけ設定する", () => {

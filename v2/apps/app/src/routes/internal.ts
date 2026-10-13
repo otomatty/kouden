@@ -61,6 +61,11 @@ export function internalRoutes(deps: AppDeps) {
 			);
 		}
 		const { kouden, members, purchases, ledger } = parsed.data;
+		// 画像の転送完了を確認してから台帳を更新する。欠落した写真を含む台帳は取り込まない。
+		for (const photo of ledger.giftPhotos ?? []) {
+			const object = await c.env.FILES.head(photo.r2Key);
+			if (!object || !object.checksums.sha256) return c.json({ error: "photo_file_missing" }, 409);
+		}
 		const at = c.get("now").toISOString();
 		// 統計の投影先になるので、D1 の行を先に作る。台帳の取り込みに失敗したら取り込み前に戻す
 		const before = await koudenRowsBefore(c.env.DB, koudenId);

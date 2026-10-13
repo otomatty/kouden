@@ -85,6 +85,7 @@ const IMPORT_TABLES = [
 	"return_items",
 	"reminders",
 	"gift_contributors",
+	"gift_photos",
 	"gifts",
 	"persons",
 	"relationships",
@@ -399,7 +400,13 @@ export class KoudenLedger extends DurableObject<Env> {
 		return this.read(caller, () => {
 			const gift = this.queryGifts(" AND g.id = ?", [giftId], "g.id")[0];
 			if (!gift) throw new LedgerFailure({ code: "not_found" });
-			return gift;
+			return {
+				...gift,
+				photos: this.all<{ id: string; caption: string | null }>(
+					"SELECT id, caption FROM gift_photos WHERE gift_id = ? AND deleted_at IS NULL ORDER BY created_at, id",
+					giftId,
+				),
+			};
 		});
 	}
 
@@ -1915,6 +1922,19 @@ export class KoudenLedger extends DurableObject<Env> {
 					c.shareAmount,
 				);
 			}
+			for (const p of snapshot.giftPhotos ?? []) {
+				this.sql.exec(
+					`INSERT INTO gift_photos (id, gift_id, r2_key, caption, created_by, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+					p.id,
+					p.giftId,
+					p.r2Key,
+					p.caption,
+					p.createdBy,
+					p.createdAt,
+					p.updatedAt,
+				);
+			}
 			for (const i of snapshot.returnItems) {
 				this.sql.exec(
 					`INSERT INTO return_items (id, name, category, price, description, image_r2_key, is_active, sort_order,
@@ -2028,6 +2048,15 @@ export class KoudenLedger extends DurableObject<Env> {
 			returns[r.status] = r.n;
 		}
 		return {
+			giftPhotos: this.scalar(
+				"SELECT count(*) AS n FROM gift_photos p JOIN gifts g ON g.id = p.gift_id WHERE p.deleted_at IS NULL AND g.deleted_at IS NULL",
+			),
+			giftPhotoRows: this.all<NonNullable<LedgerSnapshot["giftPhotos"]>[number]>(
+				`SELECT p.id, p.gift_id AS giftId, p.r2_key AS r2Key, p.caption, p.created_by AS createdBy,
+                p.created_at AS createdAt, p.updated_at AS updatedAt
+           FROM gift_photos p JOIN gifts g ON g.id = p.gift_id
+          WHERE p.deleted_at IS NULL AND g.deleted_at IS NULL ORDER BY p.id`,
+			),
 			events: this.scalar("SELECT count(*) AS n FROM events WHERE deleted_at IS NULL"),
 			relationships: count("relationships"),
 			persons: this.scalar("SELECT count(*) AS n FROM persons WHERE deleted_at IS NULL"),
@@ -2884,7 +2913,7 @@ export class KoudenLedger extends DurableObject<Env> {
 		const next = this.first<{ at: string | null }>(
 			"SELECT min(fire_at) AS at FROM reminders WHERE sent_at IS NULL",
 		)?.at;
-		if (next) candidates.push(Date.parse(next));
+		if (next && this.env.MAIL_FROM) candidates.push(Date.parse(next));
 		if (candidates.length === 0) return;
 		const wanted = Math.min(...candidates);
 		const current = await this.ctx.storage.getAlarm();
@@ -2949,6 +2978,8 @@ export class KoudenLedger extends DurableObject<Env> {
 	 * 全員への送信に失敗したら例外にする（alarm が REMINDER_RETRY_MS 後に送り直す）
 	 */
 	private async sendDueReminders(koudenId: string): Promise<void> {
+		// リハーサル環境はメール未設定。送信済みにせず、送信も再試行も行わない。
+		if (!this.env.MAIL_FROM) return;
 		const due = this.all<{
 			id: string;
 			kind: string;

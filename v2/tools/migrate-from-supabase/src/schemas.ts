@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { importKoudenPayloadSchema, importUserSchema } from "@kouden/domain";
+import { importFileKeySchema, importKoudenPayloadSchema, importUserSchema } from "@kouden/domain";
 import type { LegacyKoudenSource } from "./source.ts";
 
 const str = z.string();
@@ -86,6 +86,19 @@ export const legacySourceSchema: z.ZodType<LegacyKoudenSource> = z.object({
 			created_at: nullable,
 		}),
 	),
+	offeringPhotos: z
+		.array(
+			z.object({
+				id: str,
+				offering_id: str,
+				storage_key: str.min(1),
+				caption: nullable,
+				created_by: str,
+				created_at: str,
+				updated_at: str,
+			}),
+		)
+		.optional(),
 	offeringEntries: z.array(z.object({ offering_id: str, kouden_entry_id: str, created_at: str })),
 	telegrams: z.array(
 		z.object({
@@ -153,7 +166,7 @@ export const snapshotSchema = z.object({
 export const fileMapSchema = z.array(z.object({ source: str, path: str }));
 const digest = z.string().regex(/^[0-9a-f]{64}$/);
 export const preparedFileSchema = z.object({
-	key: z.string().regex(/^koudens\/[a-zA-Z0-9_-]{1,64}\/return-items\/[0-9a-f-]{36}$/),
+	key: importFileKeySchema,
 	sha256: digest,
 	size: z
 		.number()

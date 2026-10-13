@@ -90,6 +90,16 @@ export interface LegacyOffering extends Audited {
 	notes: string | null;
 }
 
+export interface LegacyOfferingPhoto {
+	id: string;
+	offering_id: string;
+	storage_key: string;
+	caption: string | null;
+	created_by: string;
+	created_at: string;
+	updated_at: string;
+}
+
 export interface LegacyOfferingAllocation {
 	offering_id: string | null;
 	kouden_entry_id: string | null;
@@ -162,6 +172,7 @@ export interface LegacyKoudenSource {
 	relationships: LegacyRelationship[];
 	entries: LegacyEntry[];
 	offerings: LegacyOffering[];
+	offeringPhotos?: LegacyOfferingPhoto[];
 	offeringAllocations: LegacyOfferingAllocation[];
 	offeringEntries: LegacyOfferingEntry[];
 	telegrams: LegacyTelegram[];

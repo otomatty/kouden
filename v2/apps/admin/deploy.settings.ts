@@ -5,7 +5,14 @@
  * TODO(M5): Cloudflare Access のアプリケーションを作ったら、各 mode の `access` を実際の値に置き換える。
  * 置き換えるまでは `deployBlockers` がデプロイを止める。
  */
-import { DOMAIN, MODES as APP_MODES, type Mode, resolveMode } from "../app/deploy.settings.ts";
+import {
+	DOMAIN,
+	MODES as APP_MODES,
+	type Mode,
+	resolveMode,
+	WORKERS_SUBDOMAIN,
+	STAGING_ACCESS_TEAM,
+} from "../app/deploy.settings.ts";
 
 export { resolveMode };
 export type { Mode };
@@ -41,12 +48,13 @@ export const MODES: Record<Mode, AdminModeSettings> = {
 	},
 	staging: {
 		workerName: "kouden-admin-staging",
-		// Universal SSL の証明書は 1 階層のサブドメインまでなので、admin.staging. ではなく admin-staging. にする
-		origin: `https://admin-staging.${DOMAIN}`,
-		domain: `admin-staging.${DOMAIN}`,
+		origin: `https://kouden-admin-staging.${WORKERS_SUBDOMAIN}.workers.dev`,
 		d1: APP_MODES.staging.d1,
 		appOrigin: APP_MODES.staging.origin,
-		access: { teamDomain: PLACEHOLDER_TEAM, aud: PLACEHOLDER_AUD },
+		access: {
+			teamDomain: STAGING_ACCESS_TEAM,
+			aud: "2b070c052a3073c94fbf21764ef9d841306f2b5954905f4cfbc019699d8374bd",
+		},
 		devEmail: "",
 	},
 	production: {

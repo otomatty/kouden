@@ -90,6 +90,28 @@ export const GiftEditPage: FC<{
 					{notice}
 				</p>
 			)}
+			{!!gift.photos?.length && (
+				<section aria-label="供物・供花の写真" class={`${ui.card} space-y-4`}>
+					<h3 class={ui.h3}>供物・供花の写真</h3>
+					<div class="grid gap-4 sm:grid-cols-2">
+						{gift.photos.map((photo, i) => (
+							<figure class="space-y-2">
+								<a href={`${base}/files/gifts/${gift.id}/${photo.id}`} class={ui.link}>
+									<img
+										src={`${base}/files/gifts/${gift.id}/${photo.id}`}
+										alt={photo.caption || `供物・供花の写真 ${i + 1}`}
+										loading="lazy"
+										class="max-h-64 w-full rounded object-contain"
+									/>
+								</a>
+								{photo.caption && (
+									<figcaption class="whitespace-pre-wrap text-sm">{photo.caption}</figcaption>
+								)}
+							</figure>
+						))}
+					</div>
+				</section>
+			)}
 
 			{canWrite ? (
 				<form

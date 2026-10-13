@@ -2,11 +2,22 @@ import { describe, expect, it } from "vitest";
 import { deployBlockers, MODES } from "../deploy.settings.ts";
 
 describe("deployBlockers", () => {
-	it("仮のドメインと Client ID が残っている間は staging / production へのデプロイを止める", () => {
-		for (const mode of ["staging", "production"] as const) {
-			const blockers = deployBlockers(mode);
-			expect(blockers.some((b) => b.includes("ドメイン"))).toBe(true);
-			expect(blockers.some((b) => b.includes("googleClientId"))).toBe(true);
+	it("本番に仮のドメインと Client ID が残っている間はデプロイを止める", () => {
+		const blockers = deployBlockers("production");
+		expect(blockers.some((b) => b.includes("ドメイン"))).toBe(true);
+		expect(blockers.some((b) => b.includes("googleClientId"))).toBe(true);
+	});
+
+	it("staging は workers.dev を使い、Access が設定されていればデプロイできる", () => {
+		expect(deployBlockers("staging")).toEqual([]);
+		const original = structuredClone(MODES.staging);
+		try {
+			MODES.staging.access = { teamDomain: "", aud: "" };
+			expect(deployBlockers("staging").some((b) => b.includes("access"))).toBe(true);
+			MODES.staging.origin = "https://another.saedgewell.workers.dev";
+			expect(deployBlockers("staging").some((b) => b.includes("Worker 名"))).toBe(true);
+		} finally {
+			MODES.staging = original;
 		}
 	});
 

@@ -23,7 +23,6 @@ const codes = new Set([
 	"verification_mismatch",
 	"local_file_checksum",
 	"repeated_file_cursor",
-	"unsupported:offering_photos",
 	"source_reference:offering_entry",
 	"source_reference:telegram",
 	"invalid:owner",
@@ -42,6 +41,7 @@ const codes = new Set([
 		"relationships",
 		"persons",
 		"gifts",
+		"giftPhotos",
 		"returnItems",
 		"returnRules",
 		"returns",
@@ -80,6 +80,7 @@ const sourceTables = new Set([
 	"public.return_record_items",
 ]);
 const sourceMetrics = new Set([
+	"giftPhotos",
 	"members",
 	"kodenTotal",
 	"returnItems",
