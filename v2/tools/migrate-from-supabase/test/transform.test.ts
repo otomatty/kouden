@@ -382,6 +382,20 @@ describe("香典帳（05 §3）", () => {
 		expect(guessDeceasedName("故 山田 一郎")).toBe("故 山田 一郎");
 	});
 
+	it.each(["", " \t\n", "　"])("空の台帳名 %j は未確認の名前で取り込み、警告を残す", (title) => {
+		const src = source({ kouden: { ...source().kouden, title } });
+
+		const transformed = transformKouden(src, KNOWN);
+
+		expect(transformed.payload.kouden).toMatchObject({
+			title: "香典帳（故人名未確認）",
+			deceasedName: "（故人名未確認）",
+		});
+		expect(importKoudenPayloadSchema.safeParse(transformed.payload).success).toBe(true);
+		expect(codes(transformed.warnings)).toContain("deceased_name_missing");
+		expect(src.kouden.title).toBe(title);
+	});
+
 	it("メンバー: オーナー・編集（edit を含む）・閲覧。いないユーザーは移さない", () => {
 		expect(payload.members).toEqual([
 			{

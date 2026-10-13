@@ -17,3 +17,5 @@ apps/*/public/assets/admin.css
 e2e/.state/
 e2e/test-results/
 e2e/playwright-report/
+# Supabase の抽出データ（個人情報を含むため Git に追加しない）
+.migration-data/

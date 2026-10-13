@@ -24,11 +24,13 @@ v2/
 ├── apps/admin/        # 運営者画面（kouden-admin）。Cloudflare Access の背後に置き、D1 だけを使う（DO には接続しない）
 ├── packages/domain/   # 業務ルール（入力検証・権限・検索の正規化・金額の按分など。純粋な TypeScript）
 ├── packages/ui/       # app と admin で共有するクラス名（ui.ts）と色・フォント（theme.css）
-├── tools/migrate-from-supabase/  # 旧アプリ（Supabase）からのデータ移行（docs/rebuild/05。変換は src/transform.ts）
+├── tools/migrate-from-supabase/  # 旧アプリ（Supabase）の変換・投入・照合 CLI（prepare / import / verify）
 └── e2e/               # Playwright の E2E とアクセシビリティの検査（axe）
 ```
 
 ## ローカル開発
+
+データ移行は [移行 CLI の手順](tools/migrate-from-supabase/README.md) を参照してください。Supabase コネクタの抽出結果を入力に使い、D1・DO・R2 への投入後に JSON / Markdown の照合レポートを作成します。
 
 必要なもの: Bun 1.4 以上、Node.js 22 以上（`cf` が使う）
 

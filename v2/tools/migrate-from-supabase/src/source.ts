@@ -85,7 +85,7 @@ export interface LegacyOffering extends Audited {
 	type: string;
 	description: string | null;
 	quantity: number;
-	price: number;
+	price: number | null;
 	provider_name: string;
 	notes: string | null;
 }
