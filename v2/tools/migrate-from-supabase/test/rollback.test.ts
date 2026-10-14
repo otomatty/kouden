@@ -2,9 +2,177 @@ import { readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
 import { describe, expect, it } from "vitest";
 import { captureRollback } from "../src/rollback-export.ts";
+import { prepareSnapshot } from "../src/prepare.ts";
 import { planRollback, ROLLBACK_TABLES } from "../src/rollback-plan.ts";
 import { checkedPgEnv, rollbackSql } from "../src/rollback-sql.ts";
 import { at, exportedFixture, ids, sourceFixture, sourceWithCounts } from "./rollback-fixture.ts";
+
+function sourceWithReturn() {
+	const source = sourceFixture();
+	source.data["public.return_items"] = [
+		{
+			id: "70000000-0000-4000-8000-000000000001",
+			kouden_id: ids.book,
+			name: "タオル",
+			price: 1000,
+			category: null,
+			description: null,
+			image_url: null,
+			recommended_amount_min: null,
+			recommended_amount_max: null,
+			is_active: true,
+			sort_order: 1,
+			created_by: ids.user,
+			created_at: at,
+			updated_at: at,
+		},
+	];
+	source.data["public.return_entry_records"] = [
+		{
+			id: "70000000-0000-4000-8000-000000000002",
+			kouden_entry_id: ids.entry,
+			return_status: "PENDING",
+			return_method: null,
+			funeral_gift_amount: 0,
+			arrangement_date: null,
+			shipping_postal_code: null,
+			shipping_address: null,
+			shipping_phone_number: null,
+			remarks: null,
+			return_items: [],
+			total_amount: 10000,
+			return_items_cost: 0,
+			additional_return_amount: 10000,
+			profit_loss: 10000,
+			created_by: ids.user,
+			created_at: at,
+			updated_at: at,
+		},
+	];
+	return sourceWithCounts(source.data);
+}
+
+describe("rollback review regressions", () => {
+	it("uses the same in-memory source hash as the forward migration", () => {
+		const source = sourceFixture();
+		expect(planRollback(source, exportedFixture(source)).sourceSha256).toBe(
+			prepareSnapshot(source).plan.sourceSha256,
+		);
+	});
+	it("blocks catalog deletion when an omitted legacy detail still references it", async () => {
+		const source = sourceWithReturn();
+		source.data["public.return_record_items"] = [
+			{
+				id: "70000000-0000-4000-8000-000000000003",
+				return_record_id: source.data["public.return_entry_records"]![0]!.id,
+				return_item_master_id: source.data["public.return_items"]![0]!.id,
+				price: 1000,
+				quantity: 1,
+				notes: null,
+				created_by: ids.user,
+				created_at: at,
+				updated_at: at,
+			},
+		];
+		const counted = sourceWithCounts(source.data);
+		const current = exportedFixture(counted);
+		expect(current.ledgers[0]!.tables.return_lines).toEqual([]);
+		const item = current.ledgers[0]!.tables.return_items[0]!;
+		item.deleted_at = at;
+		const plan = planRollback(counted, current);
+		expect(plan.blockers).toEqual([{ code: "delete_has_legacy_dependents", entityId: item.id }]);
+		expect(plan.after.return_items).toEqual(plan.before.return_items);
+		expect(() => rollbackSql(plan, "apply")).toThrow("rollback_blocked");
+		const db = await database(counted);
+		try {
+			await expect(db.exec("DELETE FROM return_items")).rejects.toThrow("foreign key");
+		} finally {
+			await db.close();
+		}
+	});
+	it("still deletes an unused catalog item without legacy dependencies", async () => {
+		const source = sourceWithReturn();
+		const current = exportedFixture(source);
+		current.ledgers[0]!.tables.return_items[0]!.deleted_at = at;
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual([]);
+		const db = await database(source);
+		try {
+			await db.exec(rollbackSql(plan, "apply"));
+			await db.exec(rollbackSql(plan, "verify"));
+			expect((await db.query("SELECT id FROM return_items")).rows).toEqual([]);
+		} finally {
+			await db.close();
+		}
+	});
+	it.each([null, "2026-11-01"])("checks raw return deadlines before projection: %s", (dueDate) => {
+		const source = sourceWithReturn();
+		const current = exportedFixture(source);
+		const ret = current.ledgers[0]!.tables.returns[0]!;
+		ret.due_date = dueDate;
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual(
+			dueDate
+				? [
+						{
+							code: "unrepresentable_field",
+							entityId: ret.id,
+							field: "dueDate",
+						},
+					]
+				: [],
+		);
+		if (dueDate) expect(() => rollbackSql(plan, "apply")).toThrow("rollback_blocked");
+	});
+	it("ignores deadlines on tombstones that were never migrated", () => {
+		const source = sourceFixture();
+		const current = exportedFixture(source);
+		current.ledgers[0]!.tables.returns.push({
+			id: "deleted-return",
+			deleted_at: at,
+			due_date: "2026-11-01",
+		});
+		expect(planRollback(source, current).blockers).toEqual([]);
+	});
+	it.each([false, true])("does not invent an inviter for a member (existing: %s)", (existing) => {
+		const source = sourceFixture();
+		const user = "10000000-0000-4000-8000-000000000002";
+		source.data["auth.users"]!.push({
+			id: user,
+			email: "member@example.test",
+			created_at: at,
+			identities: [],
+		});
+		source.data["public.profiles"]!.push({ ...source.data["public.profiles"]![0], id: user });
+		if (existing)
+			source.data["public.kouden_members"]!.push({
+				...source.data["public.kouden_members"]![0],
+				id: "60000000-0000-4000-8000-000000000002",
+				user_id: user,
+			});
+		const counted = sourceWithCounts(source.data);
+		const current = exportedFixture(counted);
+		const uid = current.manifest.users.find((u) => u.legacy_user_id === user)!.id;
+		if (existing) current.manifest.members.find((m) => m.user_id === uid)!.invited_by = null;
+		else
+			current.manifest.members.push({
+				kouden_id: current.ledgers[0]!.koudenId,
+				user_id: uid,
+				role: "editor",
+				joined_at: at,
+				invited_by: null,
+			});
+		const blocked = planRollback(counted, current);
+		expect(blocked.blockers).toEqual([{ code: "member_inviter_requires_mapping", entityId: uid }]);
+		expect(blocked.after.kouden_members).toEqual(blocked.before.kouden_members);
+		expect(() => rollbackSql(blocked, "apply")).toThrow("rollback_blocked");
+		current.manifest.members.find((m) => m.user_id === uid)!.invited_by =
+			current.manifest.users.find((u) => u.legacy_user_id === ids.user)!.id;
+		const valid = planRollback(counted, current);
+		expect(valid.blockers).toEqual([]);
+		expect(valid.after.kouden_members.find((m) => m.user_id === user)!.added_by).toBe(ids.user);
+	});
+});
 
 async function database(source: ReturnType<typeof sourceFixture>) {
 	const db = new PGlite();

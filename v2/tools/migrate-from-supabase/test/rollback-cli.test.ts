@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, it } from "vitest";
+import { digest, prepare } from "../src/prepare.ts";
 import { exportedFixture, sourceFixture } from "./rollback-fixture.ts";
 
 it("plans offline, refuses unapproved apply and does not print private input", async () => {
@@ -17,7 +18,8 @@ it("plans offline, refuses unapproved apply and does not print private input", a
 	const snapshotPath = join(dir, "v2.json");
 	const cli = fileURLToPath(new URL("../src/rollback-cli.ts", import.meta.url));
 	try {
-		await writeFile(sourcePath, JSON.stringify(source));
+		const sourceRaw = `${JSON.stringify(source, null, 2)}\r\n`;
+		await writeFile(sourcePath, sourceRaw);
 		await writeFile(snapshotPath, JSON.stringify(current));
 		const args = ["--source", sourcePath, "--snapshot", snapshotPath];
 		const plan = spawnSync("bun", [cli, "plan", ...args, "--out", join(dir, "plan")], {
@@ -30,6 +32,9 @@ it("plans offline, refuses unapproved apply and does not print private input", a
 		expect(plan.stdout).not.toContain("差出人");
 		const report = JSON.parse(await readFile(join(dir, "plan", "report.json"), "utf8"));
 		expect(report.status).toBe("ready");
+		const forward = await prepare(sourcePath, join(dir, "forward"));
+		expect(report.sourceSha256).toBe(digest(sourceRaw));
+		expect(report.sourceSha256).toBe(forward.sourceSha256);
 		const rejected = spawnSync(
 			"bun",
 			[
@@ -48,6 +53,9 @@ it("plans offline, refuses unapproved apply and does not print private input", a
 		);
 		expect(rejected.status).toBe(1);
 		expect(rejected.stderr).toContain("rollback_approval_mismatch");
+		expect(JSON.parse(await readFile(join(dir, "apply", "report.json"), "utf8")).status).toBe(
+			"failed",
+		);
 		await writeFile(snapshotPath, '{"private":"SECRET-PERSON"}');
 		const invalid = spawnSync("bun", [cli, "plan", ...args, "--out", join(dir, "bad")], {
 			encoding: "utf8",

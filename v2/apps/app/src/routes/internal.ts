@@ -27,7 +27,13 @@ import type { AppDeps, AppEnv } from "../types.ts";
  */
 export function internalRoutes(deps: AppDeps) {
 	const r = new Hono<AppEnv>();
-	r.use("/internal/*", importAuth(deps));
+	const authorizeImport = importAuth(deps);
+	const authorizeRollback = importAuth(deps, "rollback");
+	r.use("/internal/*", (c, next) =>
+		c.req.path.startsWith("/internal/import/rollback/")
+			? authorizeRollback(c, next)
+			: authorizeImport(c, next),
+	);
 	r.use("/internal/*", bodyLimit({ maxSize: 10 * 1024 * 1024 }));
 	r.route("/internal/import", importFileRoutes());
 	r.get("/internal/import/rollback/manifest", async (c) => {

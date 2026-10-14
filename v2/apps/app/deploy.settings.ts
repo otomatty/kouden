@@ -38,6 +38,10 @@ export interface ModeSettings {
 	importAccess: { teamDomain: string; aud: string };
 	/** development でだけ使う取り込み用のトークン（Authorization: Bearer）。staging / production では必ず空 */
 	importDevToken: string;
+	/** /internal/import/rollback/* の全件抽出専用。通常の取り込み・画面とは別の Access アプリを設定する */
+	rollbackAccess: { teamDomain: string; aud: string };
+	/** development 専用。取り込みトークンとは別の値にする */
+	rollbackDevToken: string;
 }
 
 const PLACEHOLDER_DOMAIN = "example.jp";
@@ -63,6 +67,8 @@ export const MODES: Record<Mode, ModeSettings> = {
 		access: { teamDomain: "", aud: "" },
 		importAccess: { teamDomain: "", aud: "" },
 		importDevToken: "dev-import-token",
+		rollbackAccess: { teamDomain: "", aud: "" },
+		rollbackDevToken: "dev-rollback-token",
 	},
 	staging: {
 		workerName: "kouden-app-staging",
@@ -80,6 +86,8 @@ export const MODES: Record<Mode, ModeSettings> = {
 		},
 		importAccess: { teamDomain: "", aud: "" },
 		importDevToken: "",
+		rollbackAccess: { teamDomain: "", aud: "" },
+		rollbackDevToken: "",
 	},
 	// 本番スナップショットを投入して削除する一時環境。通常の staging のユーザーやセッションを変更しない。
 	rehearsal: {
@@ -95,6 +103,8 @@ export const MODES: Record<Mode, ModeSettings> = {
 		access: { teamDomain: "", aud: "" },
 		importAccess: { teamDomain: "", aud: "" },
 		importDevToken: "",
+		rollbackAccess: { teamDomain: "", aud: "" },
+		rollbackDevToken: "",
 	},
 	production: {
 		workerName: "kouden-app",
@@ -109,6 +119,8 @@ export const MODES: Record<Mode, ModeSettings> = {
 		access: { teamDomain: "", aud: "" },
 		importAccess: { teamDomain: "", aud: "" },
 		importDevToken: "",
+		rollbackAccess: { teamDomain: "", aud: "" },
+		rollbackDevToken: "",
 	},
 };
 
@@ -184,5 +196,23 @@ export function deployBlockers(mode: Mode): string[] {
 			`${mode} の importAccess は teamDomain と aud の両方を設定するか、両方を空にしてください`,
 		);
 	}
+	if (s.rollbackDevToken !== "") blockers.push(`${mode} に rollbackDevToken が設定されています`);
+	if (
+		(s.rollbackAccess.teamDomain === "") !== (s.rollbackAccess.aud === "") ||
+		(s.rollbackAccess.teamDomain !== "" &&
+			!s.rollbackAccess.teamDomain.endsWith(".cloudflareaccess.com"))
+	)
+		blockers.push(`${mode} の rollbackAccess に有効な teamDomain と aud の両方を設定してください`);
+	if (
+		s.rollbackAccess.aud &&
+		Object.entries(MODES).some(([otherMode, other]) =>
+			[
+				other.access.aud,
+				other.importAccess.aud,
+				...(otherMode !== mode ? [other.rollbackAccess.aud] : []),
+			].includes(s.rollbackAccess.aud),
+		)
+	)
+		blockers.push(`${mode} の rollbackAccess は取り込み・画面・他環境と別の AUD にしてください`);
 	return blockers;
 }

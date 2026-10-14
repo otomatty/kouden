@@ -19,8 +19,10 @@
 1. 両アプリの書き込みを止める。画面だけでなく、運営者操作、OAuthによるユーザー更新、Stripe Webhook、ジョブ・通知も対象。`--writes-stopped` は運用者の確認であり、CLIが停止する機能ではない。作業終了まで停止を維持する。
 2. 旧Supabaseを `pg_dump` で、v2のD1・DO・R2も全体をバックアップする。CLIのexportは比較用で、セッション・招待・バイナリを含む全体バックアップの代わりにはならない。
 3. 最終移行に実際に使った `source-snapshot.json` を用意する。後から抽出したものや編集したものに差し替えない。移行後に旧DBで変更があれば前提照合で停止する。
-4. `/internal/import/*` のみService Authで開き、`CF_ACCESS_CLIENT_ID` / `CF_ACCESS_CLIENT_SECRET` を環境変数で渡す。既存の取り込み認証を使い、無効設定時は404。ローカルのみ `IMPORT_DEV_TOKEN` が使える。
+4. `/internal/import/rollback/*` 専用のAccessアプリケーションを作り、切り戻し担当の専用サービストークンだけをService Authで許可する。`apps/app/deploy.settings.ts` の対象環境の `rollbackAccess` にチームドメインとAUDを設定してデプロイし、そのトークンの `CF_ACCESS_CLIENT_ID` / `CF_ACCESS_CLIENT_SECRET` をCLIの環境変数で渡す。通常の取り込み・画面用・他環境のAUDは流用しない。全件抽出は `rollbackAccess` が空なら404で、取り込み設定から自動的に有効にはならない。ローカルは `ROLLBACK_DEV_TOKEN` を使う。
 5. Git管理外の非公開ディレクトリに保存する。Windowsでは事前にACLを限定する。JSON・SQL・レポートは個人情報を含むので、issueやPRに添付しない。
+
+Accessでは[具体的なパスの設定が優先される](https://developers.cloudflare.com/cloudflare-one/access-controls/policies/app-paths/)。既存の `/internal/import/*` やホスト全体のポリシーは切り戻し用のパスには引き継がれないため、専用アプリの許可対象を明示する。取り込みトークンと通常のログインでは両方の抽出APIが拒否されることを確認する。
 
 ## 取得・計画
 
@@ -34,6 +36,8 @@ bun run rollback plan --source ../../.migration-data/cutover/source-snapshot.jso
 D1と各DOを2回読み、一致を確認する。DO内はトランザクションで読み取り、削除済み行・変更ログも保存する。D1と全DOを横断した同時点の保証はないので、運用側での停止が必須。応答の上限は既存クライアントと同じ4 MiB。超過・途中失敗時は部分的なexportを完成扱いにしない。分割取得は今後の対応。DOスキーマはversion 3に限定する。
 
 `report.json` に変更件数、台帳別の期待件数・金額・返礼状況、履歴の件数、ブロッカーを出す。`blocked` ならSQLを出さず終了コード1。`ready` なら `apply.sql` と `verify.sql` を生成する。計画内容を確認し、表示された `apply.sql` のSHA256を実行時に渡す。SQL内のJSONはSQL注入を防ぐためUTF-8のhexで格納する。暗号化ではない。
+
+`sourceSha256` は空白・改行を含む元ファイルのSHA256で、移行時の `prepare` が保存した `plan.json` の値と一致することを確認する。
 
 ## 書き戻し・照合
 
@@ -59,13 +63,15 @@ bun run rollback verify --source ../../.migration-data/cutover/source-snapshot.j
 
 publicの対象15テーブルをロックし、元の件数・ID・値を確認してから、1トランザクションで差分を反映する。認証テーブルには書かず、RLS・FK・業務トリガーを無効にしない。最後に全対象行の期待値を照合し、失敗したら全件を取り消す。DBが自動更新する `updated_at` / `last_modified_at` / `version` のみ事後の比較から外す。NULL、金額、生成列、元データの列は照合対象。
 
-すでに期待値と一致していれば書かずに成功するので、同じ計画を再実行できる。`verify` は読み取り専用トランザクション。`passed` の確認後、画像の保全確認と旧・新10冊の画面比較を行ってから旧アプリを再開し、取り込み用Access設定を閉じる。
+すでに期待値と一致していれば書かずに成功するので、同じ計画を再実行できる。`verify` は読み取り専用トランザクション。`passed` の確認後、画像の保全確認と旧・新10冊の画面比較を行ってから旧アプリを再開する。`rollbackAccess` と取り込み用Access設定を空にして再デプロイし、専用サービストークンを失効させる。
 
 接続切断で確定の有無が不明な場合も、まず同じ計画で `verify` する。psqlの生のstderrには個人情報が入り得るため、CLIには診断コードだけを表示する。
 
 ## 停止条件と残作業
 
 ブロッカーをJSONから消して実行してはいけない。対応を実装し、隔離環境で確認してから再計画する。
+
+返礼期限 `dueDate` がある場合は旧形式に保存先がないため停止する。招待者不明のメンバー追加・招待者の削除は、旧 `added_by` が必須のため `member_inviter_requires_mapping` で停止する。返礼品目の削除も、v2への移行時に省略した旧明細からの参照が残っていれば `delete_has_legacy_dependents` で停止する。
 
 | 主なコード・フィールド                                                                                                            | 必要な対応                                                                           |
 | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |

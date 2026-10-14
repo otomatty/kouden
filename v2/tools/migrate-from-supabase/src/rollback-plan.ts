@@ -134,6 +134,10 @@ export function planRollback(sourceInput: unknown, exportInput: unknown): Rollba
 			continue;
 		}
 		const raw = current.ledgers.find((l) => l.koudenId === row.id)!;
+		// 取り込み用スキーマには返礼期限がなく、activeLedger で除かれる前に検査する。
+		for (const r of raw.tables.returns)
+			if (r.deleted_at == null && r.due_date != null)
+				block("unrepresentable_field", String(r.id), "dueDate");
 		const ledger = activeLedger(raw);
 		const oldBook = after.koudens.find((k) => k.id === base.kouden.legacyKoudenId)!;
 		if (row.legacy_kouden_id !== oldBook.id || !["active", "archived"].includes(String(row.status)))
@@ -197,16 +201,21 @@ export function planRollback(sourceInput: unknown, exportInput: unknown): Rollba
 			const oldRow = after.kouden_members.find(
 				(r) => r.kouden_id === oldBook.id && r.user_id === uid,
 			);
+			// 旧 added_by は NOT NULL。招待者不明をオーナーによる招待に置き換えない。
+			if (m.invited_by == null && (!oldRow || oldMember?.invitedBy !== null)) {
+				block("member_inviter_requires_mapping", String(m.user_id));
+				continue;
+			}
 			if (oldRow) {
 				oldRow.role_id = role.id;
-				oldRow.added_by = m.invited_by ? userId(String(m.invited_by)) : oldBook.owner_id;
+				if (m.invited_by != null) oldRow.added_by = userId(String(m.invited_by));
 			} else
 				after.kouden_members.push({
 					id: uuidv5(`rollback:member:${row.id}:${uid}`),
 					kouden_id: oldBook.id,
 					user_id: uid,
 					role_id: role.id,
-					added_by: m.invited_by ? userId(String(m.invited_by)) : oldBook.owner_id,
+					added_by: userId(String(m.invited_by)),
 					created_at: m.joined_at,
 					updated_at: m.joined_at,
 					invitation_id: null,
@@ -232,7 +241,7 @@ export function planRollback(sourceInput: unknown, exportInput: unknown): Rollba
 	return {
 		version: 1,
 		sourceProject: source.project_ref,
-		sourceSha256: digest(canonical(sourceInput)),
+		sourceSha256: baseline.sourceSha256,
 		exportSha256: digest(canonical(current)),
 		before,
 		after,
@@ -373,8 +382,13 @@ function reverseBook(
 				recommended_amount_max: null,
 			});
 	}
-	for (const r of old.returnItems)
-		if (!now.returnItems.some((x) => x.id === r.id)) remove("return_items", itemId(r.id));
+	for (const r of old.returnItems) {
+		if (now.returnItems.some((x) => x.id === r.id)) continue;
+		const id = itemId(r.id);
+		if (after.return_record_items.some((line) => line.return_item_master_id === id))
+			block("delete_has_legacy_dependents", r.id);
+		else remove("return_items", id);
+	}
 	const giftOldId = (g: LedgerSnapshot["gifts"][number]) =>
 		oldId(
 			giftTable(g.kind),

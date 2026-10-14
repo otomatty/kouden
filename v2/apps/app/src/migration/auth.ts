@@ -51,23 +51,28 @@ async function sameSecret(given: string, expected: string): Promise<boolean> {
 	return crypto.subtle.timingSafeEqual(a, b);
 }
 
-export function importAuth(deps: AppDeps) {
+/** 全件抽出は取り込みと別の AUD / 開発トークンで認証する。未設定時に取り込み権限へ戻さない。 */
+export function importAuth(deps: AppDeps, purpose: "import" | "rollback" = "import") {
 	return createMiddleware<AppEnv>(async (c, next) => {
-		const devToken = c.env.IMPORT_DEV_TOKEN;
+		const rollback = purpose === "rollback";
+		const devToken = rollback ? c.env.ROLLBACK_DEV_TOKEN : c.env.IMPORT_DEV_TOKEN;
 		if (devToken) {
 			const header = c.req.header("Authorization") ?? "";
 			const token = header.startsWith("Bearer ") ? header.slice("Bearer ".length) : "";
 			if (token !== "" && (await sameSecret(token, devToken))) return next();
-			log("warn", "import_denied", { path: c.req.path, reason: "dev_token" });
+			log("warn", "import_denied", { path: c.req.path, purpose, reason: "dev_token" });
 			return c.text("Forbidden", 403);
 		}
-		const teamDomain = c.env.IMPORT_ACCESS_TEAM_DOMAIN;
-		const aud = c.env.IMPORT_ACCESS_AUD;
+		const teamDomain = rollback
+			? c.env.ROLLBACK_ACCESS_TEAM_DOMAIN
+			: c.env.IMPORT_ACCESS_TEAM_DOMAIN;
+		const aud = rollback ? c.env.ROLLBACK_ACCESS_AUD : c.env.IMPORT_ACCESS_AUD;
 		if (!teamDomain || !aud) return c.notFound();
 		const token = c.req.header("Cf-Access-Jwt-Assertion");
-		const verify = deps.verifyImportAccess?.(c.env) ?? importAccessVerifier({ teamDomain, aud });
+		const verifier = rollback ? deps.verifyRollbackAccess : deps.verifyImportAccess;
+		const verify = verifier?.(c.env) ?? importAccessVerifier({ teamDomain, aud });
 		if (!token || !(await verify(token))) {
-			log("warn", "import_denied", { path: c.req.path, hasToken: Boolean(token) });
+			log("warn", "import_denied", { path: c.req.path, purpose, hasToken: Boolean(token) });
 			return c.text("Forbidden", 403);
 		}
 		return next();

@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { createImportClient } from "./client.ts";
@@ -31,7 +31,7 @@ async function main() {
 
 apply/verify は psql と PGHOST/PGPORT/PGUSER/PGDATABASE/PGPASSWORD を使用します。
 export/apply/verify の前に両アプリの書き込み・Webhook・ジョブを停止してください。
-export は CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET（localhost は IMPORT_DEV_TOKEN）を使用します。
+export は切り戻し専用の CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET（localhost は ROLLBACK_DEV_TOKEN）を使用します。
 全出力は個人情報を含む非公開ディレクトリに保管してください。
 `);
 		return;
@@ -55,8 +55,8 @@ export は CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET（localhost は IMPORT_
 			throw new Error("rollback_arguments");
 		const client = createImportClient(
 			v.url,
-			process.env.IMPORT_DEV_TOKEN
-				? { devToken: process.env.IMPORT_DEV_TOKEN }
+			process.env.ROLLBACK_DEV_TOKEN
+				? { devToken: process.env.ROLLBACK_DEV_TOKEN }
 				: {
 						clientId: process.env.CF_ACCESS_CLIENT_ID ?? "",
 						clientSecret: process.env.CF_ACCESS_CLIENT_SECRET ?? "",
@@ -75,7 +75,10 @@ export は CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET（localhost は IMPORT_
 		(command === "plan" && (v["approve-sha256"] || v["project-ref"]))
 	)
 		throw new Error("rollback_arguments");
-	const plan = planRollback(await json(resolve(v.source)), await json(resolve(v.snapshot)));
+	const sourceRaw = await readFile(resolve(v.source), "utf8");
+	const plan = planRollback(JSON.parse(sourceRaw), await json(resolve(v.snapshot)));
+	// prepare と同じく、空白・改行を含めた入力ファイルのハッシュを記録する。
+	plan.sourceSha256 = digest(sourceRaw);
 	if (command !== "plan" && (!v["writes-stopped"] || v["project-ref"] !== plan.sourceProject))
 		throw new Error("rollback_confirmation_required");
 	await mkdir(resolve(v.out), { mode: 0o700 });
@@ -100,9 +103,9 @@ export は CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET（localhost は IMPORT_
 		process.stdout.write(`計画作成完了。apply.sql の SHA256: ${sha256}\n`);
 		return;
 	}
-	if (command === "apply" && v["approve-sha256"] !== sha256)
-		throw new Error("rollback_approval_mismatch");
 	try {
+		if (command === "apply" && v["approve-sha256"] !== sha256)
+			throw new Error("rollback_approval_mismatch");
 		await executeRollbackSql(sql, plan.sourceProject);
 		await privateJson(resolve(v.out, "report.json"), {
 			...report,

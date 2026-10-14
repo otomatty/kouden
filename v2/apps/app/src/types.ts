@@ -14,6 +14,8 @@ export interface AppDeps {
 	stripe?: (env: Env) => StripeClient | null;
 	/** データ移行の取り込み口の Access の検証。省略時は Access の公開鍵で検証する */
 	verifyImportAccess?: (env: Env) => ImportAccessVerifier;
+	/** 切り戻しの全件抽出専用。取り込み用とは別の AUD を使う */
+	verifyRollbackAccess?: (env: Env) => ImportAccessVerifier;
 	/** staging 全体の Access。取り込み用の検証とは別の AUD を使う */
 	verifyAppAccess?: (env: Env) => ImportAccessVerifier;
 }
