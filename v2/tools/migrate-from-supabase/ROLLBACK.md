@@ -71,6 +71,8 @@ publicの対象15テーブルをロックし、元の件数・ID・値を確認�
 
 ブロッカーをJSONから消して実行してはいけない。対応を実装し、隔離環境で確認してから再計画する。
 
+香典の削除は `deleted_entry_requires_manual_cleanup` で停止する。旧 `kouden_entry_audit_logs` やロックは移行スナップショットに含まれず、旧香典行を消すとCASCADEで削除される。旧履歴の保全・照合を含む手順ができるまでは、参照なしに見える香典も削除SQLを生成しない。
+
 返礼期限 `dueDate` がある場合は旧形式に保存先がないため停止する。招待者不明のメンバー追加・招待者の削除は、旧 `added_by` が必須のため `member_inviter_requires_mapping` で停止する。返礼品目の削除も、v2への移行時に省略した旧明細からの参照が残っていれば `delete_has_legacy_dependents` で停止する。
 
 | 主なコード・フィールド                                                                                                            | 必要な対応                                                                           |

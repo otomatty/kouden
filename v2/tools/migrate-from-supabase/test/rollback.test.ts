@@ -363,17 +363,18 @@ describe("rollback plan and PostgreSQL", () => {
 			await db.close();
 		}
 	});
-	it("rolls back if a legacy table outside the mapping still references a deleted entry", async () => {
-		const source = sourceFixture();
+	it("rolls back if a legacy table outside the mapping still references a deleted catalog item", async () => {
+		const source = sourceWithReturn();
 		const current = exportedFixture(source);
 		current.manifest.users[0]!.display_name = "変更";
-		current.ledgers[0]!.tables.gifts[0]!.deleted_at = at;
-		current.ledgers[0]!.tables.persons[0]!.deleted_at = at;
+		current.ledgers[0]!.tables.return_items[0]!.deleted_at = at;
 		const plan = planRollback(source, current);
 		const db = await database(source);
 		try {
-			await db.exec("CREATE TABLE legacy_reference(entry_id uuid REFERENCES kouden_entries(id))");
-			await db.query("INSERT INTO legacy_reference VALUES ($1)", [ids.entry]);
+			await db.exec("CREATE TABLE legacy_reference(item_id uuid REFERENCES return_items(id))");
+			await db.query("INSERT INTO legacy_reference VALUES ($1)", [
+				source.data["public.return_items"]![0]!.id,
+			]);
 			await expect(db.exec(rollbackSql(plan, "apply"))).rejects.toThrow("foreign key");
 			await db.exec("ROLLBACK");
 			expect((await db.query("SELECT display_name FROM profiles")).rows).toEqual([
@@ -549,18 +550,30 @@ describe("rollback plan and PostgreSQL", () => {
 			await db.close();
 		}
 	});
-	it("deletes simple removed records instead of resurrecting them", async () => {
+	it("blocks entry deletion so unmigrated audit history cannot be cascade-deleted", async () => {
 		const source = sourceFixture();
 		const current = exportedFixture(source);
 		const t = current.ledgers[0]!.tables;
 		t.gifts[0]!.deleted_at = at;
 		t.persons[0]!.deleted_at = at;
 		const plan = planRollback(source, current);
-		expect(plan.blockers).toEqual([]);
+		expect(plan.blockers).toEqual([
+			{ code: "deleted_entry_requires_manual_cleanup", entityId: t.gifts[0]!.id },
+		]);
+		expect(plan.after.kouden_entries).toEqual(plan.before.kouden_entries);
 		const db = await database(source);
 		try {
-			await db.exec(rollbackSql(plan, "apply"));
-			expect((await db.query("SELECT * FROM kouden_entries")).rows).toEqual([]);
+			await db.exec(
+				"CREATE TABLE kouden_entry_audit_logs(entry_id uuid REFERENCES kouden_entries(id) ON DELETE CASCADE, changes jsonb)",
+			);
+			await db.query("INSERT INTO kouden_entry_audit_logs VALUES ($1, '{}'::jsonb)", [ids.entry]);
+			await expect(async () => db.exec(rollbackSql(plan, "apply"))).rejects.toThrow(
+				"rollback_blocked",
+			);
+			expect((await db.query("SELECT entry_id FROM kouden_entry_audit_logs")).rows).toEqual([
+				{ entry_id: ids.entry },
+			]);
+			expect((await db.query("SELECT id FROM kouden_entries")).rows).toEqual([{ id: ids.entry }]);
 		} finally {
 			await db.close();
 		}
