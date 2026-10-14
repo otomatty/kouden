@@ -165,7 +165,7 @@ export function deployBlockers(mode: Mode): string[] {
 			blockers.push("rehearsal のメール・決済は無効にしてください");
 		for (const live of [MODES.staging, MODES.production]) {
 			if (
-				[live.access.aud, live.importAccess.aud].some(
+				[live.access.aud, live.importAccess.aud, live.rollbackAccess.aud].some(
 					(aud) => aud !== "" && (aud === s.access.aud || aud === s.importAccess.aud),
 				)
 			)
@@ -204,15 +204,21 @@ export function deployBlockers(mode: Mode): string[] {
 	)
 		blockers.push(`${mode} の rollbackAccess に有効な teamDomain と aud の両方を設定してください`);
 	if (
-		s.rollbackAccess.aud &&
-		Object.entries(MODES).some(([otherMode, other]) =>
-			[
-				other.access.aud,
-				other.importAccess.aud,
-				...(otherMode !== mode ? [other.rollbackAccess.aud] : []),
-			].includes(s.rollbackAccess.aud),
-		)
+		Object.entries(MODES).some(([otherMode, other]) => {
+			const usedByRollback =
+				s.rollbackAccess.aud !== "" &&
+				[
+					other.access.aud,
+					other.importAccess.aud,
+					...(otherMode !== mode ? [other.rollbackAccess.aud] : []),
+				].includes(s.rollbackAccess.aud);
+			const usesOtherRollback =
+				otherMode !== mode &&
+				other.rollbackAccess.aud !== "" &&
+				[s.access.aud, s.importAccess.aud].includes(other.rollbackAccess.aud);
+			return usedByRollback || usesOtherRollback;
+		})
 	)
-		blockers.push(`${mode} の rollbackAccess は取り込み・画面・他環境と別の AUD にしてください`);
+		blockers.push(`${mode} の Access は切り戻し・取り込み・画面・他環境と別の AUD にしてください`);
 	return blockers;
 }
