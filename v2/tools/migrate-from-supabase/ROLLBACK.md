@@ -14,6 +14,8 @@
 
 変わらなかった値には元スナップショットの値を使う。前後の空白、台帳・関係の説明、元の供物分類、未移行の列を保持する。追加行のIDはv2のIDから決定的に作る。変更履歴・受付番号など旧画面にない運用情報はexport側に残す。
 
+実DBでは同じ台帳の有効な関係名に一意制約がある（`relationships_kouden_id_name_enabled_key`、`WHERE is_enabled`）。重複する名前や、変更前に別の有効な関係が使っていた名前への変更・追加・再表示は `legacy_relationship_name_conflict` で停止する。SQLが更新・追加を削除より先に行うため、相手を同時に削除・改名・非表示にする場合も停止対象。名前を再利用する場合の実行順序の調整は未対応。非表示の関係だけの同名は許容する。
+
 ### 返礼金額のDB定義
 
 2026-10-14にSupabaseコネクタで実DBの関数・トリガー定義を読み取り確認した。`return_entry_records` の `tr_update_return_entry_total_amount` は INSERT / UPDATE 前に `calculate_total_amount` を呼び、`total_amount` を香典額＋紐づく供物の `price * quantity` に設定する。旧明細の合計は `calculate_return_items_cost` が `return_items_cost` に反映する。切り戻し計画はこの実DBの定義を使う。

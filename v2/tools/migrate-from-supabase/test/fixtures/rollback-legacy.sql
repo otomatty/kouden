@@ -200,6 +200,7 @@ CREATE TABLE public.return_record_items (
 
 ALTER TABLE kouden_entries ADD FOREIGN KEY (relationship_id) REFERENCES relationships(id);
 ALTER TABLE kouden_members ADD UNIQUE(kouden_id,user_id);
+CREATE UNIQUE INDEX relationships_kouden_id_name_enabled_key ON relationships(kouden_id,name) WHERE is_enabled;
 ALTER TABLE offering_entries ADD FOREIGN KEY (kouden_entry_id) REFERENCES kouden_entries(id);
 ALTER TABLE offering_entries ADD FOREIGN KEY (offering_id) REFERENCES offerings(id);
 ALTER TABLE return_entry_records ADD FOREIGN KEY (kouden_entry_id) REFERENCES kouden_entries(id);

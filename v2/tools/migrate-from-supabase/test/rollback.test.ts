@@ -10,6 +10,7 @@ import {
 	exportedFixture,
 	ids,
 	ownershipTransferFixture,
+	relationshipFixture,
 	sourceFixture,
 	sourceWithCounts,
 } from "./rollback-fixture.ts";
@@ -60,6 +61,85 @@ function sourceWithReturn() {
 }
 
 describe("rollback review regressions", () => {
+	it.each(["duplicate", "delete", "rename", "hide"] as const)(
+		"blocks an occupied relationship name when the other row is %s",
+		(mode) => {
+			const { source, current } = relationshipFixture();
+			const [first, second] = current.ledgers[0]!.tables.relationships;
+			first!.name = second!.name;
+			if (mode === "delete") second!.deleted_at = at;
+			if (mode === "rename") second!.name = "職場";
+			if (mode === "hide") second!.is_hidden = 1;
+			const plan = planRollback(source, current);
+			expect(plan.blockers).toContainEqual({
+				code: "legacy_relationship_name_conflict",
+				entityId: source.data["public.relationships"]![0]!.id,
+				field: "name",
+			});
+			expect(() => rollbackSql(plan, "apply")).toThrow("rollback_blocked");
+		},
+	);
+	it("blocks duplicate new relationship names", () => {
+		const source = sourceFixture();
+		const current = exportedFixture(source);
+		current.ledgers[0]!.tables.relationships = [0, 1].map((i) => ({
+			id: `new-relationship-${i}`,
+			name: "親族",
+			sort_order: i,
+			is_hidden: 0,
+			created_at: `2024-01-0${i + 1}T00:00:00.000Z`,
+			updated_at: at,
+		}));
+		const plan = planRollback(source, current);
+		expect(plan.blockers.map((b) => b.code)).toEqual([
+			"legacy_relationship_name_conflict",
+			"legacy_relationship_name_conflict",
+		]);
+		expect(() => rollbackSql(plan, "apply")).toThrow("rollback_blocked");
+	});
+	it("allows hidden duplicate names under the deployed partial unique index", async () => {
+		const { source, current } = relationshipFixture();
+		const [first, second] = current.ledgers[0]!.tables.relationships;
+		second!.name = first!.name;
+		second!.is_hidden = 1;
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual([]);
+		const db = await database(source);
+		try {
+			await db.exec(rollbackSql(plan, "apply"));
+			await db.exec(rollbackSql(plan, "verify"));
+			// 非表示の同名関係を再表示すると実DBの一意制約に違反する。
+			await expect(db.exec("UPDATE relationships SET is_enabled = true")).rejects.toThrow(
+				/duplicate key/,
+			);
+		} finally {
+			await db.close();
+		}
+		const hiddenSource = sourceWithCounts({
+			...source.data,
+			"public.relationships": plan.after.relationships,
+		});
+		const show = exportedFixture(hiddenSource);
+		show.ledgers[0]!.tables.relationships[1]!.is_hidden = 0;
+		expect(
+			planRollback(hiddenSource, show).blockers.some(
+				(b) => b.code === "legacy_relationship_name_conflict",
+			),
+		).toBe(true);
+	});
+	it("allows an unoccupied relationship rename in PostgreSQL", async () => {
+		const { source, current } = relationshipFixture();
+		current.ledgers[0]!.tables.relationships[0]!.name = "職場";
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual([]);
+		const db = await database(source);
+		try {
+			await db.exec(rollbackSql(plan, "apply"));
+			await db.exec(rollbackSql(plan, "verify"));
+		} finally {
+			await db.close();
+		}
+	});
 	it.each(["editor", "removed"] as const)(
 		"blocks an ownership transfer when the former creator is %s",
 		(formerOwner) => {

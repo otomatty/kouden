@@ -90,6 +90,23 @@ export function sourceFixture() {
 	];
 	return sourceWithCounts(data);
 }
+export function relationshipFixture() {
+	const source = sourceFixture();
+	source.data["public.relationships"] = ["親族", "友人"].map((name, i) => ({
+		id: `80000000-0000-4000-8000-00000000000${i + 1}`,
+		kouden_id: ids.book,
+		name,
+		description: null,
+		is_default: false,
+		is_enabled: true,
+		created_by: ids.user,
+		created_at: `2024-01-0${i + 1}T00:00:00.000Z`,
+		updated_at: at,
+	}));
+	const counted = sourceWithCounts(source.data);
+	return { source: counted, current: exportedFixture(counted) };
+}
+
 export function sourceWithCounts(data: Record<string, Row[]>) {
 	return {
 		format_version: 1,
