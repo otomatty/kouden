@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
 import { beforeAll, describe, expect, it } from "vitest";
 import { captureRollback } from "../src/rollback-export.ts";
+import { newId } from "../src/ids.ts";
 import { prepareSnapshot } from "../src/prepare.ts";
 import { planRollback, ROLLBACK_TABLES } from "../src/rollback-plan.ts";
 import { checkedPgEnv, rollbackSql } from "../src/rollback-sql.ts";
@@ -91,10 +92,10 @@ describe("rollback review regressions", () => {
 			expect(() => rollbackSql(plan, "apply")).toThrow("rollback_blocked");
 		},
 	);
-	it.each(["editor", "viewer"] as const)(
+	it.each(["viewer"] as const)(
 		"selects a name-compatible %s role despite an earlier custom role",
 		async (role) => {
-			const permissions = role === "editor" ? ["view", "edit"] : ["view"];
+			const permissions = ["view"];
 			const { source, current, user } = memberRoleFixture(role, true, [
 				{ name: "custom", permissions },
 				{ name: role, permissions },
@@ -118,6 +119,62 @@ describe("rollback review regressions", () => {
 			}
 		},
 	);
+	it.each([false, true])(
+		"blocks ordinary editor assignment until legacy RLS agrees (existing: %s)",
+		(existing) => {
+			const { source, current, user } = memberRoleFixture("editor", existing, [
+				{ name: "editor", permissions: ["view", "edit"] },
+			]);
+			const plan = planRollback(source, current);
+			expect(plan.blockers).toEqual([
+				{ code: "editor_role_requires_legacy_rls_alignment", entityId: newId.user(user) },
+			]);
+			expect(plan.after.kouden_members).toEqual(plan.before.kouden_members);
+			expect(() => rollbackSql(plan, "apply")).toThrow("rollback_blocked");
+		},
+	);
+	it("reproduces the telegram RLS conflict for the canonical editor name", async () => {
+		const { source, user } = memberRoleFixture("editor", true, [
+			{ name: "editor", permissions: ["view", "edit"] },
+		]);
+		const db = await database(source);
+		try {
+			await installLegacyAuth(db, source, "telegram-rls");
+			await db.query(
+				"INSERT INTO telegrams(id,kouden_id,sender_name,created_by) VALUES ($1,$2,'差出人',$3)",
+				[ids.entry, ids.book, ids.user],
+			);
+			await db.query(
+				"UPDATE kouden_members SET role_id=(SELECT id FROM kouden_roles WHERE name='editor') WHERE user_id=$1",
+				[user],
+			);
+			await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)", [user]);
+			await db.exec("SET ROLE authenticated");
+			expect(
+				(
+					await db.query(
+						"SELECT name FROM kouden_roles r JOIN kouden_members m ON m.role_id=r.id WHERE m.user_id=auth.uid()",
+					)
+				).rows,
+			).toEqual([{ name: "editor" }]);
+			expect((await db.query("UPDATE telegrams SET message='編集' RETURNING id")).rows).toEqual([]);
+			expect((await db.query("DELETE FROM telegrams RETURNING id")).rows).toEqual([]);
+			await expect(
+				db.query(
+					"INSERT INTO telegrams(kouden_id,sender_name,created_by) VALUES ($1,'追加',auth.uid())",
+					[ids.book],
+				),
+			).rejects.toThrow(/row-level security/);
+			await db.exec(
+				"RESET ROLE; UPDATE kouden_roles SET name='編集者' WHERE name='editor'; SET ROLE authenticated",
+			);
+			expect((await db.query("UPDATE telegrams SET message='編集' RETURNING id")).rows).toEqual([
+				{ id: ids.entry },
+			]);
+		} finally {
+			await db.close();
+		}
+	});
 	it.each([false, true])(
 		"preserves unmigrated members (remove migrated member: %s)",
 		async (removeMember) => {
@@ -350,6 +407,8 @@ describe("rollback review regressions", () => {
 	});
 	it.each([false, true])("does not invent an inviter for a member (existing: %s)", (existing) => {
 		const source = sourceFixture();
+		source.data["public.kouden_roles"]![0]!.name = "viewer";
+		source.data["public.kouden_roles"]![0]!.permissions = ["view"];
 		const user = "10000000-0000-4000-8000-000000000002";
 		source.data["auth.users"]!.push({
 			id: user,
@@ -372,7 +431,7 @@ describe("rollback review regressions", () => {
 			current.manifest.members.push({
 				kouden_id: current.ledgers[0]!.koudenId,
 				user_id: uid,
-				role: "editor",
+				role: "viewer",
 				joined_at: at,
 				invited_by: null,
 			});
@@ -404,7 +463,138 @@ async function database(source: ReturnType<typeof sourceFixture>) {
 	return db;
 }
 
+async function installLegacyAuth(
+	db: PGlite,
+	source: ReturnType<typeof sourceFixture>,
+	fixture: "audit" | "telegram-rls",
+) {
+	await db.exec(
+		await readFile(new URL("./fixtures/rollback-legacy-auth.sql", import.meta.url), "utf8"),
+	);
+	for (const user of source.data["auth.users"]!)
+		await db.query("INSERT INTO auth.users(id) VALUES ($1)", [user.id]);
+	await db.exec(
+		await readFile(new URL(`./fixtures/rollback-legacy-${fixture}.sql`, import.meta.url), "utf8"),
+	);
+}
+
 describe("rollback plan and PostgreSQL", () => {
+	it("sets each entry actor for legacy audit triggers and restores the caller between writes", async () => {
+		const source = sourceWithReturn();
+		const secondUser = "10000000-0000-4000-8000-000000000002";
+		const secondEntry = "30000000-0000-4000-8000-000000000002";
+		source.data["auth.users"]!.push({
+			...source.data["auth.users"]![0],
+			id: secondUser,
+			email: "editor@example.test",
+		});
+		source.data["public.profiles"]!.push({ ...source.data["public.profiles"]![0], id: secondUser });
+		source.data["public.kouden_members"]!.push({
+			...source.data["public.kouden_members"]![0],
+			id: "60000000-0000-4000-8000-000000000002",
+			user_id: secondUser,
+		});
+		source.data["public.kouden_entries"]!.push({
+			...source.data["public.kouden_entries"]![0],
+			id: secondEntry,
+			name: "別の差出人",
+		});
+		const counted = sourceWithCounts(source.data);
+		const current = exportedFixture(counted);
+		const t = current.ledgers[0]!.tables;
+		const gift = t.gifts.find((g) => g.id === newId.entryGift(ids.entry))!;
+		gift.amount = 20000;
+		gift.updated_by = newId.user(secondUser);
+		const person = t.persons.find((p) => p.id === newId.entryPerson(secondEntry))!;
+		person.name = "差出人の修正";
+		person.updated_at = "2024-01-02T00:00:00.000Z";
+		person.updated_by = newId.user(ids.user);
+		t.gifts.push({ ...gift, id: "new-koden", created_by: newId.user(ids.user) });
+		t.persons.push({ ...person, id: "new-person" });
+		t.gift_contributors.push({
+			gift_id: "new-koden",
+			person_id: "new-person",
+			is_primary: 1,
+			share_amount: null,
+		});
+		t.returns[0]!.notes = "返礼の修正";
+		const plan = planRollback(counted, current);
+		expect(plan.blockers).toEqual([]);
+		const db = await database(counted);
+		try {
+			await installLegacyAuth(db, counted, "audit");
+			// last_modified_by の代入だけでは、BEFORE トリガーに NULL で上書きされる。
+			await expect(
+				db.query("UPDATE kouden_entries SET amount=20000,last_modified_by=$1 WHERE id=$2", [
+					ids.user,
+					ids.entry,
+				]),
+			).rejects.toThrow(/null value in column "user_id"/);
+			await db.exec(
+				"CREATE TABLE actor_probe(actor uuid); CREATE FUNCTION probe_actor() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN INSERT INTO public.actor_probe VALUES(auth.uid()); RETURN NEW; END $$; CREATE TRIGGER probe_actor BEFORE UPDATE ON return_entry_records FOR EACH ROW EXECUTE FUNCTION probe_actor();",
+			);
+			await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)", [ids.plan]);
+			await db.exec(rollbackSql(plan, "apply"));
+			await db.exec(rollbackSql(plan, "verify"));
+			const inserted = plan.after.kouden_entries.find(
+				(e) => !plan.before.kouden_entries.some((b) => b.id === e.id),
+			)!;
+			const expected = [
+				{ entry_id: ids.entry, user_id: secondUser, action: "update" },
+				{ entry_id: secondEntry, user_id: ids.user, action: "update" },
+				{ entry_id: inserted.id, user_id: ids.user, action: "create" },
+			].toSorted((a, b) => String(a.entry_id).localeCompare(String(b.entry_id)));
+			expect(
+				(
+					await db.query(
+						"SELECT entry_id,user_id,action FROM kouden_entry_audit_logs ORDER BY entry_id",
+					)
+				).rows,
+			).toEqual(expected);
+			expect((await db.query("SELECT actor FROM actor_probe")).rows).toEqual([{ actor: ids.plan }]);
+			expect((await db.query("SELECT auth.uid() AS actor")).rows).toEqual([{ actor: ids.plan }]);
+			await db.exec(rollbackSql(plan, "apply"));
+			expect(
+				(await db.query("SELECT count(*)::int AS count FROM kouden_entry_audit_logs")).rows,
+			).toEqual([{ count: 3 }]);
+		} finally {
+			await db.close();
+		}
+	});
+	it("rolls back the audit rows and actor when verification fails", async () => {
+		const source = sourceFixture();
+		const current = exportedFixture(source);
+		current.ledgers[0]!.tables.gifts[0]!.amount = 20000;
+		const plan = planRollback(source, current);
+		const db = await database(source);
+		try {
+			await installLegacyAuth(db, source, "audit");
+			await db.exec(
+				"CREATE FUNCTION corrupt_amount() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN NEW.amount:=7; RETURN NEW; END $$; CREATE TRIGGER corrupt_amount BEFORE UPDATE ON kouden_entries FOR EACH ROW EXECUTE FUNCTION corrupt_amount();",
+			);
+			await expect(db.exec(rollbackSql(plan, "apply"))).rejects.toThrow(
+				"rollback_verify_failed:kouden_entries",
+			);
+			await db.exec("ROLLBACK");
+			expect(
+				(await db.query("SELECT count(*)::int AS count FROM kouden_entry_audit_logs")).rows,
+			).toEqual([{ count: 0 }]);
+			expect((await db.query("SELECT amount,last_modified_by FROM kouden_entries")).rows).toEqual([
+				{ amount: 10000, last_modified_by: null },
+			]);
+			expect((await db.query("SELECT auth.uid() AS actor")).rows).toEqual([{ actor: null }]);
+		} finally {
+			await db.close();
+		}
+	});
+	it("refuses to generate an entry write without an audit actor", () => {
+		const source = sourceFixture();
+		const current = exportedFixture(source);
+		current.ledgers[0]!.tables.gifts[0]!.amount = 20000;
+		const plan = planRollback(source, current);
+		plan.after.kouden_entries[0]!.last_modified_by = null;
+		expect(() => rollbackSql(plan, "apply")).toThrow("rollback_entry_actor_required");
+	});
 	it("keeps catalog ordering when migration normalized legacy ranks", () => {
 		const source = sourceFixture();
 		source.data["public.return_items"] = [

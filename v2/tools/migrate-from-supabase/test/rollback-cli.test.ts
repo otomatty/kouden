@@ -7,39 +7,51 @@ import { expect, it } from "vitest";
 import { digest, prepare } from "../src/prepare.ts";
 import {
 	exportedFixture,
+	memberRoleFixture,
 	ownershipTransferFixture,
 	relationshipFixture,
 	sourceFixture,
 } from "./rollback-fixture.ts";
 
-it.each(["ownership", "relationship"] as const)(
+it.each(["ownership", "relationship", "editor"] as const)(
 	"refuses %s conflicts in plan, apply and verify before emitting SQL or connecting",
 	async (kind) => {
 		const dir = await mkdtemp(join(tmpdir(), "kouden-rollback-owner-"));
 		if (!dir.startsWith(join(tmpdir(), "kouden-rollback-owner-")))
 			throw new Error("invalid_test_directory");
 		const { source, current } =
-			kind === "ownership" ? ownershipTransferFixture("removed") : relationshipFixture();
+			kind === "ownership"
+				? ownershipTransferFixture("removed")
+				: kind === "relationship"
+					? relationshipFixture()
+					: memberRoleFixture("editor", false, [{ name: "editor", permissions: ["view", "edit"] }]);
 		if (kind === "relationship") {
 			const [first, second] = current.ledgers[0]!.tables.relationships;
 			first!.name = second!.name;
 			second!.deleted_at = "2026-10-14T00:00:00.000Z";
 		}
 		const blockers =
-			kind === "ownership"
+			kind === "editor"
 				? [
 						{
-							code: "owner_transfer_requires_manual_mapping",
-							entityId: current.ledgers[0]!.koudenId,
+							code: "editor_role_requires_legacy_rls_alignment",
+							entityId: current.manifest.members.find((m) => m.role === "editor")!.user_id,
 						},
 					]
-				: [
-						{
-							code: "legacy_relationship_name_conflict",
-							entityId: source.data["public.relationships"]![0]!.id,
-							field: "name",
-						},
-					];
+				: kind === "ownership"
+					? [
+							{
+								code: "owner_transfer_requires_manual_mapping",
+								entityId: current.ledgers[0]!.koudenId,
+							},
+						]
+					: [
+							{
+								code: "legacy_relationship_name_conflict",
+								entityId: source.data["public.relationships"]![0]!.id,
+								field: "name",
+							},
+						];
 		const cli = fileURLToPath(new URL("../src/rollback-cli.ts", import.meta.url));
 		try {
 			const sourcePath = join(dir, "source.json");

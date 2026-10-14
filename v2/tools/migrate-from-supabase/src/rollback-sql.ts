@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { z } from "zod";
 import { canonical, type Row } from "./rollback-export.ts";
 import { ROLLBACK_TABLES, type RollbackPlan, type Table } from "./rollback-plan.ts";
 
@@ -35,6 +36,16 @@ export function rollbackSql(plan: RollbackPlan, mode: "apply" | "verify"): strin
 				);
 				if (!columns.length) return;
 				const record = `jsonb_populate_record(NULL::public.${table}, desired->'${table}'->${index})`;
+				if (table === "kouden_entries") {
+					const actorField = old ? "last_modified_by" : "created_by";
+					if (!z.uuid().safeParse(row[actorField]).success)
+						throw new Error("rollback_entry_actor_required");
+					// auth.uid() を使う旧監査トリガーへ、この行の実行者だけを渡す。
+					statements.push(
+						"saved_actor := current_setting('request.jwt.claim.sub', true);",
+						`PERFORM set_config('request.jwt.claim.sub', desired->'${table}'->${index}->>'${actorField}', true);`,
+					);
+				}
 				if (!old)
 					statements.push(
 						`INSERT INTO public.${table} (${columns.map(identifier).join(", ")}) SELECT ${columns.map(identifier).join(", ")} FROM ${record};`,
@@ -42,6 +53,10 @@ export function rollbackSql(plan: RollbackPlan, mode: "apply" | "verify"): strin
 				else
 					statements.push(
 						`UPDATE public.${table} SET (${columns.map(identifier).join(", ")}) = (SELECT ${columns.map(identifier).join(", ")} FROM ${record}) WHERE id = (desired->'${table}'->${index}->>'id')::uuid;`,
+					);
+				if (table === "kouden_entries")
+					statements.push(
+						"PERFORM set_config('request.jwt.claim.sub', coalesce(saved_actor, ''), true);",
 					);
 			});
 		}
@@ -68,6 +83,7 @@ LOCK TABLE ${ROLLBACK_TABLES.map((t) => `public.${t}`).join(", ")} IN ${mode ===
 DO $rollback$
 DECLARE original jsonb := ${literal(plan.before)};
         desired jsonb := ${literal(plan.after)};
+        saved_actor text;
 BEGIN
 ${
 	mode === "apply"
