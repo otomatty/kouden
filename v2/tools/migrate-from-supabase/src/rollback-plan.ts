@@ -616,6 +616,8 @@ function reverseBook(
 			}));
 			values.return_items_cost = lines.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0);
 		}
+		// 実DBの BEFORE トリガー trigger_update_return_entry_total_amount に合わせる。
+		// total_amount は香典＋供物、旧明細の合計は return_items_cost（ROLLBACK.md 参照）。
 		const koden = after.kouden_entries.find((e) => e.id === entry);
 		values.total_amount =
 			Number(koden?.amount ?? 0) +

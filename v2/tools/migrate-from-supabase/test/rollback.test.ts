@@ -583,6 +583,68 @@ describe("rollback plan and PostgreSQL", () => {
 			await db.close();
 		}
 	});
+	it("keeps the deployed return total when the repository detail trigger also exists", async () => {
+		const source = sourceWithReturn();
+		const record = source.data["public.return_entry_records"]![0]!;
+		record.return_items_cost = 1000;
+		record.profit_loss = 9000;
+		source.data["public.return_record_items"] = [
+			{
+				id: "70000000-0000-4000-8000-000000000003",
+				return_record_id: record.id,
+				return_item_master_id: source.data["public.return_items"]![0]!.id,
+				price: 1000,
+				quantity: 1,
+				notes: null,
+				created_by: ids.user,
+				created_at: at,
+				updated_at: at,
+			},
+		];
+		const counted = sourceWithCounts(source.data);
+		const current = exportedFixture(counted);
+		current.ledgers[0]!.tables.returns[0]!.notes = "返礼の備考を更新";
+		const plan = planRollback(counted, current);
+		expect(plan.blockers).toEqual([]);
+		const db = await database(counted);
+		try {
+			await db.exec(
+				await readFile(
+					new URL(
+						"../../../../supabase/migrations/20260616000000_atomize_return_entry_record_total_amount.sql",
+						import.meta.url,
+					),
+					"utf8",
+				),
+			);
+			await db.exec(rollbackSql(plan, "apply"));
+			await db.exec(rollbackSql(plan, "verify"));
+			const amounts = async () =>
+				(
+					await db.query(
+						"SELECT total_amount::int, additional_return_amount::int, profit_loss::int FROM return_entry_records",
+					)
+				).rows;
+			expect(await amounts()).toEqual([
+				{
+					total_amount: 10000,
+					additional_return_amount: 10000,
+					profit_loss: 9000,
+				},
+			]);
+			// AFTER トリガーが明細合計 1000 を書いても、親の BEFORE トリガーが 10000 に戻す。
+			await db.exec("UPDATE return_record_items SET notes = '明細の備考を更新'");
+			expect(await amounts()).toEqual([
+				{
+					total_amount: 10000,
+					additional_return_amount: 10000,
+					profit_loss: 9000,
+				},
+			]);
+		} finally {
+			await db.close();
+		}
+	});
 	it("blocks entry deletion so unmigrated audit history cannot be cascade-deleted", async () => {
 		const source = sourceFixture();
 		const current = exportedFixture(source);
