@@ -106,6 +106,8 @@ Google OAuth の staging 用クライアントに登録する URI は `https://k
 
 ### 本番公開と外部サービス
 
+切り戻し用の全件抽出は `rollbackAccess` で別途有効にする。取り込み用のAccess設定・トークンでは抽出できない。専用パスとトークンの設定は [切り戻し手順](tools/migrate-from-supabase/ROLLBACK.md) を参照。
+
 M0 のコードは揃っていますが、以下は Cloudflare・Google・GitHub のアカウントでの作業が必要です。
 
 1. **本番ドメインの取得**: Cloudflare Registrar で取得し、`apps/app/deploy.settings.ts` の `DOMAIN` を置き換える。staging は上記の `workers.dev` を使える。

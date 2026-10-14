@@ -23,6 +23,9 @@ const TEST_BINDINGS = {
 	IMPORT_ACCESS_TEAM_DOMAIN: "",
 	IMPORT_ACCESS_AUD: "",
 	IMPORT_DEV_TOKEN: "test-import-token",
+	ROLLBACK_ACCESS_TEAM_DOMAIN: "",
+	ROLLBACK_ACCESS_AUD: "",
+	ROLLBACK_DEV_TOKEN: "test-rollback-token",
 } as const;
 const TEST_D1 = ["DB"] as const;
 const TEST_R2 = ["FILES"] as const;

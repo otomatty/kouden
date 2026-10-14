@@ -9,6 +9,7 @@ import { log } from "../lib/logger.ts";
 import { ledgerFor } from "../ledger/client.ts";
 import { importAuth } from "../migration/auth.ts";
 import { importFileRoutes } from "../migration/files.ts";
+import { rollbackManifest } from "../migration/rollback.ts";
 import {
 	importKoudenRows,
 	importUsers,
@@ -26,9 +27,26 @@ import type { AppDeps, AppEnv } from "../types.ts";
  */
 export function internalRoutes(deps: AppDeps) {
 	const r = new Hono<AppEnv>();
-	r.use("/internal/*", importAuth(deps));
+	const authorizeImport = importAuth(deps);
+	const authorizeRollback = importAuth(deps, "rollback");
+	r.use("/internal/*", (c, next) =>
+		c.req.path.startsWith("/internal/import/rollback/")
+			? authorizeRollback(c, next)
+			: authorizeImport(c, next),
+	);
 	r.use("/internal/*", bodyLimit({ maxSize: 10 * 1024 * 1024 }));
 	r.route("/internal/import", importFileRoutes());
+	r.get("/internal/import/rollback/manifest", async (c) => {
+		c.header("Cache-Control", "no-store");
+		return c.json(await rollbackManifest(c.env.DB));
+	});
+	r.get("/internal/import/rollback/koudens/:koudenId", async (c) => {
+		c.header("Cache-Control", "no-store");
+		const id = c.req.param("koudenId");
+		const row = await c.env.DB.prepare("SELECT id FROM koudens WHERE id = ?").bind(id).first();
+		if (!row) return c.json({ error: "not_found" }, 404);
+		return c.json(await ledgerFor(c.env, id).exportForRollback());
+	});
 	r.get("/internal/import/summary", async (c) => c.json(await importTotals(c.env.DB)));
 	r.post("/internal/import/users/verify", async (c) => {
 		const parsed = importUsersPayloadSchema.safeParse(await c.req.json().catch(() => null));

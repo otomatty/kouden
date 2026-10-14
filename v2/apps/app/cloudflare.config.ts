@@ -59,6 +59,10 @@ export default defineConfig(({ mode }) => {
 				IMPORT_ACCESS_TEAM_DOMAIN: bindings.text(s.importAccess.teamDomain),
 				IMPORT_ACCESS_AUD: bindings.text(s.importAccess.aud),
 				IMPORT_DEV_TOKEN: bindings.text(s.importDevToken),
+				// 切り戻し時の全件抽出。取り込みとは別の Access アプリケーションで守る
+				ROLLBACK_ACCESS_TEAM_DOMAIN: bindings.text(s.rollbackAccess.teamDomain),
+				ROLLBACK_ACCESS_AUD: bindings.text(s.rollbackAccess.aud),
+				ROLLBACK_DEV_TOKEN: bindings.text(s.rollbackDevToken),
 				LEDGER: bindings.durableObject({ worker: s.workerName, exportName: "KoudenLedger" }),
 				AUTH_RATE_LIMITER: bindings.rateLimit({
 					namespace: s.rateLimitNamespaces.auth,

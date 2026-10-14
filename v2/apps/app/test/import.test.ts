@@ -16,6 +16,139 @@ import { makeApp } from "./helpers.ts";
 import { deleteKoudenFiles } from "../src/kouden/files.ts";
 
 const TOKEN = { Authorization: "Bearer test-import-token" };
+const ROLLBACK_TOKEN = { Authorization: "Bearer test-rollback-token" };
+
+describe("rollback export", () => {
+	it("requires dedicated rollback auth, omits login secrets and preserves tombstones and sequence", async () => {
+		const i = ids();
+		await call("/internal/import/users", {
+			method: "POST",
+			headers: TOKEN,
+			json: { users: users(i) },
+		});
+		await call(`/internal/import/koudens/${i.kouden}`, {
+			method: "PUT",
+			headers: TOKEN,
+			json: koudenPayload(i, "2027-01-01"),
+		});
+		expect((await call("/internal/import/rollback/manifest")).status).toBe(403);
+		expect((await call("/internal/import/rollback/manifest", { headers: TOKEN })).status).toBe(403);
+		expect(
+			(await call(`/internal/import/rollback/koudens/${i.kouden}`, { headers: TOKEN })).status,
+		).toBe(403);
+		expect((await call("/internal/import/summary", { headers: ROLLBACK_TOKEN })).status).toBe(403);
+		expect(
+			(
+				await call(
+					"/internal/import/rollback/manifest",
+					{ headers: ROLLBACK_TOKEN },
+					{ ROLLBACK_DEV_TOKEN: "", ROLLBACK_ACCESS_AUD: "", ROLLBACK_ACCESS_TEAM_DOMAIN: "" },
+				)
+			).status,
+		).toBe(404);
+		const manifestResponse = await call("/internal/import/rollback/manifest", {
+			headers: ROLLBACK_TOKEN,
+		});
+		expect(manifestResponse.headers.get("cache-control")).toBe("no-store");
+		const manifest = (await manifestResponse.json()) as {
+			users: Record<string, unknown>[];
+			koudens: Record<string, unknown>[];
+		};
+		expect(manifest.users.find((u) => u.id === i.owner)).toEqual({
+			id: i.owner,
+			legacy_user_id: `${i.owner}-legacy`,
+			display_name: "山田 太郎",
+			created_at: "2024-01-01T00:00:00.000Z",
+			deleted_at: null,
+		});
+		expect(JSON.stringify(manifest)).not.toContain(i.sub);
+		const stub = ledgerFor(env, i.kouden);
+		await runInDurableObject(stub, (_instance, state) => {
+			state.storage.sql.exec(
+				"UPDATE gifts SET deleted_at = ? WHERE id = ?",
+				"2026-10-14T00:00:00.000Z",
+				i.g1,
+			);
+		});
+		const response = await call(`/internal/import/rollback/koudens/${i.kouden}`, {
+			headers: ROLLBACK_TOKEN,
+		});
+		expect(response.headers.get("cache-control")).toBe("no-store");
+		const exported = (await response.json()) as {
+			schemaVersion: number;
+			koudenId: string;
+			seq: number;
+			tables: Record<string, Record<string, unknown>[]>;
+		};
+		expect(exported.schemaVersion).toBe(3);
+		expect(exported.koudenId).toBe(i.kouden);
+		expect(exported.seq).toBeGreaterThan(0);
+		expect(exported.tables.gifts?.find((g) => g.id === i.g1)?.deleted_at).toBe(
+			"2026-10-14T00:00:00.000Z",
+		);
+		expect(exported.tables.change_log?.at(-1)?.seq).toBe(exported.seq);
+		expect(
+			(await call("/internal/import/rollback/koudens/missing-book", { headers: ROLLBACK_TOKEN }))
+				.status,
+		).toBe(404);
+	});
+	it("accepts only the rollback audience, even when normal import access is enabled", async () => {
+		const { publicKey, privateKey } = await generateKeyPair("RS256");
+		const keys = createLocalJWKSet({
+			keys: [{ ...(await exportJWK(publicKey)), kid: "rollback", alg: "RS256" }],
+		});
+		const overrides = {
+			IMPORT_DEV_TOKEN: "",
+			IMPORT_ACCESS_TEAM_DOMAIN: "team.cloudflareaccess.com",
+			IMPORT_ACCESS_AUD: "import-aud",
+			ROLLBACK_DEV_TOKEN: "",
+			ROLLBACK_ACCESS_TEAM_DOMAIN: "team.cloudflareaccess.com",
+			ROLLBACK_ACCESS_AUD: "rollback-aud",
+			APP_ACCESS_REQUIRED: "true" as const,
+			APP_ACCESS_TEAM_DOMAIN: "team.cloudflareaccess.com",
+			APP_ACCESS_AUD: "app-aud",
+		};
+		const deps = {
+			verifyImportAccess: () =>
+				importAccessVerifier({ teamDomain: "team.cloudflareaccess.com", aud: "import-aud", keys }),
+			verifyRollbackAccess: () =>
+				importAccessVerifier({
+					teamDomain: "team.cloudflareaccess.com",
+					aud: "rollback-aud",
+					keys,
+				}),
+		};
+		for (const audience of ["import-aud", "app-aud", "rollback-aud"]) {
+			const jwt = await new SignJWT({ common_name: "rollback-tool.access" })
+				.setProtectedHeader({ alg: "RS256", kid: "rollback" })
+				.setIssuer("https://team.cloudflareaccess.com")
+				.setAudience(audience)
+				.setExpirationTime("5m")
+				.sign(privateKey);
+			const headers = { "Cf-Access-Jwt-Assertion": jwt };
+			for (const path of [
+				"/internal/import/rollback/manifest",
+				"/internal/import/rollback/koudens/missing",
+			]) {
+				const res = await call(path, { headers }, overrides, deps);
+				expect(res.status).toBe(
+					audience === "rollback-aud" ? (path.endsWith("manifest") ? 200 : 404) : 403,
+				);
+				const disabled = await call(
+					path,
+					{ headers },
+					{ ...overrides, ROLLBACK_ACCESS_AUD: "", ROLLBACK_ACCESS_TEAM_DOMAIN: "" },
+					deps,
+				);
+				expect(disabled.status).toBe(404);
+			}
+			if (audience === "rollback-aud")
+				expect((await call("/internal/import/summary", { headers }, overrides, deps)).status).toBe(
+					403,
+				);
+		}
+	});
+});
 
 /** 取り込み口を呼ぶ（移行ツールの代わり）。env を差し替えて設定ごとの動作を確かめる */
 function call(

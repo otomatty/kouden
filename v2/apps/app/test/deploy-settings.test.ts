@@ -2,6 +2,25 @@ import { describe, expect, it } from "vitest";
 import { deployBlockers, MODES } from "../deploy.settings.ts";
 
 describe("deployBlockers", () => {
+	it("切り戻しの抽出は専用の Access 設定が必要", () => {
+		const original = structuredClone(MODES.staging);
+		try {
+			MODES.staging.rollbackDevToken = "dev-token";
+			expect(deployBlockers("staging").some((b) => b.includes("rollbackDevToken"))).toBe(true);
+			MODES.staging.rollbackDevToken = "";
+			MODES.staging.rollbackAccess = { teamDomain: "team.cloudflareaccess.com", aud: "" };
+			expect(deployBlockers("staging").some((b) => b.includes("rollbackAccess"))).toBe(true);
+			MODES.staging.importAccess = { teamDomain: "team.cloudflareaccess.com", aud: "import-aud" };
+			for (const aud of ["import-aud", MODES.staging.access.aud]) {
+				MODES.staging.rollbackAccess.aud = aud;
+				expect(deployBlockers("staging").some((b) => b.includes("別の AUD"))).toBe(true);
+			}
+			MODES.staging.rollbackAccess.aud = "dedicated-rollback-aud";
+			expect(deployBlockers("staging")).toEqual([]);
+		} finally {
+			MODES.staging = original;
+		}
+	});
 	it("本番に仮のドメインと Client ID が残っている間はデプロイを止める", () => {
 		const blockers = deployBlockers("production");
 		expect(blockers.some((b) => b.includes("ドメイン"))).toBe(true);
@@ -74,8 +93,10 @@ describe("deployBlockers", () => {
 	it.each([
 		["staging", "access"],
 		["staging", "importAccess"],
+		["staging", "rollbackAccess"],
 		["production", "access"],
 		["production", "importAccess"],
+		["production", "rollbackAccess"],
 	] as const)("rehearsal に %s.%s の AUD を流用できない", (mode, accessKey) => {
 		const original = structuredClone(MODES.rehearsal);
 		const liveAccess = MODES[mode][accessKey];
@@ -101,6 +122,27 @@ describe("deployBlockers", () => {
 			MODES[mode][accessKey] = liveAccess;
 		}
 	});
+
+	it.each(["access", "importAccess"] as const)(
+		"%s の変更時も他環境の切り戻し AUD の流用を拒否する",
+		(accessKey) => {
+			const staging = structuredClone(MODES.staging);
+			const production = structuredClone(MODES.production);
+			try {
+				MODES.production.rollbackAccess = {
+					teamDomain: "team.cloudflareaccess.com",
+					aud: "production-rollback-aud",
+				};
+				MODES.staging[accessKey] = { ...MODES.production.rollbackAccess };
+				expect(deployBlockers("staging").some((b) => b.includes("別の AUD"))).toBe(true);
+				MODES.staging[accessKey].aud = "staging-only-aud";
+				expect(deployBlockers("staging")).toEqual([]);
+			} finally {
+				MODES.staging = staging;
+				MODES.production = production;
+			}
+		},
+	);
 
 	it("mode ごとに Worker 名と D1 名が分かれている", () => {
 		const names = Object.values(MODES).map((m) => m.workerName);

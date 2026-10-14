@@ -2024,6 +2024,19 @@ export class KoudenLedger extends DurableObject<Env> {
 		});
 	}
 
+	/** Service Auth で保護した切り戻しツール専用。削除済みの行と変更履歴も保全する。 */
+	async exportForRollback() {
+		if (!this.ensureSchema()) throw new Error("ledger has been deleted");
+		return this.ctx.storage.transactionSync(() => ({
+			schemaVersion: Number(this.meta("schema_version")),
+			koudenId: this.meta("kouden_id"),
+			seq: this.lastSeq(),
+			tables: Object.fromEntries(
+				IMPORT_TABLES.map((table) => [table, this.all(`SELECT * FROM ${table} ORDER BY rowid`)]),
+			),
+		}));
+	}
+
 	/** 取り込んだ内容の件数（05 §5 の検証で旧データと比べる） */
 	async importSummary(): Promise<LedgerImportSummary> {
 		if (!this.ensureSchema()) throw new Error("ledger has been deleted");
