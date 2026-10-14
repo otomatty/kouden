@@ -144,7 +144,9 @@ export function planRollback(sourceInput: unknown, exportInput: unknown): Rollba
 			block("book_identity_or_status", base.koudenId);
 		oldBook.title = row.title === base.kouden.title ? oldBook.title : z.string().parse(row.title);
 		oldBook.status = row.status === base.kouden.status ? oldBook.status : row.status;
-		oldBook.owner_id = userId(String(row.owner_user_id));
+		// 旧アプリ・RLS は created_by にも管理権限を与えるため、owner_id だけ移せない。
+		if (userId(String(row.owner_user_id)) !== oldBook.owner_id)
+			block("owner_transfer_requires_manual_mapping", base.koudenId);
 		if (row.deceased_name !== base.kouden.deceasedName)
 			block("unrepresentable_field", base.koudenId, "deceasedName");
 		const purchased = current.manifest.purchases.filter((p) => p.kouden_id === row.id);

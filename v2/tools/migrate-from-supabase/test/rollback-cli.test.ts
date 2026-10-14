@@ -5,7 +5,43 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, it } from "vitest";
 import { digest, prepare } from "../src/prepare.ts";
-import { exportedFixture, sourceFixture } from "./rollback-fixture.ts";
+import { exportedFixture, ownershipTransferFixture, sourceFixture } from "./rollback-fixture.ts";
+
+it("refuses ownership transfers in plan, apply and verify before emitting SQL or connecting", async () => {
+	const dir = await mkdtemp(join(tmpdir(), "kouden-rollback-owner-"));
+	if (!dir.startsWith(join(tmpdir(), "kouden-rollback-owner-")))
+		throw new Error("invalid_test_directory");
+	const { source, current } = ownershipTransferFixture("removed");
+	const cli = fileURLToPath(new URL("../src/rollback-cli.ts", import.meta.url));
+	try {
+		const sourcePath = join(dir, "source.json");
+		const snapshotPath = join(dir, "v2.json");
+		await writeFile(sourcePath, JSON.stringify(source));
+		await writeFile(snapshotPath, JSON.stringify(current));
+		for (const command of ["plan", "apply", "verify"]) {
+			const out = join(dir, command);
+			const args = [cli, command, "--source", sourcePath, "--snapshot", snapshotPath, "--out", out];
+			if (command !== "plan") args.push("--project-ref", source.project_ref, "--writes-stopped");
+			const result = spawnSync("bun", args, {
+				encoding: "utf8",
+				timeout: 10000,
+				windowsHide: true,
+				env: { ...process.env, PGHOST: "", PGPASSWORD: "" },
+			});
+			expect(result.status).toBe(1);
+			expect(result.stderr).toBe("");
+			const report = JSON.parse(await readFile(join(out, "report.json"), "utf8"));
+			expect(report.status).toBe("blocked");
+			expect(report.blockers).toEqual([
+				{ code: "owner_transfer_requires_manual_mapping", entityId: current.ledgers[0]!.koudenId },
+			]);
+			for (const file of ["apply.sql", "verify.sql"])
+				await expect(readFile(join(out, file))).rejects.toMatchObject({ code: "ENOENT" });
+		}
+	} finally {
+		await rm(dir, { recursive: true, force: true });
+	}
+});
 
 it("plans offline, refuses unapproved apply and does not print private input", async () => {
 	const dir = await mkdtemp(join(tmpdir(), "kouden-rollback-"));

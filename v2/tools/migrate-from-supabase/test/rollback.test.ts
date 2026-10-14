@@ -5,7 +5,14 @@ import { captureRollback } from "../src/rollback-export.ts";
 import { prepareSnapshot } from "../src/prepare.ts";
 import { planRollback, ROLLBACK_TABLES } from "../src/rollback-plan.ts";
 import { checkedPgEnv, rollbackSql } from "../src/rollback-sql.ts";
-import { at, exportedFixture, ids, sourceFixture, sourceWithCounts } from "./rollback-fixture.ts";
+import {
+	at,
+	exportedFixture,
+	ids,
+	ownershipTransferFixture,
+	sourceFixture,
+	sourceWithCounts,
+} from "./rollback-fixture.ts";
 
 function sourceWithReturn() {
 	const source = sourceFixture();
@@ -53,6 +60,32 @@ function sourceWithReturn() {
 }
 
 describe("rollback review regressions", () => {
+	it.each(["editor", "removed"] as const)(
+		"blocks an ownership transfer when the former creator is %s",
+		(formerOwner) => {
+			const { source, current } = ownershipTransferFixture(formerOwner);
+			const plan = planRollback(source, current);
+			expect(plan.blockers).toEqual([
+				{ code: "owner_transfer_requires_manual_mapping", entityId: current.ledgers[0]!.koudenId },
+			]);
+			expect(plan.after.koudens).toEqual(plan.before.koudens);
+			expect(() => rollbackSql(plan, "apply")).toThrow("rollback_blocked");
+			expect(() => rollbackSql(plan, "verify")).toThrow("rollback_blocked");
+		},
+	);
+	it("allows title changes when ownership is unchanged", () => {
+		const source = sourceFixture();
+		const current = exportedFixture(source);
+		current.manifest.koudens[0]!.title = "更新した台帳名";
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual([]);
+		expect(plan.after.koudens[0]).toMatchObject({
+			title: "更新した台帳名",
+			owner_id: ids.user,
+			created_by: ids.user,
+		});
+		expect(rollbackSql(plan, "apply")).toContain('UPDATE public.koudens SET ("title")');
+	});
 	it("uses the same in-memory source hash as the forward migration", () => {
 		const source = sourceFixture();
 		expect(planRollback(source, exportedFixture(source)).sourceSha256).toBe(

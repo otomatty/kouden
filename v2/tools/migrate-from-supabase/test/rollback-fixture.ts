@@ -101,6 +101,33 @@ export function sourceWithCounts(data: Record<string, Row[]>) {
 		),
 	};
 }
+
+/** 旧作成者が v2 で降格・退会した後に、既存メンバーへ所有権が移った状態。 */
+export function ownershipTransferFixture(formerOwner: "editor" | "removed") {
+	const source = sourceFixture();
+	const memberId = "10000000-0000-4000-8000-000000000002";
+	source.data["auth.users"]!.push({
+		...source.data["auth.users"]![0],
+		id: memberId,
+		email: "next-owner@example.test",
+	});
+	source.data["public.profiles"]!.push({ ...source.data["public.profiles"]![0], id: memberId });
+	source.data["public.kouden_members"]!.push({
+		...source.data["public.kouden_members"]![0],
+		id: "60000000-0000-4000-8000-000000000002",
+		user_id: memberId,
+	});
+	const counted = sourceWithCounts(source.data);
+	const current = exportedFixture(counted);
+	const owner = current.manifest.members.find((m) => m.role === "owner")!;
+	const member = current.manifest.members.find((m) => m.user_id !== owner.user_id)!;
+	current.manifest.koudens[0]!.owner_user_id = member.user_id;
+	member.role = "owner";
+	if (formerOwner === "removed")
+		current.manifest.members = current.manifest.members.filter((m) => m !== owner);
+	else owner.role = "editor";
+	return { source: counted, current };
+}
 const snake = (r: Row): Row =>
 	Object.fromEntries(
 		Object.entries(r).map(([key, value]) => [
