@@ -71,6 +71,50 @@ function sourceWithReturn() {
 }
 
 describe("rollback review regressions", () => {
+	it.each([false, true])(
+		"preserves unmigrated members (remove migrated member: %s)",
+		async (removeMember) => {
+			const source = sourceFixture();
+			const known = "10000000-0000-4000-8000-000000000002";
+			const missing = "10000000-0000-4000-8000-000000000003";
+			source.data["auth.users"]!.push({
+				...source.data["auth.users"]![0],
+				id: known,
+				email: "member@example.test",
+			});
+			source.data["public.profiles"]!.push({ ...source.data["public.profiles"]![0], id: known });
+			for (const [i, user] of [known, missing].entries())
+				source.data["public.kouden_members"]!.push({
+					...source.data["public.kouden_members"]![0],
+					id: `60000000-0000-4000-8000-00000000000${i + 2}`,
+					user_id: user,
+				});
+			const counted = sourceWithCounts(source.data);
+			const current = exportedFixture(counted);
+			expect(current.manifest.members).toHaveLength(2);
+			if (removeMember)
+				current.manifest.members = current.manifest.members.filter((m) => m.role === "owner");
+			const plan = planRollback(counted, current);
+			expect(plan.blockers).toEqual([]);
+			const kept = counted.data["public.kouden_members"]!.filter(
+				(m) => !removeMember || m.user_id !== known,
+			);
+			expect(plan.after.kouden_members).toEqual(kept);
+			expect(plan.changes.filter((c) => c.inserted || c.updated || c.deleted)).toEqual(
+				removeMember ? [{ table: "kouden_members", inserted: 0, updated: 0, deleted: 1 }] : [],
+			);
+			const db = await database(counted);
+			try {
+				await db.exec(rollbackSql(plan, "apply"));
+				await db.exec(rollbackSql(plan, "verify"));
+				expect(
+					(await db.query("SELECT user_id::text FROM kouden_members ORDER BY user_id")).rows,
+				).toEqual(kept.map((m) => ({ user_id: m.user_id })));
+			} finally {
+				await db.close();
+			}
+		},
+	);
 	it.each(["duplicate", "delete", "rename", "hide"] as const)(
 		"blocks an occupied relationship name when the other row is %s",
 		(mode) => {

@@ -223,9 +223,12 @@ export function planRollback(sourceInput: unknown, exportInput: unknown): Rollba
 					invitation_id: null,
 				});
 		}
-		after.kouden_members = after.kouden_members.filter(
-			(m) => m.kouden_id !== oldBook.id || memberUsers.has(newId.user(String(m.user_id))),
-		);
+		// forward で member_without_user として除外された旧行は、v2で削除された行ではない。
+		const migratedMembers = new Set(base.members.map((m) => m.userId));
+		after.kouden_members = after.kouden_members.filter((m) => {
+			const uid = newId.user(String(m.user_id));
+			return m.kouden_id !== oldBook.id || !migratedMembers.has(uid) || memberUsers.has(uid);
+		});
 	}
 	for (const b of baseline.koudens)
 		if (!bookIds.has(b.payload.koudenId))
