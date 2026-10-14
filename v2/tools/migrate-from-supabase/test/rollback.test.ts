@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { captureRollback } from "../src/rollback-export.ts";
 import { prepareSnapshot } from "../src/prepare.ts";
 import { planRollback, ROLLBACK_TABLES } from "../src/rollback-plan.ts";
@@ -14,6 +14,16 @@ import {
 	sourceFixture,
 	sourceWithCounts,
 } from "./rollback-fixture.ts";
+
+// 最初のWASM初期化はCIで5秒を超えるため、テスト本体のタイムアウトとは分ける。
+beforeAll(async () => {
+	const db = new PGlite();
+	try {
+		await db.exec("SELECT 1");
+	} finally {
+		await db.close();
+	}
+}, 15000);
 
 function sourceWithReturn() {
 	const source = sourceFixture();
