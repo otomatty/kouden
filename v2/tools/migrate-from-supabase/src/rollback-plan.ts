@@ -191,6 +191,8 @@ export function planRollback(sourceInput: unknown, exportInput: unknown): Rollba
 			const uid = userId(String(m.user_id));
 			const roles = before.kouden_roles.filter((r) => r.kouden_id === oldBook.id);
 			const role = roles.find((r) => {
+				// 旧アプリの認可は editor / viewer という名前で判定する。
+				if (r.name !== (m.role === "owner" ? "editor" : m.role)) return false;
 				const edit = (r.permissions as string[]).some((p) =>
 					["edit", "entry.write", "write", "manage", "admin"].includes(p),
 				);

@@ -9,6 +9,7 @@ import {
 	at,
 	exportedFixture,
 	ids,
+	memberRoleFixture,
 	ownershipTransferFixture,
 	relationshipFixture,
 	sourceFixture,
@@ -71,6 +72,52 @@ function sourceWithReturn() {
 }
 
 describe("rollback review regressions", () => {
+	it.each(
+		[
+			{ name: "編集者", permissions: ["view", "edit"], role: "editor" as const },
+			{ name: "閲覧者", permissions: ["view"], role: "viewer" as const },
+			{ name: "editor", permissions: ["view"], role: "viewer" as const },
+			{ name: "viewer", permissions: ["edit"], role: "editor" as const },
+		].flatMap((row) => [false, true].map((existing) => ({ ...row, existing }))),
+	)(
+		"rejects legacy role $name for $role (existing: $existing)",
+		({ name, permissions, role, existing }) => {
+			const { source, current } = memberRoleFixture(role, existing, [{ name, permissions }]);
+			const plan = planRollback(source, current);
+			expect(plan.blockers).toEqual([
+				{ code: "missing_legacy_role", entityId: current.ledgers[0]!.koudenId },
+			]);
+			expect(plan.after.kouden_members).toEqual(plan.before.kouden_members);
+			expect(() => rollbackSql(plan, "apply")).toThrow("rollback_blocked");
+		},
+	);
+	it.each(["editor", "viewer"] as const)(
+		"selects a name-compatible %s role despite an earlier custom role",
+		async (role) => {
+			const permissions = role === "editor" ? ["view", "edit"] : ["view"];
+			const { source, current, user } = memberRoleFixture(role, true, [
+				{ name: "custom", permissions },
+				{ name: role, permissions },
+			]);
+			const plan = planRollback(source, current);
+			expect(plan.blockers).toEqual([]);
+			const db = await database(source);
+			try {
+				await db.exec(rollbackSql(plan, "apply"));
+				await db.exec(rollbackSql(plan, "verify"));
+				expect(
+					(
+						await db.query(
+							"SELECT r.name FROM kouden_members m JOIN kouden_roles r ON r.id = m.role_id WHERE m.user_id = $1",
+							[user],
+						)
+					).rows,
+				).toEqual([{ name: role }]);
+			} finally {
+				await db.close();
+			}
+		},
+	);
 	it.each([false, true])(
 		"preserves unmigrated members (remove migrated member: %s)",
 		async (removeMember) => {

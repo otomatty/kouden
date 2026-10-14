@@ -44,7 +44,7 @@ export function sourceFixture() {
 		{
 			id: ids.role,
 			kouden_id: ids.book,
-			name: "編集者",
+			name: "editor",
 			description: null,
 			permissions: ["view", "edit"],
 			created_by: ids.user,
@@ -117,6 +117,49 @@ export function sourceWithCounts(data: Record<string, Row[]>) {
 			Object.entries(data).map(([table, rows]) => [table, rows.length]),
 		),
 	};
+}
+
+export function memberRoleFixture(
+	role: "editor" | "viewer",
+	existing: boolean,
+	candidates: { name: string; permissions: string[] }[],
+) {
+	const source = sourceFixture();
+	const user = "10000000-0000-4000-8000-000000000002";
+	source.data["auth.users"]!.push({
+		...source.data["auth.users"]![0],
+		id: user,
+		email: "member@example.test",
+	});
+	source.data["public.profiles"]!.push({ ...source.data["public.profiles"]![0], id: user });
+	const originalRole = source.data["public.kouden_roles"]![0]!;
+	originalRole.name = "original-role";
+	originalRole.permissions = role === "editor" ? ["view"] : ["view", "edit"];
+	for (const [i, candidate] of candidates.entries())
+		source.data["public.kouden_roles"]!.push({
+			...originalRole,
+			...candidate,
+			id: `50000000-0000-4000-8000-00000000000${i + 2}`,
+		});
+	if (existing)
+		source.data["public.kouden_members"]!.push({
+			...source.data["public.kouden_members"]![0],
+			id: "60000000-0000-4000-8000-000000000002",
+			user_id: user,
+		});
+	const counted = sourceWithCounts(source.data);
+	const current = exportedFixture(counted);
+	const uid = current.manifest.users.find((u) => u.legacy_user_id === user)!.id;
+	if (existing) current.manifest.members.find((m) => m.user_id === uid)!.role = role;
+	else
+		current.manifest.members.push({
+			kouden_id: current.ledgers[0]!.koudenId,
+			user_id: uid,
+			role,
+			joined_at: at,
+			invited_by: current.manifest.users.find((u) => u.legacy_user_id === ids.user)!.id,
+		});
+	return { source: counted, current, user };
 }
 
 /** 旧作成者が v2 で降格・退会した後に、既存メンバーへ所有権が移った状態。 */
