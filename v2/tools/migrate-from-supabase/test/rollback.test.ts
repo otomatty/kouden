@@ -1120,6 +1120,26 @@ describe("rollback plan and PostgreSQL", () => {
 				[10000, 0],
 				[9000, 1000],
 			]);
+			// 削除でも元の返礼記録を再計算する。
+			await db.query(
+				"INSERT INTO return_record_items (return_record_id, return_item_master_id, price, quantity, created_by) VALUES ($1, $2, 500, 1, $3)",
+				[r1, source.data["public.return_items"]![0]!.id, ids.user],
+			);
+			expect(await state()).toEqual([
+				[10000, 500],
+				[9000, 1000],
+			]);
+			await db.query("DELETE FROM return_record_items WHERE return_record_id = $1", [r1]);
+			expect(
+				(
+					await db.query(
+						"SELECT return_items_cost::int, profit_loss::int FROM return_entry_records ORDER BY id",
+					)
+				).rows,
+			).toEqual([
+				{ return_items_cost: 0, profit_loss: 10000 },
+				{ return_items_cost: 1000, profit_loss: 8000 },
+			]);
 		} finally {
 			await db.close();
 		}
