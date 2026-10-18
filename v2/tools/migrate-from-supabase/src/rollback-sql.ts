@@ -28,11 +28,30 @@ export function rollbackSql(plan: RollbackPlan, mode: "apply" | "verify"): strin
 	if (plan.blockers.length) throw new Error("rollback_blocked");
 	const statements: string[] = [];
 	if (mode === "apply") {
+		// 有効な関係名の一意制約は遅延できない。改名・非表示・削除する行を先に無効にして名前を空け、
+		// 以降は最終状態の有効な名前だけが並ぶようにする（最終状態の重複は計画時に停止済み）。
+		const released = new Set(
+			plan.before.relationships
+				.filter((old) => {
+					if (old.is_enabled !== true) return false;
+					const row = plan.after.relationships.find((r) => r.id === old.id);
+					return !row || row.name !== old.name || row.is_enabled !== true;
+				})
+				.map((r) => String(r.id)),
+		);
+		if (released.size)
+			statements.push(
+				`UPDATE public.relationships SET is_enabled = false WHERE id IN (SELECT (jsonb_array_elements_text(${literal([...released])}))::uuid);`,
+			);
 		for (const table of ROLLBACK_TABLES) {
 			plan.after[table].forEach((row, index) => {
 				const old = plan.before[table].find((r) => r.id === row.id);
 				const columns = Object.keys(row).filter(
-					(k) => !generated(table, k) && (!old || canonical(old[k]) !== canonical(row[k])),
+					(k) =>
+						!generated(table, k) &&
+						(!old ||
+							canonical(old[k]) !== canonical(row[k]) ||
+							(table === "relationships" && k === "is_enabled" && released.has(String(row.id)))),
 				);
 				if (!columns.length) return;
 				const record = `jsonb_populate_record(NULL::public.${table}, desired->'${table}'->${index})`;

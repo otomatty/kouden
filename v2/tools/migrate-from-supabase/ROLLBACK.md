@@ -16,7 +16,7 @@
 
 旧メンバーの削除判定は、実際にv2へ移行したメンバーだけを対象にする。認証ユーザー不在により `member_without_user` として移行時に除外した旧行は保持する。
 
-実DBでは同じ台帳の有効な関係名に一意制約がある（`relationships_kouden_id_name_enabled_key`、`WHERE is_enabled`）。重複する名前や、変更前に別の有効な関係が使っていた名前への変更・追加・再表示は `legacy_relationship_name_conflict` で停止する。SQLが更新・追加を削除より先に行うため、相手を同時に削除・改名・非表示にする場合も停止対象。名前を再利用する場合の実行順序の調整は未対応。非表示の関係だけの同名は許容する。
+実DBでは同じ台帳の有効な関係名に一意制約がある（`relationships_kouden_id_name_enabled_key`、`WHERE is_enabled`）。一意制約は遅延できないため、SQLは更新・追加の前に、改名・非表示・削除する有効な関係を `is_enabled = false` にして名前を空け、更新時に最終の値へ戻す。これにより、削除・改名・非表示にする関係の名前の再利用や、2つの関係の名前の入れ替えができる。最終状態で有効な関係名が重複する場合だけ `legacy_relationship_name_conflict` で停止する。非表示の関係だけの同名は許容する。
 
 ### 返礼金額のDB定義
 

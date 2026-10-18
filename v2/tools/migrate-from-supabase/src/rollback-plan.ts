@@ -243,11 +243,11 @@ export function planRollback(sourceInput: unknown, exportInput: unknown): Rollba
 	// D1 の余分な参照を見逃さない。
 	for (const r of [...current.manifest.members, ...current.manifest.purchases])
 		if (!bookIds.has(r.kouden_id)) block("orphan_d1_row", String(r.id ?? r.user_id));
-	// 実DBは有効な関係名だけ一意。更新・追加が削除より先なので、変更前の占有名も検査する。
+	// 実DBは有効な関係名だけ一意。SQLは変更前の名前を先に空けるので、最終状態だけを検査する。
 	for (const r of after.relationships) {
 		if (r.is_enabled !== true) continue;
 		if (
-			[...before.relationships, ...after.relationships].some(
+			after.relationships.some(
 				(other) =>
 					other.id !== r.id &&
 					other.kouden_id === r.kouden_id &&
