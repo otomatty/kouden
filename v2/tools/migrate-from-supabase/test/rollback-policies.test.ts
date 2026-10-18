@@ -326,6 +326,32 @@ describe("ledger structures written in the legacy screen's terms (#188)", () => 
 			await db.close();
 		}
 	});
+	it("keeps the legacy record for a return recreated for the same person", async () => {
+		const { source, current } = twoEntries(false);
+		const t = current.ledgers[0]!.tables;
+		const removed = t.returns.find((r) => r.person_id === newId.entryPerson(entryB))!;
+		removed.deleted_at = at;
+		t.returns.push({ ...removed, id: "recreated-return", deleted_at: null, notes: "作り直し" });
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual([]);
+		const db = await legacyDatabase(source);
+		try {
+			await db.exec(rollbackSql(plan, "apply"));
+			await db.exec(rollbackSql(plan, "verify"));
+			expect(
+				(
+					await db.query(
+						"SELECT kouden_entry_id::text AS entry, remarks FROM return_entry_records ORDER BY kouden_entry_id",
+					)
+				).rows,
+			).toEqual([
+				{ entry: ids.entry, remarks: null },
+				{ entry: entryB, remarks: "作り直し" },
+			]);
+		} finally {
+			await db.close();
+		}
+	});
 	it("keeps a deleted return blocked while the legacy completed flag would still show it", () => {
 		const { source } = twoEntries(false);
 		source.data["public.kouden_entries"]!.find((e) => e.id === entryB)!.is_return_completed = true;

@@ -949,6 +949,8 @@ function reverseBook(
 			if (references) block("delete_has_legacy_dependents", g.id);
 			else remove(giftTable(g.kind), id);
 		}
+	/** 今の返礼が使う旧の返礼記録。削除した返礼を同じ人に作り直した場合は、記録を消さずに使う。 */
+	const claimedRecords = new Set<string>();
 	for (const r of now.returns) {
 		const prev = old.returns.find((b) => b.id === r.id);
 		const lines = now.returnLines.filter((l) => l.returnId === r.id);
@@ -973,6 +975,7 @@ function reverseBook(
 		}
 		const record = records[0];
 		const id = record ? String(record.id) : uuidv5(`rollback:return:${r.id}`);
+		claimedRecords.add(id);
 		if (
 			before.return_record_items.some((l) => l.return_record_id === id) &&
 			!sameRows(lines, oldLines)
@@ -1044,6 +1047,7 @@ function reverseBook(
 		const records = before.return_entry_records.filter(
 			(row) => newId.return(String(row.kouden_entry_id)) === r.id,
 		);
+		if (records.some((row) => claimedRecords.has(String(row.id)))) continue;
 		if (records.length > 1) block("merged_return_requires_manual_mapping", r.id);
 		// 記録がなく旧香典の「返礼済み」の印だけから作った返礼は、印を戻す先を確かめていない。
 		// 記録を消しても旧香典の「返礼済み」の印が残ると、旧画面は返礼済みと表示する。印の列は本番にないこともあり書かない。
