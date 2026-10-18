@@ -45,6 +45,10 @@ declare namespace NodeJS {
 		ACCOUNT_LOCK_DURATION?: string;
 		MAX_FILE_SIZE?: string;
 
+		// v2 切り替え（docs/rebuild/07-legacy-cutover.md）
+		MAINTENANCE_MODE?: string;
+		LEGACY_REDIRECT_ORIGIN?: string;
+
 		// 通知 / ロギング
 		SLACK_WEBHOOK_URL?: string;
 		LOG_LEVEL?: "debug" | "info" | "warn" | "error";

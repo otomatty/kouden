@@ -30,6 +30,12 @@ export const ROLLBACK_TABLES = [
 	"return_record_items",
 ] as const;
 export type Table = (typeof ROLLBACK_TABLES)[number];
+/** 旧 Storage へ逆転送する画像。path は旧バケット内のパスで、v2 の ID から決定的に作る。 */
+export interface ImageCopy {
+	bucket: "return-items" | "offerings";
+	path: string;
+	r2Key: string;
+}
 export interface Blocker {
 	code: string;
 	entityId: string;
@@ -46,6 +52,7 @@ export interface RollbackPlan {
 	after: Record<Table, Row[]>;
 	blockers: Blocker[];
 	notices: Notice[];
+	images: ImageCopy[];
 	changes: { table: Table; inserted: number; updated: number; deleted: number }[];
 	books: { id: string; seq: number; changedEntities: number }[];
 }
@@ -137,6 +144,14 @@ export function planRollback(
 	const notices: Notice[] = [];
 	const notice = (code: string, entityId: string, detail: Row = {}) =>
 		notices.push({ code, entityId, ...detail });
+	const images: ImageCopy[] = [];
+	// 旧アプリは返礼品画像を公開 URL、供物写真をバケット内のパスで参照する。
+	const copyImage = (bucket: ImageCopy["bucket"], path: string, r2Key: string) => {
+		images.push({ bucket, path, r2Key });
+		return bucket === "return-items"
+			? `https://${source.project_ref}.supabase.co/storage/v1/object/public/return-items/${path}`
+			: path;
+	};
 	const users = new Map(baseline.users.map((u) => [u.id, u.legacyUserId]));
 	const mappedUsers = new Map(userMap.data.map((m) => [m.v2UserId, m.legacyUserId]));
 	const legacyAuth = new Set([
@@ -279,6 +294,7 @@ export function planRollback(
 			raw.tables.relationships,
 			notice,
 			dueDates,
+			copyImage,
 		);
 		const members = current.manifest.members.filter((m) => m.kouden_id === row.id);
 		const memberUsers = new Set(members.map((m) => m.user_id));
@@ -402,6 +418,7 @@ export function planRollback(
 		after,
 		blockers,
 		notices,
+		images,
 		changes,
 		books: current.ledgers.map((l) => ({
 			id: l.koudenId,
@@ -425,6 +442,7 @@ function reverseBook(
 	relationshipRows: Row[],
 	notice: (code: string, id: string, detail?: Row) => void,
 	dueDates: Map<string, string>,
+	copyImage: (bucket: ImageCopy["bucket"], path: string, r2Key: string) => string,
 ) {
 	const old = base.ledger;
 	for (const [table, rows] of Object.entries(now)) {
@@ -471,6 +489,17 @@ function reverseBook(
 	});
 	const relationId = (id: string) => oldId("relationships", id, newId.relationship);
 	const itemId = (id: string) => oldId("return_items", id, newId.returnItem);
+	// offering_photos には kouden_id がないので、供物の台帳で所属を確かめる。
+	const photoId = (id: string) => {
+		const row = before.offering_photos.find((r) => newId.offeringPhoto(String(r.id)) === id);
+		if (row && before.offerings.find((o) => o.id === row.offering_id)?.kouden_id !== book)
+			block("id_belongs_to_another_book", id);
+		return String(row?.id ?? uuidv5(`rollback:offering_photos:${id}`));
+	};
+	const copy = (bucket: ImageCopy["bucket"], path: string, r2Key: string) => {
+		if (!r2Key.startsWith(`koudens/${base.koudenId}/`)) block("image_outside_book", r2Key);
+		return copyImage(bucket, path, r2Key);
+	};
 	// 旧形式に行事はない。行事自体は export に残し、既定の「葬儀」以外のいただきものは備考に行事名を足す。
 	const eventsById = new Map(now.events.map((e) => [e.id, e]));
 	for (const e of old.events)
@@ -494,8 +523,6 @@ function reverseBook(
 			else if (!prev || !eq({ ...prev, sortOrder: 0 }, { ...r, sortOrder: 0 }))
 				notice("return_rule_not_rolled_back", r.id);
 		}
-	if (!sameRows(old.giftPhotos ?? [], now.giftPhotos ?? []))
-		block("images_require_reverse_copy", base.koudenId);
 	for (const r of now.relationships) {
 		const prev = old.relationships.find((b) => b.id === r.id);
 		if (prev && r.sortOrder !== prev.sortOrder) block("unrepresentable_field", r.id, "sortOrder");
@@ -540,8 +567,8 @@ function reverseBook(
 	);
 	for (const r of now.returnItems) {
 		const prev = old.returnItems.find((b) => b.id === r.id);
-		unsupported(r, prev, ["imageR2Key"]);
 		const values = mapped(r, prev, {
+			imageR2Key: "image_url",
 			name: "name",
 			category: "category",
 			price: "price",
@@ -572,6 +599,18 @@ function reverseBook(
 				values.recommended_amount_max = max;
 			}
 		}
+		if ("image_url" in values) {
+			const id = itemId(r.id);
+			// 旧アプリと同じ {台帳}/{作成者}/ の下に置く。
+			const creator = after.return_items.find((x) => x.id === id)?.created_by ?? owner;
+			values.image_url = r.imageR2Key
+				? copy(
+						"return-items",
+						`${book}/${creator}/v2-${r.imageR2Key.split("/").pop()}`,
+						r.imageR2Key,
+					)
+				: null;
+		}
 		if (Object.keys(values).length)
 			patch("return_items", itemId(r.id), values, {
 				kouden_id: book,
@@ -598,6 +637,33 @@ function reverseBook(
 					? newId.telegramGift
 					: newId.offeringGift,
 		);
+	for (const p of now.giftPhotos ?? []) {
+		const prev = old.giftPhotos?.find((b) => b.id === p.id);
+		const gift = now.gifts.find((g) => g.id === p.giftId);
+		// 旧形式の写真は供物・供花だけに紐づく。
+		if (!gift || giftTable(gift.kind) !== "offerings") {
+			block("photo_requires_offering", p.id);
+			continue;
+		}
+		const values = mapped(p, prev, {
+			caption: "caption",
+			giftId: "offering_id",
+			r2Key: "storage_key",
+		});
+		if ("offering_id" in values) values.offering_id = giftOldId(gift);
+		// 旧アプリと同じく作成者の ID を先頭のフォルダにする。
+		if ("storage_key" in values)
+			values.storage_key = copy("offerings", `${userId(p.createdBy)}/v2-${p.id}`, p.r2Key);
+		if (Object.keys(values).length)
+			patch("offering_photos", photoId(p.id), values, {
+				created_by: userId(p.createdBy),
+				created_at: p.createdAt,
+				updated_at: p.updatedAt,
+			});
+	}
+	// 旧 Storage の本体は消さない。参照だけを外す。
+	for (const p of old.giftPhotos ?? [])
+		if (!now.giftPhotos?.some((x) => x.id === p.id)) remove("offering_photos", photoId(p.id));
 	// 旧形式は「香典 1 件 = 1 人」。代表者の香典ごとに旧の香典を作り、同じ人の返礼・弔電・供物は最初の香典に付ける。
 	const kodenOf = new Map<string, LedgerSnapshot["gifts"]>();
 	for (const g of now.gifts.filter((gift) => gift.kind === "koden")) {

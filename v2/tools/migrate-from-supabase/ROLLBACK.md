@@ -2,7 +2,7 @@
 
 一般公開後の切り戻し用 CLI。最終移行時のスナップショットと、書き込みを停止した v2 を比較し、旧形式に戻せる差分を SQL にする。通信しない `plan`、明示的に書き込む `apply`、読み取り専用の `verify` に分ける。
 
-この版は移行済みの香典帳を対象にする。切り替え後に作った香典帳は書き戻さず、レポートに一覧で出す（後述）。画像の逆転送など、未対応の変更が1件でもあれば全体を停止する。ブロッカーの解消、隔離した Supabase でのリハーサル、画面比較が終わるまでは、本番切り戻しの準備完了と扱わない。
+この版は移行済みの香典帳を対象にする。切り替え後に作った香典帳は書き戻さず、レポートに一覧で出す（後述）。旧形式に戻せない変更が1件でもあれば全体を停止する。ブロッカーの解消、隔離した Supabase でのリハーサル、画面比較が終わるまでは、本番切り戻しの準備完了と扱わない。
 
 ## 対応する変更
 
@@ -12,6 +12,7 @@
 - 香典・供物・供花・弔電の追加・更新。連名・按分・行事などは旧画面で読める形に落とす（後述）。
 - 旧形式で表せる返礼状況・金額・送付先・備考・JSON明細。合計と生成列は旧DBの式で計算する。
 - 旧環境の依存行がない香典・供物・弔電の削除と、返礼の削除。香典の旧監査履歴・ロックは削除前に退避する。いただきもののない差出人は書き戻さない（後述）。
+- 返礼品画像・供物写真の追加・差し替え・削除。画像は `images` で旧 Storage へ逆転送する（後述）。供物・供花以外への写真は `photo_requires_offering`、別の台帳のキーは `image_outside_book` で停止する。
 
 変わらなかった値には元スナップショットの値を使う。前後の空白、台帳・関係の説明、元の供物分類、未移行の列を保持する。追加行のIDはv2のIDから決定的に作る。変更履歴・受付番号など旧画面にない運用情報はexport側に残す。
 
@@ -51,13 +52,34 @@ bun run rollback export --url https://<v2-host> --writes-stopped --out ../../.mi
 bun run rollback plan --source ../../.migration-data/cutover/source-snapshot.json --snapshot ../../.migration-data/rollback-export/v2-export.json --out ../../.migration-data/rollback-plan
 ```
 
-v2で作ったユーザーを旧Authに対応づける場合は、`plan` / `apply` / `verify` のすべてに `--user-map <user-map.json>` を付ける（後述）。
+v2で作ったユーザーを旧Authに対応づける場合は、`plan` / `images` / `apply` / `verify` のすべてに `--user-map <user-map.json>` を付ける（後述）。
 
 D1と各DOを2回読み、一致を確認する。DO内はトランザクションで読み取り、削除済み行・変更ログも保存する。D1と全DOを横断した同時点の保証はないので、運用側での停止が必須。応答の上限は既存クライアントと同じ4 MiB。超過・途中失敗時は部分的なexportを完成扱いにしない。分割取得は今後の対応。DOスキーマはversion 3に限定する。
 
 `report.json` に変更件数、台帳別の期待件数・金額・返礼状況、履歴の件数、ブロッカーと、停止はしないが旧DBに書かない値や運用で扱う対象（`notices`）を出す。`blocked` ならSQLを出さず終了コード1。`ready` なら `apply.sql` と `verify.sql` を生成する。計画内容を確認し、表示された `apply.sql` のSHA256を実行時に渡す。SQL内のJSONはSQL注入を防ぐためUTF-8のhexで格納する。暗号化ではない。
 
 `sourceSha256` は空白・改行を含む元ファイルのSHA256で、移行時の `prepare` が保存した `plan.json` の値と一致することを確認する。
+
+## 画像の逆転送
+
+v2で追加・差し替えた画像だけを、R2から旧Storageの決定的なパスへ写す。移行時から変わらない画像は旧Storageの元の本体と参照をそのまま使う。
+
+| 画像       | 旧バケット     | パス                                 | 旧DBの参照                                        |
+| ---------- | -------------- | ------------------------------------ | ------------------------------------------------- |
+| 返礼品画像 | `return-items` | `{旧台帳ID}/{作成者ID}/v2-{R2のID}`  | `return_items.image_url`（公開URL）               |
+| 供物写真   | `offerings`    | `{作成者の旧ユーザーID}/v2-{写真ID}` | `offering_photos.storage_key`（バケット内のパス） |
+
+`report.json` の `images` に転送対象を出す。`apply` の前に次を実行する。
+
+```sh
+bun run rollback images --source ../../.migration-data/cutover/source-snapshot.json --snapshot ../../.migration-data/rollback-export/v2-export.json --url https://<v2-host> --project-ref <legacy-project-ref> --writes-stopped --out ../../.migration-data/rollback-images
+```
+
+R2の本体は切り戻し専用の `/internal/import/rollback/files` から、`export` と同じAccessのサービストークンで読む。Workerは送信した本体のSHA-256を返し、R2に保存したハッシュとも照合する。旧Storageへは `SUPABASE_SECRET_KEY`（Secret key か service_role key）を環境変数で渡し、接続先は元スナップショットのproject refから作る。
+
+各画像は、旧Storageを読んで同じ内容があれば書かず、なければ上書きなし（`x-upsert: false`）でアップロードし、読み戻してサイズとSHA-256を照合する。同じパスに違う内容があれば上書きせず `rollback_storage_conflict` で停止する。何度実行しても同じ結果になる。結果は `images.json` に出す。
+
+`apply` は計画に画像があるとき `--images <images.json>` を要求し、同じ旧プロジェクト・元スナップショット・exportのすべての転送対象が照合済みでなければ `rollback_images_not_copied` で書き込まずに停止する。v2で削除・差し替えた画像の旧Storageの本体は消さず、旧DBの参照だけを外す。
 
 ## 書き戻し・照合
 
@@ -75,7 +97,7 @@ D1と各DOを2回読み、一致を確認する。DO内はトランザクショ�
 SSL無効は拒否する。接続先と元スナップショットのproject refを照合する。`PGHOSTADDR` / `PGSERVICE` 等の上書き設定は引き継がない。秘密はコマンド引数に含めない。
 
 ```sh
-bun run rollback apply --source ../../.migration-data/cutover/source-snapshot.json --snapshot ../../.migration-data/rollback-export/v2-export.json --project-ref <legacy-project-ref> --approve-sha256 <planのSHA256> --writes-stopped --out ../../.migration-data/rollback-apply
+bun run rollback apply --source ../../.migration-data/cutover/source-snapshot.json --snapshot ../../.migration-data/rollback-export/v2-export.json --project-ref <legacy-project-ref> --approve-sha256 <planのSHA256> --images ../../.migration-data/rollback-images/images.json --writes-stopped --out ../../.migration-data/rollback-apply
 bun run rollback verify --source ../../.migration-data/cutover/source-snapshot.json --snapshot ../../.migration-data/rollback-export/v2-export.json --project-ref <legacy-project-ref> --writes-stopped --out ../../.migration-data/rollback-verify
 ```
 
@@ -85,7 +107,7 @@ publicの対象15テーブルをロックし（香典を削除する場合は `k
 
 香典の書き込み直前に `request.jwt.claim.sub` を行ごとの実行者へトランザクション内だけ設定し、直後に元へ戻す。更新時は計画の `last_modified_by`、追加時は `created_by` を使う。旧 `auth.uid()` を読む監査トリガーが有効な場合でも、行ごとの更新者・作成者を記録でき、後続の別テーブルへ実行者を引き継がない。UUIDの実行者がない香典のSQLは生成しない。2026-10-14の実DBでは監査関数は存在するが香典へのトリガー接続はなく、リポジトリの旧スキーマでは接続されるため、両構成をテストする。
 
-すでに期待値と一致していれば書かずに成功するので、同じ計画を再実行できる。`verify` は読み取り専用トランザクション。`passed` の確認後、画像の保全確認と旧・新10冊の画面比較を行ってから旧アプリを再開する。`rollbackAccess` と取り込み用Access設定を空にして再デプロイし、専用サービストークンを失効させる。
+すでに期待値と一致していれば書かずに成功するので、同じ計画を再実行できる。`verify` は読み取り専用トランザクション。`passed` の確認後、追加・差し替えた画像の旧画面での表示と旧・新10冊の画面比較を行ってから旧アプリを再開する。`rollbackAccess` と取り込み用Access設定を空にして再デプロイし、専用サービストークンを失効させる。
 
 接続切断で確定の有無が不明な場合も、まず同じ計画で `verify` する。psqlの生のstderrには個人情報が入り得るため、CLIには診断コードだけを表示する。
 
@@ -103,7 +125,7 @@ publicの対象15テーブルをロックし（香典を削除する場合は `k
 
 一般メンバーの編集者への追加・変更は、旧台帳の `editor` ロールで書き戻す。旧アプリが自分で招待した編集者と同じロールで、旧アプリの認可（`permissions.ts`）も `editor` で判定する。移行後に変更のない旧メンバー行は元のまま保持する。
 
-実DBの弔電RLS（`telegrams` の INSERT / UPDATE / DELETE）と `offering_entries` の SELECT は、本番に1行もないロール名 `編集者` / `閲覧者` を要求している（#184）。RLSを `editor` / `viewer` に揃えるマイグレーションを本番に適用する前と後で、書き戻した一般の編集者の権限は次のように違う。切り戻しのSQLはどちらでも同じ。
+実DBの弔電RLS（`telegrams` の INSERT / UPDATE / DELETE）と `offering_entries` の SELECT は、本番に1行もないロール名 `編集者` / `閲覧者` を要求している（#184）。RLSを `editor` / `viewer` に揃えるマイグレーション（`supabase/migrations/20261018010000_align_telegram_offering_entry_rls_role_names.sql`）を本番に適用する前と後で、書き戻した一般の編集者の権限は次のように違う。切り戻しのSQLはどちらでも同じ。
 
 | 本番のRLS | 書き戻した一般の編集者                                                                                                                                                     |
 | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -159,7 +181,7 @@ publicの対象15テーブルをロックし（香典を削除する場合は `k
 
 1. 対象のユーザー（`unmapped_user` の `entityId`）ごとに、Supabase Admin API（`auth.admin.createUser`）で旧Authのユーザーを作る。メールはv2の登録と同じものを使い、作成後に旧DBのトリガー `handle_new_user` が `profiles` の行を作ったことを確認する。
 2. Admin APIが同じメールの既存ユーザーを理由に作成を拒んだ場合は、既存ユーザーに寄せず、本人の2つのアカウントの扱いを決めるまで切り戻しを止める。exportにはメールがないので、CLIはメールで照合しない。
-3. 非公開ディレクトリに `user-map.json` を置き、`plan` / `apply` / `verify` に同じものを `--user-map` で渡す。
+3. 非公開ディレクトリに `user-map.json` を置き、`plan` / `images` / `apply` / `verify` に同じものを `--user-map` で渡す。
 
 ```json
 [{ "v2UserId": "<v2のユーザーID>", "legacyUserId": "<Admin APIで作った旧AuthのUUID>" }]
@@ -177,19 +199,20 @@ v2で削除したユーザーは `user_identity_or_deletion` で停止したま�
 
 招待者不明のメンバー追加・招待者の削除は、旧 `added_by` が必須のため `member_inviter_requires_mapping` で停止する。返礼品目の削除も、v2への移行時に省略した旧明細からの参照が残っていれば `delete_has_legacy_dependents` で停止する。香典の削除も、旧供物の紐付け・按分・弔電・返礼記録から参照されていれば同じコードで停止する。
 
-| 主なコード・フィールド                                                                 | 必要な対応                                                                                                                                                                                                                                                 |
-| -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `unmapped_user`                                                                        | v2で作ったユーザーの旧Auth IDを `--user-map` で渡す（前節）。メールだけで推測しない                                                                                                                                                                        |
-| `user_identity_or_deletion`                                                            | 移行したユーザーの旧IDの変更・v2での削除。旧Authとメンバーの削除手順                                                                                                                                                                                       |
-| `billing_requires_manual_reconciliation`                                               | 移行した冊の新規購入・返金と旧プランの照合                                                                                                                                                                                                                 |
-| `images_require_reverse_copy` / `imageR2Key`                                           | R2から旧Storageへの逆転送とサイズ・ハッシュ照合                                                                                                                                                                                                            |
-| `former_owner_row_access_requires_mapping`                                             | 譲渡後に編集者として残らない元オーナーが、供物・供物写真・弔電を作っている。v2で元オーナーを編集者に戻してから切り戻すか、行の作成者の扱いを決める（行の `created_by` の書き換えは未実装）                                                                 |
-| `offering_contributor_without_koden`                                                   | 香典のある差出人とない差出人の連名の供物、または香典のない差出人の按分。旧形式では香典のない人を按分・紐づけに書けない。v2で差出人を見直すか、旧画面で入力し直す                                                                                           |
-| `merged_return_requires_manual_mapping` / `legacy_return_lines_require_manual_mapping` | 1つの香典に旧の返礼記録が複数ある、または旧明細（`return_record_items`）がある返礼の変更・削除。本番では0件（2026-10-18確認。複数記録0件、旧明細0行）のため実装せず、安全のための停止として残す。発生したら、旧画面で返礼記録を1件に整理してから再計画する |
-| `deleted_return_requires_manual_cleanup`                                               | 旧の返礼記録がなく、旧香典の「返礼済み」の印から作った返礼の削除。印の扱いを決め、旧画面で直す                                                                                                                                                             |
-| `delete_has_legacy_dependents`                                                         | 旧連携データも含む削除計画                                                                                                                                                                                                                                 |
-| `rollback_precondition_failed`                                                         | 旧DBが変わった理由を調べ、双方の変更を調停。元スナップショットの差し替えで回避しない                                                                                                                                                                       |
-| `rollback_verify_failed` / `rollback_database_failed`                                  | 制約・トリガーとの差異を隔離DBで調査。失敗したSQLは確定しない                                                                                                                                                                                              |
+| 主なコード・フィールド                                                                            | 必要な対応                                                                                                                                                                                                                                                 |
+| ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `unmapped_user`                                                                                   | v2で作ったユーザーの旧Auth IDを `--user-map` で渡す（前節）。メールだけで推測しない                                                                                                                                                                        |
+| `user_identity_or_deletion`                                                                       | 移行したユーザーの旧IDの変更・v2での削除。旧Authとメンバーの削除手順                                                                                                                                                                                       |
+| `billing_requires_manual_reconciliation`                                                          | 移行した冊の新規購入・返金と旧プランの照合                                                                                                                                                                                                                 |
+| `photo_requires_offering` / `image_outside_book`                                                  | 香典・弔電への写真、別の台帳の画像キーの扱い                                                                                                                                                                                                               |
+| `rollback_storage_conflict` / `rollback_storage_verify_failed` / `rollback_image_source_mismatch` | 旧Storageの同じパスにある本体、転送途中の破損、R2の本体を調べる。上書きで回避しない                                                                                                                                                                        |
+| `former_owner_row_access_requires_mapping`                                                        | 譲渡後に編集者として残らない元オーナーが、供物・供物写真・弔電を作っている。v2で元オーナーを編集者に戻してから切り戻すか、行の作成者の扱いを決める（行の `created_by` の書き換えは未実装）                                                                 |
+| `offering_contributor_without_koden`                                                              | 香典のある差出人とない差出人の連名の供物、または香典のない差出人の按分。旧形式では香典のない人を按分・紐づけに書けない。v2で差出人を見直すか、旧画面で入力し直す                                                                                           |
+| `merged_return_requires_manual_mapping` / `legacy_return_lines_require_manual_mapping`            | 1つの香典に旧の返礼記録が複数ある、または旧明細（`return_record_items`）がある返礼の変更・削除。本番では0件（2026-10-18確認。複数記録0件、旧明細0行）のため実装せず、安全のための停止として残す。発生したら、旧画面で返礼記録を1件に整理してから再計画する |
+| `deleted_return_requires_manual_cleanup`                                                          | 旧の返礼記録がなく、旧香典の「返礼済み」の印から作った返礼の削除。印の扱いを決め、旧画面で直す                                                                                                                                                             |
+| `delete_has_legacy_dependents`                                                                    | 旧連携データも含む削除計画                                                                                                                                                                                                                                 |
+| `rollback_precondition_failed`                                                                    | 旧DBが変わった理由を調べ、双方の変更を調停。元スナップショットの差し替えで回避しない                                                                                                                                                                       |
+| `rollback_verify_failed` / `rollback_database_failed`                                             | 制約・トリガーとの差異を隔離DBで調査。失敗したSQLは確定しない                                                                                                                                                                                              |
 
 ## 検証範囲
 
@@ -197,4 +220,4 @@ PGliteのPostgreSQLに、確認した旧スキーマの型・生成列・関連F
 
 香典の削除では、旧スキーマの監査ログ・ロックのテーブルを置き、BEFORE DELETE 監査トリガーの有無の両方で、退避・照合・再実行と、照合失敗時に監査ログ・ロックが残ることを確認している。
 
-2026-10-13の保存済み抽出データ38人・40冊では、初期投入状態を再現したexportに対して変更0件・ブロッカー0件を確認した。実Supabaseへの書き込み、psqlでのリモート接続、Storageの逆転送は未実施。本番の切り戻し完了を示すものではない。
+2026-10-13の保存済み抽出データ38人・40冊では、初期投入状態を再現したexportに対して変更0件・ブロッカー0件を確認した。画像の逆転送は、R2の取得口をWorkerのテストで、旧Storageへの転送・照合・再実行・内容の衝突をStorage APIのfakeで、参照の書き戻しをPGliteで確認している。実Supabaseへの書き込み、psqlでのリモート接続、実R2・実Storageでの逆転送と旧画面での表示は未実施。本番の切り戻し完了を示すものではない。

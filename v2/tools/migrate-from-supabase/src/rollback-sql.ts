@@ -238,6 +238,7 @@ export function rollbackReport(plan: RollbackPlan): Row {
 		exportSha256: plan.exportSha256,
 		changes: plan.changes,
 		blockers: plan.blockers,
+		images: plan.images,
 		books: plan.books,
 		notices: plan.notices,
 		verification: {
