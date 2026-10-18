@@ -5,50 +5,22 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, it } from "vitest";
 import { digest, prepare } from "../src/prepare.ts";
-import {
-	exportedFixture,
-	memberRoleFixture,
-	ownershipTransferFixture,
-	relationshipFixture,
-	sourceFixture,
-} from "./rollback-fixture.ts";
+import { exportedFixture, relationshipFixture, sourceFixture } from "./rollback-fixture.ts";
 
-it.each(["ownership", "relationship", "editor"] as const)(
+it.each(["relationship"] as const)(
 	"refuses %s conflicts in plan, apply and verify before emitting SQL or connecting",
-	async (kind) => {
+	async () => {
 		const dir = await mkdtemp(join(tmpdir(), "kouden-rollback-owner-"));
 		if (!dir.startsWith(join(tmpdir(), "kouden-rollback-owner-")))
 			throw new Error("invalid_test_directory");
-		const { source, current } =
-			kind === "ownership"
-				? ownershipTransferFixture("removed")
-				: kind === "relationship"
-					? relationshipFixture()
-					: memberRoleFixture("editor", false, [{ name: "editor", permissions: ["view", "edit"] }]);
-		if (kind === "relationship") {
-			const [first, second] = current.ledgers[0]!.tables.relationships;
-			first!.name = second!.name;
-		}
-		const blockers =
-			kind === "editor"
-				? [
-						{
-							code: "editor_role_requires_legacy_rls_alignment",
-							entityId: current.manifest.members.find((m) => m.role === "editor")!.user_id,
-						},
-					]
-				: kind === "ownership"
-					? [
-							{
-								code: "owner_transfer_requires_manual_mapping",
-								entityId: current.ledgers[0]!.koudenId,
-							},
-						]
-					: source.data["public.relationships"]!.map((r) => ({
-							code: "legacy_relationship_name_conflict",
-							entityId: r.id,
-							field: "name",
-						}));
+		const { source, current } = relationshipFixture();
+		const [first, second] = current.ledgers[0]!.tables.relationships;
+		first!.name = second!.name;
+		const blockers = source.data["public.relationships"]!.map((r) => ({
+			code: "legacy_relationship_name_conflict",
+			entityId: r.id,
+			field: "name",
+		}));
 		const cli = fileURLToPath(new URL("../src/rollback-cli.ts", import.meta.url));
 		try {
 			const sourcePath = join(dir, "source.json");
@@ -137,7 +109,7 @@ it("plans offline, refuses unapproved apply and does not print private input", a
 		expect(JSON.parse(await readFile(join(dir, "apply", "report.json"), "utf8")).status).toBe(
 			"failed",
 		);
-		current.ledgers[0]!.tables.persons[0]!.name_kana = "シメイ";
+		current.ledgers[0]!.tables.persons[0]!.notes = "差出人のメモ";
 		await writeFile(snapshotPath, JSON.stringify(current));
 		const blocked = spawnSync("bun", [cli, "plan", ...args, "--out", join(dir, "blocked")], {
 			encoding: "utf8",
@@ -150,7 +122,7 @@ it("plans offline, refuses unapproved apply and does not print private input", a
 		expect(blockedReport.blockers).toContainEqual({
 			code: "unrepresentable_field",
 			entityId: current.ledgers[0]!.tables.persons[0]!.id,
-			field: "nameKana",
+			field: "notes",
 		});
 		await expect(readFile(join(dir, "blocked", "apply.sql"))).rejects.toMatchObject({
 			code: "ENOENT",
@@ -163,6 +135,66 @@ it("plans offline, refuses unapproved apply and does not print private input", a
 		});
 		expect(invalid.status).toBe(1);
 		expect(invalid.stderr + invalid.stdout).not.toContain("SECRET-PERSON");
+	} finally {
+		await rm(dir, { recursive: true, force: true });
+	}
+});
+
+it("passes --user-map to plan and rejects an invalid map without printing it", async () => {
+	const dir = await mkdtemp(join(tmpdir(), "kouden-rollback-map-"));
+	if (!dir.startsWith(join(tmpdir(), "kouden-rollback-map-")))
+		throw new Error("invalid_test_directory");
+	const source = sourceFixture();
+	const current = exportedFixture(source);
+	current.manifest.users.push({
+		id: "v2-only",
+		legacy_user_id: null,
+		display_name: "新規",
+		created_at: source.extracted_at,
+		deleted_at: null,
+	});
+	const cli = fileURLToPath(new URL("../src/rollback-cli.ts", import.meta.url));
+	try {
+		const paths = ["source", "v2", "map", "bad"].map((n) => join(dir, `${n}.json`));
+		await writeFile(paths[0]!, JSON.stringify(source));
+		await writeFile(paths[1]!, JSON.stringify(current));
+		await writeFile(
+			paths[2]!,
+			JSON.stringify([
+				{ v2UserId: "v2-only", legacyUserId: "10000000-0000-4000-8000-0000000000aa" },
+			]),
+		);
+		await writeFile(paths[3]!, JSON.stringify([{ v2UserId: "SECRET-PERSON", legacyUserId: "x" }]));
+		const run = (map: string, out: string) =>
+			spawnSync(
+				"bun",
+				[
+					cli,
+					"plan",
+					"--source",
+					paths[0]!,
+					"--snapshot",
+					paths[1]!,
+					"--user-map",
+					map,
+					"--out",
+					join(dir, out),
+				],
+				{ encoding: "utf8", timeout: 10000, windowsHide: true },
+			);
+		expect(run(paths[2]!, "ok").status).toBe(0);
+		const report = JSON.parse(await readFile(join(dir, "ok", "report.json"), "utf8"));
+		expect(report.notices).toEqual([
+			{
+				code: "new_user_mapped",
+				entityId: "v2-only",
+				legacyUserId: "10000000-0000-4000-8000-0000000000aa",
+			},
+		]);
+		const bad = run(paths[3]!, "bad");
+		expect(bad.status).toBe(1);
+		expect(bad.stderr).toContain("rollback_user_map_invalid");
+		expect(bad.stderr + bad.stdout).not.toContain("SECRET-PERSON");
 	} finally {
 		await rm(dir, { recursive: true, force: true });
 	}

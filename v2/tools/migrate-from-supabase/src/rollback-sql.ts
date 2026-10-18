@@ -7,8 +7,11 @@ const identifier = (s: string) => {
 	if (!/^[a-z][a-z0-9_]*$/.test(s)) throw new Error("rollback_invalid_column");
 	return `"${s}"`;
 };
+/** 生成列と、旧DBのトリガーが保つ列（has_offering は offering_entries のトリガーが更新する）。 */
 const generated = (table: Table, column: string) =>
-	table === "return_entry_records" && ["additional_return_amount", "profit_loss"].includes(column);
+	(table === "return_entry_records" &&
+		["additional_return_amount", "profit_loss"].includes(column)) ||
+	(table === "kouden_entries" && column === "has_offering");
 const literal = (value: unknown) =>
 	`convert_from(decode('${Buffer.from(JSON.stringify(value)).toString("hex")}', 'hex'), 'UTF8')::jsonb`;
 
@@ -54,6 +57,10 @@ export function rollbackSql(plan: RollbackPlan, mode: "apply" | "verify"): strin
 			statements.push(
 				`UPDATE public.relationships SET is_enabled = false WHERE id IN (SELECT (jsonb_array_elements_text(${literal([...released])}))::uuid);`,
 			);
+		const deletions = (table: Table) =>
+			plan.before[table]
+				.filter((row) => !plan.after[table].some((r) => r.id === row.id))
+				.map((row) => `DELETE FROM public.${table} WHERE id = (${literal(row.id)}#>>'{}')::uuid;`);
 		for (const table of ROLLBACK_TABLES) {
 			plan.after[table].forEach((row, index) => {
 				const old = plan.before[table].find((r) => r.id === row.id);
@@ -89,6 +96,9 @@ export function rollbackSql(plan: RollbackPlan, mode: "apply" | "verify"): strin
 						"PERFORM set_config('request.jwt.claim.sub', coalesce(saved_actor, ''), true);",
 					);
 			});
+			// 外した紐づけは返礼記録の更新より前に消す。返礼記録の BEFORE トリガーが最終の紐づけで合計を
+			// 計算するので、紐づけの削除で再計算しない旧DB（20261018 の未適用時）でも合計が一致する。
+			if (table === "offering_entries") statements.push(...deletions(table));
 		}
 		if (deletedEntries.length)
 			statements.push(
@@ -101,13 +111,8 @@ export function rollbackSql(plan: RollbackPlan, mode: "apply" | "verify"): strin
 				`INSERT INTO kouden_rollback.deleted_entry_history (source_table, id, entry_id, row_data) ${legacyHistory};`,
 			);
 		// 新しい参照先の作成と既存の参照の更新を終えてから、子→親の順で削除する。
-		for (const table of ROLLBACK_TABLES.toReversed()) {
-			for (const row of plan.before[table])
-				if (!plan.after[table].some((r) => r.id === row.id))
-					statements.push(
-						`DELETE FROM public.${table} WHERE id = (${literal(row.id)}#>>'{}')::uuid;`,
-					);
-		}
+		for (const table of ROLLBACK_TABLES.toReversed())
+			if (table !== "offering_entries") statements.push(...deletions(table));
 		if (deletedEntries.length)
 			statements.push(
 				`IF (SELECT coalesce(jsonb_agg(to_jsonb(h) ORDER BY h.source_table, h.id), '[]') FROM (${archivedHistory}) h) IS DISTINCT FROM preserved THEN RAISE EXCEPTION 'rollback_verify_failed:deleted_entry_history'; END IF;`,
@@ -235,6 +240,7 @@ export function rollbackReport(plan: RollbackPlan): Row {
 		blockers: plan.blockers,
 		images: plan.images,
 		books: plan.books,
+		notices: plan.notices,
 		verification: {
 			ignoredAuditColumns: ["updated_at", "last_modified_at", "version"],
 			tables: ROLLBACK_TABLES.map((table) => ({ table, expectedRows: plan.after[table].length })),

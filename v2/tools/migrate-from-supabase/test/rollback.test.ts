@@ -120,17 +120,45 @@ describe("rollback review regressions", () => {
 		},
 	);
 	it.each([false, true])(
-		"blocks ordinary editor assignment until legacy RLS agrees (existing: %s)",
-		(existing) => {
+		"gives an ordinary editor the legacy editor role on both sides of the RLS migration (existing: %s)",
+		async (existing) => {
 			const { source, current, user } = memberRoleFixture("editor", existing, [
 				{ name: "editor", permissions: ["view", "edit"] },
 			]);
 			const plan = planRollback(source, current);
-			expect(plan.blockers).toEqual([
-				{ code: "editor_role_requires_legacy_rls_alignment", entityId: newId.user(user) },
-			]);
-			expect(plan.after.kouden_members).toEqual(plan.before.kouden_members);
-			expect(() => rollbackSql(plan, "apply")).toThrow("rollback_blocked");
+			expect(plan.blockers).toEqual([]);
+			const db = await database(source);
+			try {
+				await installLegacyAuth(db, source, "telegram-rls");
+				await db.exec(rollbackSql(plan, "apply"));
+				await db.exec(rollbackSql(plan, "verify"));
+				await db.query(
+					"INSERT INTO telegrams(id,kouden_id,sender_name,created_by) VALUES ($1,$2,'差出人',$3)",
+					[ids.entry, ids.book, ids.user],
+				);
+				await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)", [user]);
+				await db.exec("SET ROLE authenticated");
+				expect(
+					(
+						await db.query(
+							"SELECT r.name FROM kouden_members m JOIN kouden_roles r ON r.id=m.role_id WHERE m.user_id=auth.uid()",
+						)
+					).rows,
+				).toEqual([{ name: "editor" }]);
+				// 適用前の本番RLSでは、旧アプリで招待した編集者と同じく弔電を変更できない（権限が狭まるだけ）。
+				expect((await db.query("UPDATE telegrams SET message='編集' RETURNING id")).rows).toEqual(
+					[],
+				);
+				// RLS を editor に揃えるマイグレーション（#184）の適用後は変更できる。
+				await db.exec(
+					"RESET ROLE; ALTER POLICY telegram_update ON telegrams USING (EXISTS (SELECT 1 FROM public.kouden_members m JOIN public.kouden_roles r ON r.id=m.role_id WHERE m.kouden_id=telegrams.kouden_id AND m.user_id=auth.uid() AND r.name='editor')); SET ROLE authenticated",
+				);
+				expect((await db.query("UPDATE telegrams SET message='編集' RETURNING id")).rows).toEqual([
+					{ id: ids.entry },
+				]);
+			} finally {
+				await db.close();
+			}
 		},
 	);
 	it("reproduces the telegram RLS conflict for the canonical editor name", async () => {
@@ -335,16 +363,62 @@ describe("rollback review regressions", () => {
 		}
 	});
 	it.each(["editor", "removed"] as const)(
-		"blocks an ownership transfer when the former creator is %s",
-		(formerOwner) => {
+		"moves owner_id and created_by to the new owner when the former creator is %s",
+		async (formerOwner) => {
 			const { source, current } = ownershipTransferFixture(formerOwner);
+			const next = "10000000-0000-4000-8000-000000000002";
 			const plan = planRollback(source, current);
-			expect(plan.blockers).toEqual([
-				{ code: "owner_transfer_requires_manual_mapping", entityId: current.ledgers[0]!.koudenId },
+			expect(plan.blockers).toEqual([]);
+			expect(plan.after.koudens[0]).toMatchObject({ owner_id: next, created_by: next });
+			// 旧DBから消える元の作成者はレポートに残す。
+			expect(plan.notices).toEqual([
+				{
+					code: "owner_transferred",
+					entityId: current.ledgers[0]!.koudenId,
+					legacyKoudenId: ids.book,
+					previousOwnerId: ids.user,
+					previousCreatedBy: ids.user,
+					ownerId: next,
+				},
 			]);
-			expect(plan.after.koudens).toEqual(plan.before.koudens);
-			expect(() => rollbackSql(plan, "apply")).toThrow("rollback_blocked");
-			expect(() => rollbackSql(plan, "verify")).toThrow("rollback_blocked");
+			const db = await database(source);
+			try {
+				await installLegacyAuth(db, source, "allocation-rls");
+				await db.exec(rollbackSql(plan, "apply"));
+				await db.exec(rollbackSql(plan, "verify"));
+				expect(
+					(
+						await db.query(
+							"SELECT m.user_id::text, r.name FROM kouden_members m JOIN kouden_roles r ON r.id=m.role_id ORDER BY m.user_id",
+						)
+					).rows,
+				).toEqual([
+					...(formerOwner === "editor" ? [{ user_id: ids.user, name: "editor" }] : []),
+					{ user_id: next, name: "editor" },
+				]);
+				await db.query(
+					"INSERT INTO offerings(id,kouden_id,type,provider_name,created_by) VALUES ($1,$2,'FLOWER','供花',$3)",
+					[ids.plan, ids.book, next],
+				);
+				const allocate = async (user: string) => {
+					await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)", [user]);
+					await db.exec("SET ROLE authenticated");
+					try {
+						// SELECT ポリシーを置いていないので RETURNING は使わない。
+						return await db.query(
+							"INSERT INTO offering_allocations(offering_id,allocated_amount,allocation_ratio) VALUES ($1,1000,1)",
+							[ids.plan],
+						);
+					} finally {
+						await db.exec("RESET ROLE");
+					}
+				};
+				// 按分のRLSは created_by だけを見る。新オーナーは操作でき、元オーナーはできない。
+				expect((await allocate(next)).affectedRows).toBe(1);
+				await expect(allocate(ids.user)).rejects.toThrow(/row-level security/);
+			} finally {
+				await db.close();
+			}
 		},
 	);
 	it("allows title changes when ownership is unchanged", () => {
@@ -412,24 +486,16 @@ describe("rollback review regressions", () => {
 			await db.close();
 		}
 	});
-	it.each([null, "2026-11-01"])("checks raw return deadlines before projection: %s", (dueDate) => {
+	it.each([null, "2026-11-01"])("reads raw return deadlines before projection: %s", (dueDate) => {
 		const source = sourceWithReturn();
 		const current = exportedFixture(source);
 		const ret = current.ledgers[0]!.tables.returns[0]!;
 		ret.due_date = dueDate;
 		const plan = planRollback(source, current);
-		expect(plan.blockers).toEqual(
-			dueDate
-				? [
-						{
-							code: "unrepresentable_field",
-							entityId: ret.id,
-							field: "dueDate",
-						},
-					]
-				: [],
+		expect(plan.blockers).toEqual([]);
+		expect(plan.after.return_entry_records[0]!.remarks).toBe(
+			dueDate ? `【v2】返礼期限: ${dueDate}` : null,
 		);
-		if (dueDate) expect(() => rollbackSql(plan, "apply")).toThrow("rollback_blocked");
 	});
 	it("ignores deadlines on tombstones that were never migrated", () => {
 		const source = sourceFixture();
@@ -516,7 +582,7 @@ const legacyLocks = `CREATE TABLE public.kouden_entry_locks (
 async function installLegacyAuth(
 	db: PGlite,
 	source: ReturnType<typeof sourceFixture>,
-	fixture: "audit" | "telegram-rls",
+	fixture: "audit" | "telegram-rls" | "allocation-rls",
 ) {
 	await db.exec(
 		await readFile(new URL("./fixtures/rollback-legacy-auth.sql", import.meta.url), "utf8"),
@@ -1280,18 +1346,6 @@ describe("rollback plan and PostgreSQL", () => {
 		expect(plan.after.kouden_entries).toEqual(plan.before.kouden_entries);
 	});
 	it.each([
-		[
-			"nameKana",
-			(c: ReturnType<typeof exportedFixture>) => {
-				c.ledgers[0]!.tables.persons[0]!.name_kana = "シメイ";
-			},
-		],
-		[
-			"events_require_manual_mapping",
-			(c: ReturnType<typeof exportedFixture>) => {
-				c.ledgers[0]!.tables.events[0]!.date = "2026-10-14";
-			},
-		],
 		[
 			"user_identity_or_deletion",
 			(c: ReturnType<typeof exportedFixture>) => {
