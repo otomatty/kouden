@@ -57,6 +57,10 @@ export function rollbackSql(plan: RollbackPlan, mode: "apply" | "verify"): strin
 			statements.push(
 				`UPDATE public.relationships SET is_enabled = false WHERE id IN (SELECT (jsonb_array_elements_text(${literal([...released])}))::uuid);`,
 			);
+		const deletions = (table: Table) =>
+			plan.before[table]
+				.filter((row) => !plan.after[table].some((r) => r.id === row.id))
+				.map((row) => `DELETE FROM public.${table} WHERE id = (${literal(row.id)}#>>'{}')::uuid;`);
 		for (const table of ROLLBACK_TABLES) {
 			plan.after[table].forEach((row, index) => {
 				const old = plan.before[table].find((r) => r.id === row.id);
@@ -92,6 +96,9 @@ export function rollbackSql(plan: RollbackPlan, mode: "apply" | "verify"): strin
 						"PERFORM set_config('request.jwt.claim.sub', coalesce(saved_actor, ''), true);",
 					);
 			});
+			// 外した紐づけは返礼記録の更新より前に消す。返礼記録の BEFORE トリガーが最終の紐づけで合計を
+			// 計算するので、紐づけの削除で再計算しない旧DB（20261018 の未適用時）でも合計が一致する。
+			if (table === "offering_entries") statements.push(...deletions(table));
 		}
 		if (deletedEntries.length)
 			statements.push(
@@ -104,13 +111,8 @@ export function rollbackSql(plan: RollbackPlan, mode: "apply" | "verify"): strin
 				`INSERT INTO kouden_rollback.deleted_entry_history (source_table, id, entry_id, row_data) ${legacyHistory};`,
 			);
 		// 新しい参照先の作成と既存の参照の更新を終えてから、子→親の順で削除する。
-		for (const table of ROLLBACK_TABLES.toReversed()) {
-			for (const row of plan.before[table])
-				if (!plan.after[table].some((r) => r.id === row.id))
-					statements.push(
-						`DELETE FROM public.${table} WHERE id = (${literal(row.id)}#>>'{}')::uuid;`,
-					);
-		}
+		for (const table of ROLLBACK_TABLES.toReversed())
+			if (table !== "offering_entries") statements.push(...deletions(table));
 		if (deletedEntries.length)
 			statements.push(
 				`IF (SELECT coalesce(jsonb_agg(to_jsonb(h) ORDER BY h.source_table, h.id), '[]') FROM (${archivedHistory}) h) IS DISTINCT FROM preserved THEN RAISE EXCEPTION 'rollback_verify_failed:deleted_entry_history'; END IF;`,

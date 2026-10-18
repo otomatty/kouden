@@ -275,15 +275,23 @@ function twoEntries(withOffering: boolean) {
 const personOf = (current: ReturnType<typeof exportedFixture>, entry: string) =>
 	current.ledgers[0]!.tables.persons.find((p) => p.id === newId.entryPerson(entry))!;
 
-async function withOfferingTriggers(source: ReturnType<typeof sourceWithCounts>) {
+/**
+ * aligned が false なら、紐づけの削除で返礼金額を再計算しない構成（20261018 の未適用の本番を想定）。
+ * 返礼記録の BEFORE トリガー（fixture の return_total）だけが合計を計算する。
+ */
+async function withOfferingTriggers(source: ReturnType<typeof sourceWithCounts>, aligned = true) {
 	// 元スナップショットの行を入れた後に置き、投入時にトリガーが動かないようにする。
 	const db = await legacyDatabase(source);
 	for (const sql of [
 		new URL("./fixtures/rollback-legacy-offering-triggers.sql", import.meta.url),
-		new URL(
-			"../../../../supabase/migrations/20261018000000_align_return_amount_triggers_with_deployed.sql",
-			import.meta.url,
-		),
+		...(aligned
+			? [
+					new URL(
+						"../../../../supabase/migrations/20261018000000_align_return_amount_triggers_with_deployed.sql",
+						import.meta.url,
+					),
+				]
+			: []),
 	])
 		await db.exec(await readFile(sql, "utf8"));
 	return db;
@@ -317,38 +325,41 @@ describe("ledger structures written in the legacy screen's terms (#188)", () => 
 			await db.close();
 		}
 	});
-	it("moves an offering share to another koden through allocations, links and legacy triggers", async () => {
-		const { source, current } = twoEntries(true);
-		const t = current.ledgers[0]!.tables;
-		const gift = t.gifts.find((g) => g.id === newId.offeringGift(offeringId))!;
-		t.gift_contributors = t.gift_contributors.filter((c) => c.gift_id !== gift.id);
-		t.gift_contributors.push({
-			gift_id: gift.id,
-			person_id: personOf(current, entryB).id,
-			is_primary: 1,
-			share_amount: 5000,
-		});
-		const plan = planRollback(source, current);
-		expect(plan.blockers).toEqual([]);
-		const db = await withOfferingTriggers(source);
-		try {
-			await db.exec(rollbackSql(plan, "apply"));
-			await db.exec(rollbackSql(plan, "verify"));
-			expect(await state(db)).toEqual([
-				{ entry: ids.entry, has_offering: false, total: 10000, links: 0, allocations: null },
-				{
-					entry: entryB,
-					has_offering: true,
-					total: 10000,
-					links: 1,
-					allocations: [{ amount: 5000, ratio: 1, primary: true }],
-				},
-			]);
-			await db.exec(rollbackSql(plan, "apply"));
-		} finally {
-			await db.close();
-		}
-	});
+	it.each([true, false])(
+		"moves an offering share to another koden through allocations, links and legacy triggers (return trigger migration: %s)",
+		async (aligned) => {
+			const { source, current } = twoEntries(true);
+			const t = current.ledgers[0]!.tables;
+			const gift = t.gifts.find((g) => g.id === newId.offeringGift(offeringId))!;
+			t.gift_contributors = t.gift_contributors.filter((c) => c.gift_id !== gift.id);
+			t.gift_contributors.push({
+				gift_id: gift.id,
+				person_id: personOf(current, entryB).id,
+				is_primary: 1,
+				share_amount: 5000,
+			});
+			const plan = planRollback(source, current);
+			expect(plan.blockers).toEqual([]);
+			const db = await withOfferingTriggers(source, aligned);
+			try {
+				await db.exec(rollbackSql(plan, "apply"));
+				await db.exec(rollbackSql(plan, "verify"));
+				expect(await state(db)).toEqual([
+					{ entry: ids.entry, has_offering: false, total: 10000, links: 0, allocations: null },
+					{
+						entry: entryB,
+						has_offering: true,
+						total: 10000,
+						links: 1,
+						allocations: [{ amount: 5000, ratio: 1, primary: true }],
+					},
+				]);
+				await db.exec(rollbackSql(plan, "apply"));
+			} finally {
+				await db.close();
+			}
+		},
+	);
 	it("adds a new offering shared by two koden senders with ratios of the offering amount", async () => {
 		const { source, current } = twoEntries(false);
 		const t = current.ledgers[0]!.tables;
