@@ -636,12 +636,7 @@ function reverseBook(
 	}
 	for (const g of old.gifts)
 		if (!now.gifts.some((x) => x.id === g.id)) {
-			// 旧監査履歴・ロックは抽出対象外で、entry の削除に CASCADE する。
-			// スナップショットだけでは保全を確認できないため、香典の削除は自動適用しない。
-			if (g.kind === "koden") {
-				block("deleted_entry_requires_manual_cleanup", g.id);
-				continue;
-			}
+			// 香典の旧監査履歴・ロックは CASCADE で消えるため、SQL が削除前に退避・照合する。
 			const id = giftOldId(g);
 			// 連携行の削除は旧 DB のトリガーで他テーブルにも影響するため、この版では停止する。
 			const references = [
