@@ -9,6 +9,7 @@ import {
 	exportedFixture,
 	ids,
 	legacyDatabase,
+	ownershipTransferFixture,
 	sourceFixture,
 	sourceWithCounts,
 } from "./rollback-fixture.ts";
@@ -702,5 +703,94 @@ describe("values without a legacy column (#189)", () => {
 			{ code: "deceased_name_not_rolled_back", entityId: current.ledgers[0]!.koudenId },
 			{ code: "name_kana_not_rolled_back", entityId: person.id },
 		]);
+	});
+});
+
+const nextOwner = "10000000-0000-4000-8000-000000000002";
+/** 元オーナーが作った供物と弔電がある冊を、既存メンバーへ譲渡した状態。 */
+function transferWithRows(formerOwner: "editor" | "viewer" | "removed") {
+	const { source, current } = ownershipTransferFixture(
+		formerOwner === "removed" ? "removed" : "editor",
+	);
+	source.data["public.offerings"] = [
+		{
+			id: offeringId,
+			kouden_id: ids.book,
+			type: "FLOWER",
+			description: "供花",
+			quantity: 1,
+			price: 5000,
+			provider_name: "差出人",
+			notes: null,
+			created_by: ids.user,
+			created_at: at,
+			updated_at: at,
+		},
+	];
+	source.data["public.telegrams"] = [
+		{
+			id: "93000000-0000-4000-8000-000000000001",
+			kouden_id: ids.book,
+			kouden_entry_id: null,
+			sender_name: "弔電の差出人",
+			sender_organization: null,
+			sender_position: null,
+			message: null,
+			notes: null,
+			created_by: ids.user,
+			created_at: at,
+			updated_at: at,
+		},
+	];
+	if (formerOwner === "viewer")
+		source.data["public.kouden_roles"]!.push({
+			...source.data["public.kouden_roles"]![0],
+			id: "50000000-0000-4000-8000-000000000002",
+			name: "viewer",
+			permissions: ["view"],
+		});
+	const counted = sourceWithCounts(source.data);
+	const exported = exportedFixture(counted);
+	exported.manifest = current.manifest;
+	if (formerOwner === "viewer")
+		exported.manifest.members.find((m) => m.role === "editor")!.role = "viewer";
+	return { source: counted, current: exported };
+}
+describe("rows the former owner created after an ownership transfer (#183)", () => {
+	it.each(["removed", "viewer"] as const)(
+		"keeps the transfer blocked when a %s former owner would keep row-level access",
+		async (formerOwner) => {
+			const { source, current } = transferWithRows(formerOwner);
+			const plan = planRollback(source, current);
+			expect(plan.blockers).toEqual([
+				{
+					code: "former_owner_row_access_requires_mapping",
+					entityId: current.ledgers[0]!.koudenId,
+				},
+			]);
+			expect(() => rollbackSql(plan, "apply")).toThrow("rollback_blocked");
+			// 台帳の owner_id / created_by だけを変えても、行の created_by で元オーナーに権限が残る。
+			const db = await legacyDatabase(
+				source,
+				"rollback-legacy-auth",
+				"rollback-legacy-row-owner-rls",
+			);
+			try {
+				await db.query("UPDATE koudens SET owner_id = $1, created_by = $1", [nextOwner]);
+				await db.query("DELETE FROM kouden_members WHERE user_id = $1", [ids.user]);
+				await db.query("SELECT set_config('request.jwt.claim.sub', $1, false)", [ids.user]);
+				await db.exec("SET ROLE authenticated");
+				expect((await db.query("DELETE FROM offerings RETURNING id")).rows).toHaveLength(1);
+				expect((await db.query("DELETE FROM telegrams RETURNING id")).rows).toHaveLength(1);
+			} finally {
+				await db.close();
+			}
+		},
+	);
+	it("allows the transfer when the former owner stays an editor with the same access", () => {
+		const { source, current } = transferWithRows("editor");
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual([]);
+		expect(plan.after.koudens[0]).toMatchObject({ owner_id: nextOwner, created_by: nextOwner });
 	});
 });

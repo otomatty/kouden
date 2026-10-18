@@ -227,7 +227,9 @@ export function planRollback(
 		// 旧アプリ・RLS は created_by にも管理権限を与える（按分は created_by だけで判定する）。
 		// v2 と同じ権限にするため両方を新オーナーにし、元の作成者はレポートに残す。
 		const ownerId = userId(String(row.owner_user_id));
-		if (ownerId !== oldBook.owner_id) {
+		const formerOwners = new Set([oldBook.owner_id, oldBook.created_by]);
+		const transferred = ownerId !== oldBook.owner_id;
+		if (transferred) {
 			notice("owner_transferred", base.koudenId, {
 				legacyKoudenId: oldBook.id,
 				previousOwnerId: oldBook.owner_id,
@@ -333,6 +335,23 @@ export function planRollback(
 			const uid = newId.user(String(m.user_id));
 			return m.kouden_id !== oldBook.id || !migratedMembers.has(uid) || memberUsers.has(uid);
 		});
+		// 旧RLSは供物・供物写真・弔電の行の created_by にも権限を与える。行の作成者は書き換えないので、
+		// 譲渡後に編集者として残らない元オーナーが作った行があれば、v2 にない権限が残るため停止する。
+		if (transferred) {
+			const editor = members.some(
+				(m) =>
+					m.role === "editor" &&
+					formerOwners.has(users.get(String(m.user_id)) ?? mappedUsers.get(String(m.user_id))),
+			);
+			const offerings = after.offerings.filter((o) => o.kouden_id === oldBook.id);
+			const rows = [
+				...offerings,
+				...after.offering_photos.filter((p) => offerings.some((o) => o.id === p.offering_id)),
+				...after.telegrams.filter((t) => t.kouden_id === oldBook.id),
+			];
+			if (!editor && rows.some((r) => formerOwners.has(r.created_by)))
+				block("former_owner_row_access_requires_mapping", base.koudenId);
+		}
 	}
 	// v2 で削除した冊は旧DBで消さない。切り戻し後に旧アプリの削除処理で消す（ROLLBACK.md）。
 	for (const b of baseline.koudens)

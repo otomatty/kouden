@@ -97,6 +97,8 @@ publicの対象15テーブルをロックし（香典を削除する場合は `k
 
 オーナーの譲渡は、`koudens` の `owner_id` と `created_by` の両方を新オーナーにする（#183）。旧DBの `created_by` は表示される作成者の履歴ではなく、認可の列として働いている。旧アプリ（`permissions.ts`）とRLSの多くは `owner_id` か `created_by` が一致すればオーナーとして扱い、`offering_allocations` のRLSは `created_by` だけで判定する。`owner_id` だけを書き戻すと、v2で編集者に降格・退会した元オーナーに管理権限が残り、新オーナーは按分を操作できない。両方を書き戻すと、元オーナーは編集者のメンバー行だけを持ち、v2と同じ権限になる。本番のRLSは変えない。
 
+ただし旧RLSは、供物（`offerings`）・供物写真（`offering_photos`）・弔電（`telegrams`）では、行の `created_by` が一致するユーザーにも権限を与える。行の作成者は書き換えないので、v2で退会した、または閲覧者になった元オーナーが作った行がその冊にあると、切り戻し後も元オーナーはその行を参照・変更・削除できる。この場合は `former_owner_row_access_requires_mapping` で停止する。元オーナーが編集者として残る場合は、編集者の権限に含まれるので停止しない。一般メンバーの退会・閲覧者への変更でも同じく作成した行の権限は残るが、旧アプリで退会させた場合と同じ挙動なので停止しない。
+
 旧DBの `created_by` は上書きされて失われるので、元の値を `report.json` の `notices`（`owner_transferred`、台帳ごとに `previousOwnerId` / `previousCreatedBy` / `ownerId`）に残す。元スナップショットと `pg_dump` にも残る。レポートは元スナップショットと一緒に保管する。
 
 一般メンバーの編集者への追加・変更は、旧台帳の `editor` ロールで書き戻す。旧アプリが自分で招待した編集者と同じロールで、旧アプリの認可（`permissions.ts`）も `editor` で判定する。移行後に変更のない旧メンバー行は元のまま保持する。
@@ -181,6 +183,7 @@ v2で削除したユーザーは `user_identity_or_deletion` で停止したま�
 | `user_identity_or_deletion`                                                            | 移行したユーザーの旧IDの変更・v2での削除。旧Authとメンバーの削除手順                                                                                                                                                                                       |
 | `billing_requires_manual_reconciliation`                                               | 移行した冊の新規購入・返金と旧プランの照合                                                                                                                                                                                                                 |
 | `images_require_reverse_copy` / `imageR2Key`                                           | R2から旧Storageへの逆転送とサイズ・ハッシュ照合                                                                                                                                                                                                            |
+| `former_owner_row_access_requires_mapping`                                             | 譲渡後に編集者として残らない元オーナーが、供物・供物写真・弔電を作っている。v2で元オーナーを編集者に戻してから切り戻すか、行の作成者の扱いを決める（行の `created_by` の書き換えは未実装）                                                                 |
 | `offering_contributor_without_koden`                                                   | 香典のある差出人とない差出人の連名の供物、または香典のない差出人の按分。旧形式では香典のない人を按分・紐づけに書けない。v2で差出人を見直すか、旧画面で入力し直す                                                                                           |
 | `merged_return_requires_manual_mapping` / `legacy_return_lines_require_manual_mapping` | 1つの香典に旧の返礼記録が複数ある、または旧明細（`return_record_items`）がある返礼の変更・削除。本番では0件（2026-10-18確認。複数記録0件、旧明細0行）のため実装せず、安全のための停止として残す。発生したら、旧画面で返礼記録を1件に整理してから再計画する |
 | `deleted_return_requires_manual_cleanup`                                               | 旧の返礼記録がなく、旧香典の「返礼済み」の印から作った返礼の削除。印の扱いを決め、旧画面で直す                                                                                                                                                             |
