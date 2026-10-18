@@ -120,17 +120,45 @@ describe("rollback review regressions", () => {
 		},
 	);
 	it.each([false, true])(
-		"blocks ordinary editor assignment until legacy RLS agrees (existing: %s)",
-		(existing) => {
+		"gives an ordinary editor the legacy editor role on both sides of the RLS migration (existing: %s)",
+		async (existing) => {
 			const { source, current, user } = memberRoleFixture("editor", existing, [
 				{ name: "editor", permissions: ["view", "edit"] },
 			]);
 			const plan = planRollback(source, current);
-			expect(plan.blockers).toEqual([
-				{ code: "editor_role_requires_legacy_rls_alignment", entityId: newId.user(user) },
-			]);
-			expect(plan.after.kouden_members).toEqual(plan.before.kouden_members);
-			expect(() => rollbackSql(plan, "apply")).toThrow("rollback_blocked");
+			expect(plan.blockers).toEqual([]);
+			const db = await database(source);
+			try {
+				await installLegacyAuth(db, source, "telegram-rls");
+				await db.exec(rollbackSql(plan, "apply"));
+				await db.exec(rollbackSql(plan, "verify"));
+				await db.query(
+					"INSERT INTO telegrams(id,kouden_id,sender_name,created_by) VALUES ($1,$2,'差出人',$3)",
+					[ids.entry, ids.book, ids.user],
+				);
+				await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)", [user]);
+				await db.exec("SET ROLE authenticated");
+				expect(
+					(
+						await db.query(
+							"SELECT r.name FROM kouden_members m JOIN kouden_roles r ON r.id=m.role_id WHERE m.user_id=auth.uid()",
+						)
+					).rows,
+				).toEqual([{ name: "editor" }]);
+				// 適用前の本番RLSでは、旧アプリで招待した編集者と同じく弔電を変更できない（権限が狭まるだけ）。
+				expect((await db.query("UPDATE telegrams SET message='編集' RETURNING id")).rows).toEqual(
+					[],
+				);
+				// RLS を editor に揃えるマイグレーション（#184）の適用後は変更できる。
+				await db.exec(
+					"RESET ROLE; ALTER POLICY telegram_update ON telegrams USING (EXISTS (SELECT 1 FROM public.kouden_members m JOIN public.kouden_roles r ON r.id=m.role_id WHERE m.kouden_id=telegrams.kouden_id AND m.user_id=auth.uid() AND r.name='editor')); SET ROLE authenticated",
+				);
+				expect((await db.query("UPDATE telegrams SET message='編集' RETURNING id")).rows).toEqual([
+					{ id: ids.entry },
+				]);
+			} finally {
+				await db.close();
+			}
 		},
 	);
 	it("reproduces the telegram RLS conflict for the canonical editor name", async () => {

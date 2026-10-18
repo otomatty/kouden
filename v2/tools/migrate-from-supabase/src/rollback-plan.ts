@@ -210,11 +210,7 @@ export function planRollback(sourceInput: unknown, exportInput: unknown): Rollba
 				block("member_inviter_requires_mapping", String(m.user_id));
 				continue;
 			}
-			// アプリは editor、弔電RLSは「編集者」を要求し、通常メンバーの権限を両立できない。
-			if (m.role === "editor" && uid !== oldBook.owner_id && uid !== oldBook.created_by) {
-				block("editor_role_requires_legacy_rls_alignment", String(m.user_id));
-				continue;
-			}
+			// 弔電RLSが「編集者」を要求する間は、旧アプリで招待した編集者と同じく弔電を変更できない（ROLLBACK.md）。
 			if (oldRow) {
 				oldRow.role_id = role.id;
 				if (m.invited_by != null) oldRow.added_by = userId(String(m.invited_by));
