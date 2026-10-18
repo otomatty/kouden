@@ -708,6 +708,7 @@ function reverseBook(
 		links: (LedgerSnapshot["contributors"][number] & { entry: string })[],
 	) => {
 		const actor = userId(g.updatedBy);
+		const amountChanged = !eq(old.gifts.find((b) => b.id === g.id)?.amount, g.amount);
 		for (const table of ["offering_entries", "offering_allocations"] as const) {
 			const wanted = links.filter((l) => table === "offering_entries" || l.shareAmount !== null);
 			const seen = new Set<string>();
@@ -729,7 +730,13 @@ function reverseBook(
 								is_primary_contributor: l.isPrimary,
 							};
 				for (const [k, v] of Object.entries(values)) if (row && eq(row[k], v)) delete values[k];
-				if (row && "allocation_ratio" in values && eq(row.allocated_amount, l.shareAmount))
+				// 負担額も供物の金額も変わらない按分は、旧の比率を保つ。
+				if (
+					row &&
+					"allocation_ratio" in values &&
+					eq(row.allocated_amount, l.shareAmount) &&
+					!amountChanged
+				)
 					delete values.allocation_ratio;
 				if (row) Object.assign(row, values);
 				else
@@ -854,7 +861,8 @@ function reverseBook(
 				after.offerings.find((e) => e.id === id),
 				eventLines(g),
 			);
-			if (!prev || !sameRows(contributors, previousContributors)) {
+			// 金額だけを変えた場合も、按分の比率（按分額÷供物の金額）を合わせ直す。
+			if (!prev || !sameRows(contributors, previousContributors) || prev.amount !== g.amount) {
 				const entries = contributors.map((c) => entryForPerson.get(c.personId));
 				// 差出人に香典がない供物は、旧形式では provider_name だけで表す（紐づけを作らない）。
 				if (

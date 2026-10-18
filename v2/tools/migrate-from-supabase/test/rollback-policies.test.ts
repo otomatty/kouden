@@ -361,6 +361,27 @@ describe("ledger structures written in the legacy screen's terms (#188)", () => 
 			}
 		},
 	);
+	it("recalculates the allocation ratio when only the offering amount changes", async () => {
+		const { source, current } = twoEntries(true);
+		current.ledgers[0]!.tables.gifts.find((g) => g.id === newId.offeringGift(offeringId))!.amount =
+			10000;
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual([]);
+		const db = await withOfferingTriggers(source);
+		try {
+			await db.exec(rollbackSql(plan, "apply"));
+			await db.exec(rollbackSql(plan, "verify"));
+			expect((await state(db))[0]).toEqual({
+				entry: ids.entry,
+				has_offering: true,
+				total: 20000,
+				links: 1,
+				allocations: [{ amount: 5000, ratio: 0.5, primary: true }],
+			});
+		} finally {
+			await db.close();
+		}
+	});
 	it("adds a new offering shared by two koden senders with ratios of the offering amount", async () => {
 		const { source, current } = twoEntries(false);
 		const t = current.ledgers[0]!.tables;
