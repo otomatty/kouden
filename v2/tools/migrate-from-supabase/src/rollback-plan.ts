@@ -671,6 +671,23 @@ function reverseBook(
 		const primary = now.contributors.find((c) => c.giftId === g.id && c.isPrimary);
 		if (primary) kodenOf.set(primary.personId, [...(kodenOf.get(primary.personId) ?? []), g]);
 	}
+	// 代表者を替えると旧の香典は新しい代表者の行になる。前の代表者の返礼・供物の紐づけ・弔電が
+	// 旧の香典に付いたままだと別の人に付け替わるので、その場合は停止する。
+	for (const [person, gifts] of kodenOf)
+		for (const g of gifts) {
+			const previous = old.contributors.find((c) => c.giftId === g.id && c.isPrimary)?.personId;
+			if (!previous || previous === person) continue;
+			const entry = giftOldId(g);
+			if (
+				[
+					...before.return_entry_records,
+					...before.offering_entries,
+					...before.offering_allocations,
+					...before.telegrams,
+				].some((r) => r.kouden_entry_id === entry)
+			)
+				block("koden_representative_changed", g.id);
+		}
 	const entryForPerson = new Map<string, string>();
 	for (const [person, gifts] of kodenOf) {
 		const entries = gifts

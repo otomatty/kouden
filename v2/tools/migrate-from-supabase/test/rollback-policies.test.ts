@@ -577,6 +577,55 @@ describe("ledger structures written in the legacy screen's terms (#188)", () => 
 			planRollback(source, current).after.kouden_entries.find((e) => e.id === ids.entry)!.notes,
 		).toBe("連名: 佐藤 次郎");
 	});
+	it.each(["return", "offering link"] as const)(
+		"blocks a new koden representative while the legacy entry keeps the previous one's %s",
+		(dependent) => {
+			const { source: initial } = twoEntries(dependent === "offering link");
+			const data = structuredClone(initial.data);
+			if (dependent === "offering link") data["public.return_entry_records"] = [];
+			const source = sourceWithCounts(data);
+			const current = exportedFixture(source);
+			const t = current.ledgers[0]!.tables;
+			const gift = t.gifts.find((g) => g.id === newId.entryGift(ids.entry))!;
+			t.persons.push({ ...t.persons[0]!, id: "new-representative", name: "新しい代表者" });
+			t.gift_contributors.find((c) => c.gift_id === gift.id)!.is_primary = 0;
+			t.gift_contributors.push({
+				gift_id: gift.id,
+				person_id: "new-representative",
+				is_primary: 1,
+				share_amount: null,
+			});
+			const plan = planRollback(source, current);
+			expect(plan.blockers).toContainEqual({
+				code: "koden_representative_changed",
+				entityId: gift.id,
+			});
+			expect(() => rollbackSql(plan, "apply")).toThrow("rollback_blocked");
+		},
+	);
+	it("allows a new koden representative when the legacy entry has nothing attached", () => {
+		const { source: initial } = twoEntries(false);
+		const data = structuredClone(initial.data);
+		data["public.return_entry_records"] = [];
+		const source = sourceWithCounts(data);
+		const current = exportedFixture(source);
+		const t = current.ledgers[0]!.tables;
+		const gift = t.gifts.find((g) => g.id === newId.entryGift(ids.entry))!;
+		t.persons.push({ ...t.persons[0]!, id: "new-representative", name: "新しい代表者" });
+		t.gift_contributors.find((c) => c.gift_id === gift.id)!.is_primary = 0;
+		t.gift_contributors.push({
+			gift_id: gift.id,
+			person_id: "new-representative",
+			is_primary: 1,
+			share_amount: null,
+		});
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual([]);
+		expect(plan.after.kouden_entries.find((e) => e.id === ids.entry)).toMatchObject({
+			name: "新しい代表者",
+			notes: "連名: 差出人",
+		});
+	});
 	it("copies the sender to each koden of the same person and keeps the return on the first one", async () => {
 		const { source, current } = twoEntries(false);
 		const t = current.ledgers[0]!.tables;
