@@ -22,7 +22,12 @@
 
 2026-10-14にSupabaseコネクタで実DBの関数・トリガー定義を読み取り確認した。`return_entry_records` の `tr_update_return_entry_total_amount` は INSERT / UPDATE 前に `calculate_total_amount` を呼び、`total_amount` を香典額＋紐づく供物の `price * quantity` に設定する。旧明細の合計は `calculate_return_items_cost` が `return_items_cost` に反映する。切り戻し計画はこの実DBの定義を使う。
 
-リポジトリの `supabase/migrations/20260616000000_atomize_return_entry_record_total_amount.sql` は明細合計を `total_amount` に設定するが、実DBにはその関数・トリガーがなく、このファイルも上記の BEFORE トリガーを削除しない。両トリガーがある場合も親の更新時に香典＋供物へ戻ることをPostgreSQLテストで確認している。実DBとマイグレーションの定義の統一は別途必要。隔離環境でのリハーサルではトリガー定義も比較し、計算式を変更したDBにそのまま適用しない。適用後の値が計画と異なる場合は、照合エラーによりトランザクション全体を取り消す。
+2026-10-18に再確認し、リポジトリの定義を `supabase/migrations/20261018000000_align_return_amount_triggers_with_deployed.sql` で実DBに揃えた。このマイグレーションは、実DBに未適用の `20260616000000_atomize_return_entry_record_total_amount.sql`（明細合計を `total_amount` に設定する）のトリガーと関数を削除し、実DBの返礼金額の関数・トリガーを記録する。実DBとの違いは2点ある。
+
+- 実DBの `return_record_items` には、存在しない `public.return_records` を更新する `tr_update_return_record_total_amount` があり、明細の追加・更新・削除がすべて失敗する（実DBの明細は0件）。マイグレーションはこのトリガーを削除する。
+- 実DBの `calculate_return_items_cost` は IMMUTABLE で、明細トリガー内では直前の変更が見えず、1回前の合計が `return_items_cost` に残る。マイグレーションでは STABLE にする。
+
+マイグレーションは実DBにまだ適用していない。切り戻しは旧明細テーブルへの変更を `legacy_return_lines_require_manual_mapping` で停止するため、壊れたトリガーの影響を受けない。PGliteでは実DBと同じ壊れたトリガーと未適用の 20260616 を置いた状態から、このマイグレーションを適用し、書き戻し・照合と明細追加後の金額を確認している。隔離環境でのリハーサルではトリガー定義も比較し、計算式を変更したDBにそのまま適用しない。適用後の値が計画と異なる場合は、照合エラーによりトランザクション全体を取り消す。
 
 ## 実行前
 

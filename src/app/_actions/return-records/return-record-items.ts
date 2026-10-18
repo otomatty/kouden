@@ -53,9 +53,9 @@ export async function createReturnRecordItem(
 			throw new KoudenError("返礼品詳細情報の作成に失敗しました", ErrorCodes.DB_INSERT_ERROR);
 		}
 
-		// 親 return_entry_records の total_amount は DB トリガ
-		// (recalc_return_entry_record_total_amount_trigger) が同一トランザクション内で
-		// 再集計するため、アプリ層での更新は不要。
+		// 親 return_entry_records の return_items_cost は DB トリガ
+		// (trigger_update_return_items_cost) が同一トランザクション内で再集計するため、
+		// アプリ層での更新は不要。total_amount は香典＋供物で、明細では変わらない。
 
 		// キャッシュの再検証
 		revalidatePath(`/koudens/${koudenId}`);
@@ -160,7 +160,7 @@ export async function updateReturnRecordItem(
 			throw new KoudenError("返礼品詳細情報の更新に失敗しました", ErrorCodes.DB_UPDATE_ERROR);
 		}
 
-		// 親 return_entry_records の total_amount は DB トリガが再集計するため
+		// 親 return_entry_records の return_items_cost は DB トリガが再集計するため
 		// アプリ層での更新は不要。
 
 		// キャッシュの再検証
@@ -203,7 +203,7 @@ export async function deleteReturnRecordItem(
 			throw error;
 		}
 
-		// 親 return_entry_records の total_amount は DB トリガが再集計するため
+		// 親 return_entry_records の return_items_cost は DB トリガが再集計するため
 		// アプリ層での更新は不要。
 
 		// キャッシュの再検証
