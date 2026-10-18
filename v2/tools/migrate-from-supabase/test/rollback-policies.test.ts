@@ -326,6 +326,20 @@ describe("ledger structures written in the legacy screen's terms (#188)", () => 
 			await db.close();
 		}
 	});
+	it("keeps a deleted return blocked while the legacy completed flag would still show it", () => {
+		const { source } = twoEntries(false);
+		source.data["public.kouden_entries"]!.find((e) => e.id === entryB)!.is_return_completed = true;
+		const current = exportedFixture(source);
+		const removed = current.ledgers[0]!.tables.returns.find(
+			(r) => r.person_id === newId.entryPerson(entryB),
+		)!;
+		removed.deleted_at = at;
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual([
+			{ code: "deleted_return_requires_manual_cleanup", entityId: removed.id },
+		]);
+		expect(plan.after.return_entry_records).toEqual(plan.before.return_entry_records);
+	});
 	it.each([true, false])(
 		"moves an offering share to another koden through allocations, links and legacy triggers (return trigger migration: %s)",
 		async (aligned) => {
@@ -401,6 +415,34 @@ describe("ledger structures written in the legacy screen's terms (#188)", () => 
 		expect(plan.blockers).toEqual([]);
 		expect(plan.after.offering_allocations.map((a) => a.contribution_notes)).toEqual([null]);
 		expect(plan.after.offerings[0]!.notes).toBe("差出人: 花は連名で");
+	});
+	it("adds only the removed allocation's note to the untouched legacy offering notes", () => {
+		const { source: initial } = twoEntries(true);
+		const source = sourceWithCounts(structuredClone(initial.data));
+		source.data["public.offerings"]![0]!.notes = "  元の備考  ";
+		source.data["public.offering_allocations"]![0]!.contribution_notes = "花は連名で";
+		source.data["public.offering_allocations"]!.push({
+			...source.data["public.offering_allocations"]![0]!,
+			id: "91000000-0000-4000-8000-000000000002",
+			kouden_entry_id: entryB,
+			allocated_amount: 2500,
+			allocation_ratio: 0.5,
+			is_primary_contributor: false,
+			contribution_notes: "Bの備考",
+		});
+		source.row_counts["public.offering_allocations"] = 2;
+		const current = exportedFixture(source);
+		const t = current.ledgers[0]!.tables;
+		const gift = t.gifts.find((g) => g.id === newId.offeringGift(offeringId))!;
+		expect(gift.notes).toBe("元の備考\n差出人: 花は連名で\n二人目: Bの備考");
+		t.gift_contributors = t.gift_contributors.filter(
+			(c) => c.gift_id !== gift.id || c.person_id === personOf(current, entryB).id,
+		);
+		t.gift_contributors.find((c) => c.gift_id === gift.id)!.is_primary = 1;
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual([]);
+		expect(plan.after.offerings[0]!.notes).toBe("  元の備考  \n差出人: 花は連名で");
+		expect(plan.after.offering_allocations.map((a) => a.contribution_notes)).toEqual(["Bの備考"]);
 	});
 	it("adds a new offering shared by two koden senders with ratios of the offering amount", async () => {
 		const { source, current } = twoEntries(false);

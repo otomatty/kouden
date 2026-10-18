@@ -1,6 +1,7 @@
 import type { ImportKoudenPayload, LedgerSnapshot } from "@kouden/domain";
 import { z } from "zod";
 import { newId, uuidv5 } from "./ids.ts";
+import { MISSING_NAME } from "./transform.ts";
 import { digest, prepareSnapshot } from "./prepare.ts";
 import { snapshotSchema } from "./schemas.ts";
 import {
@@ -705,7 +706,8 @@ function reverseBook(
 	) => {
 		const actor = userId(g.updatedBy);
 		const amountChanged = !eq(old.gifts.find((b) => b.id === g.id)?.amount, g.amount);
-		let droppedNotes = false;
+		/** 消す按分の備考。移行時に供物の備考へ足した「差出人: 備考」と同じ形にする（transform.ts）。 */
+		const droppedNotes: string[] = [];
 		for (const table of ["offering_entries", "offering_allocations"] as const) {
 			const wanted = links.filter((l) => table === "offering_entries" || l.shareAmount !== null);
 			const seen = new Set<string>();
@@ -713,7 +715,12 @@ function reverseBook(
 				const keep = wanted.some((l) => l.entry === row.kouden_entry_id);
 				if (!keep || seen.has(String(row.kouden_entry_id))) {
 					remove(table, String(row.id));
-					if (String(row.contribution_notes ?? "").trim()) droppedNotes = true;
+					const note = String(row.contribution_notes ?? "").trim();
+					const entry = before.kouden_entries.find((e) => e.id === row.kouden_entry_id);
+					const label = [entry?.name, entry?.organization]
+						.map((v) => String(v ?? "").trim())
+						.find((v) => v);
+					if (note) droppedNotes.push(`${label ?? MISSING_NAME}: ${note}`);
 				}
 				seen.add(String(row.kouden_entry_id));
 			}
@@ -856,6 +863,7 @@ function reverseBook(
 				if (person.name === null) block("provider_name_required", g.id);
 				values.provider_name = person.name;
 			}
+			let dropped: string[] = [];
 			// 金額だけを変えた場合も、按分の比率（按分額÷供物の金額）を合わせ直す。
 			if (!prev || !sameRows(contributors, previousContributors) || prev.amount !== g.amount) {
 				const entries = contributors.map((c) => entryForPerson.get(c.personId));
@@ -867,22 +875,19 @@ function reverseBook(
 						contributors[0]!.shareAmount !== null)
 				)
 					block("offering_contributor_without_koden", g.id);
-				// 消す按分の備考は、移行時に供物の備考へ足してある。旧の備考に移してから消す。
-				else if (
-					linkOffering(
+				// 消す按分の備考だけを、旧の供物の備考に足してから消す（残す按分の備考は二重にしない）。
+				else
+					dropped = linkOffering(
 						id,
 						g,
 						contributors.flatMap((c, i) => (entries[i] ? [{ ...c, entry: entries[i] }] : [])),
-					) &&
-					!("notes" in values)
-				)
-					values.notes = g.notes;
+					);
 			}
 			appendLines(
 				values,
 				"notes",
 				after.offerings.find((e) => e.id === id),
-				eventLines(g),
+				[...dropped, ...eventLines(g)],
 			);
 		}
 		if (Object.keys(values).length && g.kind === "koden" && prev) {
@@ -1041,7 +1046,14 @@ function reverseBook(
 		);
 		if (records.length > 1) block("merged_return_requires_manual_mapping", r.id);
 		// 記録がなく旧香典の「返礼済み」の印だけから作った返礼は、印を戻す先を確かめていない。
-		else if (!records.length) block("deleted_return_requires_manual_cleanup", r.id);
+		// 記録を消しても旧香典の「返礼済み」の印が残ると、旧画面は返礼済みと表示する。印の列は本番にないこともあり書かない。
+		else if (
+			!records.length ||
+			before.kouden_entries.some(
+				(e) => e.id === records[0]!.kouden_entry_id && e.is_return_completed === true,
+			)
+		)
+			block("deleted_return_requires_manual_cleanup", r.id);
 		else if (before.return_record_items.some((l) => l.return_record_id === records[0]!.id))
 			block("legacy_return_lines_require_manual_mapping", r.id);
 		else remove("return_entry_records", String(records[0]!.id));
