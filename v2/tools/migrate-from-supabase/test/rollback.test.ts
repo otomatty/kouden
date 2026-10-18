@@ -1054,6 +1054,71 @@ describe("rollback plan and PostgreSQL", () => {
 			await db.close();
 		}
 	});
+	it("recalculates return amounts when sources change or move after the alignment migration", async () => {
+		const source = sourceWithCounts(sourceWithReturn().data);
+		const [r1, e2, r2, offering] = [2, 3, 4, 5].map(
+			(n) => `90000000-0000-4000-8000-00000000000${n}`,
+		);
+		const db = await database(source);
+		try {
+			await db.exec(
+				await legacyMigration("20261018000000_align_return_amount_triggers_with_deployed"),
+			);
+			await db.query("UPDATE return_entry_records SET id = $1", [r1]);
+			await db.query(
+				"INSERT INTO kouden_entries SELECT (jsonb_populate_record(NULL::kouden_entries, to_jsonb(k) || jsonb_build_object('id', $1::uuid, 'amount', 5000))).* FROM kouden_entries k",
+				[e2],
+			);
+			await db.query(
+				"INSERT INTO return_entry_records (id, kouden_entry_id, created_by) VALUES ($1, $2, $3)",
+				[r2, e2, ids.user],
+			);
+			await db.query(
+				"INSERT INTO offerings (id, kouden_id, type, price, quantity, provider_name, created_by) VALUES ($1, $2, 'FLOWER', 2000, 1, '供物', $3)",
+				[offering, ids.book, ids.user],
+			);
+			await db.query(
+				"INSERT INTO offering_entries (offering_id, kouden_entry_id, created_by) VALUES ($1, $2, $3)",
+				[offering, ids.entry, ids.user],
+			);
+			const state = async () =>
+				(
+					await db.query<{ total_amount: number; return_items_cost: number }>(
+						"SELECT total_amount::int, return_items_cost::int FROM return_entry_records ORDER BY id",
+					)
+				).rows.map((r) => [r.total_amount, r.return_items_cost]);
+			expect(await state()).toEqual([
+				[12000, 0],
+				[5000, 0],
+			]);
+			await db.exec("UPDATE offerings SET price = 3000");
+			expect(await state()).toEqual([
+				[13000, 0],
+				[5000, 0],
+			]);
+			await db.query("UPDATE offering_entries SET kouden_entry_id = $1", [e2]);
+			expect(await state()).toEqual([
+				[10000, 0],
+				[8000, 0],
+			]);
+			await db.query("UPDATE kouden_entries SET amount = 6000 WHERE id = $1", [e2]);
+			expect(await state()).toEqual([
+				[10000, 0],
+				[9000, 0],
+			]);
+			await db.query(
+				"INSERT INTO return_record_items (return_record_id, return_item_master_id, price, quantity, created_by) VALUES ($1, $2, 1000, 1, $3)",
+				[r1, source.data["public.return_items"]![0]!.id, ids.user],
+			);
+			await db.query("UPDATE return_record_items SET return_record_id = $1", [r2]);
+			expect(await state()).toEqual([
+				[10000, 0],
+				[9000, 1000],
+			]);
+		} finally {
+			await db.close();
+		}
+	});
 	it("blocks entry deletion so unmigrated audit history cannot be cascade-deleted", async () => {
 		const source = sourceFixture();
 		const current = exportedFixture(source);
