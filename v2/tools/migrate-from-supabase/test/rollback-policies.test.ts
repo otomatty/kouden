@@ -442,6 +442,24 @@ describe("ledger structures written in the legacy screen's terms (#188)", () => 
 		expect(plan.after.offering_allocations.map((a) => a.contribution_notes)).toEqual([null]);
 		expect(plan.after.offerings[0]!.notes).toBe("差出人: 花は連名で");
 	});
+	it("does not restore an allocation note the v2 notes no longer contain", () => {
+		const { source } = twoEntries(true);
+		source.data["public.offering_allocations"]![0]!.contribution_notes = "花は連名で";
+		const current = exportedFixture(source);
+		const t = current.ledgers[0]!.tables;
+		const gift = t.gifts.find((g) => g.id === newId.offeringGift(offeringId))!;
+		gift.notes = "編集後の備考";
+		t.gift_contributors = t.gift_contributors.filter((c) => c.gift_id !== gift.id);
+		t.gift_contributors.push({
+			gift_id: gift.id,
+			person_id: personOf(current, entryB).id,
+			is_primary: 1,
+			share_amount: 5000,
+		});
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual([]);
+		expect(plan.after.offerings[0]!.notes).toBe("編集後の備考");
+	});
 	it("adds only the removed allocation's note to the untouched legacy offering notes", () => {
 		const { source: initial } = twoEntries(true);
 		const source = sourceWithCounts(structuredClone(initial.data));

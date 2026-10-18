@@ -907,7 +907,8 @@ function reverseBook(
 				values,
 				"notes",
 				after.offerings.find((e) => e.id === id),
-				[...dropped, ...eventLines(g)],
+				// v2 で備考を変えた場合は、消した按分の備考も v2 の備考に従う（戻さない）。
+				[...("notes" in values ? [] : dropped), ...eventLines(g)],
 			);
 		}
 		if (Object.keys(values).length && g.kind === "koden" && prev) {
