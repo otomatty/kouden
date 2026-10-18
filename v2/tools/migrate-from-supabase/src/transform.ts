@@ -174,6 +174,16 @@ export function returnMethodOf(value: string | null): ReturnMethod | null {
 	return RETURN_METHOD_PATTERNS.find(([pattern]) => pattern.test(v))?.[1] ?? null;
 }
 
+/** 旧 DB のトリガーが台帳作成時に入れる関係の名前と説明（database/functions/initialize_default_relationships.sql） */
+const DEFAULT_RELATIONSHIPS = new Map([
+	["親族", "故人の親族"],
+	["友人", "故人の友人"],
+	["知人", "故人の知人"],
+	["会社関係", "故人の会社関係者"],
+	["近所", "故人の近所の方"],
+	["その他", "その他の関係"],
+]);
+
 type Person = LedgerSnapshot["persons"][number];
 type Gift = LedgerSnapshot["gifts"][number];
 type Contributor = LedgerSnapshot["contributors"][number];
@@ -280,10 +290,11 @@ export function transformKouden(
 			sortOrder: i + 1,
 			isHidden: !r.is_enabled,
 		}));
-	// 新しい関係には説明の欄がない。旧画面で書かれた説明は移さず、検証レポートで知らせる
+	// 新しい関係には説明の欄がない。旧画面で書かれた説明は移さず、検証レポートで知らせる。
+	// 台帳作成時に旧 DB が自動で入れた定型の説明は失っても困らないので知らせない（#192）
 	for (const r of source.relationships) {
 		const description = trimOrNull(r.description);
-		if (description !== null) {
+		if (description !== null && DEFAULT_RELATIONSHIPS.get(r.name.trim()) !== description) {
 			warn(
 				"relationship_description_dropped",
 				r.id,

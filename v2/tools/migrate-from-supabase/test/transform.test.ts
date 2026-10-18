@@ -40,6 +40,14 @@ function entry(id: string, fields: Partial<LegacyEntry> = {}): LegacyEntry {
 	};
 }
 
+const relationship = (id: string, name: string, description: string) => ({
+	id,
+	name,
+	description,
+	is_enabled: true,
+	created_at: T,
+});
+
 function source(overrides: Partial<LegacyKoudenSource> = {}): LegacyKoudenSource {
 	return {
 		kouden: {
@@ -444,6 +452,27 @@ describe("香典帳（05 §3）", () => {
 				message: expect.stringContaining("学生時代の友人"),
 			}),
 		]);
+	});
+
+	it("旧 DB が入れた定型の関係の説明は知らせず、利用者が書いた説明だけを知らせる", () => {
+		const { warnings } = transformKouden(
+			source({
+				relationships: [
+					// 定型の名前と説明の組（前後の空白は無視）
+					relationship("d-1", "親族", "故人の親族"),
+					relationship("d-2", " 会社関係 ", "故人の会社関係者 "),
+					// 定型の名前でも説明を書き換えたもの
+					relationship("u-1", "友人", "故人の大学時代の友人"),
+					// 定型の説明でも名前を変えたもの
+					relationship("u-2", "親戚", "故人の親族"),
+					relationship("u-3", "趣味の会", "囲碁仲間"),
+				],
+			}),
+			KNOWN,
+		);
+		expect(
+			warnings.filter((w) => w.code === "relationship_description_dropped").map((w) => w.legacyId),
+		).toEqual(["u-1", "u-2", "u-3"]);
 	});
 
 	it("香典 1 件 = 差出人 1 人。氏名も団体名もなければ補い、参列は写像する", () => {
