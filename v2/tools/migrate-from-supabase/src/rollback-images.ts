@@ -54,7 +54,11 @@ export function createStorageClient(
 		async put(bucket, path, bytes, contentType) {
 			const response = await call(url("", bucket, path), {
 				method: "POST",
-				headers: { "Content-Type": contentType, "Cache-Control": "3600", "x-upsert": "false" },
+				headers: {
+					"Content-Type": contentType,
+					"Cache-Control": "max-age=3600",
+					"x-upsert": "false",
+				},
 				body: new Blob([new Uint8Array(bytes)]),
 			});
 			await response.body?.cancel();
