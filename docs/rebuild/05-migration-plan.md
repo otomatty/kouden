@@ -45,7 +45,7 @@ flowchart LR
 
 [`v2/tools/migrate-from-supabase/README.md`](../../v2/tools/migrate-from-supabase/README.md) に実行手順・入力形式・認証・レポートをまとめた。`prepare` がコネクタの抽出結果を検証・変換し、`import` がユーザーを最大200人ずつ、続いて台帳単位で投入して保存先を読み戻す。`verify` は書き込みをせずに同じ照合を行う。JSON / Markdown に件数・香典合計の予定値と実測値を記録し、メンバー・購入などの不一致は項目の場所で示す。
 
-返礼品画像と供物写真は保全済みの本体と対応表を使い、R2 へ転送後にキー・サイズ・SHA-256 を照合する。対応表の `source` は返礼品の `image_url` または供物写真の `storage_key`。各台帳で画像を先に転送し、D1・DO を投入する。供物写真は元の供物との対応・説明・登録者・日時も読み戻して比較し、いただきものの詳細にメンバー限定で表示する。`common` / `gift` / `funeral` の非空テーブルは警告として残し、領収書の本体保全も別作業として追跡する。
+返礼品画像と供物写真は保全済みの本体と対応表を使い、R2 へ転送後にキー・サイズ・SHA-256 を照合する。対応表の `source` は返礼品の `image_url` または供物写真の `storage_key`。各台帳で画像を先に転送し、D1・DO を投入する。供物写真は元の供物との対応・説明・登録者・日時も読み戻して比較し、いただきものの詳細にメンバー限定で表示する。`common` / `gift` / `funeral` は移行しない（[#190](https://github.com/otomatty/kouden/issues/190)）。非空のテーブルがあれば警告を出す。領収書の本体保全は別作業として追跡する。最終抽出の警告は、README の「最終抽出の警告の判断基準」と突き合わせる。
 
 全件の原子的な切り替えは行わない。途中で失敗した場合は原因を直して同じ計画を全件再実行する。再実行は新旧アプリへの書き込み停止中に限る。投入予定外の移行済みユーザー・台帳・台帳配下の画像も不一致として検出する。照合の合格は集計・D1 行・画像の一致を示すもので、DO の全テキスト項目や画面表示の一致までは保証しない。§5 の目視確認、切り戻しツール、staging リハーサルは引き続き必要。
 
@@ -83,7 +83,7 @@ flowchart LR
 | 旧 | 新 | 変換ルール |
 |---|---|---|
 | — | `events` | 香典帳ごとに既定の行事「葬儀」を 1 件作成し、旧データはすべてここに入れる。受付番号は付けない（`receipt_no = NULL`） |
-| `relationships` | `relationships` | 名前と表示・非表示はそのまま。新しい関係には説明の欄がないので、`description` は移さず `relationship_description_dropped` として検証レポートに載せる |
+| `relationships` | `relationships` | 名前と表示・非表示はそのまま。新しい関係には説明の欄がないので、`description` は移さない。旧 DB が台帳作成時に入れる定型の説明以外は `relationship_description_dropped` として検証レポートに載せる |
 | `kouden_entries` | `persons` + `gifts`（`kind = 'koden'`）+ `gift_contributors` | **1 件 = 1 人**として差出人を作る（自動での名寄せはしない。誤った統合を避けるため）。`name` と `organization` がどちらも NULL の行は、差出人の必須条件を満たさないため `name = '（氏名未記入）'` とし、`notes` に移行時の補完であることを記録する（件数は §4 の事前調査で確認する）。`attendance_type`: `FUNERAL` → `attended`、`CONDOLENCE_VISIT` → `condolence_visit`、`ABSENT` → `absent`。香典の `notes` は `gifts.notes` に移す |
 | `offerings` | `gifts`（`kind` は `type` から写像: `FLOWER` → `kyoka`、`INCENSE` / `FOOD` → `kumotsu`、`MONEY` / `OTHER` → `other`） | `description` → `item_name`（空なら種類の名前）、`quantity`、`price`（→ `amount`）、`notes` を移す |
 | `offering_allocations` / `offering_entries` | `gift_contributors` | 紐づく香典の差出人を供物の差出人にする。`allocated_amount` → `share_amount`、`is_primary_contributor` → `is_primary`（代表者がいなければ先頭、複数なら最初の 1 人）。紐づきがなければ `provider_name` で差出人を新規作成。連名の差出人には備考の欄がないので、`contribution_notes` は「差出人: 備考」として供物の備考に足す |
@@ -100,7 +100,7 @@ flowchart LR
 
 これらは切り替え時に `pg_dump` で全体のバックアップを取り、アクセス制限付きの保管場所に 1 年間保存する。
 
-> **事前確認**: 型定義には `common` / `gift` / `funeral` スキーマも存在する。アプリからは参照されていないが、本番にデータが入っていないかを抽出の前に確認する。
+> **事前確認**: 型定義には `common` / `gift` / `funeral` スキーマも存在する。アプリからは参照されていない。本番 `common` の組織データは 2026-10-18 に削除済みで（[#190](https://github.com/otomatty/kouden/issues/190)）、最終抽出で 1 行でもあれば停止して確認する。
 
 ## 4. 移行前の準備
 

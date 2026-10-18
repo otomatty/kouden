@@ -109,8 +109,7 @@ it("plans offline, refuses unapproved apply and does not print private input", a
 		expect(JSON.parse(await readFile(join(dir, "apply", "report.json"), "utf8")).status).toBe(
 			"failed",
 		);
-		current.ledgers[0]!.tables.gifts[0]!.deleted_at = "2026-10-14T00:00:00.000Z";
-		current.ledgers[0]!.tables.persons[0]!.deleted_at = "2026-10-14T00:00:00.000Z";
+		current.ledgers[0]!.tables.persons[0]!.notes = "差出人のメモ";
 		await writeFile(snapshotPath, JSON.stringify(current));
 		const blocked = spawnSync("bun", [cli, "plan", ...args, "--out", join(dir, "blocked")], {
 			encoding: "utf8",
@@ -121,8 +120,9 @@ it("plans offline, refuses unapproved apply and does not print private input", a
 		const blockedReport = JSON.parse(await readFile(join(dir, "blocked", "report.json"), "utf8"));
 		expect(blockedReport.status).toBe("blocked");
 		expect(blockedReport.blockers).toContainEqual({
-			code: "deleted_entry_requires_manual_cleanup",
-			entityId: current.ledgers[0]!.tables.gifts[0]!.id,
+			code: "unrepresentable_field",
+			entityId: current.ledgers[0]!.tables.persons[0]!.id,
+			field: "notes",
 		});
 		await expect(readFile(join(dir, "blocked", "apply.sql"))).rejects.toMatchObject({
 			code: "ENOENT",
