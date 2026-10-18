@@ -26,7 +26,7 @@ v2 をローカルで動かすのは、Cloudflare に一時リソースを作ら
 1. Supabase のダッシュボードでリハーサル用プロジェクトを作る。名前は `kouden-rollback-rehearsal`、リージョンは Tokyo。選べるなら Postgres 15（本番は 15.8）にし、選べなければ版の違いを結果に記録する。Free プランの組織で作れる稼働中のプロジェクトは 2 つまでで、本番と合わせて上限になる。
 2. Authentication の設定で、新規登録（Allow new users to sign up）を無効にし、Site URL を `http://localhost:8788` にする。旧アプリは 6 桁の認証コードでログインするため、Email Templates の Magic Link の本文を、リンク（`{{ .ConfirmationURL }}`）ではなくコード（`{{ .Token }}`）を含むものにする。複製した `auth.users` には実在の利用者のメールアドレスが入る。独自の SMTP は設定しない（既定の送信は組織のメンバー宛てにしか届かない）。自分以外のアドレスにメールを送る操作をしない。
 3. Database の SSL Configuration から CA 証明書をダウンロードし、Git 管理外に置く。環境変数 `PGSSLROOTCERT` にそのパスを設定する。
-4. [PostgreSQL のクライアント](https://www.postgresql.org/download/windows/)（`psql`）を入れて PATH を通し、Docker Desktop を起動する（`supabase db dump` が使う）。
+4. [PostgreSQL のクライアント](https://www.postgresql.org/download/windows/)（`psql`・`pg_dump`・`pg_dumpall`。本番の 15 以上の版）と Git for Windows（Git Bash）を入れて PATH を通す。Docker は使わない。
 5. Git 管理外の作業フォルダ `v2/.migration-data/rollback-rehearsal-<日付>/` を作り、ACL を自分だけに絞る。dump には利用者の個人情報とパスワードのハッシュが入る。
 6. スクリプトを実行する PowerShell の環境変数に、本番とリハーサル用の Session pooler の接続文字列（5432 番ポート）を設定する。Free プランの Direct connection は IPv6 のみのため、Session pooler を使う。パスワードに記号があれば URL エンコードする。
 
@@ -36,7 +36,7 @@ $env:REHEARSAL_DB_URL = 'postgresql://postgres.<リハーサル用ref>:<パス�
 $env:PGSSLROOTCERT = '<CA 証明書のパス>'
 ```
 
-スクリプトは psql にパスワードを `PGPASSWORD` で渡し、`sslmode=verify-full` で証明書を検証する。`supabase db dump` は Docker 内の `pg_dump` に URL を渡すため、ホストの証明書を使えず、パスワードもコマンドの引数に入る。そのため `sslmode=require`（平文に落ちない）を付けて実行する。自分だけが使う端末で実行する。
+スクリプトは psql・pg_dump にパスワードを `PGPASSWORD` で渡し、`sslmode=verify-full` で証明書を検証する。パスワードはコマンドの引数やファイルに残さない。
 
 ## 1. 旧本番 DB を複製する
 
@@ -49,7 +49,7 @@ $env:PGSSLROOTCERT = '<CA 証明書のパス>'
 
 `copy-legacy-db.ps1` は次を行う。接続先が逆のときと、空でないプロジェクト（public の表、Auth のユーザー、Storage のバケット・ファイルのいずれかがある）への復元は止める。
 
-1. 本番を `supabase db dump` で roles・schema・data の 3 つに分けて保存する（既にあれば使い回す）。
+1. 本番を roles・schema・data の 3 つに分けて保存する（既にあれば使い回す）。`supabase db dump --dry-run` で Supabase の絞り込みを入れた pg_dump のスクリプトだけを出させ、ホストの pg_dump で実行する。`supabase db dump` 自身は Docker 内の pg_dump を使い、ホストの CA 証明書で検証できないため。
 2. auth・storage の表に付けた独自トリガー（新規ユーザーの `profiles` を作る `on_auth_user_created` など）と RLS ポリシー（`auth.users` の本人読み取りなど）は dump に含まれないため、本番の定義を読み取り、リハーサル用にないものだけを作る SQL を用意する。Supabase が管理する表でポリシーの作成を拒まれた場合は警告を出して飛ばし、比較スクリプトの差分に残る。
 3. リハーサル用へ 1 トランザクションで復元する。データの投入中だけトリガーを止める。
 4. 複製された `pg_cron` のジョブ（無料の香典帳を 14 日で自動アーカイブする `archive_free_koudens_daily`）を止める。リハーサル中に状態が変わり、前提照合が崩れるのを防ぐ。

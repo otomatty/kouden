@@ -24,12 +24,29 @@ function Invoke-Psql([string]$url, [string[]]$options) {
 $used = Invoke-Psql $env:REHEARSAL_DB_URL @('-A', '-t', '-c', "select (select count(*) from pg_tables where schemaname = 'public') + (select count(*) from auth.users) + (select count(*) from storage.buckets) + (select count(*) from storage.objects)")
 if ([int]$used -ne 0) { throw 'リハーサル用のプロジェクトに既存の表・ユーザー・ファイルがあります。作ったばかりの空のプロジェクトに復元してください' }
 
-# supabase db dump は Docker 内の pg_dump に URL を渡すため、ホストの証明書は使えない。平文に落ちないよう require にする。
-# パスワードはこのコマンドの引数に入る。自分だけが使う端末で実行する。
-$dumpUrl = $env:PROD_DB_URL + $(if ($env:PROD_DB_URL.Contains('?')) { '&' } else { '?' }) + 'sslmode=require'
+# supabase db dump は Docker 内の pg_dump を使うため、ホストの CA 証明書で検証できない。
+# --dry-run で同じ絞り込みの pg_dump スクリプトだけを出させ、ホストの pg_dump（Git Bash）で verify-full のまま実行する。
+# パスワードは URL から外して PGPASSWORD で渡し、スクリプトにもコマンドの引数にも残さない。
+$prod = [Uri]$env:PROD_DB_URL
+$prodUser, $prodPassword = $prod.UserInfo -split ':', 2
+$dumpUrl = 'postgresql://{0}@{1}:{2}{3}' -f $prodUser, $prod.Host, $prod.Port, $prod.AbsolutePath
+# WSL の bash を避け、git.exe（cmd\ や mingw64\bin\ にある）から上へ Git for Windows の bin\bash.exe を探す。
+$gitBash = $null
+for ($d = Split-Path (Get-Command git).Source; $d; $d = Split-Path $d) {
+	if (Test-Path (Join-Path $d 'bin\bash.exe')) { $gitBash = Join-Path $d 'bin\bash.exe'; break }
+}
+if (-not $gitBash) { throw 'Git for Windows の bash.exe が見つかりません' }
 function Save-Dump([string]$file, [string[]]$options) {
 	if (Test-Path $file) { return }  # 復元だけをやり直す場合は使い回す
-	supabase db dump --db-url $dumpUrl -f "$file.part" @options
+	$script = supabase db dump --workdir $PWD --db-url $dumpUrl --dry-run @options  # リポジトリの supabase/config.toml を読まない
+	if ($LASTEXITCODE -ne 0) { throw "dump $file の準備に失敗しました (exit $LASTEXITCODE)" }
+	# 出力は bash 側でファイルへ書く（PowerShell 5.1 のリダイレクトは UTF-16 になるため）。
+	$script = @($script | Where-Object { $_ -notmatch '^export PGPASSWORD=' }) -replace '^set -euo pipefail$', ('set -euo pipefail' + "`n" + 'exec > "$DUMP_OUT"')
+	[IO.File]::WriteAllText("$PWD\$file.sh", ($script -join "`n") + "`n")
+	$env:PGPASSWORD = [Uri]::UnescapeDataString("$prodPassword")
+	$env:DUMP_OUT = "$file.part"
+	try { & $gitBash "$file.sh" }
+	finally { Remove-Item Env:PGPASSWORD, Env:DUMP_OUT }
 	if ($LASTEXITCODE -ne 0) { Remove-Item -ErrorAction SilentlyContinue "$file.part"; throw "dump $file failed (exit $LASTEXITCODE)" }
 	Move-Item "$file.part" $file
 }
