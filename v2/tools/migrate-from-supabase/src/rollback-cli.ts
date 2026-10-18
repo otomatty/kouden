@@ -4,7 +4,9 @@ import { parseArgs } from "node:util";
 import { createImportClient } from "./client.ts";
 import { digest, json, privateJson } from "./prepare.ts";
 import { captureRollback } from "./rollback-export.ts";
+import { copyRollbackImages, createStorageClient } from "./rollback-images.ts";
 import { planRollback } from "./rollback-plan.ts";
+import { z } from "zod";
 import { executeRollbackSql, rollbackReport, rollbackSql } from "./rollback-sql.ts";
 
 async function main() {
@@ -19,6 +21,7 @@ async function main() {
 			"writes-stopped": { type: "boolean" },
 			"project-ref": { type: "string" },
 			"approve-sha256": { type: "string" },
+			images: { type: "string" },
 			help: { type: "boolean" },
 		},
 	});
@@ -26,12 +29,14 @@ async function main() {
 		process.stdout.write(`使い方:
   bun run rollback export --url <origin> --writes-stopped --out <new-private-dir>
   bun run rollback plan --source <original-source.json> --snapshot <v2-export.json> --out <new-private-dir>
-  bun run rollback apply --source <original-source.json> --snapshot <v2-export.json> --project-ref <ref> --approve-sha256 <apply.sql SHA256> --writes-stopped --out <new-report-dir>
+  bun run rollback images --source <original-source.json> --snapshot <v2-export.json> --url <origin> --project-ref <ref> --writes-stopped --out <new-report-dir>
+  bun run rollback apply --source <original-source.json> --snapshot <v2-export.json> --project-ref <ref> --approve-sha256 <apply.sql SHA256> [--images <images.json>] --writes-stopped --out <new-report-dir>
   bun run rollback verify --source <original-source.json> --snapshot <v2-export.json> --project-ref <ref> --writes-stopped --out <new-report-dir>
 
 apply/verify は psql と PGHOST/PGPORT/PGUSER/PGDATABASE/PGPASSWORD を使用します。
 export/apply/verify の前に両アプリの書き込み・Webhook・ジョブを停止してください。
-export は切り戻し専用の CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET（localhost は ROLLBACK_DEV_TOKEN）を使用します。
+export/images は切り戻し専用の CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET（localhost は ROLLBACK_DEV_TOKEN）を使用します。
+images は旧 Storage へ SUPABASE_SECRET_KEY で書き込みます。apply の前に実行してください。
 全出力は個人情報を含む非公開ディレクトリに保管してください。
 `);
 		return;
@@ -39,7 +44,7 @@ export は切り戻し専用の CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET（
 	const command = positionals[0];
 	if (
 		positionals.length !== 1 ||
-		!["export", "plan", "apply", "verify"].includes(command!) ||
+		!["export", "plan", "images", "apply", "verify"].includes(command!) ||
 		!v.out
 	)
 		throw new Error("rollback_arguments");
@@ -53,16 +58,7 @@ export は切り戻し専用の CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET（
 			v["approve-sha256"]
 		)
 			throw new Error("rollback_arguments");
-		const client = createImportClient(
-			v.url,
-			process.env.ROLLBACK_DEV_TOKEN
-				? { devToken: process.env.ROLLBACK_DEV_TOKEN }
-				: {
-						clientId: process.env.CF_ACCESS_CLIENT_ID ?? "",
-						clientSecret: process.env.CF_ACCESS_CLIENT_SECRET ?? "",
-					},
-		);
-		const data = await captureRollback(client, true);
+		const data = await captureRollback(rollbackClient(v.url), true);
 		await mkdir(resolve(v.out), { mode: 0o700 });
 		await privateJson(resolve(v.out, "v2-export.json"), data);
 		process.stdout.write(`取得完了: ${data.manifest.users.length} 人、${data.ledgers.length} 冊\n`);
@@ -71,8 +67,10 @@ export は切り戻し専用の CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET（
 	if (
 		!v.source ||
 		!v.snapshot ||
-		v.url ||
-		(command === "plan" && (v["approve-sha256"] || v["project-ref"]))
+		(command === "images") !== Boolean(v.url) ||
+		(["plan", "images"].includes(command!) && v["approve-sha256"]) ||
+		(command !== "apply" && v.images) ||
+		(command === "plan" && v["project-ref"])
 	)
 		throw new Error("rollback_arguments");
 	const sourceRaw = await readFile(resolve(v.source), "utf8");
@@ -91,6 +89,20 @@ export は切り戻し専用の CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET（
 		process.exitCode = 1;
 		return;
 	}
+	if (command === "images") {
+		const images = await copyRollbackImages(
+			plan.images,
+			rollbackClient(v.url!),
+			createStorageClient(plan.sourceProject, process.env.SUPABASE_SECRET_KEY ?? ""),
+		);
+		await privateJson(resolve(v.out, "images.json"), {
+			exportSha256: plan.exportSha256,
+			images,
+		});
+		process.stdout.write(`画像 ${images.length} 件のサイズと SHA-256 を照合しました。
+`);
+		return;
+	}
 	const sql = rollbackSql(plan, command === "verify" ? "verify" : "apply");
 	const sha256 = digest(sql);
 	if (command === "plan") {
@@ -106,6 +118,22 @@ export は切り戻し専用の CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET（
 	try {
 		if (command === "apply" && v["approve-sha256"] !== sha256)
 			throw new Error("rollback_approval_mismatch");
+		// 参照先の画像がない状態で旧 DB を書き換えない。
+		if (command === "apply" && plan.images.length) {
+			const copied = v.images
+				? imagesReportSchema.parse(await json(resolve(v.images)))
+				: { exportSha256: "", images: [] };
+			if (
+				copied.exportSha256 !== plan.exportSha256 ||
+				plan.images.some(
+					(i) =>
+						!copied.images.some(
+							(c) => c.bucket === i.bucket && c.path === i.path && c.r2Key === i.r2Key,
+						),
+				)
+			)
+				throw new Error("rollback_images_not_copied");
+		}
 		await executeRollbackSql(sql, plan.sourceProject);
 		await privateJson(resolve(v.out, "report.json"), {
 			...report,
@@ -123,6 +151,23 @@ export は切り戻し専用の CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET（
 		});
 		throw error;
 	}
+}
+
+const imagesReportSchema = z.object({
+	exportSha256: z.string(),
+	images: z.array(z.object({ bucket: z.string(), path: z.string(), r2Key: z.string() })),
+});
+
+function rollbackClient(url: string) {
+	return createImportClient(
+		url,
+		process.env.ROLLBACK_DEV_TOKEN
+			? { devToken: process.env.ROLLBACK_DEV_TOKEN }
+			: {
+					clientId: process.env.CF_ACCESS_CLIENT_ID ?? "",
+					clientSecret: process.env.CF_ACCESS_CLIENT_SECRET ?? "",
+				},
+	);
 }
 
 // DB エラー、Zod の入力値、psql の SQL 引用を標準出力へ漏らさない。

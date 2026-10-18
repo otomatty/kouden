@@ -2,7 +2,7 @@
 
 一般公開後の切り戻し用 CLI。最終移行時のスナップショットと、書き込みを停止した v2 を比較し、旧形式に戻せる差分を SQL にする。通信しない `plan`、明示的に書き込む `apply`、読み取り専用の `verify` に分ける。
 
-この版は移行済みの香典帳を対象にする。新規ユーザー・新規香典帳や画像の逆転送など、未対応の変更が1件でもあれば全体を停止する。ブロッカーの解消、隔離した Supabase でのリハーサル、画面比較が終わるまでは、本番切り戻しの準備完了と扱わない。
+この版は移行済みの香典帳を対象にする。新規ユーザー・新規香典帳など、未対応の変更が1件でもあれば全体を停止する。ブロッカーの解消、隔離した Supabase でのリハーサル、画面比較が終わるまでは、本番切り戻しの準備完了と扱わない。
 
 ## 対応する変更
 
@@ -11,6 +11,7 @@
 - 単独差出人の香典、独立した供物・供花、弔電の追加・更新。
 - 旧形式で表せる返礼状況・金額・送付先・備考・JSON明細。合計と生成列は旧DBの式で計算する。
 - 旧環境の依存行がない供物・弔電の削除。紐づかない差出人が残る場合は停止する。
+- 返礼品画像・供物写真の追加・差し替え・削除。画像は `images` で旧 Storage へ逆転送する（後述）。供物・供花以外への写真は `photo_requires_offering`、別の台帳のキーは `image_outside_book` で停止する。
 
 変わらなかった値には元スナップショットの値を使う。前後の空白、台帳・関係の説明、元の供物分類、未移行の列を保持する。追加行のIDはv2のIDから決定的に作る。変更履歴・受付番号など旧画面にない運用情報はexport側に残す。
 
@@ -56,6 +57,27 @@ D1と各DOを2回読み、一致を確認する。DO内はトランザクショ�
 
 `sourceSha256` は空白・改行を含む元ファイルのSHA256で、移行時の `prepare` が保存した `plan.json` の値と一致することを確認する。
 
+## 画像の逆転送
+
+v2で追加・差し替えた画像だけを、R2から旧Storageの決定的なパスへ写す。移行時から変わらない画像は旧Storageの元の本体と参照をそのまま使う。
+
+| 画像       | 旧バケット     | パス                                 | 旧DBの参照                                        |
+| ---------- | -------------- | ------------------------------------ | ------------------------------------------------- |
+| 返礼品画像 | `return-items` | `{旧台帳ID}/{作成者ID}/v2-{R2のID}`  | `return_items.image_url`（公開URL）               |
+| 供物写真   | `offerings`    | `{作成者の旧ユーザーID}/v2-{写真ID}` | `offering_photos.storage_key`（バケット内のパス） |
+
+`report.json` の `images` に転送対象を出す。`apply` の前に次を実行する。
+
+```sh
+bun run rollback images --source ../../.migration-data/cutover/source-snapshot.json --snapshot ../../.migration-data/rollback-export/v2-export.json --url https://<v2-host> --project-ref <legacy-project-ref> --writes-stopped --out ../../.migration-data/rollback-images
+```
+
+R2の本体は切り戻し専用の `/internal/import/rollback/files` から、`export` と同じAccessのサービストークンで読む。Workerは送信した本体のSHA-256を返し、R2に保存したハッシュとも照合する。旧Storageへは `SUPABASE_SECRET_KEY`（Secret key か service_role key）を環境変数で渡し、接続先は元スナップショットのproject refから作る。
+
+各画像は、旧Storageを読んで同じ内容があれば書かず、なければ上書きなし（`x-upsert: false`）でアップロードし、読み戻してサイズとSHA-256を照合する。同じパスに違う内容があれば上書きせず `rollback_storage_conflict` で停止する。何度実行しても同じ結果になる。結果は `images.json` に出す。
+
+`apply` は計画に画像があるとき `--images <images.json>` を要求し、同じexportのすべての転送対象が照合済みでなければ `rollback_images_not_copied` で書き込まずに停止する。v2で削除・差し替えた画像の旧Storageの本体は消さず、旧DBの参照だけを外す。
+
 ## 書き戻し・照合
 
 `psql` をPATHに入れる。[SupabaseのDirect connectionかSession pooler](https://supabase.com/docs/guides/database/connecting-to-postgres) の5432番ポートを使う。Transaction poolerは拒否する。
@@ -72,7 +94,7 @@ D1と各DOを2回読み、一致を確認する。DO内はトランザクショ�
 SSL無効は拒否する。接続先と元スナップショットのproject refを照合する。`PGHOSTADDR` / `PGSERVICE` 等の上書き設定は引き継がない。秘密はコマンド引数に含めない。
 
 ```sh
-bun run rollback apply --source ../../.migration-data/cutover/source-snapshot.json --snapshot ../../.migration-data/rollback-export/v2-export.json --project-ref <legacy-project-ref> --approve-sha256 <planのSHA256> --writes-stopped --out ../../.migration-data/rollback-apply
+bun run rollback apply --source ../../.migration-data/cutover/source-snapshot.json --snapshot ../../.migration-data/rollback-export/v2-export.json --project-ref <legacy-project-ref> --approve-sha256 <planのSHA256> --images ../../.migration-data/rollback-images/images.json --writes-stopped --out ../../.migration-data/rollback-apply
 bun run rollback verify --source ../../.migration-data/cutover/source-snapshot.json --snapshot ../../.migration-data/rollback-export/v2-export.json --project-ref <legacy-project-ref> --writes-stopped --out ../../.migration-data/rollback-verify
 ```
 
@@ -82,7 +104,7 @@ publicの対象15テーブルをロックし、元の件数・ID・値を確認�
 
 香典の書き込み直前に `request.jwt.claim.sub` を行ごとの実行者へトランザクション内だけ設定し、直後に元へ戻す。更新時は計画の `last_modified_by`、追加時は `created_by` を使う。旧 `auth.uid()` を読む監査トリガーが有効な場合でも、行ごとの更新者・作成者を記録でき、後続の別テーブルへ実行者を引き継がない。UUIDの実行者がない香典のSQLは生成しない。2026-10-14の実DBでは監査関数は存在するが香典へのトリガー接続はなく、リポジトリの旧スキーマでは接続されるため、両構成をテストする。
 
-すでに期待値と一致していれば書かずに成功するので、同じ計画を再実行できる。`verify` は読み取り専用トランザクション。`passed` の確認後、画像の保全確認と旧・新10冊の画面比較を行ってから旧アプリを再開する。`rollbackAccess` と取り込み用Access設定を空にして再デプロイし、専用サービストークンを失効させる。
+すでに期待値と一致していれば書かずに成功するので、同じ計画を再実行できる。`verify` は読み取り専用トランザクション。`passed` の確認後、追加・差し替えた画像の旧画面での表示と旧・新10冊の画面比較を行ってから旧アプリを再開する。`rollbackAccess` と取り込み用Access設定を空にして再デプロイし、専用サービストークンを失効させる。
 
 接続切断で確定の有無が不明な場合も、まず同じ計画で `verify` する。psqlの生のstderrには個人情報が入り得るため、CLIには診断コードだけを表示する。
 
@@ -105,7 +127,8 @@ publicの対象15テーブルをロックし、元の件数・ID・値を確認�
 | `billing_requires_manual_reconciliation`                                                                                          | 新規購入・返金と旧プランの照合                                                       |
 | `deceasedName` / `nameKana` / `shipName` / `shippedAt` / `status`                                                                 | 旧画面に対応欄・状態のない値の保全・表示方針。当日渡しを発送済みに置き換えない       |
 | `events_require_manual_mapping` / `return_rules_require_manual_mapping`                                                           | 行事・日付・金額帯ルールの対応づけ                                                   |
-| `images_require_reverse_copy` / `imageR2Key`                                                                                      | R2から旧Storageへの逆転送とサイズ・ハッシュ照合                                      |
+| `photo_requires_offering` / `image_outside_book`                                                                                  | 香典・弔電への写真、別の台帳の画像キーの扱い                                         |
+| `rollback_storage_conflict` / `rollback_storage_verify_failed` / `rollback_image_source_mismatch`                                 | 旧Storageの同じパスにある本体、転送途中の破損、R2の本体を調べる。上書きで回避しない  |
 | `koden_requires_single_person` / `person_has_multiple_koden` / `person_without_gift`                                              | 連名、同一差出人の複数香典、紐づかない差出人の保全                                   |
 | `offering_allocation_changed` / `new_offering_allocation_requires_mapping`                                                        | 按分額・比率・備考と旧トリガーの整合性                                               |
 | `merged_return_requires_manual_mapping` / `legacy_return_lines_require_manual_mapping` / `deleted_return_requires_manual_cleanup` | 統合返礼、旧明細テーブル、返礼削除の対応                                             |
@@ -117,4 +140,4 @@ publicの対象15テーブルをロックし、元の件数・ID・値を確認�
 
 PGliteのPostgreSQLに、確認した旧スキーマの型・生成列・関連FK・返礼合計トリガーのfixtureを作り、追加・更新・削除・再実行、NULL・引用符、前提不一致、トリガーによる事後不一致、FK失敗時の取り消しをテストする。Workerでは認証拒否、no-store、削除済み行と変更履歴の取得を確認する。
 
-2026-10-13の保存済み抽出データ38人・40冊では、初期投入状態を再現したexportに対して変更0件・ブロッカー0件を確認した。実Supabaseへの書き込み、psqlでのリモート接続、Storageの逆転送は未実施。本番の切り戻し完了を示すものではない。
+2026-10-13の保存済み抽出データ38人・40冊では、初期投入状態を再現したexportに対して変更0件・ブロッカー0件を確認した。画像の逆転送は、R2の取得口をWorkerのテストで、旧Storageへの転送・照合・再実行・内容の衝突をStorage APIのfakeで、参照の書き戻しをPGliteで確認している。実Supabaseへの書き込み、psqlでのリモート接続、実R2・実Storageでの逆転送と旧画面での表示は未実施。本番の切り戻し完了を示すものではない。
