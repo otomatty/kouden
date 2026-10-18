@@ -382,6 +382,26 @@ describe("ledger structures written in the legacy screen's terms (#188)", () => 
 			await db.close();
 		}
 	});
+	it("keeps the note of a removed allocation in the offering's notes", () => {
+		const { source } = twoEntries(true);
+		source.data["public.offering_allocations"]![0]!.contribution_notes = "花は連名で";
+		const current = exportedFixture(source);
+		const t = current.ledgers[0]!.tables;
+		const gift = t.gifts.find((g) => g.id === newId.offeringGift(offeringId))!;
+		// 移行時に按分の備考を供物の備考に足している。
+		expect(gift.notes).toBe("差出人: 花は連名で");
+		t.gift_contributors = t.gift_contributors.filter((c) => c.gift_id !== gift.id);
+		t.gift_contributors.push({
+			gift_id: gift.id,
+			person_id: personOf(current, entryB).id,
+			is_primary: 1,
+			share_amount: 5000,
+		});
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual([]);
+		expect(plan.after.offering_allocations.map((a) => a.contribution_notes)).toEqual([null]);
+		expect(plan.after.offerings[0]!.notes).toBe("差出人: 花は連名で");
+	});
 	it("adds a new offering shared by two koden senders with ratios of the offering amount", async () => {
 		const { source, current } = twoEntries(false);
 		const t = current.ledgers[0]!.tables;
@@ -570,6 +590,37 @@ describe("ledger structures written in the legacy screen's terms (#188)", () => 
 		} finally {
 			await db.close();
 		}
+	});
+	it("leaves the recommended amounts of an edited rule it cannot write back", () => {
+		const source = sourceFixture();
+		source.data["public.return_items"] = [
+			{
+				id: "70000000-0000-4000-8000-000000000010",
+				kouden_id: ids.book,
+				name: "タオル",
+				price: 1000,
+				category: null,
+				description: null,
+				image_url: null,
+				recommended_amount_min: 10000,
+				recommended_amount_max: 30000,
+				is_active: false,
+				sort_order: 1,
+				created_by: ids.user,
+				created_at: at,
+				updated_at: at,
+			},
+		];
+		const counted = sourceWithCounts(source.data);
+		const current = exportedFixture(counted);
+		const rule = current.ledgers[0]!.tables.return_rules[0]!;
+		// 無効な品のルールは、移行時に返礼品を指さない。
+		expect(rule.suggested_item_id).toBeNull();
+		rule.min_amount = 20000;
+		const plan = planRollback(counted, current);
+		expect(plan.blockers).toEqual([]);
+		expect(plan.notices).toEqual([{ code: "return_rule_not_rolled_back", entityId: rule.id }]);
+		expect(plan.after.return_items).toEqual(plan.before.return_items);
 	});
 	it("appends to the untouched legacy notes instead of the trimmed v2 copy", () => {
 		const { source } = twoEntries(false);

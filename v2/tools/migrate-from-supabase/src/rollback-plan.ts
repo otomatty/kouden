@@ -582,15 +582,11 @@ function reverseBook(
 		if (rulesChanged) {
 			const current = after.return_items.find((x) => x.id === itemId(r.id));
 			const rule = ruleForItem.get(r.id);
-			// 移行時にこの品から作ったルールが変わらず残っていれば（無効な品のルールなど）旧の値を保つ。
+			// 移行時にこの品から作ったルールが残っていれば、書き戻せない編集（無効な品のルールなど）でも旧の値を保つ。
+			// ルールが消えた、または別の品の半返しとして書き戻す場合だけ空にする。
 			const own = current && newId.returnRule(String(current.id));
-			const kept =
-				!rule &&
-				own &&
-				eq(
-					old.returnRules.find((x) => x.id === own),
-					now.returnRules.find((x) => x.id === own),
-				);
+			const ownNow = now.returnRules.find((x) => x.id === own);
+			const kept = !rule && ownNow !== undefined && ![...ruleForItem.values()].includes(ownNow);
 			const [min, max] = rule ? [rule.minAmount, rule.maxAmount] : [null, null];
 			if (
 				!kept &&
@@ -709,12 +705,16 @@ function reverseBook(
 	) => {
 		const actor = userId(g.updatedBy);
 		const amountChanged = !eq(old.gifts.find((b) => b.id === g.id)?.amount, g.amount);
+		let droppedNotes = false;
 		for (const table of ["offering_entries", "offering_allocations"] as const) {
 			const wanted = links.filter((l) => table === "offering_entries" || l.shareAmount !== null);
 			const seen = new Set<string>();
 			for (const row of after[table].filter((r) => r.offering_id === offering)) {
 				const keep = wanted.some((l) => l.entry === row.kouden_entry_id);
-				if (!keep || seen.has(String(row.kouden_entry_id))) remove(table, String(row.id));
+				if (!keep || seen.has(String(row.kouden_entry_id))) {
+					remove(table, String(row.id));
+					if (String(row.contribution_notes ?? "").trim()) droppedNotes = true;
+				}
 				seen.add(String(row.kouden_entry_id));
 			}
 			for (const l of wanted) {
@@ -753,6 +753,7 @@ function reverseBook(
 					});
 			}
 		}
+		return droppedNotes;
 	};
 	const represented = new Set<string>();
 	for (const g of now.gifts) {
@@ -855,12 +856,6 @@ function reverseBook(
 				if (person.name === null) block("provider_name_required", g.id);
 				values.provider_name = person.name;
 			}
-			appendLines(
-				values,
-				"notes",
-				after.offerings.find((e) => e.id === id),
-				eventLines(g),
-			);
 			// 金額だけを変えた場合も、按分の比率（按分額÷供物の金額）を合わせ直す。
 			if (!prev || !sameRows(contributors, previousContributors) || prev.amount !== g.amount) {
 				const entries = contributors.map((c) => entryForPerson.get(c.personId));
@@ -872,13 +867,23 @@ function reverseBook(
 						contributors[0]!.shareAmount !== null)
 				)
 					block("offering_contributor_without_koden", g.id);
-				else
+				// 消す按分の備考は、移行時に供物の備考へ足してある。旧の備考に移してから消す。
+				else if (
 					linkOffering(
 						id,
 						g,
 						contributors.flatMap((c, i) => (entries[i] ? [{ ...c, entry: entries[i] }] : [])),
-					);
+					) &&
+					!("notes" in values)
+				)
+					values.notes = g.notes;
 			}
+			appendLines(
+				values,
+				"notes",
+				after.offerings.find((e) => e.id === id),
+				eventLines(g),
+			);
 		}
 		if (Object.keys(values).length && g.kind === "koden" && prev) {
 			const changedBy = person.updatedAt > g.updatedAt ? person.updatedBy : g.updatedBy;
