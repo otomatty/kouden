@@ -483,6 +483,9 @@ describe("rollback review regressions", () => {
 	});
 });
 
+const legacyMigration = (name: string) =>
+	readFile(new URL(`../../../../supabase/migrations/${name}.sql`, import.meta.url), "utf8");
+
 async function database(source: ReturnType<typeof sourceFixture>) {
 	const db = new PGlite();
 	await db.exec(await readFile(new URL("./fixtures/rollback-legacy.sql", import.meta.url), "utf8"));
@@ -990,7 +993,7 @@ describe("rollback plan and PostgreSQL", () => {
 			await db.close();
 		}
 	});
-	it("keeps the deployed return total when the repository detail trigger also exists", async () => {
+	it("keeps the deployed return total after the migration aligning return triggers", async () => {
 		const source = sourceWithReturn();
 		const record = source.data["public.return_entry_records"]![0]!;
 		record.return_items_cost = 1000;
@@ -1015,38 +1018,127 @@ describe("rollback plan and PostgreSQL", () => {
 		expect(plan.blockers).toEqual([]);
 		const db = await database(counted);
 		try {
+			// 本番と同じく、存在しない return_records を更新する明細トリガーを置く。
 			await db.exec(
-				await readFile(
-					new URL(
-						"../../../../supabase/migrations/20260616000000_atomize_return_entry_record_total_amount.sql",
-						import.meta.url,
-					),
-					"utf8",
-				),
+				"CREATE FUNCTION public.update_return_record_total_amount() RETURNS trigger LANGUAGE plpgsql SET search_path TO '' AS $$ BEGIN UPDATE public.return_records SET total_amount = 0; RETURN NULL; END $$; CREATE TRIGGER tr_update_return_record_total_amount AFTER INSERT OR DELETE OR UPDATE ON return_record_items FOR EACH ROW EXECUTE FUNCTION public.update_return_record_total_amount();",
+			);
+			// fixture の BEFORE トリガーを外し、20260616 のバックフィルが明細合計を残す環境を再現する。
+			await db.exec("DROP TRIGGER return_total ON return_entry_records");
+			await db.exec(
+				await legacyMigration("20260616000000_atomize_return_entry_record_total_amount"),
+			);
+			expect((await db.query("SELECT total_amount::int FROM return_entry_records")).rows).toEqual([
+				{ total_amount: 1000 },
+			]);
+			await expect(db.exec("UPDATE return_record_items SET notes = '明細'")).rejects.toThrow(
+				/return_records/,
+			);
+			await db.exec(
+				await legacyMigration("20261018000000_align_return_amount_triggers_with_deployed"),
 			);
 			await db.exec(rollbackSql(plan, "apply"));
 			await db.exec(rollbackSql(plan, "verify"));
 			const amounts = async () =>
 				(
 					await db.query(
-						"SELECT total_amount::int, additional_return_amount::int, profit_loss::int FROM return_entry_records",
+						"SELECT total_amount::int, return_items_cost::int, profit_loss::int FROM return_entry_records",
 					)
 				).rows;
 			expect(await amounts()).toEqual([
-				{
-					total_amount: 10000,
-					additional_return_amount: 10000,
-					profit_loss: 9000,
-				},
+				{ total_amount: 10000, return_items_cost: 1000, profit_loss: 9000 },
 			]);
-			// AFTER トリガーが明細合計 1000 を書いても、親の BEFORE トリガーが 10000 に戻す。
-			await db.exec("UPDATE return_record_items SET notes = '明細の備考を更新'");
+			// 明細の変更は return_items_cost だけを再計算し、total_amount は香典＋供物のまま。
+			await db.query(
+				"INSERT INTO return_record_items (return_record_id, return_item_master_id, price, quantity, created_by) VALUES ($1, $2, 500, 2, $3)",
+				[record.id, source.data["public.return_items"]![0]!.id, ids.user],
+			);
 			expect(await amounts()).toEqual([
-				{
-					total_amount: 10000,
-					additional_return_amount: 10000,
-					profit_loss: 9000,
-				},
+				{ total_amount: 10000, return_items_cost: 2000, profit_loss: 8000 },
+			]);
+		} finally {
+			await db.close();
+		}
+	});
+	it("recalculates return amounts when sources change or move after the alignment migration", async () => {
+		const source = sourceWithCounts(sourceWithReturn().data);
+		const [r1, e2, r2, offering] = [2, 3, 4, 5].map(
+			(n) => `90000000-0000-4000-8000-00000000000${n}`,
+		);
+		const db = await database(source);
+		try {
+			await db.exec(
+				await legacyMigration("20261018000000_align_return_amount_triggers_with_deployed"),
+			);
+			await db.query("UPDATE return_entry_records SET id = $1", [r1]);
+			await db.query(
+				"INSERT INTO kouden_entries SELECT (jsonb_populate_record(NULL::kouden_entries, to_jsonb(k) || jsonb_build_object('id', $1::uuid, 'amount', 5000))).* FROM kouden_entries k",
+				[e2],
+			);
+			await db.query(
+				"INSERT INTO return_entry_records (id, kouden_entry_id, created_by) VALUES ($1, $2, $3)",
+				[r2, e2, ids.user],
+			);
+			await db.query(
+				"INSERT INTO offerings (id, kouden_id, type, price, quantity, provider_name, created_by) VALUES ($1, $2, 'FLOWER', 2000, 1, '供物', $3)",
+				[offering, ids.book, ids.user],
+			);
+			await db.query(
+				"INSERT INTO offering_entries (offering_id, kouden_entry_id, created_by) VALUES ($1, $2, $3)",
+				[offering, ids.entry, ids.user],
+			);
+			const state = async () =>
+				(
+					await db.query<{ total_amount: number; return_items_cost: number }>(
+						"SELECT total_amount::int, return_items_cost::int FROM return_entry_records ORDER BY id",
+					)
+				).rows.map((r) => [r.total_amount, r.return_items_cost]);
+			expect(await state()).toEqual([
+				[12000, 0],
+				[5000, 0],
+			]);
+			await db.exec("UPDATE offerings SET price = 3000");
+			expect(await state()).toEqual([
+				[13000, 0],
+				[5000, 0],
+			]);
+			await db.query("UPDATE offering_entries SET kouden_entry_id = $1", [e2]);
+			expect(await state()).toEqual([
+				[10000, 0],
+				[8000, 0],
+			]);
+			await db.query("UPDATE kouden_entries SET amount = 6000 WHERE id = $1", [e2]);
+			expect(await state()).toEqual([
+				[10000, 0],
+				[9000, 0],
+			]);
+			await db.query(
+				"INSERT INTO return_record_items (return_record_id, return_item_master_id, price, quantity, created_by) VALUES ($1, $2, 1000, 1, $3)",
+				[r1, source.data["public.return_items"]![0]!.id, ids.user],
+			);
+			await db.query("UPDATE return_record_items SET return_record_id = $1", [r2]);
+			expect(await state()).toEqual([
+				[10000, 0],
+				[9000, 1000],
+			]);
+			// 削除でも元の返礼記録を再計算する。
+			await db.query(
+				"INSERT INTO return_record_items (return_record_id, return_item_master_id, price, quantity, created_by) VALUES ($1, $2, 500, 1, $3)",
+				[r1, source.data["public.return_items"]![0]!.id, ids.user],
+			);
+			expect(await state()).toEqual([
+				[10000, 500],
+				[9000, 1000],
+			]);
+			await db.query("DELETE FROM return_record_items WHERE return_record_id = $1", [r1]);
+			expect(
+				(
+					await db.query(
+						"SELECT return_items_cost::int, profit_loss::int FROM return_entry_records ORDER BY id",
+					)
+				).rows,
+			).toEqual([
+				{ return_items_cost: 0, profit_loss: 10000 },
+				{ return_items_cost: 1000, profit_loss: 8000 },
 			]);
 		} finally {
 			await db.close();
