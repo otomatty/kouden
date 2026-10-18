@@ -1006,6 +1006,20 @@ describe("values without a legacy column (#189)", () => {
 			plan.after.return_entry_records.find((r) => r.kouden_entry_id === ids.entry),
 		).toMatchObject({ return_status: "PARTIAL_RETURNED", remarks: `【v2】発送日: ${shipped}` });
 	});
+	it("reports a shipped date cleared in v2 that the next migration would derive again", () => {
+		const source = twoEntries(false).source;
+		source.data["public.return_entry_records"]![0]!.return_status = "COMPLETED";
+		const current = exportedFixture(source);
+		const ret = current.ledgers[0]!.tables.returns.find(
+			(r) => r.person_id === newId.entryPerson(ids.entry),
+		)!;
+		ret.shipped_at = null;
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual([]);
+		expect(plan.notices).toEqual([
+			{ code: "shipped_date_cleared_not_rolled_back", entityId: ret.id },
+		]);
+	});
 	it("keeps reading kana and the deceased name in the export and lists them", () => {
 		const { source, current } = twoEntries(false);
 		current.manifest.koudens[0]!.deceased_name = "山田 一郎";

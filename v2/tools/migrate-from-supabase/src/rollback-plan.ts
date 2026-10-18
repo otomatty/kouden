@@ -1030,6 +1030,9 @@ function reverseBook(
 		// 旧形式に欄・状態のない値は、備考に決まった形式で足す。当日返しは「完了」と方法「on_day」で表す。
 		// 移行時に最後の更新日から作った発送日は、変わっていなければ足さない。
 		const changed = (f: "shipName" | "shippedAt") => r[f] !== null && !eq(r[f], prev?.[f] ?? null);
+		// 発送済みのまま発送日を消しても、旧DBに記録する欄がなく、再移行で最後の更新日から作り直される。
+		if (r.status === "shipped" && r.shippedAt === null && prev?.shippedAt != null)
+			notice("shipped_date_cleared_not_rolled_back", r.id);
 		appendLines(
 			values,
 			"remarks",
