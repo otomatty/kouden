@@ -37,7 +37,7 @@ export REHEARSAL_DB_URL='postgresql://postgres.<リハーサル用ref>:<パス�
 
 ## 1. 旧本番 DB を複製する
 
-[Backup and Restore using the CLI](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore) に従う。作業フォルダで実行する。
+[Backup and Restore using the CLI](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore) に従う。作業フォルダで `scripts/copy-legacy-db.ps1` を実行すると、下の dump・復元と `pg_cron` の停止をまとめて行う（接続先の取り違えと、空でないプロジェクトへの復元は止める）。`scripts/compare-legacy-db.ps1` は件数・関数・トリガー・RLS ポリシーを本番と比べ、件数と md5 だけを `compare/` に出す。
 
 ```sh
 supabase db dump --db-url "$PROD_DB_URL" -f roles.sql --role-only
