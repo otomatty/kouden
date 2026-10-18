@@ -57,6 +57,7 @@ describe("legacyCutoverResponse", () => {
 
 			expect(res?.status).toBe(301);
 			expect(res?.headers.get("location")).toBe("https://new.example.com/koudens/abc?tab=entries");
+			expect(res?.headers.get("cache-control")).toBe("no-store");
 		});
 
 		it("メンテナンス中でも転送を優先する", () => {

@@ -25,7 +25,11 @@ export function legacyCutoverResponse(request: NextRequest): NextResponse | null
 	const redirectOrigin = process.env.LEGACY_REDIRECT_ORIGIN;
 	if (redirectOrigin) {
 		const { pathname, search } = request.nextUrl;
-		return NextResponse.redirect(new URL(pathname + search, redirectOrigin), 301);
+		// 切り戻しで転送を取り消せるよう、ブラウザに 301 を保存させない
+		return NextResponse.redirect(new URL(pathname + search, redirectOrigin), {
+			status: 301,
+			headers: { "Cache-Control": "no-store" },
+		});
 	}
 
 	if (process.env.MAINTENANCE_MODE !== "true") return null;
