@@ -133,6 +133,22 @@ export async function loadKouden(
 	};
 }
 
+/** 旧アプリの香典帳 ID から、閲覧者が開ける香典帳の ID を引く（旧 URL の転送用） */
+export async function findKoudenIdByLegacyId(
+	db: D1Database,
+	legacyKoudenId: string,
+	userId: string,
+): Promise<string | null> {
+	return db
+		.prepare(
+			`SELECT k.id
+         FROM koudens k JOIN kouden_members m ON m.kouden_id = k.id AND m.user_id = ?
+        WHERE k.legacy_kouden_id = ? AND k.status IN ('active', 'archived')`,
+		)
+		.bind(userId, legacyKoudenId)
+		.first<string>("id");
+}
+
 export async function updateKoudenInfo(
 	db: D1Database,
 	koudenId: string,

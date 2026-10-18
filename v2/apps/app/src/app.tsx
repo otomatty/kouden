@@ -9,6 +9,7 @@ import { session } from "./middleware/session.ts";
 import { stagingAccess } from "./middleware/staging-access.ts";
 import { webhookRoutes } from "./routes/billing.tsx";
 import { koudenRoutes } from "./routes/koudens.tsx";
+import { legacyRoutes } from "./routes/legacy.tsx";
 import { internalRoutes } from "./routes/internal.ts";
 import { inviteRoutes } from "./routes/members.tsx";
 import { pageRoutes } from "./routes/pages.tsx";
@@ -38,6 +39,7 @@ export function createApp(deps: AppDeps = {}) {
 	app.route("/", inviteRoutes);
 	app.route("/", webhookRoutes);
 	app.route("/", internalRoutes(deps));
+	app.route("/", legacyRoutes);
 
 	app.notFound((c) =>
 		c.html(

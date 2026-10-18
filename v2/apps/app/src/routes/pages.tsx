@@ -19,7 +19,12 @@ pageRoutes.get("/", async (c) => {
 			listMyKoudens(c.env.DB, user.id, tab),
 			incomingTransfers(c.env.DB, user.id, c.get("now")),
 		]);
-		const notices = { deleted: "香典帳を削除しました。", left: "香典帳から抜けました。" } as const;
+		const notices = {
+			deleted: "香典帳を削除しました。",
+			left: "香典帳から抜けました。",
+			legacy_missing:
+				"以前のアドレスの香典帳が見つからないか、開く権限がありません。一覧から開いてください。",
+		} as const;
 		const key = c.req.query("notice");
 		const notice = key && key in notices ? notices[key as keyof typeof notices] : undefined;
 		return c.html(
