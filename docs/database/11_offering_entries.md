@@ -76,7 +76,7 @@ CREATE POLICY "Users can view offering entries" ON public.offering_entries
                 JOIN kouden_roles r ON m.role_id = r.id
                 WHERE m.kouden_id = k.id
                 AND m.user_id = auth.uid()
-                AND r.name = ANY(ARRAY['編集者', '閲覧者'])
+                AND (r.name = ANY(ARRAY['editor', 'viewer']) OR 'entry.read' = ANY(r.permissions))
             )
         )
     ));

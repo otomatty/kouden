@@ -73,7 +73,7 @@ CREATE POLICY "Users can insert telegrams if they have edit access"
             JOIN kouden_roles r ON m.role_id = r.id
             WHERE m.kouden_id = telegrams.kouden_id
             AND m.user_id = auth.uid()
-            AND r.name = '編集者'
+            AND (r.name = 'editor' OR 'entry.write' = ANY(r.permissions))
         )
         OR EXISTS (
             SELECT 1
@@ -94,7 +94,7 @@ CREATE POLICY "Users can update telegrams if they have edit access"
             JOIN kouden_roles r ON m.role_id = r.id
             WHERE m.kouden_id = telegrams.kouden_id
             AND m.user_id = auth.uid()
-            AND r.name = '編集者'
+            AND (r.name = 'editor' OR 'entry.write' = ANY(r.permissions))
         )
         OR EXISTS (
             SELECT 1
@@ -115,7 +115,7 @@ CREATE POLICY "Users can delete telegrams if they have edit access"
             JOIN kouden_roles r ON m.role_id = r.id
             WHERE m.kouden_id = telegrams.kouden_id
             AND m.user_id = auth.uid()
-            AND r.name = '編集者'
+            AND (r.name = 'editor' OR 'entry.write' = ANY(r.permissions))
         )
         OR EXISTS (
             SELECT 1
