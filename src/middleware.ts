@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { legacyCutoverResponse } from "@/lib/legacy-cutover";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import {
@@ -13,6 +14,10 @@ import { logRateLimitExceeded, logSuspiciousActivity } from "@/lib/security/secu
 // 2FAチェックはMiddlewareではなくページレベルで実行（Edge Runtime制限のため）
 
 export async function middleware(request: NextRequest) {
+	// v2 切り替え時のメンテナンス・301 転送。Supabase に触れる前に止める
+	const cutoverResponse = legacyCutoverResponse(request);
+	if (cutoverResponse) return cutoverResponse;
+
 	const supabase = await createClient();
 
 	// レート制限チェック
