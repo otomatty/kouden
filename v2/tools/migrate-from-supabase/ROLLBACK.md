@@ -88,7 +88,7 @@ publicの対象15テーブルをロックし（香典を削除する場合は `k
 
 ### 香典削除時の旧監査履歴・ロック
 
-旧 `kouden_entry_audit_logs` と `kouden_entry_locks` は `entry_id` の FK が `ON DELETE CASCADE` で、移行スナップショットにも含まれない（移行対象外）。香典を削除する計画では、同じトランザクション内で、削除する香典の両テーブルの行を `kouden_rollback.deleted_entry_history`（`source_table`, `id`, `entry_id`, 元の行の `row_data`, `archived_at`）へ退避してから削除する。スキーマとテーブルは初回の適用時に作り、RLSを有効にする。publicの外に置くため、旧アプリ・APIからは見えず、旧スキーマのFK・トリガーも変えない。削除後に退避した行と削除前の行を照合し、一致しなければ `rollback_verify_failed:deleted_entry_history` で全件を取り消す。旧スキーマの BEFORE DELETE 監査トリガーが削除時に書く `delete` 行は、旧アプリでの削除と同じくCASCADEで消える。退避した行は旧アプリへ戻さないため、必要な場合は運用者がSQLで参照する。退避の照合は `apply` のトランザクション内だけで行い、期待する行を計画が持たない `verify` では照合しない。
+旧 `kouden_entry_audit_logs` と `kouden_entry_locks` は `entry_id` の FK が `ON DELETE CASCADE` で、移行スナップショットにも含まれない（移行対象外）。香典を削除する計画では、同じトランザクション内で、削除する香典の両テーブルの行を `kouden_rollback.deleted_entry_history`（`source_table`, `id`, `entry_id`, 元の行の `row_data`, `archived_at`）へ退避してから削除する。スキーマとテーブルは初回の適用時に作り、RLSを有効にしたうえで、`PUBLIC` と存在する `anon` / `authenticated` / `service_role` の権限を取り消す（RLSは所有者やBYPASSRLSのロールを制限しないため）。publicの外に置くため、旧アプリ・APIからは見えず、旧スキーマのFK・トリガーも変えない。削除後に退避した行と削除前の行を照合し、一致しなければ `rollback_verify_failed:deleted_entry_history` で全件を取り消す。旧スキーマの BEFORE DELETE 監査トリガーが削除時に書く `delete` 行は、旧アプリでの削除と同じくCASCADEで消える。退避した行は旧アプリへ戻さないため、必要な場合は運用者がSQLで参照する。退避の照合は `apply` のトランザクション内だけで行い、期待する行を計画が持たない `verify` では照合しない。
 
 ## 停止条件と残作業
 

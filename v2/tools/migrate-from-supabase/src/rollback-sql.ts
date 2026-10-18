@@ -95,6 +95,8 @@ export function rollbackSql(plan: RollbackPlan, mode: "apply" | "verify"): strin
 				"CREATE SCHEMA IF NOT EXISTS kouden_rollback;",
 				"CREATE TABLE IF NOT EXISTS kouden_rollback.deleted_entry_history (source_table text NOT NULL, id uuid NOT NULL, entry_id uuid NOT NULL, row_data jsonb NOT NULL, archived_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (source_table, id));",
 				"ALTER TABLE kouden_rollback.deleted_entry_history ENABLE ROW LEVEL SECURITY;",
+				// RLS は所有者や BYPASSRLS のロールを制限しない。既定権限で付与された分も明示的に取り消す。
+				"FOR api_role IN SELECT 'PUBLIC' UNION ALL SELECT quote_ident(rolname) FROM pg_roles WHERE rolname IN ('anon', 'authenticated', 'service_role') LOOP EXECUTE 'REVOKE ALL ON SCHEMA kouden_rollback FROM ' || api_role; EXECUTE 'REVOKE ALL ON TABLE kouden_rollback.deleted_entry_history FROM ' || api_role; END LOOP;",
 				`SELECT coalesce(jsonb_agg(to_jsonb(h) ORDER BY h.source_table, h.id), '[]') INTO preserved FROM (${legacyHistory}) h;`,
 				`INSERT INTO kouden_rollback.deleted_entry_history (source_table, id, entry_id, row_data) ${legacyHistory};`,
 			);
@@ -127,6 +129,7 @@ DECLARE original jsonb := ${literal(plan.before)};
         desired jsonb := ${literal(plan.after)};
         saved_actor text;
         preserved jsonb;
+        api_role text;
 BEGIN
 ${
 	mode === "apply"

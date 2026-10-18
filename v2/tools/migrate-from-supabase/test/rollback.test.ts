@@ -1170,6 +1170,10 @@ describe("rollback plan and PostgreSQL", () => {
 			try {
 				await installLegacyAuth(db, source, "audit");
 				await db.exec(legacyLocks);
+				// Supabase の API ロールに新規スキーマ・テーブルの既定権限がある場合を再現する。
+				await db.exec(
+					"CREATE ROLE anon; CREATE ROLE service_role BYPASSRLS; ALTER DEFAULT PRIVILEGES GRANT USAGE ON SCHEMAS TO anon, service_role; ALTER DEFAULT PRIVILEGES GRANT SELECT ON TABLES TO anon, service_role;",
+				);
 				// 実DBにはない旧スキーマの BEFORE DELETE 監査トリガー。
 				if (deleteTrigger)
 					await db.exec(
@@ -1204,6 +1208,16 @@ describe("rollback plan and PostgreSQL", () => {
 					row_data: (original[i] as { row: unknown }).row,
 				}));
 				expect(await archived()).toEqual(expected);
+				expect(
+					(
+						await db.query(
+							"SELECT r.rolname, has_schema_privilege(r.rolname,'kouden_rollback','USAGE') AS usage, has_table_privilege(r.rolname,'kouden_rollback.deleted_entry_history','SELECT') AS select FROM pg_roles r WHERE r.rolname IN ('anon','service_role') ORDER BY 1",
+						)
+					).rows,
+				).toEqual([
+					{ rolname: "anon", usage: false, select: false },
+					{ rolname: "service_role", usage: false, select: false },
+				]);
 				// 適用済みなら書かずに成功し、退避を重複させない。
 				await db.exec(rollbackSql(plan, "apply"));
 				expect(await archived()).toEqual(expected);
