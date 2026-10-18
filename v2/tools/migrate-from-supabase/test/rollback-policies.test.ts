@@ -593,3 +593,103 @@ describe("ledger structures written in the legacy screen's terms (#188)", () => 
 		}
 	});
 });
+
+const remarksOf = async (db: PGlite) =>
+	(
+		await db.query(
+			"SELECT return_status, return_method, arrangement_date::text, remarks FROM return_entry_records WHERE kouden_entry_id = $1",
+			[ids.entry],
+		)
+	).rows;
+describe("values without a legacy column (#189)", () => {
+	it.each([
+		["on_day", null],
+		["hand_delivery", "【v2】当日返し済み"],
+	])("writes a return handed on the day as completed (method: %s)", async (method, remarks) => {
+		const { source, current } = twoEntries(false);
+		const ret = current.ledgers[0]!.tables.returns.find(
+			(r) => r.person_id === newId.entryPerson(ids.entry),
+		)!;
+		ret.status = "handed_on_day";
+		ret.method = method;
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual([]);
+		const db = await legacyDatabase(source);
+		try {
+			await db.exec(rollbackSql(plan, "apply"));
+			await db.exec(rollbackSql(plan, "verify"));
+			expect(await remarksOf(db)).toEqual([
+				{ return_status: "COMPLETED", return_method: method, arrangement_date: null, remarks },
+			]);
+		} finally {
+			await db.close();
+		}
+	});
+	it("adds the ship name, shipped date and due date to the remarks once", async () => {
+		const { source, current } = twoEntries(false);
+		const ret = current.ledgers[0]!.tables.returns.find(
+			(r) => r.person_id === newId.entryPerson(ids.entry),
+		)!;
+		Object.assign(ret, {
+			status: "shipped",
+			notes: "既存の備考",
+			arranged_at: "2026-10-05",
+			ship_name: "山田 花子",
+			shipped_at: "2026-10-10",
+			due_date: "2026-11-01",
+		});
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual([]);
+		const expected =
+			"既存の備考\n【v2】送付先氏名: 山田 花子\n【v2】発送日: 2026-10-10\n【v2】返礼期限: 2026-11-01";
+		const db = await legacyDatabase(source);
+		try {
+			await db.exec(rollbackSql(plan, "apply"));
+			await db.exec(rollbackSql(plan, "verify"));
+			expect(await remarksOf(db)).toEqual([
+				{
+					return_status: "COMPLETED",
+					return_method: null,
+					arrangement_date: "2026-10-05",
+					remarks: expected,
+				},
+			]);
+		} finally {
+			await db.close();
+		}
+		ret.notes = expected;
+		expect(
+			planRollback(source, current).after.return_entry_records.find(
+				(r) => r.kouden_entry_id === ids.entry,
+			)!.remarks,
+		).toBe(expected);
+	});
+	it("does not note the shipped date that the migration derived from the update time", () => {
+		const source = twoEntries(false).source;
+		source.data["public.return_entry_records"]![0]!.return_status = "COMPLETED";
+		const current = exportedFixture(source);
+		const ret = current.ledgers[0]!.tables.returns.find(
+			(r) => r.person_id === newId.entryPerson(ids.entry),
+		)!;
+		expect(ret.shipped_at).not.toBeNull();
+		ret.notes = "備考だけ変更";
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual([]);
+		expect(
+			plan.after.return_entry_records.find((r) => r.kouden_entry_id === ids.entry)!.remarks,
+		).toBe("備考だけ変更");
+	});
+	it("keeps reading kana and the deceased name in the export and lists them", () => {
+		const { source, current } = twoEntries(false);
+		current.manifest.koudens[0]!.deceased_name = "山田 一郎";
+		const person = personOf(current, ids.entry);
+		person.name_kana = "サシダシニン";
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual([]);
+		expect(plan.after).toEqual(plan.before);
+		expect(plan.notices).toEqual([
+			{ code: "deceased_name_not_rolled_back", entityId: current.ledgers[0]!.koudenId },
+			{ code: "name_kana_not_rolled_back", entityId: person.id },
+		]);
+	});
+});

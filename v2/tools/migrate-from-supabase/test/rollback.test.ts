@@ -486,24 +486,16 @@ describe("rollback review regressions", () => {
 			await db.close();
 		}
 	});
-	it.each([null, "2026-11-01"])("checks raw return deadlines before projection: %s", (dueDate) => {
+	it.each([null, "2026-11-01"])("reads raw return deadlines before projection: %s", (dueDate) => {
 		const source = sourceWithReturn();
 		const current = exportedFixture(source);
 		const ret = current.ledgers[0]!.tables.returns[0]!;
 		ret.due_date = dueDate;
 		const plan = planRollback(source, current);
-		expect(plan.blockers).toEqual(
-			dueDate
-				? [
-						{
-							code: "unrepresentable_field",
-							entityId: ret.id,
-							field: "dueDate",
-						},
-					]
-				: [],
+		expect(plan.blockers).toEqual([]);
+		expect(plan.after.return_entry_records[0]!.remarks).toBe(
+			dueDate ? `【v2】返礼期限: ${dueDate}` : null,
 		);
-		if (dueDate) expect(() => rollbackSql(plan, "apply")).toThrow("rollback_blocked");
 	});
 	it("ignores deadlines on tombstones that were never migrated", () => {
 		const source = sourceFixture();
@@ -1247,12 +1239,6 @@ describe("rollback plan and PostgreSQL", () => {
 		}
 	});
 	it.each([
-		[
-			"nameKana",
-			(c: ReturnType<typeof exportedFixture>) => {
-				c.ledgers[0]!.tables.persons[0]!.name_kana = "シメイ";
-			},
-		],
 		[
 			"user_identity_or_deletion",
 			(c: ReturnType<typeof exportedFixture>) => {

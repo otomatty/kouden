@@ -212,10 +212,12 @@ export function planRollback(
 			continue;
 		}
 		const raw = current.ledgers.find((l) => l.koudenId === row.id)!;
-		// 取り込み用スキーマには返礼期限がなく、activeLedger で除かれる前に検査する。
-		for (const r of raw.tables.returns)
-			if (r.deleted_at == null && r.due_date != null)
-				block("unrepresentable_field", String(r.id), "dueDate");
+		// 取り込み用スキーマには返礼期限がなく、activeLedger で除かれる前に取り出す。
+		const dueDates = new Map(
+			raw.tables.returns
+				.filter((r) => r.deleted_at == null && r.due_date != null)
+				.map((r) => [String(r.id), String(r.due_date)]),
+		);
 		const ledger = activeLedger(raw);
 		const oldBook = after.koudens.find((k) => k.id === base.kouden.legacyKoudenId)!;
 		if (row.legacy_kouden_id !== oldBook.id || !["active", "archived"].includes(String(row.status)))
@@ -235,8 +237,9 @@ export function planRollback(
 			oldBook.owner_id = ownerId;
 			oldBook.created_by = ownerId;
 		}
+		// 旧画面には台帳名（title）だけがある。故人名は export に残し、再移行時にオーナーに確認してもらう。
 		if (row.deceased_name !== base.kouden.deceasedName)
-			block("unrepresentable_field", base.koudenId, "deceasedName");
+			notice("deceased_name_not_rolled_back", base.koudenId);
 		const purchased = current.manifest.purchases.filter((p) => p.kouden_id === row.id);
 		const expectedPurchases = base.purchases.map((p) => ({
 			id: p.id,
@@ -264,7 +267,17 @@ export function planRollback(
 		);
 		if (!sameRows(projected, expectedPurchases) || row.plan !== "paid")
 			block("billing_requires_manual_reconciliation", base.koudenId);
-		reverseBook(base, ledger, before, after, block, userId, raw.tables.relationships, notice);
+		reverseBook(
+			base,
+			ledger,
+			before,
+			after,
+			block,
+			userId,
+			raw.tables.relationships,
+			notice,
+			dueDates,
+		);
 		const members = current.manifest.members.filter((m) => m.kouden_id === row.id);
 		const memberUsers = new Set(members.map((m) => m.user_id));
 		if (
@@ -392,6 +405,7 @@ function reverseBook(
 	userId: (id: string) => string,
 	relationshipRows: Row[],
 	notice: (code: string, id: string, detail?: Row) => void,
+	dueDates: Map<string, string>,
 ) {
 	const old = base.ledger;
 	for (const [table, rows] of Object.entries(now)) {
@@ -803,7 +817,9 @@ function reverseBook(
 			notice("person_without_gift", p.id);
 			continue;
 		}
-		unsupported(p, prev, ["nameKana", "notes"]);
+		unsupported(p, prev, ["notes"]);
+		// 読み仮名は旧画面の並べ替え・検索に使えず、備考に足すと香典の備考が埋まる。export に残す。
+		if (!eq(p.nameKana, prev?.nameKana ?? null)) notice("name_kana_not_rolled_back", p.id);
 		if (jointOnly.has(p.id)) continue;
 		if (!entryForPerson.has(p.id)) {
 			unsupported(p, prev, ["relationshipId", "postalCode", "address", "phone"]);
@@ -841,8 +857,14 @@ function reverseBook(
 		const prev = old.returns.find((b) => b.id === r.id);
 		const lines = now.returnLines.filter((l) => l.returnId === r.id);
 		const oldLines = old.returnLines.filter((l) => l.returnId === r.id);
-		if (prev && eq(withoutAudit(r), withoutAudit(prev)) && sameRows(lines, oldLines)) continue;
-		unsupported(r, prev, ["shipName", "shippedAt", ...(prev ? ["personId"] : [])]);
+		if (
+			prev &&
+			eq(withoutAudit(r), withoutAudit(prev)) &&
+			sameRows(lines, oldLines) &&
+			!dueDates.has(r.id)
+		)
+			continue;
+		if (prev) unsupported(r, prev, ["personId"]);
 		const entry = entryForPerson.get(r.personId);
 		if (!entry) {
 			block("return_requires_single_koden", r.id);
@@ -870,7 +892,21 @@ function reverseBook(
 			shipPhone: "shipping_phone_number",
 			notes: "remarks",
 		});
-		if (r.status === "handed_on_day") block("unrepresentable_field", r.id, "status");
+		// 旧形式に欄・状態のない値は、備考に決まった形式で足す。当日返しは「完了」と方法「on_day」で表す。
+		// 移行時に最後の更新日から作った発送日は、変わっていなければ足さない。
+		const changed = (f: "shipName" | "shippedAt") => r[f] !== null && !eq(r[f], prev?.[f] ?? null);
+		appendLines(
+			values,
+			"remarks",
+			r.notes,
+			after.return_entry_records.find((x) => x.id === id),
+			[
+				...(r.status === "handed_on_day" && r.method !== "on_day" ? ["【v2】当日返し済み"] : []),
+				...(changed("shipName") ? [`【v2】送付先氏名: ${r.shipName}`] : []),
+				...(changed("shippedAt") ? [`【v2】発送日: ${r.shippedAt}`] : []),
+				...(dueDates.has(r.id) ? [`【v2】返礼期限: ${dueDates.get(r.id)}`] : []),
+			],
+		);
 		if ("return_status" in values)
 			values.return_status = {
 				pending: "PENDING",
