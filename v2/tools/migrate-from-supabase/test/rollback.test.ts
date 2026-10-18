@@ -502,6 +502,17 @@ async function database(source: ReturnType<typeof sourceFixture>) {
 	return db;
 }
 
+// 20250128134809_remote_schema.sql の kouden_entry_locks（香典の削除に CASCADE する）。
+const legacyLocks = `CREATE TABLE public.kouden_entry_locks (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  entry_id uuid NOT NULL UNIQUE REFERENCES public.kouden_entries(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users(id),
+  locked_at timestamptz NOT NULL DEFAULT now(),
+  expires_at timestamptz NOT NULL DEFAULT (now() + '00:05:00'::interval),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);`;
+
 async function installLegacyAuth(
 	db: PGlite,
 	source: ReturnType<typeof sourceFixture>,
@@ -1144,33 +1155,129 @@ describe("rollback plan and PostgreSQL", () => {
 			await db.close();
 		}
 	});
-	it("blocks entry deletion so unmigrated audit history cannot be cascade-deleted", async () => {
+	it.each([false, true])(
+		"archives legacy audit history and locks before deleting an entry (delete trigger: %s)",
+		async (deleteTrigger) => {
+			const source = sourceFixture();
+			const current = exportedFixture(source);
+			const t = current.ledgers[0]!.tables;
+			t.gifts[0]!.deleted_at = at;
+			t.persons[0]!.deleted_at = at;
+			const plan = planRollback(source, current);
+			expect(plan.blockers).toEqual([]);
+			expect(plan.after.kouden_entries).toEqual([]);
+			const db = await database(source);
+			try {
+				await installLegacyAuth(db, source, "audit");
+				await db.exec(legacyLocks);
+				// Supabase の API ロールに新規スキーマ・テーブルの既定権限がある場合を再現する。
+				await db.exec(
+					"CREATE ROLE anon; CREATE ROLE service_role BYPASSRLS; ALTER DEFAULT PRIVILEGES GRANT USAGE ON SCHEMAS TO anon, service_role; ALTER DEFAULT PRIVILEGES GRANT SELECT ON TABLES TO anon, service_role;",
+				);
+				// 実DBにはない旧スキーマの BEFORE DELETE 監査トリガー。
+				if (deleteTrigger)
+					await db.exec(
+						"CREATE TRIGGER log_kouden_entry_delete BEFORE DELETE ON public.kouden_entries FOR EACH ROW EXECUTE FUNCTION public.log_kouden_entry_changes();",
+					);
+				await db.query(
+					"INSERT INTO kouden_entry_audit_logs(id,entry_id,user_id,action,changes,created_at) VALUES ('a0000000-0000-4000-8000-000000000001',$1,$2,'create','{\"name\": \"差出人\"}',$3)",
+					[ids.entry, ids.user, at],
+				);
+				await db.query(
+					"INSERT INTO kouden_entry_locks(id,entry_id,user_id,locked_at,expires_at,created_at,updated_at) VALUES ('b0000000-0000-4000-8000-000000000001',$1,$2,$3,$3,$3,$3)",
+					[ids.entry, ids.user, at],
+				);
+				const legacy = async () => [
+					...(await db.query("SELECT to_jsonb(l) AS row FROM kouden_entry_audit_logs l")).rows,
+					...(await db.query("SELECT to_jsonb(l) AS row FROM kouden_entry_locks l")).rows,
+				];
+				const original = await legacy();
+				const archived = async () =>
+					(
+						await db.query(
+							"SELECT source_table,entry_id,row_data FROM kouden_rollback.deleted_entry_history ORDER BY source_table",
+						)
+					).rows;
+				await db.exec(rollbackSql(plan, "apply"));
+				await db.exec(rollbackSql(plan, "verify"));
+				expect((await db.query("SELECT id FROM kouden_entries")).rows).toEqual([]);
+				expect(await legacy()).toEqual([]);
+				const expected = ["kouden_entry_audit_logs", "kouden_entry_locks"].map((table, i) => ({
+					source_table: table,
+					entry_id: ids.entry,
+					row_data: (original[i] as { row: unknown }).row,
+				}));
+				expect(await archived()).toEqual(expected);
+				expect(
+					(
+						await db.query(
+							"SELECT r.rolname, has_schema_privilege(r.rolname,'kouden_rollback','USAGE') AS usage, has_table_privilege(r.rolname,'kouden_rollback.deleted_entry_history','SELECT') AS select FROM pg_roles r WHERE r.rolname IN ('anon','service_role') ORDER BY 1",
+						)
+					).rows,
+				).toEqual([
+					{ rolname: "anon", usage: false, select: false },
+					{ rolname: "service_role", usage: false, select: false },
+				]);
+				// 適用済みなら書かずに成功し、退避を重複させない。
+				await db.exec(rollbackSql(plan, "apply"));
+				expect(await archived()).toEqual(expected);
+			} finally {
+				await db.close();
+			}
+		},
+	);
+	it("keeps audit history and locks when an entry deletion is rolled back", async () => {
 		const source = sourceFixture();
 		const current = exportedFixture(source);
 		const t = current.ledgers[0]!.tables;
 		t.gifts[0]!.deleted_at = at;
 		t.persons[0]!.deleted_at = at;
 		const plan = planRollback(source, current);
-		expect(plan.blockers).toEqual([
-			{ code: "deleted_entry_requires_manual_cleanup", entityId: t.gifts[0]!.id },
-		]);
-		expect(plan.after.kouden_entries).toEqual(plan.before.kouden_entries);
 		const db = await database(source);
 		try {
-			await db.exec(
-				"CREATE TABLE kouden_entry_audit_logs(entry_id uuid REFERENCES kouden_entries(id) ON DELETE CASCADE, changes jsonb)",
+			await installLegacyAuth(db, source, "audit");
+			await db.exec(legacyLocks);
+			await db.query(
+				"INSERT INTO kouden_entry_audit_logs(entry_id,user_id,action) VALUES ($1,$2,'create')",
+				[ids.entry, ids.user],
 			);
-			await db.query("INSERT INTO kouden_entry_audit_logs VALUES ($1, '{}'::jsonb)", [ids.entry]);
-			await expect(async () => db.exec(rollbackSql(plan, "apply"))).rejects.toThrow(
-				"rollback_blocked",
-			);
-			expect((await db.query("SELECT entry_id FROM kouden_entry_audit_logs")).rows).toEqual([
-				{ entry_id: ids.entry },
+			await db.query("INSERT INTO kouden_entry_locks(entry_id,user_id) VALUES ($1,$2)", [
+				ids.entry,
+				ids.user,
 			]);
+			// 退避後の行を書き換え、照合で取り消されることを確認する。
+			await db.exec(
+				"CREATE SCHEMA kouden_rollback; CREATE TABLE kouden_rollback.deleted_entry_history (source_table text NOT NULL, id uuid NOT NULL, entry_id uuid NOT NULL, row_data jsonb NOT NULL, archived_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (source_table, id)); CREATE FUNCTION kouden_rollback.corrupt() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN NEW.row_data := '{}'; RETURN NEW; END $$; CREATE TRIGGER corrupt BEFORE INSERT ON kouden_rollback.deleted_entry_history FOR EACH ROW EXECUTE FUNCTION kouden_rollback.corrupt();",
+			);
+			await expect(db.exec(rollbackSql(plan, "apply"))).rejects.toThrow(
+				"rollback_verify_failed:deleted_entry_history",
+			);
+			await db.exec("ROLLBACK");
 			expect((await db.query("SELECT id FROM kouden_entries")).rows).toEqual([{ id: ids.entry }]);
+			expect(
+				(
+					await db.query(
+						"SELECT (SELECT count(*) FROM kouden_entry_audit_logs)::int AS logs, (SELECT count(*) FROM kouden_entry_locks)::int AS locks, (SELECT count(*) FROM kouden_rollback.deleted_entry_history)::int AS archived",
+					)
+				).rows,
+			).toEqual([{ logs: 1, locks: 1, archived: 0 }]);
 		} finally {
 			await db.close();
 		}
+	});
+	it("still blocks deleting an entry that legacy rows reference", () => {
+		const source = sourceWithReturn();
+		const current = exportedFixture(source);
+		const t = current.ledgers[0]!.tables;
+		t.gifts[0]!.deleted_at = at;
+		t.persons[0]!.deleted_at = at;
+		t.returns[0]!.deleted_at = at;
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toContainEqual({
+			code: "delete_has_legacy_dependents",
+			entityId: t.gifts[0]!.id,
+		});
+		expect(plan.after.kouden_entries).toEqual(plan.before.kouden_entries);
 	});
 	it.each([
 		[

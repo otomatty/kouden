@@ -166,7 +166,7 @@ CREATE POLICY "Users can view offering entries"
                     JOIN kouden_roles r ON m.role_id = r.id
                     WHERE m.kouden_id = k.id
                     AND m.user_id = auth.uid()::uuid
-                    AND r.name IN ('編集者', '閲覧者')
+                    AND r.name IN ('editor', 'viewer')
                 )
             )
         )
@@ -186,7 +186,7 @@ CREATE POLICY "Users can insert offering entries"
                     JOIN kouden_roles r ON m.role_id = r.id
                     WHERE m.kouden_id = k.id
                     AND m.user_id = auth.uid()::uuid
-                    AND r.name = '編集者'
+                    AND r.name = 'editor'
                 )
             )
         )
@@ -207,7 +207,7 @@ CREATE POLICY "Users can delete offering entries"
                     JOIN kouden_roles r ON m.role_id = r.id
                     WHERE m.kouden_id = k.id
                     AND m.user_id = auth.uid()::uuid
-                    AND r.name = '編集者'
+                    AND r.name = 'editor'
                 )
             )
         )
@@ -230,7 +230,7 @@ CREATE POLICY "Users can view offering photos"
                     JOIN kouden_roles r ON m.role_id = r.id
                     WHERE m.kouden_id = k.id
                     AND m.user_id = auth.uid()::uuid
-                    AND r.name IN ('編集者', '閲覧者')
+                    AND r.name IN ('editor', 'viewer')
                 )
             )
         )
@@ -252,7 +252,7 @@ CREATE POLICY "Users can insert offering photos"
                     JOIN kouden_roles r ON m.role_id = r.id
                     WHERE m.kouden_id = k.id
                     AND m.user_id = auth.uid()::uuid
-                    AND r.name = '編集者'
+                    AND r.name = 'editor'
                 )
             )
         )
@@ -275,7 +275,7 @@ CREATE POLICY "Users can update offering photos"
                     JOIN kouden_roles r ON m.role_id = r.id
                     WHERE m.kouden_id = k.id
                     AND m.user_id = auth.uid()::uuid
-                    AND r.name = '編集者'
+                    AND r.name = 'editor'
                 )
             )
         )
@@ -297,7 +297,7 @@ CREATE POLICY "Users can delete offering photos"
                     JOIN kouden_roles r ON m.role_id = r.id
                     WHERE m.kouden_id = k.id
                     AND m.user_id = auth.uid()::uuid
-                    AND r.name = '編集者'
+                    AND r.name = 'editor'
                 )
             )
         )

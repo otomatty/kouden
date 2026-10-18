@@ -2,7 +2,7 @@
 
 import { type ActionResult, ErrorCodes, KoudenError, withActionResult } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
-import type { KoudenRole } from "@/types/role";
+import { KOUDEN_ROLES, type KoudenRole } from "@/types/role";
 import { revalidatePath } from "next/cache";
 import { cache } from "react";
 import { requireKoudenOwner } from "./permissions";
@@ -20,7 +20,7 @@ export const getKoudenRoles = cache(
 				.from("kouden_roles")
 				.select("id, name")
 				.eq("kouden_id", koudenId)
-				.in("name", ["編集者", "閲覧者"])
+				.in("name", [KOUDEN_ROLES.EDITOR, KOUDEN_ROLES.VIEWER])
 				.order("name");
 
 			if (error) throw error;
@@ -53,7 +53,7 @@ export const getKoudenRolesForAdmin = cache(
 				.from("kouden_roles")
 				.select("id, name")
 				.eq("kouden_id", koudenId)
-				.in("name", ["編集者", "閲覧者"])
+				.in("name", [KOUDEN_ROLES.EDITOR, KOUDEN_ROLES.VIEWER])
 				.order("name");
 
 			if (error) throw error;
