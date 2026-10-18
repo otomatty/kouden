@@ -156,6 +156,7 @@ $function$;
 -- 同じ返礼記録への同時書き込みで合計を取りこぼさないよう、親の行ロックを取ってから
 -- 次の文（READ COMMITTED では新しいスナップショット）で再計算する。
 -- 1 文の UPDATE で再計算すると、ロック待ちの後も待つ前のスナップショットで集計してしまう。
+-- 明細の FK 検査が親に取る KEY SHARE と衝突しないよう、FOR UPDATE ではなく FOR NO KEY UPDATE を使う。
 -- total_amount は BEFORE トリガーがロック取得後に再計算するため、この対策は不要。
 CREATE OR REPLACE FUNCTION public.update_return_items_cost()
  RETURNS trigger
@@ -172,7 +173,7 @@ BEGIN
     ]) ORDER BY 1  -- 付け替えの同時実行でデッドロックしないよう ID 順にロックする
   LOOP
     CONTINUE WHEN target_record_id IS NULL;
-    PERFORM 1 FROM public.return_entry_records WHERE id = target_record_id FOR UPDATE;
+    PERFORM 1 FROM public.return_entry_records WHERE id = target_record_id FOR NO KEY UPDATE;
     UPDATE public.return_entry_records
     SET return_items_cost = public.calculate_return_items_cost(target_record_id)
     WHERE id = target_record_id;
