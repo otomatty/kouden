@@ -512,7 +512,18 @@ function reverseBook(
 	const eventLines = (g: LedgerSnapshot["gifts"][number]) =>
 		g.eventId === newId.event(book) ? [] : [`行事: ${eventsById.get(g.eventId)?.name ?? ""}`];
 	// 旧形式の金額帯は返礼品ごとの推奨額だけ。1品に1つの半返しのルールに限って戻し、他は export に残す。
-	const rulesChanged = !sameRows(old.returnRules, now.returnRules);
+	// 移行時は品が有効かどうかでルールが品を指すかを決めるので、品の有効・無効の変更でもルールを見直す。
+	const activityChanged = new Set(
+		now.returnItems
+			.filter((i) => old.returnItems.some((b) => b.id === i.id && b.isActive !== i.isActive))
+			.map((i) => i.id),
+	);
+	/** 移行時にこのルールを作った品（v2 の ID）。 */
+	const ruleSource = (ruleId: string) => {
+		const row = before.return_items.find((x) => newId.returnRule(String(x.id)) === ruleId);
+		return row ? newId.returnItem(String(row.id)) : undefined;
+	};
+	const rulesChanged = !sameRows(old.returnRules, now.returnRules) || activityChanged.size > 0;
 	const ruleForItem = new Map<string, LedgerSnapshot["returnRules"][number]>();
 	if (rulesChanged)
 		for (const r of now.returnRules) {
@@ -525,7 +536,11 @@ function reverseBook(
 				now.returnRules.filter((x) => x.suggestedItemId === r.suggestedItemId).length === 1
 			)
 				ruleForItem.set(r.suggestedItemId, r);
-			else if (!prev || !eq({ ...prev, sortOrder: 0 }, { ...r, sortOrder: 0 }))
+			else if (
+				!prev ||
+				!eq({ ...prev, sortOrder: 0 }, { ...r, sortOrder: 0 }) ||
+				[ruleSource(r.id), r.suggestedItemId].some((id) => id && activityChanged.has(id))
+			)
 				notice("return_rule_not_rolled_back", r.id);
 		}
 	for (const r of now.relationships) {

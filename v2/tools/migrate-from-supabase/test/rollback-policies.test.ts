@@ -726,6 +726,44 @@ describe("ledger structures written in the legacy screen's terms (#188)", () => 
 			await db.close();
 		}
 	});
+	it.each([true, false])(
+		"reports a rule whose item only changed its active state (was active: %s)",
+		(wasActive) => {
+			const source = sourceFixture();
+			source.data["public.return_items"] = [
+				{
+					id: "70000000-0000-4000-8000-000000000010",
+					kouden_id: ids.book,
+					name: "タオル",
+					price: 1000,
+					category: null,
+					description: null,
+					image_url: null,
+					recommended_amount_min: 10000,
+					recommended_amount_max: 30000,
+					is_active: wasActive,
+					sort_order: 1,
+					created_by: ids.user,
+					created_at: at,
+					updated_at: at,
+				},
+			];
+			const counted = sourceWithCounts(source.data);
+			const current = exportedFixture(counted);
+			const t = current.ledgers[0]!.tables;
+			t.return_items[0]!.is_active = wasActive ? 0 : 1;
+			const plan = planRollback(counted, current);
+			expect(plan.blockers).toEqual([]);
+			expect(plan.notices).toEqual([
+				{ code: "return_rule_not_rolled_back", entityId: t.return_rules[0]!.id },
+			]);
+			expect(plan.after.return_items[0]).toMatchObject({
+				is_active: !wasActive,
+				recommended_amount_min: 10000,
+				recommended_amount_max: 30000,
+			});
+		},
+	);
 	it("does not write a rule back to an item disabled in v2", () => {
 		const source = sourceFixture();
 		source.data["public.return_items"] = [
