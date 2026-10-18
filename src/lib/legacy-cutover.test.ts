@@ -1,10 +1,16 @@
 // @vitest-environment node
 import { NextRequest } from "next/server";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { legacyCutoverResponse } from "./legacy-cutover";
 
 const request = (path: string, init?: { method?: string; headers?: Record<string, string> }) =>
 	new NextRequest(`https://old.example.com${path}`, init);
+
+// 実行環境から引き継いだ値に左右されないよう、どちらも未設定から始める
+beforeEach(() => {
+	vi.stubEnv("MAINTENANCE_MODE", "");
+	vi.stubEnv("LEGACY_REDIRECT_ORIGIN", "");
+});
 
 afterEach(() => {
 	vi.unstubAllEnvs();
@@ -12,9 +18,6 @@ afterEach(() => {
 
 describe("legacyCutoverResponse", () => {
 	it("どちらも未設定なら通常の処理を続ける", () => {
-		vi.stubEnv("MAINTENANCE_MODE", "");
-		vi.stubEnv("LEGACY_REDIRECT_ORIGIN", "");
-
 		expect(legacyCutoverResponse(request("/koudens"))).toBeNull();
 		expect(legacyCutoverResponse(request("/api/stripe/webhook", { method: "POST" }))).toBeNull();
 	});
