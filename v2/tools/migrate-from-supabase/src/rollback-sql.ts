@@ -27,6 +27,17 @@ function matches(table: Table, variable: string, ignoreAudit: boolean): string {
 export function rollbackSql(plan: RollbackPlan, mode: "apply" | "verify"): string {
 	if (plan.blockers.length) throw new Error("rollback_blocked");
 	const statements: string[] = [];
+	const deletedEntries = plan.before.kouden_entries
+		.filter((old) => !plan.after.kouden_entries.some((r) => r.id === old.id))
+		.map((r) => String(r.id));
+	// 旧監査履歴・ロックは香典の削除に CASCADE する。旧アプリが参照しない別スキーマへ削除前に退避する。
+	const entryIds = `SELECT (jsonb_array_elements_text(${literal(deletedEntries)}))::uuid`;
+	const history = (from: string) =>
+		`SELECT source_table, id, entry_id, row_data FROM (${from}) h WHERE entry_id IN (${entryIds})`;
+	const legacyHistory = history(
+		"SELECT 'kouden_entry_audit_logs' AS source_table, id, entry_id, to_jsonb(l) AS row_data FROM public.kouden_entry_audit_logs l UNION ALL SELECT 'kouden_entry_locks', id, entry_id, to_jsonb(l) FROM public.kouden_entry_locks l",
+	);
+	const archivedHistory = history("SELECT * FROM kouden_rollback.deleted_entry_history");
 	if (mode === "apply") {
 		// 有効な関係名の一意制約は遅延できない。改名・非表示・削除する行を先に無効にして名前を空け、
 		// 以降は最終状態の有効な名前だけが並ぶようにする（最終状態の重複は計画時に停止済み）。
@@ -79,6 +90,14 @@ export function rollbackSql(plan: RollbackPlan, mode: "apply" | "verify"): strin
 					);
 			});
 		}
+		if (deletedEntries.length)
+			statements.push(
+				"CREATE SCHEMA IF NOT EXISTS kouden_rollback;",
+				"CREATE TABLE IF NOT EXISTS kouden_rollback.deleted_entry_history (source_table text NOT NULL, id uuid NOT NULL, entry_id uuid NOT NULL, row_data jsonb NOT NULL, archived_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (source_table, id));",
+				"ALTER TABLE kouden_rollback.deleted_entry_history ENABLE ROW LEVEL SECURITY;",
+				`SELECT coalesce(jsonb_agg(to_jsonb(h) ORDER BY h.source_table, h.id), '[]') INTO preserved FROM (${legacyHistory}) h;`,
+				`INSERT INTO kouden_rollback.deleted_entry_history (source_table, id, entry_id, row_data) ${legacyHistory};`,
+			);
 		// 新しい参照先の作成と既存の参照の更新を終えてから、子→親の順で削除する。
 		for (const table of ROLLBACK_TABLES.toReversed()) {
 			for (const row of plan.before[table])
@@ -87,6 +106,10 @@ export function rollbackSql(plan: RollbackPlan, mode: "apply" | "verify"): strin
 						`DELETE FROM public.${table} WHERE id = (${literal(row.id)}#>>'{}')::uuid;`,
 					);
 		}
+		if (deletedEntries.length)
+			statements.push(
+				`IF (SELECT coalesce(jsonb_agg(to_jsonb(h) ORDER BY h.source_table, h.id), '[]') FROM (${archivedHistory}) h) IS DISTINCT FROM preserved THEN RAISE EXCEPTION 'rollback_verify_failed:deleted_entry_history'; END IF;`,
+			);
 	}
 	const checks = ROLLBACK_TABLES.map(
 		(t) =>
@@ -98,11 +121,12 @@ SET LOCAL search_path = pg_catalog, pg_temp;
 SET LOCAL lock_timeout = '5s';
 SET LOCAL statement_timeout = '120s';
 ${mode === "verify" ? "SET TRANSACTION READ ONLY;" : ""}
-LOCK TABLE ${ROLLBACK_TABLES.map((t) => `public.${t}`).join(", ")} IN ${mode === "verify" ? "ACCESS SHARE" : "EXCLUSIVE"} MODE;
+LOCK TABLE ${[...ROLLBACK_TABLES, ...(mode === "apply" && deletedEntries.length ? ["kouden_entry_audit_logs", "kouden_entry_locks"] : [])].map((t) => `public.${t}`).join(", ")} IN ${mode === "verify" ? "ACCESS SHARE" : "EXCLUSIVE"} MODE;
 DO $rollback$
 DECLARE original jsonb := ${literal(plan.before)};
         desired jsonb := ${literal(plan.after)};
         saved_actor text;
+        preserved jsonb;
 BEGIN
 ${
 	mode === "apply"
