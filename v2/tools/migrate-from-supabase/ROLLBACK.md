@@ -2,7 +2,7 @@
 
 一般公開後の切り戻し用 CLI。最終移行時のスナップショットと、書き込みを停止した v2 を比較し、旧形式に戻せる差分を SQL にする。通信しない `plan`、明示的に書き込む `apply`、読み取り専用の `verify` に分ける。
 
-この版は移行済みの香典帳を対象にする。新規ユーザー・新規香典帳や画像の逆転送など、未対応の変更が1件でもあれば全体を停止する。ブロッカーの解消、隔離した Supabase でのリハーサル、画面比較が終わるまでは、本番切り戻しの準備完了と扱わない。
+この版は移行済みの香典帳を対象にする。切り替え後に作った香典帳は書き戻さず、レポートに一覧で出す（後述）。画像の逆転送など、未対応の変更が1件でもあれば全体を停止する。ブロッカーの解消、隔離した Supabase でのリハーサル、画面比較が終わるまでは、本番切り戻しの準備完了と扱わない。
 
 ## 対応する変更
 
@@ -51,6 +51,8 @@ bun run rollback export --url https://<v2-host> --writes-stopped --out ../../.mi
 bun run rollback plan --source ../../.migration-data/cutover/source-snapshot.json --snapshot ../../.migration-data/rollback-export/v2-export.json --out ../../.migration-data/rollback-plan
 ```
 
+v2で作ったユーザーを旧Authに対応づける場合は、`plan` / `apply` / `verify` のすべてに `--user-map <user-map.json>` を付ける（後述）。
+
 D1と各DOを2回読み、一致を確認する。DO内はトランザクションで読み取り、削除済み行・変更ログも保存する。D1と全DOを横断した同時点の保証はないので、運用側での停止が必須。応答の上限は既存クライアントと同じ4 MiB。超過・途中失敗時は部分的なexportを完成扱いにしない。分割取得は今後の対応。DOスキーマはversion 3に限定する。
 
 `report.json` に変更件数、台帳別の期待件数・金額・返礼状況、履歴の件数、ブロッカーと、停止はしないが旧DBに書かない値や運用で扱う対象（`notices`）を出す。`blocked` ならSQLを出さず終了コード1。`ready` なら `apply.sql` と `verify.sql` を生成する。計画内容を確認し、表示された `apply.sql` のSHA256を実行時に渡す。SQL内のJSONはSQL注入を防ぐためUTF-8のhexで格納する。暗号化ではない。
@@ -87,6 +89,34 @@ publicの対象15テーブルをロックし、元の件数・ID・値を確認�
 
 接続切断で確定の有無が不明な場合も、まず同じ計画で `verify` する。psqlの生のstderrには個人情報が入り得るため、CLIには診断コードだけを表示する。
 
+## 切り替え後に作った香典帳・ユーザー・購入
+
+切り替え後にv2で作った香典帳は旧形式に戻さない（#186）。旧DBで香典帳を作るとトリガーがロール・オーナーのメンバー行・既定の関係・配送方法を作り、旧アプリは無料の冊を14日で期限切れにするなど、旧形式で作り直すと検証できない差が重なる。これらの冊は旧アプリで使われたことがない。CLIは停止せず、`report.json` の `notices` に一覧を出す。
+
+| `notices` のコード                     | 対象                                                     | 運用                                                                                                                                                                 |
+| -------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `new_book_not_rolled_back`             | v2で作った冊（v2のID）                                   | データはv2のexportとD1・DOのバックアップに残る。必要ならv2のデータとして書き出し（Excel・印刷）、オーナーに渡す                                                      |
+| `purchase_not_rolled_back`             | 移行した冊以外の購入（冊のID、`source`、`status`、金額） | 旧DBに戻す先がない（旧アプリに管理画面から有料化する機能はない）。Stripeで返金するか、v2の再開まで保留するかを利用者ごとに決める                                     |
+| `deleted_book_requires_manual_cleanup` | v2で削除した移行済みの冊（旧ID）                         | CLIは旧DBで消さない。旧アプリの再開後に、旧アプリの香典帳の削除処理で消す（招待・メンバー・ロールは旧DBのトリガー `cleanup_kouden_related_data`、供物写真はStorage） |
+| `new_user_not_rolled_back`             | 移行した冊から参照されない、v2で作ったユーザー           | 旧Authに作らない                                                                                                                                                     |
+| `new_user_mapped`                      | `--user-map` で旧Auth IDを対応づけたユーザー             | 下記                                                                                                                                                                 |
+
+移行した冊のメンバー・招待者・作成者として、v2で作ったユーザーが参照されている場合は、旧AuthのIDを明示的に対応づける。対応表がなければ `unmapped_user` で停止する。
+
+1. 対象のユーザー（`unmapped_user` の `entityId`）ごとに、Supabase Admin API（`auth.admin.createUser`）で旧Authのユーザーを作る。メールはv2の登録と同じものを使い、作成後に旧DBのトリガー `handle_new_user` が `profiles` の行を作ったことを確認する。
+2. Admin APIが同じメールの既存ユーザーを理由に作成を拒んだ場合は、既存ユーザーに寄せず、本人の2つのアカウントの扱いを決めるまで切り戻しを止める。exportにはメールがないので、CLIはメールで照合しない。
+3. 非公開ディレクトリに `user-map.json` を置き、`plan` / `apply` / `verify` に同じものを `--user-map` で渡す。
+
+```json
+[{ "v2UserId": "<v2のユーザーID>", "legacyUserId": "<Admin APIで作った旧AuthのUUID>" }]
+```
+
+CLIは、v2で作った削除されていないユーザーだけを、既存の旧Auth・`profiles` にないUUIDへ、1対1で対応づけることを検査し、違反は `rollback_user_map_invalid` で停止する。SQLは対応づけたユーザーの `profiles` の行が存在することを前提照合し（表示名以外の値は照合しない）、表示名をv2の値にする。Authユーザーを作る前に `apply` すると `rollback_precondition_failed` で何も書かずに止まる。
+
+v2で削除したユーザーは `user_identity_or_deletion` で停止したままにする。
+
+移行した冊の購入は、移行時の購入と一致し、冊が有料のままであることを照合する。返金や新しい購入があれば `billing_requires_manual_reconciliation` で停止する。
+
 ## 停止条件と残作業
 
 ブロッカーをJSONから消して実行してはいけない。対応を実装し、隔離環境で確認してから再計画する。
@@ -112,9 +142,9 @@ publicの対象15テーブルをロックし、元の件数・ID・値を確認�
 
 | 主なコード・フィールド                                                                                                            | 必要な対応                                                                           |
 | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `new_book_requires_mapping` / `user_identity_or_deletion` / `unmapped_user`                                                       | 旧Auth ID、旧plan ID、初期ロール等の明示的な対応づけ。メールだけで推測しない         |
-| `deleted_book_requires_manual_cleanup`                                                                                            | 招待・領収書・他スキーマも含む削除手順                                               |
-| `billing_requires_manual_reconciliation`                                                                                          | 新規購入・返金と旧プランの照合                                                       |
+| `unmapped_user`                                                                                                                   | v2で作ったユーザーの旧Auth IDを `--user-map` で渡す（前節）。メールだけで推測しない  |
+| `user_identity_or_deletion`                                                                                                       | 移行したユーザーの旧IDの変更・v2での削除。旧Authとメンバーの削除手順                 |
+| `billing_requires_manual_reconciliation`                                                                                          | 移行した冊の新規購入・返金と旧プランの照合                                           |
 | `deceasedName` / `nameKana` / `shipName` / `shippedAt` / `status`                                                                 | 旧画面に対応欄・状態のない値の保全・表示方針。当日渡しを発送済みに置き換えない       |
 | `events_require_manual_mapping` / `return_rules_require_manual_mapping`                                                           | 行事・日付・金額帯ルールの対応づけ                                                   |
 | `images_require_reverse_copy` / `imageR2Key`                                                                                      | R2から旧Storageへの逆転送とサイズ・ハッシュ照合                                      |

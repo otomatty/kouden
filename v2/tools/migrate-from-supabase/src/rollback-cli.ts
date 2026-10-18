@@ -19,16 +19,18 @@ async function main() {
 			"writes-stopped": { type: "boolean" },
 			"project-ref": { type: "string" },
 			"approve-sha256": { type: "string" },
+			"user-map": { type: "string" },
 			help: { type: "boolean" },
 		},
 	});
 	if (v.help || !positionals.length) {
 		process.stdout.write(`使い方:
   bun run rollback export --url <origin> --writes-stopped --out <new-private-dir>
-  bun run rollback plan --source <original-source.json> --snapshot <v2-export.json> --out <new-private-dir>
+  bun run rollback plan --source <original-source.json> --snapshot <v2-export.json> [--user-map <user-map.json>] --out <new-private-dir>
   bun run rollback apply --source <original-source.json> --snapshot <v2-export.json> --project-ref <ref> --approve-sha256 <apply.sql SHA256> --writes-stopped --out <new-report-dir>
   bun run rollback verify --source <original-source.json> --snapshot <v2-export.json> --project-ref <ref> --writes-stopped --out <new-report-dir>
 
+--user-map は v2 で作ったユーザーの旧 Auth ID の対応表。plan と同じものを apply/verify にも渡します。
 apply/verify は psql と PGHOST/PGPORT/PGUSER/PGDATABASE/PGPASSWORD を使用します。
 export/apply/verify の前に両アプリの書き込み・Webhook・ジョブを停止してください。
 export は切り戻し専用の CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET（localhost は ROLLBACK_DEV_TOKEN）を使用します。
@@ -50,7 +52,8 @@ export は切り戻し専用の CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET（
 			v.source ||
 			v.snapshot ||
 			v["project-ref"] ||
-			v["approve-sha256"]
+			v["approve-sha256"] ||
+			v["user-map"]
 		)
 			throw new Error("rollback_arguments");
 		const client = createImportClient(
@@ -76,7 +79,11 @@ export は切り戻し専用の CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET（
 	)
 		throw new Error("rollback_arguments");
 	const sourceRaw = await readFile(resolve(v.source), "utf8");
-	const plan = planRollback(JSON.parse(sourceRaw), await json(resolve(v.snapshot)));
+	const plan = planRollback(
+		JSON.parse(sourceRaw),
+		await json(resolve(v.snapshot)),
+		v["user-map"] ? await json(resolve(v["user-map"])) : [],
+	);
 	// prepare と同じく、空白・改行を含めた入力ファイルのハッシュを記録する。
 	plan.sourceSha256 = digest(sourceRaw);
 	if (command !== "plan" && (!v["writes-stopped"] || v["project-ref"] !== plan.sourceProject))

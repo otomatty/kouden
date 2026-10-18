@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import { PGlite } from "@electric-sql/pglite";
 import { prepareSnapshot } from "../src/prepare.ts";
 import { ROLLBACK_TABLES } from "../src/rollback-plan.ts";
 import { rollbackExportSchema, type Row } from "../src/rollback-export.ts";
@@ -247,4 +249,25 @@ export function exportedFixture(source: unknown) {
 			]),
 		})),
 	});
+}
+
+/** 旧スキーマの fixture に元スナップショットを入れる。fixtures は続けて読み込む test/fixtures の SQL 名。 */
+export async function legacyDatabase(
+	source: ReturnType<typeof sourceWithCounts>,
+	...fixtures: string[]
+) {
+	const db = new PGlite();
+	for (const name of ["rollback-legacy", ...fixtures])
+		await db.exec(await readFile(new URL(`./fixtures/${name}.sql`, import.meta.url), "utf8"));
+	for (const table of ROLLBACK_TABLES)
+		for (const row of source.data[`public.${table}`]!) {
+			const fields = Object.keys(row).filter(
+				(f) => !["additional_return_amount", "profit_loss"].includes(f),
+			);
+			await db.query(
+				`INSERT INTO public.${table} (${fields.join(",")}) SELECT ${fields.join(",")} FROM jsonb_populate_record(NULL::public.${table}, $1::jsonb)`,
+				[JSON.stringify(row)],
+			);
+		}
+	return db;
 }

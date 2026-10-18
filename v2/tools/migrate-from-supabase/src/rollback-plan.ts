@@ -49,6 +49,15 @@ export interface RollbackPlan {
 	changes: { table: Table; inserted: number; updated: number; deleted: number }[];
 	books: { id: string; seq: number; changedEntities: number }[];
 }
+/** v2 で作ったユーザーの旧 Auth ID。運用者が Supabase Admin API で作ってから渡す（ROLLBACK.md）。 */
+export const userMapSchema = z.array(
+	z
+		.object({
+			v2UserId: z.string().min(1),
+			legacyUserId: z.uuid().transform((id) => id.toLowerCase()),
+		})
+		.strict(),
+);
 const idOf = (row: Row) => z.uuid().parse(row.id);
 const eq = (a: unknown, b: unknown) => canonical(a) === canonical(b);
 const mapped = (next: Row, prev: Row | undefined, fields: Record<string, string>): Row =>
@@ -66,9 +75,15 @@ const withoutAudit = (row: Row) =>
 		),
 	);
 
-export function planRollback(sourceInput: unknown, exportInput: unknown): RollbackPlan {
+export function planRollback(
+	sourceInput: unknown,
+	exportInput: unknown,
+	userMapInput: unknown = [],
+): RollbackPlan {
 	const source = snapshotSchema.parse(sourceInput);
 	const current = rollbackExportSchema.parse(exportInput);
+	const userMap = userMapSchema.safeParse(userMapInput);
+	if (!userMap.success) throw new Error("rollback_user_map_invalid");
 	const entityIds = new Set<string>();
 	for (const ledger of current.ledgers)
 		for (const [table, rows] of Object.entries(ledger.tables)) {
@@ -101,13 +116,47 @@ export function planRollback(sourceInput: unknown, exportInput: unknown): Rollba
 	const notice = (code: string, entityId: string, detail: Row = {}) =>
 		notices.push({ code, entityId, ...detail });
 	const users = new Map(baseline.users.map((u) => [u.id, u.legacyUserId]));
+	const mappedUsers = new Map(userMap.data.map((m) => [m.v2UserId, m.legacyUserId]));
+	const legacyAuth = new Set([
+		...source.data["auth.users"]!.map((u) => u.id),
+		...before.profiles.map((p) => p.id),
+	]);
+	// 移行済みのユーザーや既存の旧 Auth ユーザー（同じメールの利用者など）には寄せない。
+	if (
+		mappedUsers.size !== userMap.data.length ||
+		new Set(mappedUsers.values()).size !== userMap.data.length ||
+		userMap.data.some((m) => {
+			const u = current.manifest.users.find((r) => r.id === m.v2UserId);
+			return (
+				!u ||
+				u.legacy_user_id != null ||
+				u.deleted_at != null ||
+				users.has(m.v2UserId) ||
+				legacyAuth.has(m.legacyUserId)
+			);
+		})
+	)
+		throw new Error("rollback_user_map_invalid");
 	const userId = (id: string) => {
-		const legacy = users.get(id);
+		const legacy = users.get(id) ?? mappedUsers.get(id);
 		if (!legacy) block("unmapped_user", id);
 		return legacy ?? uuidv5(`rollback:user:${id}`);
 	};
 	for (const u of current.manifest.users) {
 		const old = baseline.users.find((b) => b.id === u.id);
+		if (!old && u.legacy_user_id == null) {
+			const legacy = mappedUsers.get(String(u.id));
+			// 対応表にないユーザーは対象外。移行した冊から参照されていれば unmapped_user で停止する。
+			if (!legacy) {
+				notice("new_user_not_rolled_back", String(u.id));
+				continue;
+			}
+			// Admin API で作った Auth ユーザーには旧DBのトリガーが profiles の行を作る。存在だけを前提にする。
+			before.profiles.push({ id: legacy });
+			after.profiles.push({ id: legacy, display_name: z.string().min(1).parse(u.display_name) });
+			notice("new_user_mapped", String(u.id), { legacyUserId: legacy });
+			continue;
+		}
 		if (!old || old.legacyUserId !== u.legacy_user_id || u.deleted_at != null) {
 			block("user_identity_or_deletion", String(u.id));
 			continue;
@@ -135,8 +184,9 @@ export function planRollback(sourceInput: unknown, exportInput: unknown): Rollba
 		throw new Error("rollback_book_mismatch");
 	for (const row of current.manifest.koudens) {
 		const base = baseline.koudens.find((b) => b.payload.koudenId === row.id)?.payload;
+		// 切り替え後に作った冊は旧形式に戻さない。v2 の export とバックアップに残る（ROLLBACK.md）。
 		if (!base) {
-			block("new_book_requires_mapping", String(row.id));
+			notice("new_book_not_rolled_back", String(row.id));
 			continue;
 		}
 		const raw = current.ledgers.find((l) => l.koudenId === row.id)!;
@@ -249,12 +299,25 @@ export function planRollback(sourceInput: unknown, exportInput: unknown): Rollba
 			return m.kouden_id !== oldBook.id || !migratedMembers.has(uid) || memberUsers.has(uid);
 		});
 	}
+	// v2 で削除した冊は旧DBで消さない。切り戻し後に旧アプリの削除処理で消す（ROLLBACK.md）。
 	for (const b of baseline.koudens)
 		if (!bookIds.has(b.payload.koudenId))
-			block("deleted_book_requires_manual_cleanup", b.payload.koudenId);
+			notice("deleted_book_requires_manual_cleanup", b.payload.koudenId, {
+				legacyKoudenId: b.payload.kouden.legacyKoudenId,
+			});
+	// 購入は冊の削除後も D1 に残る。移行した冊の購入は上で照合し、それ以外は戻す先がないので一覧に出す。
+	const migratedBooks = new Set(baseline.koudens.map((b) => b.payload.koudenId));
+	for (const p of current.manifest.purchases)
+		if (!migratedBooks.has(String(p.kouden_id)) || !bookIds.has(p.kouden_id))
+			notice("purchase_not_rolled_back", String(p.id), {
+				koudenId: p.kouden_id,
+				source: p.source,
+				status: p.status,
+				amount: p.amount,
+			});
 	// D1 の余分な参照を見逃さない。
-	for (const r of [...current.manifest.members, ...current.manifest.purchases])
-		if (!bookIds.has(r.kouden_id)) block("orphan_d1_row", String(r.id ?? r.user_id));
+	for (const m of current.manifest.members)
+		if (!bookIds.has(m.kouden_id)) block("orphan_d1_row", String(m.user_id));
 	// 実DBは有効な関係名だけ一意。SQLは変更前の名前を先に空けるので、最終状態だけを検査する。
 	for (const r of after.relationships) {
 		if (r.is_enabled !== true) continue;

@@ -139,3 +139,63 @@ it("plans offline, refuses unapproved apply and does not print private input", a
 		await rm(dir, { recursive: true, force: true });
 	}
 });
+
+it("passes --user-map to plan and rejects an invalid map without printing it", async () => {
+	const dir = await mkdtemp(join(tmpdir(), "kouden-rollback-map-"));
+	if (!dir.startsWith(join(tmpdir(), "kouden-rollback-map-")))
+		throw new Error("invalid_test_directory");
+	const source = sourceFixture();
+	const current = exportedFixture(source);
+	current.manifest.users.push({
+		id: "v2-only",
+		legacy_user_id: null,
+		display_name: "新規",
+		created_at: source.extracted_at,
+		deleted_at: null,
+	});
+	const cli = fileURLToPath(new URL("../src/rollback-cli.ts", import.meta.url));
+	try {
+		const paths = ["source", "v2", "map", "bad"].map((n) => join(dir, `${n}.json`));
+		await writeFile(paths[0]!, JSON.stringify(source));
+		await writeFile(paths[1]!, JSON.stringify(current));
+		await writeFile(
+			paths[2]!,
+			JSON.stringify([
+				{ v2UserId: "v2-only", legacyUserId: "10000000-0000-4000-8000-0000000000aa" },
+			]),
+		);
+		await writeFile(paths[3]!, JSON.stringify([{ v2UserId: "SECRET-PERSON", legacyUserId: "x" }]));
+		const run = (map: string, out: string) =>
+			spawnSync(
+				"bun",
+				[
+					cli,
+					"plan",
+					"--source",
+					paths[0]!,
+					"--snapshot",
+					paths[1]!,
+					"--user-map",
+					map,
+					"--out",
+					join(dir, out),
+				],
+				{ encoding: "utf8", timeout: 10000, windowsHide: true },
+			);
+		expect(run(paths[2]!, "ok").status).toBe(0);
+		const report = JSON.parse(await readFile(join(dir, "ok", "report.json"), "utf8"));
+		expect(report.notices).toEqual([
+			{
+				code: "new_user_mapped",
+				entityId: "v2-only",
+				legacyUserId: "10000000-0000-4000-8000-0000000000aa",
+			},
+		]);
+		const bad = run(paths[3]!, "bad");
+		expect(bad.status).toBe(1);
+		expect(bad.stderr).toContain("rollback_user_map_invalid");
+		expect(bad.stderr + bad.stdout).not.toContain("SECRET-PERSON");
+	} finally {
+		await rm(dir, { recursive: true, force: true });
+	}
+});
