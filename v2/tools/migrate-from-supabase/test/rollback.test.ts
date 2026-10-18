@@ -1254,12 +1254,6 @@ describe("rollback plan and PostgreSQL", () => {
 			},
 		],
 		[
-			"events_require_manual_mapping",
-			(c: ReturnType<typeof exportedFixture>) => {
-				c.ledgers[0]!.tables.events[0]!.date = "2026-10-14";
-			},
-		],
-		[
 			"user_identity_or_deletion",
 			(c: ReturnType<typeof exportedFixture>) => {
 				c.manifest.users[0]!.legacy_user_id = null;

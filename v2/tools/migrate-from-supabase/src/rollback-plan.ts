@@ -68,6 +68,28 @@ const mapped = (next: Row, prev: Row | undefined, fields: Record<string, string>
 	);
 const giftTable = (kind: string): Table =>
 	kind === "koden" ? "kouden_entries" : kind === "choden" ? "telegrams" : "offerings";
+/**
+ * 旧画面の備考に足す決まった形式の行。再移行した備考から再び切り戻しても二重にしない。
+ * 再移行の変換（transform.ts）が読み取れるよう、形式は ROLLBACK.md に揃える。
+ */
+const withLines = (text: string | null, lines: string[]) => {
+	const present = new Set(text?.split("\n"));
+	const added = lines.filter((l) => !present.has(l));
+	return added.length ? [text, ...added].filter((l) => l).join("\n") : text;
+};
+/** 備考の列に行を足す。値が旧行と同じなら書かない。 */
+const appendLines = (
+	values: Row,
+	column: string,
+	text: string | null,
+	current: Row | undefined,
+	lines: string[],
+) => {
+	if (!lines.length) return;
+	const next = withLines(text, lines);
+	if (eq(next, current?.[column] ?? null)) delete values[column];
+	else values[column] = next;
+};
 const withoutAudit = (row: Row) =>
 	Object.fromEntries(
 		Object.entries(row).filter(
@@ -242,7 +264,7 @@ export function planRollback(
 		);
 		if (!sameRows(projected, expectedPurchases) || row.plan !== "paid")
 			block("billing_requires_manual_reconciliation", base.koudenId);
-		reverseBook(base, ledger, before, after, block, userId, raw.tables.relationships);
+		reverseBook(base, ledger, before, after, block, userId, raw.tables.relationships, notice);
 		const members = current.manifest.members.filter((m) => m.kouden_id === row.id);
 		const memberUsers = new Set(members.map((m) => m.user_id));
 		if (
@@ -369,6 +391,7 @@ function reverseBook(
 	block: (code: string, id: string, field?: string) => void,
 	userId: (id: string) => string,
 	relationshipRows: Row[],
+	notice: (code: string, id: string, detail?: Row) => void,
 ) {
 	const old = base.ledger;
 	for (const [table, rows] of Object.entries(now)) {
@@ -415,9 +438,29 @@ function reverseBook(
 	});
 	const relationId = (id: string) => oldId("relationships", id, newId.relationship);
 	const itemId = (id: string) => oldId("return_items", id, newId.returnItem);
-	if (!sameRows(old.events, now.events)) block("events_require_manual_mapping", base.koudenId);
-	if (!sameRows(old.returnRules, now.returnRules))
-		block("return_rules_require_manual_mapping", base.koudenId);
+	// 旧形式に行事はない。行事自体は export に残し、既定の「葬儀」以外のいただきものは備考に行事名を足す。
+	const eventsById = new Map(now.events.map((e) => [e.id, e]));
+	for (const e of old.events)
+		if (!eq(e, eventsById.get(e.id))) notice("event_not_rolled_back", e.id);
+	for (const e of now.events)
+		if (!old.events.some((x) => x.id === e.id)) notice("event_not_rolled_back", e.id);
+	const eventLines = (g: LedgerSnapshot["gifts"][number]) =>
+		g.eventId === newId.event(book) ? [] : [`行事: ${eventsById.get(g.eventId)?.name ?? ""}`];
+	// 旧形式の金額帯は返礼品ごとの推奨額だけ。1品に1つの半返しのルールに限って戻し、他は export に残す。
+	const rulesChanged = !sameRows(old.returnRules, now.returnRules);
+	const ruleForItem = new Map<string, LedgerSnapshot["returnRules"][number]>();
+	if (rulesChanged)
+		for (const r of now.returnRules) {
+			const prev = old.returnRules.find((x) => x.id === r.id);
+			if (
+				r.ratioNumerator * 2 === r.ratioDenominator &&
+				r.suggestedItemId &&
+				now.returnRules.filter((x) => x.suggestedItemId === r.suggestedItemId).length === 1
+			)
+				ruleForItem.set(r.suggestedItemId, r);
+			else if (!prev || !eq({ ...prev, sortOrder: 0 }, { ...r, sortOrder: 0 }))
+				notice("return_rule_not_rolled_back", r.id);
+		}
 	if (!sameRows(old.giftPhotos ?? [], now.giftPhotos ?? []))
 		block("images_require_reverse_copy", base.koudenId);
 	for (const r of now.relationships) {
@@ -475,6 +518,27 @@ function reverseBook(
 		});
 		// 移行時に 10,20 等の旧順位を 1,2 に直しているため、追加時も全体を揃える。
 		if (itemOrderChanged) values.sort_order = r.sortOrder;
+		if (rulesChanged) {
+			const current = after.return_items.find((x) => x.id === itemId(r.id));
+			const rule = ruleForItem.get(r.id);
+			// 移行時にこの品から作ったルールが変わらず残っていれば（無効な品のルールなど）旧の値を保つ。
+			const own = current && newId.returnRule(String(current.id));
+			const kept =
+				!rule &&
+				own &&
+				eq(
+					old.returnRules.find((x) => x.id === own),
+					now.returnRules.find((x) => x.id === own),
+				);
+			const [min, max] = rule ? [rule.minAmount, rule.maxAmount] : [null, null];
+			if (
+				!kept &&
+				!eq([min, max], [current?.recommended_amount_min, current?.recommended_amount_max])
+			) {
+				values.recommended_amount_min = min;
+				values.recommended_amount_max = max;
+			}
+		}
 		if (Object.keys(values).length)
 			patch("return_items", itemId(r.id), values, {
 				kouden_id: book,
@@ -501,21 +565,88 @@ function reverseBook(
 					? newId.telegramGift
 					: newId.offeringGift,
 		);
-	const entryForPerson = new Map<string, string>();
+	// 旧形式は「香典 1 件 = 1 人」。代表者の香典ごとに旧の香典を作り、同じ人の返礼・弔電・供物は最初の香典に付ける。
+	const kodenOf = new Map<string, LedgerSnapshot["gifts"]>();
 	for (const g of now.gifts.filter((gift) => gift.kind === "koden")) {
-		const contributors = now.contributors.filter((c) => c.giftId === g.id);
-		if (
-			contributors.length !== 1 ||
-			!contributors[0]!.isPrimary ||
-			contributors[0]!.shareAmount !== null
-		) {
-			block("koden_requires_single_person", g.id);
-			continue;
-		}
-		const person = contributors[0]!.personId;
-		if (entryForPerson.has(person)) block("person_has_multiple_koden", person);
-		entryForPerson.set(person, giftOldId(g));
+		const primary = now.contributors.find((c) => c.giftId === g.id && c.isPrimary);
+		if (primary) kodenOf.set(primary.personId, [...(kodenOf.get(primary.personId) ?? []), g]);
 	}
+	const entryForPerson = new Map<string, string>();
+	for (const [person, gifts] of kodenOf) {
+		const entries = gifts
+			.toSorted((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id))
+			.map(giftOldId);
+		// 旧の返礼記録がある香典を優先し、返礼記録を付け替えない。
+		const entry =
+			entries.find((e) => before.return_entry_records.some((r) => r.kouden_entry_id === e)) ??
+			entries[0]!;
+		entryForPerson.set(person, entry);
+		if (gifts.length > 1)
+			notice("person_has_multiple_koden", person, {
+				kodenCount: gifts.length,
+				returnEntryId: entry,
+			});
+	}
+	// 連名の香典の代表者以外。旧形式に置き場がない住所などは export に残す。
+	const jointOnly = new Set(
+		now.contributors
+			.filter(
+				(c) =>
+					!c.isPrimary &&
+					!kodenOf.has(c.personId) &&
+					now.gifts.some((g) => g.id === c.giftId && g.kind === "koden"),
+			)
+			.map((c) => c.personId),
+	);
+	/**
+	 * 旧の按分（負担額・比率・代表者）と紐づけを、v2 の差出人に合わせる。按分は負担額のある差出人だけ。
+	 * 比率は按分額÷供物の金額。旧行の備考は保つ。has_offering と返礼金額は旧DBのトリガーが更新する。
+	 */
+	const linkOffering = (
+		offering: string,
+		g: LedgerSnapshot["gifts"][number],
+		links: (LedgerSnapshot["contributors"][number] & { entry: string })[],
+	) => {
+		const actor = userId(g.updatedBy);
+		for (const table of ["offering_entries", "offering_allocations"] as const) {
+			const wanted = links.filter((l) => table === "offering_entries" || l.shareAmount !== null);
+			const seen = new Set<string>();
+			for (const row of after[table].filter((r) => r.offering_id === offering)) {
+				const keep = wanted.some((l) => l.entry === row.kouden_entry_id);
+				if (!keep || seen.has(String(row.kouden_entry_id))) remove(table, String(row.id));
+				seen.add(String(row.kouden_entry_id));
+			}
+			for (const l of wanted) {
+				const row = after[table].find(
+					(r) => r.offering_id === offering && r.kouden_entry_id === l.entry,
+				);
+				const values: Row =
+					table === "offering_entries"
+						? {}
+						: {
+								allocated_amount: l.shareAmount,
+								allocation_ratio: g.amount ? l.shareAmount! / g.amount : 0,
+								is_primary_contributor: l.isPrimary,
+							};
+				for (const [k, v] of Object.entries(values)) if (row && eq(row[k], v)) delete values[k];
+				if (row && "allocation_ratio" in values && eq(row.allocated_amount, l.shareAmount))
+					delete values.allocation_ratio;
+				if (row) Object.assign(row, values);
+				else
+					after[table].push({
+						id: uuidv5(`rollback:${table}:${g.id}:${l.personId}`),
+						offering_id: offering,
+						kouden_entry_id: l.entry,
+						...values,
+						...(table === "offering_allocations"
+							? { contribution_notes: null, updated_at: g.updatedAt }
+							: {}),
+						created_by: actor,
+						created_at: g.updatedAt,
+					});
+			}
+		}
+	};
 	const represented = new Set<string>();
 	for (const g of now.gifts) {
 		const prev = old.gifts.find((b) => b.id === g.id);
@@ -566,6 +697,21 @@ function reverseBook(
 			}
 			if ("relationship_id" in values)
 				values.relationship_id = person.relationshipId ? relationId(person.relationshipId) : null;
+			const others = people.filter((p) => p !== person);
+			if (others.length)
+				notice("joint_koden_flattened", g.id, { personIds: others.map((p) => p!.id) });
+			appendLines(
+				values,
+				"notes",
+				g.notes,
+				after.kouden_entries.find((e) => e.id === id),
+				[
+					...eventLines(g),
+					...(others.length
+						? [`連名: ${others.map((p) => p!.name ?? p!.organization).join("、")}`]
+						: []),
+				],
+			);
 		} else if (g.kind === "choden") {
 			unsupported(g, prev, ["amount", "itemName", "quantity", "attendance"]);
 			if (contributors.length !== 1 || contributors[0]!.shareAmount !== null)
@@ -583,6 +729,13 @@ function reverseBook(
 				values.kouden_entry_id = entryForPerson.get(person.id) ?? null;
 			if ((!prev || "sender_name" in values) && person.name === null)
 				block("sender_name_required", g.id);
+			appendLines(
+				values,
+				"notes",
+				g.notes,
+				after.telegrams.find((e) => e.id === id),
+				eventLines(g),
+			);
 		} else {
 			unsupported(g, prev, ["message", "attendance"]);
 			Object.assign(
@@ -597,16 +750,30 @@ function reverseBook(
 				if (person.name === null) block("provider_name_required", g.id);
 				values.provider_name = person.name;
 			}
-			// 按分の備考・比率・参照は旧行のまま保つ。構成を変えた場合は別途確認する。
-			if (prev && !sameRows(contributors, previousContributors))
-				block("offering_allocation_changed", g.id);
-			if (
-				!prev &&
-				(contributors.length !== 1 ||
-					contributors[0]!.shareAmount !== null ||
-					entryForPerson.has(person.id))
-			)
-				block("new_offering_allocation_requires_mapping", g.id);
+			appendLines(
+				values,
+				"notes",
+				g.notes,
+				after.offerings.find((e) => e.id === id),
+				eventLines(g),
+			);
+			if (!prev || !sameRows(contributors, previousContributors)) {
+				const entries = contributors.map((c) => entryForPerson.get(c.personId));
+				// 差出人に香典がない供物は、旧形式では provider_name だけで表す（紐づけを作らない）。
+				if (
+					entries.some((e) => e === undefined) &&
+					(entries.some((e) => e !== undefined) ||
+						contributors.length !== 1 ||
+						contributors[0]!.shareAmount !== null)
+				)
+					block("offering_contributor_without_koden", g.id);
+				else
+					linkOffering(
+						id,
+						g,
+						contributors.flatMap((c, i) => (entries[i] ? [{ ...c, entry: entries[i] }] : [])),
+					);
+			}
 		}
 		if (Object.keys(values).length && g.kind === "koden" && prev) {
 			const changedBy = person.updatedAt > g.updatedAt ? person.updatedBy : g.updatedBy;
@@ -631,8 +798,13 @@ function reverseBook(
 	}
 	for (const p of now.persons) {
 		const prev = old.persons.find((b) => b.id === p.id);
+		// 旧形式には住所録がない。いただきもののない差出人は書き戻さず export に残す。
+		if (!represented.has(p.id)) {
+			notice("person_without_gift", p.id);
+			continue;
+		}
 		unsupported(p, prev, ["nameKana", "notes"]);
-		if (!represented.has(p.id)) block("person_without_gift", p.id);
+		if (jointOnly.has(p.id)) continue;
 		if (!entryForPerson.has(p.id)) {
 			unsupported(p, prev, ["relationshipId", "postalCode", "address", "phone"]);
 			if (
@@ -735,9 +907,19 @@ function reverseBook(
 			return_items_cost: 0,
 		});
 	}
-	for (const r of old.returns)
-		if (!now.returns.some((x) => x.id === r.id))
-			block("deleted_return_requires_manual_cleanup", r.id);
+	// 返礼記録を消すと、旧画面はその香典を「未対応」と表示する。返礼金額は香典の側にあり失われない。
+	for (const r of old.returns) {
+		if (now.returns.some((x) => x.id === r.id)) continue;
+		const records = before.return_entry_records.filter(
+			(row) => newId.return(String(row.kouden_entry_id)) === r.id,
+		);
+		if (records.length > 1) block("merged_return_requires_manual_mapping", r.id);
+		// 記録がなく旧香典の「返礼済み」の印だけから作った返礼は、印を戻す先を確かめていない。
+		else if (!records.length) block("deleted_return_requires_manual_cleanup", r.id);
+		else if (before.return_record_items.some((l) => l.return_record_id === records[0]!.id))
+			block("legacy_return_lines_require_manual_mapping", r.id);
+		else remove("return_entry_records", String(records[0]!.id));
+	}
 	for (const l of now.returnLines)
 		if (!now.returns.some((r) => r.id === l.returnId)) block("orphan_return_line", l.id);
 		else if (l.returnItemId && !now.returnItems.some((r) => r.id === l.returnItemId))
@@ -745,6 +927,12 @@ function reverseBook(
 	for (const r of now.returnRules)
 		if (r.suggestedItemId && !now.returnItems.some((i) => i.id === r.suggestedItemId))
 			block("missing_return_item", r.id);
+	// 紐づけを変えた香典は、旧DBのトリガー update_has_offering_flag が has_offering を更新する。
+	for (const e of after.kouden_entries.filter((x) => x.kouden_id === book)) {
+		const linked = (rows: Row[]) => rows.filter((l) => l.kouden_entry_id === e.id).map((l) => l.id);
+		if (!sameRows(linked(before.offering_entries), linked(after.offering_entries)))
+			e.has_offering = after.offering_entries.some((l) => l.kouden_entry_id === e.id);
+	}
 	// 合計と生成列を旧 DB の式で再計算する。変更のない旧行はそのまま保存する。
 	for (const r of after.return_entry_records) {
 		const entry = after.kouden_entries.find(
@@ -760,7 +948,13 @@ function reverseBook(
 					after.offerings.find((o) => o.id === l.offering_id),
 				),
 		);
-		if (oldEntry?.amount !== entry.amount || offeringChanged)
+		const linksChanged = !sameRows(
+			before.offering_entries
+				.filter((e) => e.kouden_entry_id === entry.id)
+				.map((l) => l.offering_id),
+			links.map((l) => l.offering_id),
+		);
+		if (oldEntry?.amount !== entry.amount || offeringChanged || linksChanged)
 			r.total_amount =
 				Number(entry.amount) +
 				links.reduce((sum, l) => {

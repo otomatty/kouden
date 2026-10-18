@@ -7,8 +7,11 @@ const identifier = (s: string) => {
 	if (!/^[a-z][a-z0-9_]*$/.test(s)) throw new Error("rollback_invalid_column");
 	return `"${s}"`;
 };
+/** 生成列と、旧DBのトリガーが保つ列（has_offering は offering_entries のトリガーが更新する）。 */
 const generated = (table: Table, column: string) =>
-	table === "return_entry_records" && ["additional_return_amount", "profit_loss"].includes(column);
+	(table === "return_entry_records" &&
+		["additional_return_amount", "profit_loss"].includes(column)) ||
+	(table === "kouden_entries" && column === "has_offering");
 const literal = (value: unknown) =>
 	`convert_from(decode('${Buffer.from(JSON.stringify(value)).toString("hex")}', 'hex'), 'UTF8')::jsonb`;
 

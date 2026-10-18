@@ -1,5 +1,7 @@
+import { readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
 import { beforeAll, describe, expect, it } from "vitest";
+import { newId } from "../src/ids.ts";
 import { planRollback } from "../src/rollback-plan.ts";
 import { rollbackSql } from "../src/rollback-sql.ts";
 import {
@@ -190,5 +192,404 @@ describe("books, users and purchases created after cutover (#186)", () => {
 				{ v2UserId: "another", legacyUserId: newLegacyUser },
 			]),
 		).toThrow("rollback_user_map_invalid");
+	});
+});
+
+const entryB = "30000000-0000-4000-8000-000000000002";
+const offeringId = "90000000-0000-4000-8000-000000000001";
+const returnRow = (entry: string, i: number, total: number) => ({
+	id: `70000000-0000-4000-8000-00000000000${i + 1}`,
+	kouden_entry_id: entry,
+	return_status: "PENDING",
+	return_method: null,
+	funeral_gift_amount: 0,
+	arrangement_date: null,
+	shipping_postal_code: null,
+	shipping_address: null,
+	shipping_phone_number: null,
+	remarks: null,
+	return_items: [],
+	total_amount: total,
+	return_items_cost: 0,
+	additional_return_amount: total,
+	profit_loss: total,
+	created_by: ids.user,
+	created_at: at,
+	updated_at: at,
+});
+
+/** 香典 2 件（A: 10,000 円、B: 5,000 円）と返礼記録。供物ありなら A に按分・紐づけ済み。 */
+function twoEntries(withOffering: boolean) {
+	const source = sourceFixture();
+	const entries = source.data["public.kouden_entries"]!;
+	entries.push({ ...entries[0]!, id: entryB, name: "二人目", amount: 5000, is_duplicate: false });
+	if (withOffering) {
+		entries[0]!.has_offering = true;
+		source.data["public.offerings"] = [
+			{
+				id: offeringId,
+				kouden_id: ids.book,
+				type: "FLOWER",
+				description: "供花",
+				quantity: 1,
+				price: 5000,
+				provider_name: "差出人",
+				notes: null,
+				created_by: ids.user,
+				created_at: at,
+				updated_at: at,
+			},
+		];
+		source.data["public.offering_allocations"] = [
+			{
+				id: "91000000-0000-4000-8000-000000000001",
+				offering_id: offeringId,
+				kouden_entry_id: ids.entry,
+				allocated_amount: 5000,
+				allocation_ratio: 1,
+				is_primary_contributor: true,
+				contribution_notes: null,
+				created_by: ids.user,
+				created_at: at,
+				updated_at: at,
+			},
+		];
+		source.data["public.offering_entries"] = [
+			{
+				id: "92000000-0000-4000-8000-000000000001",
+				offering_id: offeringId,
+				kouden_entry_id: ids.entry,
+				created_by: ids.user,
+				created_at: at,
+			},
+		];
+	}
+	source.data["public.return_entry_records"] = [
+		returnRow(ids.entry, 0, withOffering ? 15000 : 10000),
+		returnRow(entryB, 1, 5000),
+	];
+	const counted = sourceWithCounts(source.data);
+	return { source: counted, current: exportedFixture(counted) };
+}
+
+const personOf = (current: ReturnType<typeof exportedFixture>, entry: string) =>
+	current.ledgers[0]!.tables.persons.find((p) => p.id === newId.entryPerson(entry))!;
+
+async function withOfferingTriggers(source: ReturnType<typeof sourceWithCounts>) {
+	// 元スナップショットの行を入れた後に置き、投入時にトリガーが動かないようにする。
+	const db = await legacyDatabase(source);
+	for (const sql of [
+		new URL("./fixtures/rollback-legacy-offering-triggers.sql", import.meta.url),
+		new URL(
+			"../../../../supabase/migrations/20261018000000_align_return_amount_triggers_with_deployed.sql",
+			import.meta.url,
+		),
+	])
+		await db.exec(await readFile(sql, "utf8"));
+	return db;
+}
+const state = async (db: PGlite) =>
+	(
+		await db.query(
+			`SELECT e.id::text AS entry, e.has_offering, r.total_amount::int AS total,
+				(SELECT count(*)::int FROM offering_entries o WHERE o.kouden_entry_id = e.id) AS links,
+				(SELECT json_agg(json_build_object('amount', a.allocated_amount::int, 'ratio', a.allocation_ratio::float, 'primary', a.is_primary_contributor))
+				   FROM offering_allocations a WHERE a.kouden_entry_id = e.id) AS allocations
+			 FROM kouden_entries e LEFT JOIN return_entry_records r ON r.kouden_entry_id = e.id ORDER BY e.id`,
+		)
+	).rows;
+
+describe("ledger structures written in the legacy screen's terms (#188)", () => {
+	it("deletes the legacy return record so the old screen shows the entry as not handled", async () => {
+		const { source, current } = twoEntries(false);
+		const t = current.ledgers[0]!.tables;
+		t.returns.find((r) => r.person_id === newId.entryPerson(entryB))!.deleted_at = at;
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual([]);
+		const db = await legacyDatabase(source);
+		try {
+			await db.exec(rollbackSql(plan, "apply"));
+			await db.exec(rollbackSql(plan, "verify"));
+			expect(
+				(await db.query("SELECT kouden_entry_id::text AS entry FROM return_entry_records")).rows,
+			).toEqual([{ entry: ids.entry }]);
+		} finally {
+			await db.close();
+		}
+	});
+	it("moves an offering share to another koden through allocations, links and legacy triggers", async () => {
+		const { source, current } = twoEntries(true);
+		const t = current.ledgers[0]!.tables;
+		const gift = t.gifts.find((g) => g.id === newId.offeringGift(offeringId))!;
+		t.gift_contributors = t.gift_contributors.filter((c) => c.gift_id !== gift.id);
+		t.gift_contributors.push({
+			gift_id: gift.id,
+			person_id: personOf(current, entryB).id,
+			is_primary: 1,
+			share_amount: 5000,
+		});
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual([]);
+		const db = await withOfferingTriggers(source);
+		try {
+			await db.exec(rollbackSql(plan, "apply"));
+			await db.exec(rollbackSql(plan, "verify"));
+			expect(await state(db)).toEqual([
+				{ entry: ids.entry, has_offering: false, total: 10000, links: 0, allocations: null },
+				{
+					entry: entryB,
+					has_offering: true,
+					total: 10000,
+					links: 1,
+					allocations: [{ amount: 5000, ratio: 1, primary: true }],
+				},
+			]);
+			await db.exec(rollbackSql(plan, "apply"));
+		} finally {
+			await db.close();
+		}
+	});
+	it("adds a new offering shared by two koden senders with ratios of the offering amount", async () => {
+		const { source, current } = twoEntries(false);
+		const t = current.ledgers[0]!.tables;
+		t.gifts.push({
+			...t.gifts[0]!,
+			id: "new-offering",
+			kind: "kyoka",
+			amount: 5000,
+			quantity: 1,
+			item_name: "供花",
+			attendance: null,
+		});
+		for (const [entry, share] of [
+			[ids.entry, 3000],
+			[entryB, 2000],
+		] as const)
+			t.gift_contributors.push({
+				gift_id: "new-offering",
+				person_id: personOf(current, entry).id,
+				is_primary: entry === ids.entry ? 1 : 0,
+				share_amount: share,
+			});
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual([]);
+		const db = await withOfferingTriggers(source);
+		try {
+			await db.exec(rollbackSql(plan, "apply"));
+			await db.exec(rollbackSql(plan, "verify"));
+			expect(await state(db)).toEqual([
+				{
+					entry: ids.entry,
+					has_offering: true,
+					total: 15000,
+					links: 1,
+					allocations: [{ amount: 3000, ratio: 0.6, primary: true }],
+				},
+				{
+					entry: entryB,
+					has_offering: true,
+					total: 10000,
+					links: 1,
+					allocations: [{ amount: 2000, ratio: 0.4, primary: false }],
+				},
+			]);
+		} finally {
+			await db.close();
+		}
+	});
+	it("refuses an offering shared with a sender who has no koden", () => {
+		const { source, current } = twoEntries(false);
+		const t = current.ledgers[0]!.tables;
+		t.persons.push({ ...t.persons[0]!, id: "no-koden", name: "香典なし" });
+		t.gifts.push({
+			...t.gifts[0]!,
+			id: "shared",
+			kind: "kumotsu",
+			amount: 3000,
+			quantity: 1,
+			attendance: null,
+		});
+		for (const person of [personOf(current, ids.entry).id, "no-koden"])
+			t.gift_contributors.push({
+				gift_id: "shared",
+				person_id: person,
+				is_primary: person === "no-koden" ? 0 : 1,
+				share_amount: null,
+			});
+		expect(planRollback(source, current).blockers).toEqual([
+			{ code: "offering_contributor_without_koden", entityId: "shared" },
+		]);
+	});
+	it("writes a joint koden as its representative with the other names in the notes", async () => {
+		const { source, current } = twoEntries(false);
+		const t = current.ledgers[0]!.tables;
+		t.persons.push({ ...t.persons[0]!, id: "joint", name: "佐藤 次郎", address: "別住所" });
+		const gift = t.gifts.find((g) => g.id === newId.entryGift(ids.entry))!;
+		t.gift_contributors.push({
+			gift_id: gift.id,
+			person_id: "joint",
+			is_primary: 0,
+			share_amount: null,
+		});
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual([]);
+		expect(plan.notices).toEqual([
+			{ code: "joint_koden_flattened", entityId: gift.id, personIds: ["joint"] },
+		]);
+		const db = await legacyDatabase(source);
+		try {
+			await db.exec(rollbackSql(plan, "apply"));
+			await db.exec(rollbackSql(plan, "verify"));
+			expect(
+				(
+					await db.query("SELECT name, amount, notes FROM kouden_entries WHERE id = $1", [
+						ids.entry,
+					])
+				).rows,
+			).toEqual([{ name: "  差出人  ", amount: 10000, notes: "連名: 佐藤 次郎" }]);
+		} finally {
+			await db.close();
+		}
+		// 再移行した備考から再び切り戻しても、同じ行を二重に足さない。
+		gift.notes = "連名: 佐藤 次郎";
+		expect(
+			planRollback(source, current).after.kouden_entries.find((e) => e.id === ids.entry)!.notes,
+		).toBe("連名: 佐藤 次郎");
+	});
+	it("copies the sender to each koden of the same person and keeps the return on the first one", async () => {
+		const { source, current } = twoEntries(false);
+		const t = current.ledgers[0]!.tables;
+		const person = personOf(current, ids.entry);
+		person.address = "新しい住所";
+		t.gifts.push({
+			...t.gifts[0]!,
+			id: "second-koden",
+			amount: 3000,
+			created_at: "2024-02-01T00:00:00.000Z",
+		});
+		t.gift_contributors.push({
+			gift_id: "second-koden",
+			person_id: person.id,
+			is_primary: 1,
+			share_amount: null,
+		});
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual([]);
+		expect(plan.notices).toEqual([
+			{
+				code: "person_has_multiple_koden",
+				entityId: person.id,
+				kodenCount: 2,
+				returnEntryId: ids.entry,
+			},
+		]);
+		const db = await legacyDatabase(source);
+		try {
+			await db.exec(rollbackSql(plan, "apply"));
+			await db.exec(rollbackSql(plan, "verify"));
+			expect(
+				(
+					await db.query(
+						"SELECT amount, address, (SELECT count(*)::int FROM return_entry_records r WHERE r.kouden_entry_id = e.id) AS returns FROM kouden_entries e WHERE e.id <> $1 ORDER BY amount",
+						[entryB],
+					)
+				).rows,
+			).toEqual([
+				{ amount: 3000, address: "新しい住所", returns: 0 },
+				{ amount: 10000, address: "新しい住所", returns: 1 },
+			]);
+		} finally {
+			await db.close();
+		}
+	});
+	it("keeps a person without gifts in the export only", () => {
+		const { source, current } = twoEntries(false);
+		const t = current.ledgers[0]!.tables;
+		t.persons.push({ ...t.persons[0]!, id: "address-book-only", name_kana: "ジュウショロク" });
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual([]);
+		expect(plan.after).toEqual(plan.before);
+		expect(plan.notices).toEqual([{ code: "person_without_gift", entityId: "address-book-only" }]);
+	});
+	it("notes the event of a gift outside the default funeral and leaves events in the export", async () => {
+		const { source, current } = twoEntries(false);
+		const t = current.ledgers[0]!.tables;
+		t.events[0]!.date = "2026-10-01";
+		t.events.push({
+			id: "memorial",
+			kind: "memorial_49",
+			name: "四十九日",
+			date: null,
+			sort_order: 2,
+		});
+		t.gifts.find((g) => g.id === newId.entryGift(entryB))!.event_id = "memorial";
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual([]);
+		expect(plan.notices).toEqual([
+			{ code: "event_not_rolled_back", entityId: t.events[0]!.id },
+			{ code: "event_not_rolled_back", entityId: "memorial" },
+		]);
+		expect(plan.after.kouden_entries.find((e) => e.id === entryB)!.notes).toBe("行事: 四十九日");
+		const db = await legacyDatabase(source);
+		try {
+			await db.exec(rollbackSql(plan, "apply"));
+			await db.exec(rollbackSql(plan, "verify"));
+		} finally {
+			await db.close();
+		}
+	});
+	it("writes half-return rules back to the recommended amounts and lists the others", async () => {
+		const source = sourceFixture();
+		source.data["public.return_items"] = ["タオル", "茶"].map((name, i) => ({
+			id: `70000000-0000-4000-8000-00000000001${i}`,
+			kouden_id: ids.book,
+			name,
+			price: 1000,
+			category: null,
+			description: null,
+			image_url: null,
+			recommended_amount_min: i === 0 ? 10000 : null,
+			recommended_amount_max: i === 0 ? 30000 : null,
+			is_active: true,
+			sort_order: i + 1,
+			created_by: ids.user,
+			created_at: at,
+			updated_at: at,
+		}));
+		const counted = sourceWithCounts(source.data);
+		const current = exportedFixture(counted);
+		const t = current.ledgers[0]!.tables;
+		const [towel, tea] = t.return_items;
+		t.return_rules[0]!.min_amount = 20000;
+		t.return_rules[0]!.suggested_item_id = tea!.id;
+		t.return_rules.push({
+			id: "third",
+			min_amount: 50000,
+			max_amount: null,
+			ratio_numerator: 1,
+			ratio_denominator: 3,
+			suggested_item_id: towel!.id,
+			sort_order: 2,
+		});
+		const plan = planRollback(counted, current);
+		expect(plan.blockers).toEqual([]);
+		expect(plan.notices).toEqual([{ code: "return_rule_not_rolled_back", entityId: "third" }]);
+		expect(
+			plan.after.return_items.map((r) => [
+				r.name,
+				r.recommended_amount_min,
+				r.recommended_amount_max,
+			]),
+		).toEqual([
+			["タオル", null, null],
+			["茶", 20000, 30000],
+		]);
+		const db = await legacyDatabase(counted);
+		try {
+			await db.exec(rollbackSql(plan, "apply"));
+			await db.exec(rollbackSql(plan, "verify"));
+		} finally {
+			await db.close();
+		}
 	});
 });
