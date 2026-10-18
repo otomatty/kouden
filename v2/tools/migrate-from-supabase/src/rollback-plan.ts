@@ -1037,7 +1037,10 @@ function reverseBook(
 			[
 				...(r.status === "handed_on_day" && r.method !== "on_day" ? ["【v2】当日返し済み"] : []),
 				...(changed("shipName") ? [`【v2】送付先氏名: ${r.shipName}`] : []),
-				...(changed("shippedAt") ? [`【v2】発送日: ${r.shippedAt}`] : []),
+				// 移行時は旧の状況が発送済みのときだけ発送日を作るので、発送済みでなくなった日付も残す。
+				...(changed("shippedAt") || (r.shippedAt !== null && r.status !== "shipped")
+					? [`【v2】発送日: ${r.shippedAt}`]
+					: []),
 				...(dueDates.has(r.id) ? [`【v2】返礼期限: ${dueDates.get(r.id)}`] : []),
 			],
 		);
