@@ -465,7 +465,8 @@ function reverseBook(
 		if (!now.gifts.some((g) => g.id === c.giftId) || !now.persons.some((p) => p.id === c.personId))
 			block("orphan_contributor", c.giftId);
 	const book = base.kouden.legacyKoudenId;
-	const owner = userId(base.kouden.ownerUserId);
+	// 作成者がない行の補完には、譲渡を反映した今のオーナーを使う（planRollback が先に台帳を更新する）。
+	const owner = String(after.koudens.find((k) => k.id === book)!.owner_id);
 	const oldId = (table: Table, id: string, forward: (id: string) => string) => {
 		const row = before[table].find((r) => forward(String(r.id)) === id);
 		if (row && row.kouden_id !== book) block("id_belongs_to_another_book", id);
@@ -519,6 +520,8 @@ function reverseBook(
 			if (
 				r.ratioNumerator * 2 === r.ratioDenominator &&
 				r.suggestedItemId &&
+				// 移行時は無効な品の推奨額を、品を指さないルールにする。無効な品へは書き戻さない。
+				now.returnItems.some((i) => i.id === r.suggestedItemId && i.isActive) &&
 				now.returnRules.filter((x) => x.suggestedItemId === r.suggestedItemId).length === 1
 			)
 				ruleForItem.set(r.suggestedItemId, r);

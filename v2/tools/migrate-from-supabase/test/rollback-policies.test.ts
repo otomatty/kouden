@@ -659,6 +659,42 @@ describe("ledger structures written in the legacy screen's terms (#188)", () => 
 			await db.close();
 		}
 	});
+	it("does not write a rule back to an item disabled in v2", () => {
+		const source = sourceFixture();
+		source.data["public.return_items"] = [
+			{
+				id: "70000000-0000-4000-8000-000000000010",
+				kouden_id: ids.book,
+				name: "タオル",
+				price: 1000,
+				category: null,
+				description: null,
+				image_url: null,
+				recommended_amount_min: 10000,
+				recommended_amount_max: 30000,
+				is_active: true,
+				sort_order: 1,
+				created_by: ids.user,
+				created_at: at,
+				updated_at: at,
+			},
+		];
+		const counted = sourceWithCounts(source.data);
+		const current = exportedFixture(counted);
+		const t = current.ledgers[0]!.tables;
+		t.return_items[0]!.is_active = 0;
+		const rule = t.return_rules[0]!;
+		expect(rule.suggested_item_id).toBe(t.return_items[0]!.id);
+		rule.min_amount = 20000;
+		const plan = planRollback(counted, current);
+		expect(plan.blockers).toEqual([]);
+		expect(plan.notices).toEqual([{ code: "return_rule_not_rolled_back", entityId: rule.id }]);
+		expect(plan.after.return_items[0]).toMatchObject({
+			is_active: false,
+			recommended_amount_min: 10000,
+			recommended_amount_max: 30000,
+		});
+	});
 	it("leaves the recommended amounts of an edited rule it cannot write back", () => {
 		const source = sourceFixture();
 		source.data["public.return_items"] = [
@@ -993,6 +1029,22 @@ describe("rows the former owner created after an ownership transfer (#183)", () 
 			}
 		},
 	);
+	it("attributes rows without a v2 creator to the new owner", () => {
+		const { source, current } = ownershipTransferFixture("editor");
+		current.ledgers[0]!.tables.relationships.push({
+			id: "new-relationship",
+			name: "追加関係",
+			sort_order: 1,
+			is_hidden: 0,
+			created_at: at,
+			updated_at: at,
+		});
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual([]);
+		expect(plan.after.relationships).toEqual([
+			expect.objectContaining({ name: "追加関係", created_by: nextOwner }),
+		]);
+	});
 	it("allows the transfer when the former owner stays an editor with the same access", () => {
 		const { source, current } = transferWithRows("editor");
 		const plan = planRollback(source, current);
