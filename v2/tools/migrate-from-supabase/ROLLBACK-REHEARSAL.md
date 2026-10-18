@@ -47,7 +47,7 @@ $env:PGSSLROOTCERT = '<CA 証明書のパス>'
 & <リポジトリ>\v2\tools\migrate-from-supabase\scripts\compare-legacy-db.ps1
 ```
 
-`copy-legacy-db.ps1` は次を行う。接続先が逆のときと、空でないプロジェクトへの復元は止める。
+`copy-legacy-db.ps1` は次を行う。接続先が逆のときと、空でないプロジェクト（public の表、Auth のユーザー、Storage のバケット・ファイルのいずれかがある）への復元は止める。
 
 1. 本番を `supabase db dump` で roles・schema・data の 3 つに分けて保存する（既にあれば使い回す）。
 2. auth・storage の表に付けた独自トリガー（新規ユーザーの `profiles` を作る `on_auth_user_created` など）と RLS ポリシー（`auth.users` の本人読み取りなど）は dump に含まれないため、本番の定義を読み取り、リハーサル用にないものだけを作る SQL を用意する。Supabase が管理する表でポリシーの作成を拒まれた場合は警告を出して飛ばし、比較スクリプトの差分に残る。
@@ -75,7 +75,7 @@ psql -X -q -A -t -d postgres -f extract.sql -o cutover\source-snapshot.json
 
 切り戻しの `apply` / `verify` は、接続先とこのスナップショットの `project_ref` を照合する。本番の ref のスナップショットでは、リハーサル用に書き込めない。
 
-v2 をローカルで起動する。保存先は環境変数 `KOUDEN_LOCAL_STATE` で作業フォルダ内の新しいフォルダ（例: `v2-state-1`）にし、普段の開発データと分ける（`v2/apps/app` で `bun run dev`）。[README](./README.md) の手順で `prepare` → `import` → `verify` を行う。投入先は `http://localhost:5173`、トークンは `IMPORT_DEV_TOKEN=dev-import-token`。`verify` が `passed` になったら、変更する前に一度 `rollback export` → `plan` を行い、変更 0 件・ブロッカー 0 件を確認する。
+v2 をローカルで起動する。保存先は環境変数 `KOUDEN_LOCAL_STATE` で作業フォルダ内の新しいフォルダ（例: `v2-state-1` の絶対パス）にし、普段の開発データと分ける。新しい保存先の D1 は空なので、同じ `KOUDEN_LOCAL_STATE` のまま `v2/apps/app` で `bun run db:migrate:local` を実行してから `bun run dev` で起動する。[README](./README.md) の手順で `prepare` → `import` → `verify` を行う。投入先は `http://localhost:5173`、トークンは `IMPORT_DEV_TOKEN=dev-import-token`。`verify` が `passed` になったら、変更する前に一度 `rollback export` → `plan` を行い、変更 0 件・ブロッカー 0 件を確認する。
 
 画面から変更するときは、`v2/e2e/scripts/prepare.ts` と同じ方法で、操作する移行済みユーザーのセッションをローカル D1 の `sessions` に追加し、Cookie `__Host-kouden_session` に設定する。
 
@@ -124,7 +124,7 @@ group by 1 order by 2 desc limit 5;
 
 1. 返礼金額（#194）: 2 つの psql から同じ返礼記録へ明細を同時に追加・削除し、`return_items_cost` が明細の合計と一致すること、デッドロックしないことを確かめる。適用前は明細の書き込みが `public.return_records` の不在で失敗することも記録する。
 2. RLS（#184）: 適用前後で、一般の編集者が旧アプリから弔電・供物の紐づけを追加・変更できるかを確かめる。
-3. 適用後に 2〜3 をやり直し、書き戻しと照合が `passed` になることを確かめる。1 回目の書き戻しと前提照合の試験で旧 DB は変わっているため、最初の元スナップショットは使えない。前提照合の試験で変えた行を戻し、リハーサル用の今の状態から元スナップショットを取り直す。ローカルの v2 は `KOUDEN_LOCAL_STATE` を新しいフォルダ（例: `v2-state-2`）にして空の状態から投入する。
+3. 適用後に 2〜3 をやり直し、書き戻しと照合が `passed` になることを確かめる。1 回目の書き戻しと前提照合の試験で旧 DB は変わっているため、最初の元スナップショットは使えない。前提照合の試験で変えた行を戻し、リハーサル用の今の状態から元スナップショットを取り直す。ローカルの v2 は `KOUDEN_LOCAL_STATE` を新しいフォルダ（例: `v2-state-2`）にし、`db:migrate:local` を実行してから空の状態で投入する。
 
 ## 5. 画面を比べる
 

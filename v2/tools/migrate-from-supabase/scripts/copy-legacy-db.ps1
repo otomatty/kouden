@@ -20,9 +20,9 @@ function Invoke-Psql([string]$url, [string[]]$options) {
 	if ($LASTEXITCODE -ne 0) { throw "psql failed (exit $LASTEXITCODE)" }
 }
 
-# 復元先が空であること（public にテーブルがない）を確かめる。
-$tables = Invoke-Psql $env:REHEARSAL_DB_URL @('-A', '-t', '-c', "select count(*) from pg_tables where schemaname = 'public'")
-if ([int]$tables -ne 0) { throw "リハーサル用の public にテーブルが $tables 個あります。空のプロジェクトに復元してください" }
+# 復元先が作ったばかりの空のプロジェクトであること（public の表、Auth のユーザー、Storage のバケット・ファイルがない）を確かめる。
+$used = Invoke-Psql $env:REHEARSAL_DB_URL @('-A', '-t', '-c', "select (select count(*) from pg_tables where schemaname = 'public') + (select count(*) from auth.users) + (select count(*) from storage.buckets) + (select count(*) from storage.objects)")
+if ([int]$used -ne 0) { throw 'リハーサル用のプロジェクトに既存の表・ユーザー・ファイルがあります。作ったばかりの空のプロジェクトに復元してください' }
 
 # supabase db dump は Docker 内の pg_dump に URL を渡すため、ホストの証明書は使えない。平文に落ちないよう require にする。
 # パスワードはこのコマンドの引数に入る。自分だけが使う端末で実行する。
