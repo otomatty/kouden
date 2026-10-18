@@ -4,12 +4,22 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { digest } from "../src/prepare.ts";
 import { copyRollbackImages, createStorageClient } from "../src/rollback-images.ts";
 import { planRollback, ROLLBACK_TABLES, type ImageCopy } from "../src/rollback-plan.ts";
 import { rollbackSql } from "../src/rollback-sql.ts";
 import { at, exportedFixture, ids, sourceFixture, sourceWithCounts } from "./rollback-fixture.ts";
+
+// 最初のWASM初期化は5秒を超えることがあるため、テスト本体のタイムアウトとは分ける。
+beforeAll(async () => {
+	const db = new PGlite();
+	try {
+		await db.exec("SELECT 1");
+	} finally {
+		await db.close();
+	}
+}, 15000);
 
 const project = "abcdefghijklmnopqrst";
 const publicUrl = (path: string) =>
@@ -193,32 +203,37 @@ describe("rollback image references", () => {
 const png = (n: number) => new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, n]);
 
 /** Supabase Storage の REST API の振る舞いだけを再現する。未存在は旧版と同じ 400 を返す。 */
-function fakeStorage(corrupt = false) {
+function fakeStorage(corrupt = false, key = "sb_secret_test") {
 	const objects = new Map<string, Uint8Array>();
 	let uploads = 0;
 	const fetcher = (async (input: string | URL | Request, init: RequestInit = {}) => {
 		const url = new URL(String(input));
 		const headers = new Headers(init.headers);
-		if (url.origin !== `https://${project}.supabase.co` || headers.get("apikey") !== "secret")
+		// 新しい secret key は apikey だけ、旧 service_role の JWT は Bearer も送る。
+		if (
+			url.origin !== `https://${project}.supabase.co` ||
+			headers.get("apikey") !== key ||
+			headers.get("authorization") !== (key.startsWith("sb_") ? null : `Bearer ${key}`)
+		)
 			return new Response(null, { status: 401 });
 		const read = url.pathname.match(/^\/storage\/v1\/object\/authenticated\/(.+)$/);
 		if (read) {
 			const bytes = objects.get(decodeURIComponent(read[1]!));
 			return bytes ? new Response(new Uint8Array(bytes)) : new Response("{}", { status: 400 });
 		}
-		const key = decodeURIComponent(url.pathname.replace("/storage/v1/object/", ""));
+		const object = decodeURIComponent(url.pathname.replace("/storage/v1/object/", ""));
 		if (init.method !== "POST" || headers.get("x-upsert") !== "false")
 			return new Response(null, { status: 405 });
-		if (objects.has(key)) return new Response("{}", { status: 400 });
+		if (objects.has(object)) return new Response("{}", { status: 400 });
 		const bytes = new Uint8Array(await new Response(init.body).arrayBuffer());
 		uploads++;
-		objects.set(key, corrupt ? bytes.subarray(1) : bytes);
+		objects.set(object, corrupt ? bytes.subarray(1) : bytes);
 		return new Response("{}");
 	}) as typeof fetch;
 	return {
 		objects,
 		uploads: () => uploads,
-		client: createStorageClient(project, "secret", fetcher),
+		client: createStorageClient(project, key, fetcher),
 	};
 }
 
@@ -255,6 +270,9 @@ describe("rollback image transfer", () => {
 		const again = await copyRollbackImages(images, fakeR2(r2), storage.client);
 		expect(again.map((r) => r.copied)).toEqual([false, false]);
 		expect(storage.uploads()).toBe(2);
+		const legacyKey = fakeStorage(false, "eyJ.legacy.jwt");
+		await copyRollbackImages(images, fakeR2(r2), legacyKey.client);
+		expect(legacyKey.uploads()).toBe(2);
 	});
 
 	it("stops without overwriting different content or trusting a bad transfer", async () => {
@@ -306,21 +324,43 @@ it("refuses apply until the copy report covers every planned image", async () =>
 				...extra,
 			).stderr;
 		expect(apply("missing")).toContain("rollback_images_not_copied");
+		// 計画の report.json は転送の結果ではない。
+		expect(apply("plan-report", "--images", join(dir, "plan", "report.json"))).toContain(
+			"rollback_images_not_copied",
+		);
+		expect(
+			run(
+				"images",
+				"--url",
+				"https://other.example.test",
+				"--out",
+				join(dir, "other-origin"),
+				"--project-ref",
+				project,
+				"--writes-stopped",
+			).stderr,
+		).toContain("rollback_images_origin_mismatch");
+		const copied = report.images.map((i: ImageCopy) => ({
+			...i,
+			size: 9,
+			sha256: "0".repeat(64),
+			copied: true,
+		}));
 		const partial = join(dir, "partial.json");
 		await writeFile(
 			partial,
-			JSON.stringify({ exportSha256: report.exportSha256, images: report.images.slice(1) }),
+			JSON.stringify({ exportSha256: report.exportSha256, images: copied.slice(1) }),
 		);
 		expect(apply("partial", "--images", partial)).toContain("rollback_images_not_copied");
 		const complete = join(dir, "images.json");
 		await writeFile(
 			complete,
-			JSON.stringify({ exportSha256: report.exportSha256, images: report.images }),
+			JSON.stringify({ exportSha256: report.exportSha256, images: copied }),
 		);
 		// 画像の確認を通過し、DB 接続の検査で止まる。
 		expect(apply("complete", "--images", complete)).toContain("rollback_database_target_mismatch");
 	} finally {
 		await rm(dir, { recursive: true, force: true });
 	}
-	// bun を4回起動する。
+	// bun を6回起動する。
 }, 30000);

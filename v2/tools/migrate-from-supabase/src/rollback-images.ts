@@ -19,7 +19,10 @@ export function createStorageClient(
 ): StorageClient {
 	if (!/^[a-z0-9]{20}$/.test(project)) throw new Error("rollback_invalid_project");
 	if (!secretKey) throw new Error("rollback_storage_credentials");
-	const headers = { apikey: secretKey, Authorization: `Bearer ${secretKey}` };
+	// sb_secret_ の鍵は apikey だけで送る。Bearer にすると JWT として拒否される。旧 service_role は JWT。
+	const headers: Record<string, string> = secretKey.startsWith("sb_")
+		? { apikey: secretKey }
+		: { apikey: secretKey, Authorization: `Bearer ${secretKey}` };
 	const url = (prefix: string, bucket: string, path: string) =>
 		`https://${project}.supabase.co/storage/v1/object/${prefix}${bucket}/${path.split("/").map(encodeURIComponent).join("/")}`;
 	const call = async (target: string, init: RequestInit = {}) => {

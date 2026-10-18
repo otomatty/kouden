@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { createImportClient } from "./client.ts";
 import { digest, json, privateJson } from "./prepare.ts";
-import { captureRollback } from "./rollback-export.ts";
+import { captureRollback, rollbackExportSchema } from "./rollback-export.ts";
 import { copyRollbackImages, createStorageClient } from "./rollback-images.ts";
 import { planRollback } from "./rollback-plan.ts";
 import { z } from "zod";
@@ -74,7 +74,8 @@ images は旧 Storage へ SUPABASE_SECRET_KEY で書き込みます。apply の�
 	)
 		throw new Error("rollback_arguments");
 	const sourceRaw = await readFile(resolve(v.source), "utf8");
-	const plan = planRollback(JSON.parse(sourceRaw), await json(resolve(v.snapshot)));
+	const snapshot = await json(resolve(v.snapshot));
+	const plan = planRollback(JSON.parse(sourceRaw), snapshot);
 	// prepare と同じく、空白・改行を含めた入力ファイルのハッシュを記録する。
 	plan.sourceSha256 = digest(sourceRaw);
 	if (command !== "plan" && (!v["writes-stopped"] || v["project-ref"] !== plan.sourceProject))
@@ -90,6 +91,9 @@ images は旧 Storage へ SUPABASE_SECRET_KEY で書き込みます。apply の�
 		return;
 	}
 	if (command === "images") {
+		// 計画の R2 キーは export した環境のもの。別の環境の同じキーの画像を写さない。
+		if (new URL(v.url!).origin !== new URL(rollbackExportSchema.parse(snapshot).origin).origin)
+			throw new Error("rollback_images_origin_mismatch");
 		const images = await copyRollbackImages(
 			plan.images,
 			rollbackClient(v.url!),
@@ -120,9 +124,11 @@ images は旧 Storage へ SUPABASE_SECRET_KEY で書き込みます。apply の�
 			throw new Error("rollback_approval_mismatch");
 		// 参照先の画像がない状態で旧 DB を書き換えない。
 		if (command === "apply" && plan.images.length) {
-			const copied = v.images
-				? imagesReportSchema.parse(await json(resolve(v.images)))
-				: { exportSha256: "", images: [] };
+			const copied = (v.images &&
+				imagesReportSchema.safeParse(await json(resolve(v.images))).data) || {
+				exportSha256: "",
+				images: [],
+			};
 			if (
 				copied.exportSha256 !== plan.exportSha256 ||
 				plan.images.some(
@@ -155,7 +161,19 @@ images は旧 Storage へ SUPABASE_SECRET_KEY で書き込みます。apply の�
 
 const imagesReportSchema = z.object({
 	exportSha256: z.string(),
-	images: z.array(z.object({ bucket: z.string(), path: z.string(), r2Key: z.string() })),
+	// 計画の report.json と区別するため、転送で照合した結果の項目を必須にする。
+	images: z.array(
+		z
+			.object({
+				bucket: z.string(),
+				path: z.string(),
+				r2Key: z.string(),
+				size: z.number().int().positive(),
+				sha256: z.string().regex(/^[0-9a-f]{64}$/),
+				copied: z.boolean(),
+			})
+			.strict(),
+	),
 });
 
 function rollbackClient(url: string) {
