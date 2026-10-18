@@ -38,16 +38,26 @@ $start = Get-Date
 Save-Dump roles.sql @('--role-only')
 Save-Dump schema.sql @()
 Save-Dump data.sql @('--use-copy', '--data-only', '-x', 'storage.buckets_vectors', '-x', 'storage.vector_indexes')
-# auth・storage の表に付けた独自トリガー（新規ユーザーの profiles 作成など）は dump に含まれない。本番の定義から、ないものだけ作る。
-Invoke-Psql $env:PROD_DB_URL @('-A', '-t', '-o', 'managed-triggers.sql', '-c', @"
+# auth・storage の表に付けた独自トリガー（新規ユーザーの profiles 作成など）・RLS ポリシーは dump に含まれない。
+# 本番の定義から、ないものだけ作る SQL を用意する。search_path を空にして、関数名などを schema 付きで出す（schema.sql も空にする）。
+# トリガーは作れなければ失敗させる。ポリシーは Supabase が管理する表で作成を拒まれることがあり、その場合は飛ばして比較で差分として示す。
+Invoke-Psql $env:PROD_DB_URL @('-q', '-A', '-t', '-o', 'managed-objects.sql', '-c', "set search_path = ''", '-c', @"
 select format('do `$t`$ begin if not exists (select 1 from pg_trigger where tgrelid = %L::regclass and tgname = %L) then execute %L; end if; end `$t`$;',
   c.oid::regclass::text, t.tgname, pg_get_triggerdef(t.oid))
 from pg_trigger t join pg_class c on c.oid = t.tgrelid join pg_namespace n on n.oid = c.relnamespace
-where n.nspname in ('auth', 'storage') and not t.tgisinternal order by 1
+where n.nspname in ('auth', 'storage') and not t.tgisinternal
+union all
+select format('do `$t`$ begin if not exists (select 1 from pg_policies where schemaname = %L and tablename = %L and policyname = %L) then execute %L; end if; exception when insufficient_privilege then raise warning ''policy skipped: %%s.%%s'', %L, %L; end `$t`$;',
+  schemaname, tablename, policyname,
+  format('create policy %I on %I.%I as %s for %s to %s', policyname, schemaname, tablename, permissive, cmd,
+    (select string_agg(quote_ident(r), ', ') from unnest(roles) r))
+  || coalesce(' using (' || qual || ')', '') || coalesce(' with check (' || with_check || ')', ''),
+  schemaname, tablename)
+from pg_policies where schemaname in ('auth', 'storage')
 "@)
 $dumped = Get-Date
 
-Invoke-Psql $env:REHEARSAL_DB_URL @('--single-transaction', '-f', 'roles.sql', '-f', 'schema.sql', '-c', 'SET session_replication_role = replica', '-f', 'data.sql', '-c', 'SET session_replication_role = origin', '-f', 'managed-triggers.sql')
+Invoke-Psql $env:REHEARSAL_DB_URL @('--single-transaction', '-f', 'roles.sql', '-f', 'schema.sql', '-c', 'SET session_replication_role = replica', '-f', 'data.sql', '-c', 'SET session_replication_role = origin', '-f', 'managed-objects.sql')
 $restored = Get-Date
 
 # 複製された無料香典帳の自動アーカイブを止める（状態が変わると切り戻しの前提照合が崩れる）。

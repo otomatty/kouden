@@ -18,7 +18,7 @@ $queries = @{
 	counts    = "select table_schema || '.' || table_name, (xpath('/row/c/text()', query_to_xml(format('select count(*) as c from %I.%I', table_schema, table_name), false, true, '')))[1]::text from information_schema.tables where table_schema in ('public', 'auth', 'storage', 'common', 'gift', 'funeral', 'cron') and table_type = 'BASE TABLE' order by 1"
 	functions = "select p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')', md5(pg_get_functiondef(p.oid)) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.prokind in ('f', 'p') order by 1"
 	triggers  = "select c.oid::regclass::text || '.' || t.tgname, md5(pg_get_triggerdef(t.oid)) from pg_trigger t join pg_class c on c.oid = t.tgrelid join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public', 'auth', 'storage') and not t.tgisinternal order by 1"
-	policies  = "select schemaname || '.' || tablename || '.' || policyname, md5(concat_ws('|', permissive, cmd, roles::text, qual, with_check)) from pg_policies where schemaname in ('public', 'storage') order by 1"
+	policies  = "select schemaname || '.' || tablename || '.' || policyname, md5(concat_ws('|', permissive, cmd, roles::text, qual, with_check)) from pg_policies where schemaname in ('public', 'auth', 'storage') order by 1"
 }
 
 New-Item -ItemType Directory -Force compare | Out-Null

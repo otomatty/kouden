@@ -50,14 +50,14 @@ $env:PGSSLROOTCERT = '<CA 証明書のパス>'
 `copy-legacy-db.ps1` は次を行う。接続先が逆のときと、空でないプロジェクトへの復元は止める。
 
 1. 本番を `supabase db dump` で roles・schema・data の 3 つに分けて保存する（既にあれば使い回す）。
-2. auth・storage の表に付けた独自トリガー（新規ユーザーの `profiles` を作る `on_auth_user_created` など）は dump に含まれないため、本番の定義を読み取り、リハーサル用にないものだけを作る SQL を用意する。
+2. auth・storage の表に付けた独自トリガー（新規ユーザーの `profiles` を作る `on_auth_user_created` など）と RLS ポリシー（`auth.users` の本人読み取りなど）は dump に含まれないため、本番の定義を読み取り、リハーサル用にないものだけを作る SQL を用意する。Supabase が管理する表でポリシーの作成を拒まれた場合は警告を出して飛ばし、比較スクリプトの差分に残る。
 3. リハーサル用へ 1 トランザクションで復元する。データの投入中だけトリガーを止める。
 4. 複製された `pg_cron` のジョブ（無料の香典帳を 14 日で自動アーカイブする `archive_free_koudens_daily`）を止める。リハーサル中に状態が変わり、前提照合が崩れるのを防ぐ。
 5. 複製したログインセッション（`auth.sessions`・`auth.refresh_tokens`）を消す。
 
 復元の前に、リハーサル用の Database の Extensions で、本番と同じ拡張を有効にする（2026-10-19 の本番: `moddatetime`・`pg_cron`・`pg_trgm`・`pgcrypto`・`pgjwt`・`uuid-ossp`。`pg_stat_statements`・`pgsodium`・`supabase_vault`・`plpgsql` は既定で有効）。復元に失敗した場合は何も残らない。ドキュメントのトラブルシューティング（`supabase_admin` の所有者変更、`cli_login_postgres` の付与）に従って dump を直し、もう一度実行する。
 
-`compare-legacy-db.ps1` は、表ごとの件数、public の関数、public・auth・storage のトリガー、public・storage の RLS ポリシーを本番と比べる。件数と定義の md5 だけを `compare/` に出し、行の中身は出さない。止めた `cron.job` と消したセッションの件数以外に差分があれば、原因を直してから先へ進む。
+`compare-legacy-db.ps1` は、表ごとの件数、public の関数、public・auth・storage のトリガーと RLS ポリシーを本番と比べる。件数と定義の md5 だけを `compare/` に出し、行の中身は出さない。止めた `cron.job` と消したセッションの件数以外に差分があれば、原因を直してから先へ進む。
 
 Storage は DB の行（`storage.objects`）だけが複製され、本体は複製されない。初回抽出の時点で本体があったのは非公開の `receipts` 4 件だけで、移行・切り戻しの対象外。
 
