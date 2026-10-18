@@ -550,6 +550,24 @@ describe("ledger structures written in the legacy screen's terms (#188)", () => 
 			await db.close();
 		}
 	});
+	it("appends to the untouched legacy notes instead of the trimmed v2 copy", () => {
+		const { source } = twoEntries(false);
+		source.data["public.kouden_entries"]!.find((e) => e.id === entryB)!.notes = "  旧の備考  ";
+		const current = exportedFixture(source);
+		const t = current.ledgers[0]!.tables;
+		t.events.push({
+			id: "memorial",
+			kind: "memorial_49",
+			name: "四十九日",
+			date: null,
+			sort_order: 2,
+		});
+		t.gifts.find((g) => g.id === newId.entryGift(entryB))!.event_id = "memorial";
+		const plan = planRollback(source, current);
+		expect(plan.after.kouden_entries.find((e) => e.id === entryB)!.notes).toBe(
+			"  旧の備考  \n行事: 四十九日",
+		);
+	});
 	it("writes half-return rules back to the recommended amounts and lists the others", async () => {
 		const source = sourceFixture();
 		source.data["public.return_items"] = ["タオル", "茶"].map((name, i) => ({
@@ -708,10 +726,18 @@ describe("values without a legacy column (#189)", () => {
 
 const nextOwner = "10000000-0000-4000-8000-000000000002";
 /** 元オーナーが作った供物と弔電がある冊を、既存メンバーへ譲渡した状態。 */
-function transferWithRows(formerOwner: "editor" | "viewer" | "removed") {
-	const { source, current } = ownershipTransferFixture(
-		formerOwner === "removed" ? "removed" : "editor",
-	);
+const otherUser = "10000000-0000-4000-8000-000000000003";
+/**
+ * 元オーナーが作った供物と弔電がある冊を、既存メンバーへ譲渡した状態。
+ * edit で元スナップショットの行（台帳の作成者や行の作成者）を変えてから export を作る。
+ */
+function transferWithRows(
+	formerOwner: "editor" | "viewer" | "removed",
+	edit: (data: Record<string, Record<string, unknown>[]>) => void = () => {},
+) {
+	const source = ownershipTransferFixture("editor").source;
+	source.data["auth.users"]!.push({ ...source.data["auth.users"]![0], id: otherUser });
+	source.data["public.profiles"]!.push({ ...source.data["public.profiles"]![0], id: otherUser });
 	source.data["public.offerings"] = [
 		{
 			id: offeringId,
@@ -749,14 +775,54 @@ function transferWithRows(formerOwner: "editor" | "viewer" | "removed") {
 			name: "viewer",
 			permissions: ["view"],
 		});
+	edit(source.data);
 	const counted = sourceWithCounts(source.data);
 	const exported = exportedFixture(counted);
-	exported.manifest = current.manifest;
-	if (formerOwner === "viewer")
-		exported.manifest.members.find((m) => m.role === "editor")!.role = "viewer";
+	const members = exported.manifest.members;
+	const owner = members.find((m) => m.role === "owner")!;
+	const next = members.find((m) => m.user_id === newId.user(nextOwner))!;
+	exported.manifest.koudens[0]!.owner_user_id = next.user_id;
+	next.role = "owner";
+	if (formerOwner === "removed") exported.manifest.members = members.filter((m) => m !== owner);
+	else owner.role = formerOwner;
 	return { source: counted, current: exported };
 }
 describe("rows the former owner created after an ownership transfer (#183)", () => {
+	it("judges a photo by its parent offering, as the legacy photo policies do", () => {
+		const { source, current } = transferWithRows("removed", (data) => {
+			for (const table of ["public.offerings", "public.telegrams"])
+				for (const row of data[table]!) row.created_by = nextOwner;
+			data["public.offering_photos"] = [
+				{
+					id: "94000000-0000-4000-8000-000000000001",
+					offering_id: offeringId,
+					storage_key: `${ids.user}/photo.jpg`,
+					caption: null,
+					created_by: ids.user,
+					created_at: at,
+					updated_at: at,
+				},
+			];
+		});
+		expect(planRollback(source, current).blockers).toEqual([]);
+	});
+	it("blocks when the book's creator leaves even if the former owner_id stays an editor", () => {
+		const { source, current } = transferWithRows("editor", (data) => {
+			data["public.koudens"]![0]!.created_by = otherUser;
+			data["public.telegrams"]![0]!.created_by = otherUser;
+		});
+		expect(planRollback(source, current).blockers).toEqual([
+			{ code: "former_owner_row_access_requires_mapping", entityId: current.ledgers[0]!.koudenId },
+		]);
+	});
+	it("does not count rows of the new owner who was the book's creator", () => {
+		const { source, current } = transferWithRows("removed", (data) => {
+			data["public.koudens"]![0]!.created_by = nextOwner;
+			for (const table of ["public.offerings", "public.telegrams"])
+				for (const row of data[table]!) row.created_by = nextOwner;
+		});
+		expect(planRollback(source, current).blockers).toEqual([]);
+	});
 	it.each(["removed", "viewer"] as const)(
 		"keeps the transfer blocked when a %s former owner would keep row-level access",
 		async (formerOwner) => {

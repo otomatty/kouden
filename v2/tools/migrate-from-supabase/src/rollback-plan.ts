@@ -84,15 +84,13 @@ const withLines = (text: string | null, lines: string[]) => {
 	const added = lines.filter((l) => !present.has(l));
 	return added.length ? [text, ...added].filter((l) => l).join("\n") : text;
 };
-/** 備考の列に行を足す。値が旧行と同じなら書かない。 */
-const appendLines = (
-	values: Row,
-	column: string,
-	text: string | null,
-	current: Row | undefined,
-	lines: string[],
-) => {
+/**
+ * 備考の列に行を足す。v2 で備考を変えていなければ、旧行の値（前後の空白や移行時に足した行を含む）に足す。
+ * 値が旧行と同じなら書かない。
+ */
+const appendLines = (values: Row, column: string, current: Row | undefined, lines: string[]) => {
 	if (!lines.length) return;
+	const text = (column in values ? values[column] : (current?.[column] ?? null)) as string | null;
 	const next = withLines(text, lines);
 	if (eq(next, current?.[column] ?? null)) delete values[column];
 	else values[column] = next;
@@ -351,21 +349,24 @@ export function planRollback(
 			const uid = newId.user(String(m.user_id));
 			return m.kouden_id !== oldBook.id || !migratedMembers.has(uid) || memberUsers.has(uid);
 		});
-		// 旧RLSは供物・供物写真・弔電の行の created_by にも権限を与える。行の作成者は書き換えないので、
-		// 譲渡後に編集者として残らない元オーナーが作った行があれば、v2 にない権限が残るため停止する。
+		// 旧RLSは供物・弔電の行の created_by にも権限を与える（供物写真は親の供物の created_by で判定する）。
+		// 行の作成者は書き換えないので、新オーナーでも編集者でもなくなった元オーナーが作った行があれば、
+		// v2 にない権限が残るため停止する。元オーナー（旧 owner_id / created_by）ごとに判定する。
 		if (transferred) {
-			const editor = members.some(
-				(m) =>
-					m.role === "editor" &&
-					formerOwners.has(users.get(String(m.user_id)) ?? mappedUsers.get(String(m.user_id))),
+			const editors = new Set(
+				members
+					.filter((m) => m.role === "editor")
+					.map((m) => users.get(String(m.user_id)) ?? mappedUsers.get(String(m.user_id))),
 			);
-			const offerings = after.offerings.filter((o) => o.kouden_id === oldBook.id);
-			const rows = [
-				...offerings,
-				...after.offering_photos.filter((p) => offerings.some((o) => o.id === p.offering_id)),
-				...after.telegrams.filter((t) => t.kouden_id === oldBook.id),
-			];
-			if (!editor && rows.some((r) => formerOwners.has(r.created_by)))
+			const keepsAccess = (r: Row) =>
+				formerOwners.has(r.created_by) &&
+				r.created_by !== ownerId &&
+				!editors.has(String(r.created_by));
+			if (
+				[...after.offerings, ...after.telegrams].some(
+					(r) => r.kouden_id === oldBook.id && keepsAccess(r),
+				)
+			)
 				block("former_owner_row_access_requires_mapping", base.koudenId);
 		}
 	}
@@ -802,7 +803,6 @@ function reverseBook(
 			appendLines(
 				values,
 				"notes",
-				g.notes,
 				after.kouden_entries.find((e) => e.id === id),
 				[
 					...eventLines(g),
@@ -831,7 +831,6 @@ function reverseBook(
 			appendLines(
 				values,
 				"notes",
-				g.notes,
 				after.telegrams.find((e) => e.id === id),
 				eventLines(g),
 			);
@@ -852,7 +851,6 @@ function reverseBook(
 			appendLines(
 				values,
 				"notes",
-				g.notes,
 				after.offerings.find((e) => e.id === id),
 				eventLines(g),
 			);
@@ -978,7 +976,6 @@ function reverseBook(
 		appendLines(
 			values,
 			"remarks",
-			r.notes,
 			after.return_entry_records.find((x) => x.id === id),
 			[
 				...(r.status === "handed_on_day" && r.method !== "on_day" ? ["【v2】当日返し済み"] : []),
