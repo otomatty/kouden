@@ -33,6 +33,7 @@ describe("旧アプリの URL", () => {
 		["/legal", "/legal/tokushoho"],
 		["/features", "/"],
 		["/features/export", "/"],
+		["/features?utm_source=mail", "/?utm_source=mail"],
 		["/manuals/basic/start", "/"],
 	])("%s → %s", async (from, to) => {
 		const res = await app.request(from, {}, env);

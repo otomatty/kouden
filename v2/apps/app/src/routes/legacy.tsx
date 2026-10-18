@@ -89,7 +89,7 @@ const RETIRED = [
 
 for (const path of RETIRED) {
 	// `/features/*` は `/features/` にも当たる
-	legacyRoutes.on("GET", [path, `${path}/*`], (c) => c.redirect("/"));
+	legacyRoutes.on("GET", [path, `${path}/*`], (c) => c.redirect(withQuery(c, "/")));
 }
 
 /** 招待は移行しない（05 §3）。旧リンクを開いた人に作り直しを案内する */
