@@ -1022,9 +1022,14 @@ describe("rollback plan and PostgreSQL", () => {
 			await db.exec(
 				"CREATE FUNCTION public.update_return_record_total_amount() RETURNS trigger LANGUAGE plpgsql SET search_path TO '' AS $$ BEGIN UPDATE public.return_records SET total_amount = 0; RETURN NULL; END $$; CREATE TRIGGER tr_update_return_record_total_amount AFTER INSERT OR DELETE OR UPDATE ON return_record_items FOR EACH ROW EXECUTE FUNCTION public.update_return_record_total_amount();",
 			);
+			// fixture の BEFORE トリガーを外し、20260616 のバックフィルが明細合計を残す環境を再現する。
+			await db.exec("DROP TRIGGER return_total ON return_entry_records");
 			await db.exec(
 				await legacyMigration("20260616000000_atomize_return_entry_record_total_amount"),
 			);
+			expect((await db.query("SELECT total_amount::int FROM return_entry_records")).rows).toEqual([
+				{ total_amount: 1000 },
+			]);
 			await expect(db.exec("UPDATE return_record_items SET notes = '明細'")).rejects.toThrow(
 				/return_records/,
 			);

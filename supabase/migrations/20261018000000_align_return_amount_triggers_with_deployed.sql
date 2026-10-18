@@ -181,3 +181,11 @@ DROP TRIGGER IF EXISTS trigger_update_return_items_cost ON public.return_record_
 CREATE TRIGGER trigger_update_return_items_cost
 AFTER INSERT OR DELETE OR UPDATE ON public.return_record_items
 FOR EACH ROW EXECUTE FUNCTION public.update_return_items_cost();
+
+-- 20260616 を適用した環境では、そのバックフィルで total_amount が明細合計になっている。
+-- 既存行を本番の定義で再計算する（差分のある行だけ更新）。
+UPDATE public.return_entry_records r
+SET total_amount = public.calculate_total_amount(r.kouden_entry_id),
+    return_items_cost = public.calculate_return_items_cost(r.id)
+WHERE r.total_amount IS DISTINCT FROM public.calculate_total_amount(r.kouden_entry_id)
+   OR r.return_items_cost IS DISTINCT FROM public.calculate_return_items_cost(r.id);
