@@ -100,6 +100,9 @@ images は旧 Storage へ SUPABASE_SECRET_KEY で書き込みます。apply の�
 			createStorageClient(plan.sourceProject, process.env.SUPABASE_SECRET_KEY ?? ""),
 		);
 		await privateJson(resolve(v.out, "images.json"), {
+			// 同じ export でも、転送先の旧プロジェクトと元スナップショットが違えば使わない。
+			sourceProject: plan.sourceProject,
+			sourceSha256: plan.sourceSha256,
 			exportSha256: plan.exportSha256,
 			images,
 		});
@@ -126,10 +129,14 @@ images は旧 Storage へ SUPABASE_SECRET_KEY で書き込みます。apply の�
 		if (command === "apply" && plan.images.length) {
 			const copied = (v.images &&
 				imagesReportSchema.safeParse(await json(resolve(v.images))).data) || {
+				sourceProject: "",
+				sourceSha256: "",
 				exportSha256: "",
 				images: [],
 			};
 			if (
+				copied.sourceProject !== plan.sourceProject ||
+				copied.sourceSha256 !== plan.sourceSha256 ||
 				copied.exportSha256 !== plan.exportSha256 ||
 				plan.images.some(
 					(i) =>
@@ -160,6 +167,8 @@ images は旧 Storage へ SUPABASE_SECRET_KEY で書き込みます。apply の�
 }
 
 const imagesReportSchema = z.object({
+	sourceProject: z.string(),
+	sourceSha256: z.string(),
 	exportSha256: z.string(),
 	// 計画の report.json と区別するため、転送で照合した結果の項目を必須にする。
 	images: z.array(

@@ -346,21 +346,29 @@ it("refuses apply until the copy report covers every planned image", async () =>
 			sha256: "0".repeat(64),
 			copied: true,
 		}));
-		const partial = join(dir, "partial.json");
+		const binding = {
+			sourceProject: report.sourceProject,
+			sourceSha256: report.sourceSha256,
+			exportSha256: report.exportSha256,
+		};
+		// 別の旧プロジェクト向けに作った転送結果は使わない。
+		const otherProject = join(dir, "other-project.json");
 		await writeFile(
-			partial,
-			JSON.stringify({ exportSha256: report.exportSha256, images: copied.slice(1) }),
+			otherProject,
+			JSON.stringify({ ...binding, sourceProject: "zyxwvutsrqponmlkjihg", images: copied }),
 		);
+		expect(apply("other-project", "--images", otherProject)).toContain(
+			"rollback_images_not_copied",
+		);
+		const partial = join(dir, "partial.json");
+		await writeFile(partial, JSON.stringify({ ...binding, images: copied.slice(1) }));
 		expect(apply("partial", "--images", partial)).toContain("rollback_images_not_copied");
 		const complete = join(dir, "images.json");
-		await writeFile(
-			complete,
-			JSON.stringify({ exportSha256: report.exportSha256, images: copied }),
-		);
+		await writeFile(complete, JSON.stringify({ ...binding, images: copied }));
 		// 画像の確認を通過し、DB 接続の検査で止まる。
 		expect(apply("complete", "--images", complete)).toContain("rollback_database_target_mismatch");
 	} finally {
 		await rm(dir, { recursive: true, force: true });
 	}
-	// bun を6回起動する。
+	// bun を7回起動する。
 }, 30000);

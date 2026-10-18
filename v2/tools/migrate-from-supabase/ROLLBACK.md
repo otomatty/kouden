@@ -76,7 +76,7 @@ R2の本体は切り戻し専用の `/internal/import/rollback/files` から、`
 
 各画像は、旧Storageを読んで同じ内容があれば書かず、なければ上書きなし（`x-upsert: false`）でアップロードし、読み戻してサイズとSHA-256を照合する。同じパスに違う内容があれば上書きせず `rollback_storage_conflict` で停止する。何度実行しても同じ結果になる。結果は `images.json` に出す。
 
-`apply` は計画に画像があるとき `--images <images.json>` を要求し、同じexportのすべての転送対象が照合済みでなければ `rollback_images_not_copied` で書き込まずに停止する。v2で削除・差し替えた画像の旧Storageの本体は消さず、旧DBの参照だけを外す。
+`apply` は計画に画像があるとき `--images <images.json>` を要求し、同じ旧プロジェクト・元スナップショット・exportのすべての転送対象が照合済みでなければ `rollback_images_not_copied` で書き込まずに停止する。v2で削除・差し替えた画像の旧Storageの本体は消さず、旧DBの参照だけを外す。
 
 ## 書き戻し・照合
 
