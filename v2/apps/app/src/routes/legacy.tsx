@@ -14,11 +14,15 @@ import type { Ctx } from "./helpers.tsx";
  */
 export const legacyRoutes = new Hono<AppEnv>();
 
-/** `path` に元の要求のクエリを足す（`path` 側にある項目はそちらを優先する） */
+/** 旧ドメインからはパスがそのまま届くので、末尾に `/` が付いた形（`/koudens/` など）も受ける */
+const withSlash = (path: string) => [path, `${path}/`];
+
+/** `path` に元の要求のクエリを足す（`path` 側にある項目はそちらを優先する。同名の項目はすべて引き継ぐ） */
 function withQuery(c: Ctx, path: string): string {
 	const to = new URL(path, c.req.url);
+	const fixed = new Set(to.searchParams.keys());
 	for (const [key, value] of new URL(c.req.url).searchParams) {
-		if (!to.searchParams.has(key)) to.searchParams.append(key, value);
+		if (!fixed.has(key)) to.searchParams.append(key, value);
 	}
 	return to.pathname + to.search;
 }
@@ -47,7 +51,7 @@ export function koudenSubpath(rest: string): string {
 }
 
 /** 旧アプリのログイン（`redirectTo` で戻り先を受けていた） */
-legacyRoutes.get("/auth/login", (c) => {
+legacyRoutes.on("GET", withSlash("/auth/login"), (c) => {
 	const returnTo = safeReturnTo(c.req.query("redirectTo"));
 	return c.redirect(
 		returnTo === "/" ? "/login" : `/login?return_to=${encodeURIComponent(returnTo)}`,
@@ -55,7 +59,7 @@ legacyRoutes.get("/auth/login", (c) => {
 });
 
 /** 旧アプリの OAuth のコールバック。旧方式のコードは使えないので、クエリは捨てる */
-legacyRoutes.get("/auth/callback", (c) => c.redirect("/login"));
+legacyRoutes.on("GET", withSlash("/auth/callback"), (c) => c.redirect("/login"));
 
 const RENAMED = {
 	"/koudens": "/",
@@ -66,7 +70,7 @@ const RENAMED = {
 } as const;
 
 for (const [from, to] of Object.entries(RENAMED)) {
-	legacyRoutes.get(from, (c) => c.redirect(withQuery(c, to)));
+	legacyRoutes.on("GET", withSlash(from), (c) => c.redirect(withQuery(c, to)));
 }
 
 /** v2 にない公開ページ（機能紹介・マニュアル・お問い合わせなど）はトップへ */
@@ -84,8 +88,8 @@ const RETIRED = [
 ];
 
 for (const path of RETIRED) {
-	legacyRoutes.get(path, (c) => c.redirect("/"));
-	legacyRoutes.get(`${path}/*`, (c) => c.redirect("/"));
+	// `/features/*` は `/features/` にも当たる
+	legacyRoutes.on("GET", [path, `${path}/*`], (c) => c.redirect("/"));
 }
 
 /** 招待は移行しない（05 §3）。旧リンクを開いた人に作り直しを案内する */
@@ -96,8 +100,8 @@ const invitationGone = (c: Ctx) =>
 		</Layout>,
 		410,
 	);
-legacyRoutes.get("/invitations/:token", invitationGone);
-legacyRoutes.get("/invitation-error", invitationGone);
+legacyRoutes.on("GET", withSlash("/invitations/:token"), invitationGone);
+legacyRoutes.on("GET", withSlash("/invitation-error"), invitationGone);
 
 /** 旧 ID の香典帳を、閲覧者がメンバーなら v2 の対応する画面へ。見つからなければ一覧へ */
 async function toKouden(c: Ctx, legacyId: string, subpath: string) {
@@ -108,12 +112,14 @@ async function toKouden(c: Ctx, legacyId: string, subpath: string) {
 	return c.redirect(withQuery(c, `/k/${id}${subpath}`));
 }
 
-legacyRoutes.get("/purchase/:legacyId", requireUser, (c) =>
+// `/purchase/:legacyId/*` は `/purchase/:legacyId` と `/purchase/:legacyId/` にも当たる
+legacyRoutes.get("/purchase/:legacyId/*", requireUser, (c) =>
 	toKouden(c, c.req.param("legacyId"), "/settings"),
 );
 legacyRoutes.get("/koudens/:legacyId", requireUser, (c) =>
 	toKouden(c, c.req.param("legacyId"), ""),
 );
+// `/koudens/:legacyId/*` は `/koudens/:legacyId/` にも当たる
 legacyRoutes.get("/koudens/:legacyId/*", requireUser, (c) => {
 	const rest = c.req.path.split("/").slice(3).join("/");
 	return toKouden(c, c.req.param("legacyId"), koudenSubpath(rest));

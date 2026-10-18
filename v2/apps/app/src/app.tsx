@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { trimTrailingSlash } from "hono/trailing-slash";
 import { authRoutes } from "./auth/routes.tsx";
 import { accountRoutes } from "./routes/account.tsx";
 import { log } from "./lib/logger.ts";
@@ -31,8 +30,6 @@ export function createApp(deps: AppDeps = {}) {
 	app.use(securityHeaders);
 	app.use(csrfProtection);
 	app.use(session);
-	// 旧ドメインからはパスがそのまま届く（`/koudens/` など）。404 になる GET だけを末尾の `/` なしへ 301 で送る
-	app.use(trimTrailingSlash());
 
 	app.get("/healthz", (c) => c.text("ok"));
 	app.route("/", authRoutes(deps));

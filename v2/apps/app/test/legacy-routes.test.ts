@@ -40,15 +40,29 @@ describe("旧アプリの URL", () => {
 		expect(location(res)).toBe(to);
 	});
 
-	it("末尾に / が付いた旧パスは / を除いてから転送する", async () => {
-		const res = await app.request("/koudens/?tab=archived", {}, env);
-		expect(res.status).toBe(301);
-		expect(new URL(location(res) ?? "").pathname + new URL(location(res) ?? "").search).toBe(
-			"/koudens?tab=archived",
-		);
-		// 既存の画面と、末尾の / がない経路には影響しない
-		expect((await app.request("/", {}, env)).status).toBe(200);
-		expect((await app.request("/no-such-page", {}, env)).status).toBe(404);
+	it.each([
+		["/koudens/?tab=archived", "/?tab=archived"],
+		["/koudens/new/", "/k/new"],
+		["/profile/", "/account"],
+		["/auth/login/", "/login"],
+		["/features/", "/"],
+	])("末尾に / が付いた %s も %s へ", async (from, to) => {
+		const res = await app.request(from, {}, env);
+		expect(res.status).toBe(302);
+		expect(location(res)).toBe(to);
+	});
+
+	it("旧パス以外は末尾に / が付いても 404 のまま", async () => {
+		expect((await app.request("/api/unknown/", {}, env)).status).toBe(404);
+		expect((await app.request("/no-such-page/", {}, env)).status).toBe(404);
+	});
+
+	it("同名のクエリ項目はすべて引き継ぎ、転送先にある項目はそちらを優先する", async () => {
+		const res = await app.request("/koudens?tag=a&tag=b", {}, env);
+		expect(location(res)).toBe("/?tag=a&tag=b");
+		const { taro, koudenId, legacyId } = await legacyKouden();
+		const gifts = await taro.request(`/koudens/${legacyId}/telegrams?kind=koden&q=a&q=b`);
+		expect(location(gifts)).toBe(`/k/${koudenId}/gifts?kind=choden&q=a&q=b`);
 	});
 
 	it("旧招待リンクは作り直しを案内する", async () => {
@@ -72,6 +86,9 @@ describe("旧アプリの URL", () => {
 		const { taro, koudenId, legacyId } = await legacyKouden();
 		const cases = [
 			[`/koudens/${legacyId}`, `/k/${koudenId}`],
+			[`/koudens/${legacyId}/`, `/k/${koudenId}`],
+			[`/koudens/${legacyId}/entries/`, `/k/${koudenId}/gifts`],
+			[`/purchase/${legacyId}/`, `/k/${koudenId}/settings`],
 			[
 				`/koudens/${legacyId}/entries?q=%E5%B1%B1%E7%94%B0`,
 				`/k/${koudenId}/gifts?q=%E5%B1%B1%E7%94%B0`,
