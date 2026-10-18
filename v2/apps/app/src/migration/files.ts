@@ -38,6 +38,22 @@ export function importFileRoutes() {
 			sha256: object.checksums.sha256 ? hex(object.checksums.sha256) : null,
 		});
 	});
+	// 切り戻し専用（親で rollback の認証になる）。本体を返し、送信した内容の SHA-256 を添える。
+	r.get("/rollback/files", async (c) => {
+		const key = c.req.query("key") ?? "";
+		if (!validKey(key)) return c.json({ error: "invalid" }, 400);
+		const object = await c.env.FILES.get(key);
+		if (!object) return c.json({ error: "not_found" }, 404);
+		const bytes = await object.arrayBuffer();
+		const sha256 = hex(await crypto.subtle.digest("SHA-256", bytes));
+		if (object.checksums.sha256 && hex(object.checksums.sha256) !== sha256)
+			return c.json({ error: "checksum" }, 500);
+		return c.body(bytes, 200, {
+			"Cache-Control": "no-store",
+			"Content-Type": object.httpMetadata?.contentType ?? "application/octet-stream",
+			"X-Content-SHA256": sha256,
+		});
+	});
 	r.get("/koudens/:koudenId/files", async (c) => {
 		const id = c.req.param("koudenId");
 		if (!/^[a-zA-Z0-9_-]{1,64}$/.test(id)) return c.json({ error: "invalid" }, 400);

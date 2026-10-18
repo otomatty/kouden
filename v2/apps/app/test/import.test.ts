@@ -92,6 +92,35 @@ describe("rollback export", () => {
 				.status,
 		).toBe(404);
 	});
+	it("returns image bytes with their SHA-256 only to rollback auth", async () => {
+		const key = `koudens/${crypto.randomUUID()}/return-items/${crypto.randomUUID()}`;
+		const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2]);
+		const hash = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)), (b) =>
+			b.toString(16).padStart(2, "0"),
+		).join("");
+		await call(`/internal/import/files?key=${encodeURIComponent(key)}`, {
+			method: "PUT",
+			headers: { ...TOKEN, "X-Content-SHA256": hash },
+			body: bytes,
+		});
+		const path = `/internal/import/rollback/files?key=${encodeURIComponent(key)}`;
+		expect((await call(path)).status).toBe(403);
+		expect((await call(path, { headers: TOKEN })).status).toBe(403);
+		const response = await call(path, { headers: ROLLBACK_TOKEN });
+		expect(response.status).toBe(200);
+		expect(response.headers.get("cache-control")).toBe("no-store");
+		expect(response.headers.get("content-type")).toBe("image/png");
+		expect(response.headers.get("x-content-sha256")).toBe(hash);
+		expect(new Uint8Array(await response.arrayBuffer())).toEqual(bytes);
+		for (const missing of ["outside/path", key.replace(/[0-9a-f]{12}$/, "0".repeat(12))])
+			expect(
+				(
+					await call(`/internal/import/rollback/files?key=${encodeURIComponent(missing)}`, {
+						headers: ROLLBACK_TOKEN,
+					})
+				).status,
+			).toBeGreaterThanOrEqual(400);
+	});
 	it("accepts only the rollback audience, even when normal import access is enabled", async () => {
 		const { publicKey, privateKey } = await generateKeyPair("RS256");
 		const keys = createLocalJWKSet({
