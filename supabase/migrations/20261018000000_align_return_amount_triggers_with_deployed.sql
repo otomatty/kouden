@@ -153,25 +153,30 @@ BEGIN
 END;
 $function$;
 
+-- 同じ返礼記録への同時書き込みで合計を取りこぼさないよう、親の行ロックを取ってから
+-- 次の文（READ COMMITTED では新しいスナップショット）で再計算する。
+-- 1 文の UPDATE で再計算すると、ロック待ちの後も待つ前のスナップショットで集計してしまう。
+-- total_amount は BEFORE トリガーがロック取得後に再計算するため、この対策は不要。
 CREATE OR REPLACE FUNCTION public.update_return_items_cost()
  RETURNS trigger
  LANGUAGE plpgsql
  SET search_path TO ''
 AS $function$
+DECLARE
+  target_record_id uuid;
 BEGIN
-  IF TG_OP IN ('INSERT', 'UPDATE') THEN
+  FOR target_record_id IN
+    SELECT DISTINCT unnest(ARRAY[
+      CASE WHEN TG_OP IN ('INSERT', 'UPDATE') THEN NEW.return_record_id END,
+      CASE WHEN TG_OP IN ('UPDATE', 'DELETE') THEN OLD.return_record_id END
+    ]) ORDER BY 1  -- 付け替えの同時実行でデッドロックしないよう ID 順にロックする
+  LOOP
+    CONTINUE WHEN target_record_id IS NULL;
+    PERFORM 1 FROM public.return_entry_records WHERE id = target_record_id FOR UPDATE;
     UPDATE public.return_entry_records
-    SET return_items_cost = public.calculate_return_items_cost(NEW.return_record_id)
-    WHERE id = NEW.return_record_id;
-  END IF;
-
-  -- 削除と、別の返礼記録への付け替えでは元の返礼記録も再計算する。
-  IF TG_OP = 'DELETE'
-     OR (TG_OP = 'UPDATE' AND OLD.return_record_id IS DISTINCT FROM NEW.return_record_id) THEN
-    UPDATE public.return_entry_records
-    SET return_items_cost = public.calculate_return_items_cost(OLD.return_record_id)
-    WHERE id = OLD.return_record_id;
-  END IF;
+    SET return_items_cost = public.calculate_return_items_cost(target_record_id)
+    WHERE id = target_record_id;
+  END LOOP;
 
   RETURN NULL;
 END;
