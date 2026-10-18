@@ -40,7 +40,7 @@ $env:PGSSLROOTCERT = '<CA 証明書のパス>'
 
 ## 1. 旧本番 DB を複製する
 
-[Backup and Restore using the CLI](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore) に従う。手順は `scripts/` の 2 つのスクリプトにまとめてある。作業フォルダで実行する。
+[Backup and Restore using the CLI](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore) に従う。手順は `scripts/` の 2 つのスクリプトにまとめてある。1・2 のコマンドはすべて、準備 5 の作業フォルダ（`v2/.migration-data/rollback-rehearsal-<日付>/`）をカレントにして実行する。dump・比較結果・スナップショットはそこに出る。
 
 ```powershell
 & <リポジトリ>\v2\tools\migrate-from-supabase\scripts\copy-legacy-db.ps1

@@ -28,6 +28,8 @@ foreach ($name in $queries.Keys | Sort-Object) {
 		$url = if ($target -eq 'prod') { $env:PROD_DB_URL } else { $env:REHEARSAL_DB_URL }
 		Invoke-Psql $url @('-A', '-t', '-F', ' ', '-c', $queries[$name], '-o', "compare/$target-$name.txt")
 	}
+	# 件数が空なら接続先や権限の誤りで、比較が成り立たない。
+	if ($name -eq 'counts' -and @(Get-Content "compare/prod-$name.txt").Count -eq 0) { throw '本番の件数を取得できませんでした' }
 	$d = Compare-Object @(Get-Content "compare/prod-$name.txt") @(Get-Content "compare/rehearsal-$name.txt")
 	$d | Out-File -Encoding utf8 "compare/diff-$name.txt"
 	"{0}: 本番 {1} 行 / 差分 {2} 行" -f $name, @(Get-Content "compare/prod-$name.txt").Count, @($d).Count
