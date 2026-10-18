@@ -207,6 +207,7 @@ export function rollbackReport(plan: RollbackPlan): Row {
 		changes: plan.changes,
 		blockers: plan.blockers,
 		books: plan.books,
+		notices: plan.notices,
 		verification: {
 			ignoredAuditColumns: ["updated_at", "last_modified_at", "version"],
 			tables: ROLLBACK_TABLES.map((table) => ({ table, expectedRows: plan.after[table].length })),

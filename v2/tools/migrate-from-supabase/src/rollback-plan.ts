@@ -35,6 +35,8 @@ export interface Blocker {
 	entityId: string;
 	field?: string;
 }
+/** 停止しないが、旧DBに書かない値や運用で扱う対象。レポートに残す。 */
+export type Notice = Blocker & Row;
 export interface RollbackPlan {
 	version: 1;
 	sourceProject: string;
@@ -43,6 +45,7 @@ export interface RollbackPlan {
 	before: Record<Table, Row[]>;
 	after: Record<Table, Row[]>;
 	blockers: Blocker[];
+	notices: Notice[];
 	changes: { table: Table; inserted: number; updated: number; deleted: number }[];
 	books: { id: string; seq: number; changedEntities: number }[];
 }
@@ -94,6 +97,9 @@ export function planRollback(sourceInput: unknown, exportInput: unknown): Rollba
 	const blockers: Blocker[] = [];
 	const block = (code: string, entityId: string, field?: string) =>
 		blockers.push({ code, entityId, ...(field ? { field } : {}) });
+	const notices: Notice[] = [];
+	const notice = (code: string, entityId: string, detail: Row = {}) =>
+		notices.push({ code, entityId, ...detail });
 	const users = new Map(baseline.users.map((u) => [u.id, u.legacyUserId]));
 	const userId = (id: string) => {
 		const legacy = users.get(id);
@@ -144,9 +150,19 @@ export function planRollback(sourceInput: unknown, exportInput: unknown): Rollba
 			block("book_identity_or_status", base.koudenId);
 		oldBook.title = row.title === base.kouden.title ? oldBook.title : z.string().parse(row.title);
 		oldBook.status = row.status === base.kouden.status ? oldBook.status : row.status;
-		// 旧アプリ・RLS は created_by にも管理権限を与えるため、owner_id だけ移せない。
-		if (userId(String(row.owner_user_id)) !== oldBook.owner_id)
-			block("owner_transfer_requires_manual_mapping", base.koudenId);
+		// 旧アプリ・RLS は created_by にも管理権限を与える（按分は created_by だけで判定する）。
+		// v2 と同じ権限にするため両方を新オーナーにし、元の作成者はレポートに残す。
+		const ownerId = userId(String(row.owner_user_id));
+		if (ownerId !== oldBook.owner_id) {
+			notice("owner_transferred", base.koudenId, {
+				legacyKoudenId: oldBook.id,
+				previousOwnerId: oldBook.owner_id,
+				previousCreatedBy: oldBook.created_by,
+				ownerId,
+			});
+			oldBook.owner_id = ownerId;
+			oldBook.created_by = ownerId;
+		}
 		if (row.deceased_name !== base.kouden.deceasedName)
 			block("unrepresentable_field", base.koudenId, "deceasedName");
 		const purchased = current.manifest.purchases.filter((p) => p.kouden_id === row.id);
@@ -268,6 +284,7 @@ export function planRollback(sourceInput: unknown, exportInput: unknown): Rollba
 		before,
 		after,
 		blockers,
+		notices,
 		changes,
 		books: current.ledgers.map((l) => ({
 			id: l.koudenId,

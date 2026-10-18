@@ -363,16 +363,62 @@ describe("rollback review regressions", () => {
 		}
 	});
 	it.each(["editor", "removed"] as const)(
-		"blocks an ownership transfer when the former creator is %s",
-		(formerOwner) => {
+		"moves owner_id and created_by to the new owner when the former creator is %s",
+		async (formerOwner) => {
 			const { source, current } = ownershipTransferFixture(formerOwner);
+			const next = "10000000-0000-4000-8000-000000000002";
 			const plan = planRollback(source, current);
-			expect(plan.blockers).toEqual([
-				{ code: "owner_transfer_requires_manual_mapping", entityId: current.ledgers[0]!.koudenId },
+			expect(plan.blockers).toEqual([]);
+			expect(plan.after.koudens[0]).toMatchObject({ owner_id: next, created_by: next });
+			// 旧DBから消える元の作成者はレポートに残す。
+			expect(plan.notices).toEqual([
+				{
+					code: "owner_transferred",
+					entityId: current.ledgers[0]!.koudenId,
+					legacyKoudenId: ids.book,
+					previousOwnerId: ids.user,
+					previousCreatedBy: ids.user,
+					ownerId: next,
+				},
 			]);
-			expect(plan.after.koudens).toEqual(plan.before.koudens);
-			expect(() => rollbackSql(plan, "apply")).toThrow("rollback_blocked");
-			expect(() => rollbackSql(plan, "verify")).toThrow("rollback_blocked");
+			const db = await database(source);
+			try {
+				await installLegacyAuth(db, source, "allocation-rls");
+				await db.exec(rollbackSql(plan, "apply"));
+				await db.exec(rollbackSql(plan, "verify"));
+				expect(
+					(
+						await db.query(
+							"SELECT m.user_id::text, r.name FROM kouden_members m JOIN kouden_roles r ON r.id=m.role_id ORDER BY m.user_id",
+						)
+					).rows,
+				).toEqual([
+					...(formerOwner === "editor" ? [{ user_id: ids.user, name: "editor" }] : []),
+					{ user_id: next, name: "editor" },
+				]);
+				await db.query(
+					"INSERT INTO offerings(id,kouden_id,type,provider_name,created_by) VALUES ($1,$2,'FLOWER','供花',$3)",
+					[ids.plan, ids.book, next],
+				);
+				const allocate = async (user: string) => {
+					await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)", [user]);
+					await db.exec("SET ROLE authenticated");
+					try {
+						// SELECT ポリシーを置いていないので RETURNING は使わない。
+						return await db.query(
+							"INSERT INTO offering_allocations(offering_id,allocated_amount,allocation_ratio) VALUES ($1,1000,1)",
+							[ids.plan],
+						);
+					} finally {
+						await db.exec("RESET ROLE");
+					}
+				};
+				// 按分のRLSは created_by だけを見る。新オーナーは操作でき、元オーナーはできない。
+				expect((await allocate(next)).affectedRows).toBe(1);
+				await expect(allocate(ids.user)).rejects.toThrow(/row-level security/);
+			} finally {
+				await db.close();
+			}
 		},
 	);
 	it("allows title changes when ownership is unchanged", () => {
@@ -533,7 +579,7 @@ async function database(source: ReturnType<typeof sourceFixture>) {
 async function installLegacyAuth(
 	db: PGlite,
 	source: ReturnType<typeof sourceFixture>,
-	fixture: "audit" | "telegram-rls",
+	fixture: "audit" | "telegram-rls" | "allocation-rls",
 ) {
 	await db.exec(
 		await readFile(new URL("./fixtures/rollback-legacy-auth.sql", import.meta.url), "utf8"),

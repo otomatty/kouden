@@ -5,38 +5,22 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, it } from "vitest";
 import { digest, prepare } from "../src/prepare.ts";
-import {
-	exportedFixture,
-	ownershipTransferFixture,
-	relationshipFixture,
-	sourceFixture,
-} from "./rollback-fixture.ts";
+import { exportedFixture, relationshipFixture, sourceFixture } from "./rollback-fixture.ts";
 
-it.each(["ownership", "relationship"] as const)(
+it.each(["relationship"] as const)(
 	"refuses %s conflicts in plan, apply and verify before emitting SQL or connecting",
-	async (kind) => {
+	async () => {
 		const dir = await mkdtemp(join(tmpdir(), "kouden-rollback-owner-"));
 		if (!dir.startsWith(join(tmpdir(), "kouden-rollback-owner-")))
 			throw new Error("invalid_test_directory");
-		const { source, current } =
-			kind === "ownership" ? ownershipTransferFixture("removed") : relationshipFixture();
-		if (kind === "relationship") {
-			const [first, second] = current.ledgers[0]!.tables.relationships;
-			first!.name = second!.name;
-		}
-		const blockers =
-			kind === "ownership"
-				? [
-						{
-							code: "owner_transfer_requires_manual_mapping",
-							entityId: current.ledgers[0]!.koudenId,
-						},
-					]
-				: source.data["public.relationships"]!.map((r) => ({
-						code: "legacy_relationship_name_conflict",
-						entityId: r.id,
-						field: "name",
-					}));
+		const { source, current } = relationshipFixture();
+		const [first, second] = current.ledgers[0]!.tables.relationships;
+		first!.name = second!.name;
+		const blockers = source.data["public.relationships"]!.map((r) => ({
+			code: "legacy_relationship_name_conflict",
+			entityId: r.id,
+			field: "name",
+		}));
 		const cli = fileURLToPath(new URL("../src/rollback-cli.ts", import.meta.url));
 		try {
 			const sourcePath = join(dir, "source.json");
