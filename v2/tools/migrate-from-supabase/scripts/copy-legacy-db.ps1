@@ -1,43 +1,57 @@
 ﻿# 旧本番 DB をリハーサル用プロジェクトへ複製する（ROLLBACK-REHEARSAL.md の 1）。
-# Git 管理外の作業フォルダで実行する。接続文字列は環境変数 PROD_DB_URL / REHEARSAL_DB_URL で渡す。
-# 本番には dump（読み取り）だけを行う。
+# Git 管理外の作業フォルダで実行する。接続文字列は環境変数 PROD_DB_URL / REHEARSAL_DB_URL、
+# CA 証明書は PGSSLROOTCERT で渡す。本番には dump（読み取り）と SELECT だけを行う。
 $ErrorActionPreference = 'Stop'
 $prodRef = 'tcqnsslsaizqwjuyvoyu'
 
-function Invoke-Native([string]$label, [scriptblock]$block) {
-	& $block
-	if ($LASTEXITCODE -ne 0) { throw "$label failed (exit $LASTEXITCODE)" }
-}
-
 if (-not $env:PROD_DB_URL -or -not $env:REHEARSAL_DB_URL) { throw 'PROD_DB_URL と REHEARSAL_DB_URL を設定してください' }
+if (-not $env:PGSSLROOTCERT -or -not (Test-Path $env:PGSSLROOTCERT)) { throw 'PGSSLROOTCERT に Supabase の CA 証明書のパスを設定してください' }
 if ($env:REHEARSAL_DB_URL -match $prodRef) { throw 'REHEARSAL_DB_URL が本番を指しています' }
 if ($env:PROD_DB_URL -notmatch $prodRef) { throw 'PROD_DB_URL が本番を指していません' }
 
+# psql にはパスワードを引数でなく PGPASSWORD で渡し、証明書を検証する。
+$env:PGSSLMODE = 'verify-full'
+function Invoke-Psql([string]$url, [string[]]$options) {
+	$u = [Uri]$url
+	$user, $password = $u.UserInfo -split ':', 2
+	$env:PGPASSWORD = [Uri]::UnescapeDataString("$password")
+	try { psql -X -v ON_ERROR_STOP=1 -h $u.Host -p $u.Port -U ([Uri]::UnescapeDataString($user)) -d $u.AbsolutePath.TrimStart('/') @options }
+	finally { Remove-Item Env:PGPASSWORD }
+	if ($LASTEXITCODE -ne 0) { throw "psql failed (exit $LASTEXITCODE)" }
+}
+
 # 復元先が空であること（public にテーブルがない）を確かめる。
-$tables = Invoke-Native 'psql (check)' { psql -X -A -t -d $env:REHEARSAL_DB_URL -c "select count(*) from pg_tables where schemaname = 'public'" }
+$tables = Invoke-Psql $env:REHEARSAL_DB_URL @('-A', '-t', '-c', "select count(*) from pg_tables where schemaname = 'public'")
 if ([int]$tables -ne 0) { throw "リハーサル用の public にテーブルが $tables 個あります。空のプロジェクトに復元してください" }
 
-# dump が既にあれば使い回す（復元だけをやり直す場合）。
-$start = Get-Date
+# supabase db dump は Docker 内の pg_dump に URL を渡すため、ホストの証明書は使えない。平文に落ちないよう require にする。
+# パスワードはこのコマンドの引数に入る。自分だけが使う端末で実行する。
+$dumpUrl = $env:PROD_DB_URL + $(if ($env:PROD_DB_URL.Contains('?')) { '&' } else { '?' }) + 'sslmode=require'
 function Save-Dump([string]$file, [string[]]$options) {
-	if (Test-Path $file) { return }
-	supabase db dump --db-url $env:PROD_DB_URL -f "$file.part" @options
+	if (Test-Path $file) { return }  # 復元だけをやり直す場合は使い回す
+	supabase db dump --db-url $dumpUrl -f "$file.part" @options
 	if ($LASTEXITCODE -ne 0) { Remove-Item -ErrorAction SilentlyContinue "$file.part"; throw "dump $file failed (exit $LASTEXITCODE)" }
 	Move-Item "$file.part" $file
 }
+
+$start = Get-Date
 Save-Dump roles.sql @('--role-only')
 Save-Dump schema.sql @()
 Save-Dump data.sql @('--use-copy', '--data-only', '-x', 'storage.buckets_vectors', '-x', 'storage.vector_indexes')
+# auth・storage の表に付けた独自トリガー（新規ユーザーの profiles 作成など）は dump に含まれない。本番の定義から、ないものだけ作る。
+Invoke-Psql $env:PROD_DB_URL @('-A', '-t', '-o', 'managed-triggers.sql', '-c', @"
+select format('do `$t`$ begin if not exists (select 1 from pg_trigger where tgrelid = %L::regclass and tgname = %L) then execute %L; end if; end `$t`$;',
+  c.oid::regclass::text, t.tgname, pg_get_triggerdef(t.oid))
+from pg_trigger t join pg_class c on c.oid = t.tgrelid join pg_namespace n on n.oid = c.relnamespace
+where n.nspname in ('auth', 'storage') and not t.tgisinternal order by 1
+"@)
 $dumped = Get-Date
 
-Invoke-Native 'restore' {
-	psql -X --single-transaction -v ON_ERROR_STOP=1 -f roles.sql -f schema.sql -c 'SET session_replication_role = replica' -f data.sql -d $env:REHEARSAL_DB_URL
-}
+Invoke-Psql $env:REHEARSAL_DB_URL @('--single-transaction', '-f', 'roles.sql', '-f', 'schema.sql', '-c', 'SET session_replication_role = replica', '-f', 'data.sql', '-c', 'SET session_replication_role = origin', '-f', 'managed-triggers.sql')
 $restored = Get-Date
 
-# 複製された無料香典帳の自動アーカイブを止める。状態が変わると切り戻しの前提照合が崩れる。
-Invoke-Native 'unschedule cron' {
-	psql -X -v ON_ERROR_STOP=1 -d $env:REHEARSAL_DB_URL -c "do `$`$ begin if to_regclass('cron.job') is not null then perform cron.unschedule(jobid) from cron.job; end if; end `$`$"
-}
+# 複製された無料香典帳の自動アーカイブを止める（状態が変わると切り戻しの前提照合が崩れる）。
+# 複製したログインセッションも消す（本番のトークンでリハーサル用にログインできないようにする）。
+Invoke-Psql $env:REHEARSAL_DB_URL @('-c', "do `$`$ begin if to_regclass('cron.job') is not null then perform cron.unschedule(jobid) from cron.job; end if; end `$`$", '-c', 'delete from auth.refresh_tokens', '-c', 'delete from auth.sessions')
 
 "dump: {0:n0} 秒 / restore: {1:n0} 秒" -f ($dumped - $start).TotalSeconds, ($restored - $dumped).TotalSeconds
