@@ -28,7 +28,6 @@ it.each(["ownership", "relationship", "editor"] as const)(
 		if (kind === "relationship") {
 			const [first, second] = current.ledgers[0]!.tables.relationships;
 			first!.name = second!.name;
-			second!.deleted_at = "2026-10-14T00:00:00.000Z";
 		}
 		const blockers =
 			kind === "editor"
@@ -45,13 +44,11 @@ it.each(["ownership", "relationship", "editor"] as const)(
 								entityId: current.ledgers[0]!.koudenId,
 							},
 						]
-					: [
-							{
-								code: "legacy_relationship_name_conflict",
-								entityId: source.data["public.relationships"]![0]!.id,
-								field: "name",
-							},
-						];
+					: source.data["public.relationships"]!.map((r) => ({
+							code: "legacy_relationship_name_conflict",
+							entityId: r.id,
+							field: "name",
+						}));
 		const cli = fileURLToPath(new URL("../src/rollback-cli.ts", import.meta.url));
 		try {
 			const sourcePath = join(dir, "source.json");

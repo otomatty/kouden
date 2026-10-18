@@ -219,22 +219,58 @@ describe("rollback review regressions", () => {
 			}
 		},
 	);
-	it.each(["duplicate", "delete", "rename", "hide"] as const)(
-		"blocks an occupied relationship name when the other row is %s",
-		(mode) => {
+	it("blocks a relationship name that stays occupied by another enabled row", () => {
+		const { source, current } = relationshipFixture();
+		const [first, second] = current.ledgers[0]!.tables.relationships;
+		first!.name = second!.name;
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toContainEqual({
+			code: "legacy_relationship_name_conflict",
+			entityId: source.data["public.relationships"]![0]!.id,
+			field: "name",
+		});
+		expect(() => rollbackSql(plan, "apply")).toThrow("rollback_blocked");
+	});
+	it.each(["delete", "rename", "hide", "swap", "new"] as const)(
+		"reuses a relationship name released when the other row is %s",
+		async (mode) => {
 			const { source, current } = relationshipFixture();
-			const [first, second] = current.ledgers[0]!.tables.relationships;
-			first!.name = second!.name;
-			if (mode === "delete") second!.deleted_at = at;
+			const rows = current.ledgers[0]!.tables.relationships;
+			const [first, second] = rows;
+			const taken = String(second!.name);
+			if (mode === "new")
+				rows.push({
+					...first!,
+					id: "new-relationship",
+					name: taken,
+					sort_order: 2,
+					created_at: "2024-01-03T00:00:00.000Z",
+					updated_at: at,
+				});
+			else first!.name = taken;
+			if (mode === "delete" || mode === "new") second!.deleted_at = at;
 			if (mode === "rename") second!.name = "職場";
+			if (mode === "swap") second!.name = source.data["public.relationships"]![0]!.name;
 			if (mode === "hide") second!.is_hidden = 1;
 			const plan = planRollback(source, current);
-			expect(plan.blockers).toContainEqual({
-				code: "legacy_relationship_name_conflict",
-				entityId: source.data["public.relationships"]![0]!.id,
-				field: "name",
-			});
-			expect(() => rollbackSql(plan, "apply")).toThrow("rollback_blocked");
+			expect(plan.blockers).toEqual([]);
+			const db = await database(source);
+			try {
+				await db.exec(rollbackSql(plan, "apply"));
+				await db.exec(rollbackSql(plan, "verify"));
+				expect(
+					(
+						await db.query(
+							"SELECT count(*)::int AS n FROM relationships WHERE is_enabled AND name = $1",
+							[taken],
+						)
+					).rows,
+				).toEqual([{ n: 1 }]);
+				// 同じ計画の再実行は書かずに成功する。
+				await db.exec(rollbackSql(plan, "apply"));
+			} finally {
+				await db.close();
+			}
 		},
 	);
 	it("blocks duplicate new relationship names", () => {
