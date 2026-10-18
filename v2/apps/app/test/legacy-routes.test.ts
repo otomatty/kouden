@@ -40,6 +40,17 @@ describe("旧アプリの URL", () => {
 		expect(location(res)).toBe(to);
 	});
 
+	it("末尾に / が付いた旧パスは / を除いてから転送する", async () => {
+		const res = await app.request("/koudens/?tab=archived", {}, env);
+		expect(res.status).toBe(301);
+		expect(new URL(location(res) ?? "").pathname + new URL(location(res) ?? "").search).toBe(
+			"/koudens?tab=archived",
+		);
+		// 既存の画面と、末尾の / がない経路には影響しない
+		expect((await app.request("/", {}, env)).status).toBe(200);
+		expect((await app.request("/no-such-page", {}, env)).status).toBe(404);
+	});
+
 	it("旧招待リンクは作り直しを案内する", async () => {
 		const res = await app.request("/invitations/old-token", {}, env);
 		expect(res.status).toBe(410);
