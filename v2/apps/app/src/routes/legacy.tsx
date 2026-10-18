@@ -73,6 +73,11 @@ for (const [from, to] of Object.entries(RENAMED)) {
 	legacyRoutes.on("GET", withSlash(from), (c) => c.redirect(withQuery(c, to)));
 }
 
+/** v2 にも同じパスで残る公開ページ。末尾に `/` が付いた形だけをここで受ける */
+for (const path of ["/pricing", "/faq", "/terms", "/privacy"]) {
+	legacyRoutes.get(`${path}/`, (c) => c.redirect(withQuery(c, path)));
+}
+
 /** v2 にない公開ページ（機能紹介・マニュアル・お問い合わせなど）はトップへ */
 const RETIRED = [
 	"/features",

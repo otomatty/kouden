@@ -47,6 +47,8 @@ describe("旧アプリの URL", () => {
 		["/profile/", "/account"],
 		["/auth/login/", "/login"],
 		["/features/", "/"],
+		["/pricing/", "/pricing"],
+		["/privacy/?x=1", "/privacy?x=1"],
 	])("末尾に / が付いた %s も %s へ", async (from, to) => {
 		const res = await app.request(from, {}, env);
 		expect(res.status).toBe(302);
