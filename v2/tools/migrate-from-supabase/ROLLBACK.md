@@ -181,7 +181,7 @@ publicの対象15テーブルをロックし（香典を削除する場合は `k
 
 移行した冊のメンバー・招待者・作成者として、v2で作ったユーザーが参照されている場合は、旧AuthのIDを明示的に対応づける。対応表がなければ `unmapped_user` で停止する。
 
-1. 対象のユーザー（`unmapped_user` の `entityId`）ごとに、Supabase Admin API（`auth.admin.createUser`）で旧Authのユーザーを作る。メールはv2の登録と同じものを使い、作成後に旧DBのトリガー `handle_new_user` が `profiles` の行を作ったことを確認する。
+1. 対象のユーザー（`unmapped_user` の `entityId`）ごとに、Supabase Admin API（`auth.admin.createUser`）で旧Authのユーザーを作る。メールはv2の登録と同じものを使い、作成後に旧DBのトリガー `handle_new_user` が `profiles` の行を作ったことを確認する。PowerShell 5.1 の `Invoke-RestMethod` で Secret key（`sb_secret_…`）を使う場合は `-UserAgent` を付ける（既定の User-Agent はブラウザとみなされ 403 になる）。鍵は `Read-Host -AsSecureString` で入力し、画面や履歴に残さない。
 2. Admin APIが同じメールの既存ユーザーを理由に作成を拒んだ場合は、既存ユーザーに寄せず、本人の2つのアカウントの扱いを決めるまで切り戻しを止める。exportにはメールがないので、CLIはメールで照合しない。
 3. 非公開ディレクトリに `user-map.json` を置き、`plan` / `images` / `apply` / `verify` に同じものを `--user-map` で渡す。
 
