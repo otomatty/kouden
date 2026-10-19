@@ -7,10 +7,20 @@ describe("deployBlockers（運営者画面）", () => {
 		expect(() => resolveMode("rehearsal")).toThrow("rehearsal にデプロイできません");
 	});
 	it("本番の Access が仮の値の間はデプロイを止める", () => {
-		const blockers = deployBlockers("production");
-		expect(blockers.some((b) => b.includes("access.teamDomain"))).toBe(true);
-		expect(blockers.some((b) => b.includes("access.aud"))).toBe(true);
+		expect(deployBlockers("production")).toEqual([]);
 		expect(deployBlockers("staging")).toEqual([]);
+		const original = structuredClone(MODES.production);
+		try {
+			MODES.production.access = {
+				teamDomain: "REPLACE_ME.cloudflareaccess.com",
+				aud: "REPLACE_ME",
+			};
+			const blockers = deployBlockers("production");
+			expect(blockers.some((b) => b.includes("access.teamDomain"))).toBe(true);
+			expect(blockers.some((b) => b.includes("access.aud"))).toBe(true);
+		} finally {
+			MODES.production = original;
+		}
 	});
 
 	it("Access を迂回する devEmail は development にだけ設定する", () => {
