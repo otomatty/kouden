@@ -1,8 +1,7 @@
 /**
  * 環境（mode）ごとの設定。cloudflare.config.ts とスクリプトの両方から参照する。
  *
- * TODO(M0): 本番の Google OAuth クライアントを用意したら、production の `googleClientId` を
- * 実際の値に置き換える。置き換えるまでは `deployBlockers` がデプロイを止める。
+ * `DOMAIN` と `googleClientId` が仮の値のままなら `deployBlockers` がデプロイを止める。
  */
 export type Mode = "development" | "staging" | "rehearsal" | "production";
 
@@ -115,7 +114,7 @@ export const MODES: Record<Mode, ModeSettings> = {
 		mailFrom: `noreply@${DOMAIN}`,
 		billingEnabled: true,
 		rateLimitNamespaces: { auth: "1001", write: "1002", invite: "1003" },
-		googleClientId: PLACEHOLDER_CLIENT_ID,
+		googleClientId: "148244071330-8sros0m9gbf0udl6ap50t0u51ti2qijl.apps.googleusercontent.com",
 		access: { teamDomain: "", aud: "" },
 		importAccess: { teamDomain: "", aud: "" },
 		importDevToken: "",

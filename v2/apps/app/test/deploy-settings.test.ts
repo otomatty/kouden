@@ -21,15 +21,16 @@ describe("deployBlockers", () => {
 			MODES.staging = original;
 		}
 	});
-	it("本番に仮のドメインと Client ID が残っている間はデプロイを止める", () => {
-		const blockers = deployBlockers("production");
-		expect(blockers.some((b) => b.includes("ドメイン"))).toBe(false);
-		expect(blockers.some((b) => b.includes("googleClientId"))).toBe(true);
+	it("本番は仮のドメイン・Client ID が残っていればデプロイを止める", () => {
+		expect(deployBlockers("production")).toEqual([]);
 		const original = structuredClone(MODES.production);
 		try {
 			MODES.production.domain = "example.jp";
 			MODES.production.origin = "https://example.jp";
-			expect(deployBlockers("production").some((b) => b.includes("ドメインが仮の値"))).toBe(true);
+			MODES.production.googleClientId = "REPLACE_ME.apps.googleusercontent.com";
+			const blockers = deployBlockers("production");
+			expect(blockers.some((b) => b.includes("ドメインが仮の値"))).toBe(true);
+			expect(blockers.some((b) => b.includes("googleClientId"))).toBe(true);
 		} finally {
 			MODES.production = original;
 		}

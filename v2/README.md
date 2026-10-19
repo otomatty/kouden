@@ -112,9 +112,9 @@ M0 のコードは揃っていますが、以下は Cloudflare・Google・GitHub
 
 1. **本番ドメイン**: `kouden.app`（2026-10-19 に Cloudflare Registrar で取得、`apps/app/deploy.settings.ts` の `DOMAIN`）。staging は上記の `workers.dev` を使う。
 2. **Google OAuth クライアントの作成**（Google Cloud Console）:
-   - 種類: ウェブ アプリケーション
-   - 承認済みのリダイレクト URI: `https://kouden.app/auth/google/callback`、`https://kouden-app-staging.saedgewell.workers.dev/auth/google/callback`、`http://localhost:5173/auth/google/callback`
-   - クライアント ID を `apps/app/deploy.settings.ts` の各 mode の `googleClientId` に設定する
+   - 本番は Google Cloud プロジェクト `kouden`、staging は `kouden-staging` に分けて作成済み（種類: ウェブ アプリケーション）
+   - 承認済みのリダイレクト URI: 本番は `https://kouden.app/auth/google/callback`、staging は `https://kouden-app-staging.saedgewell.workers.dev/auth/google/callback`
+   - クライアント ID は `apps/app/deploy.settings.ts` の各 mode の `googleClientId` に設定済み。シークレットは Git に入れない
    - 同意画面のブランド確認のため、取得したドメインを Search Console で所有確認する
 3. **Cloudflare の API トークン作成**: 権限は Workers Scripts・D1・Workers Routes / Custom Domains の編集。
 4. **GitHub の Environments（`staging` / `production`）にシークレットを登録**:
