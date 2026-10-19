@@ -1,8 +1,8 @@
 /**
  * 環境（mode）ごとの設定。cloudflare.config.ts とスクリプトの両方から参照する。
  *
- * TODO(M0): ドメインと Google OAuth クライアントを用意したら、`DOMAIN` と各 mode の
- * `googleClientId` を実際の値に置き換える。置き換えるまでは `deployBlockers` がデプロイを止める。
+ * TODO(M0): 本番の Google OAuth クライアントを用意したら、production の `googleClientId` を
+ * 実際の値に置き換える。置き換えるまでは `deployBlockers` がデプロイを止める。
  */
 export type Mode = "development" | "staging" | "rehearsal" | "production";
 
@@ -47,7 +47,7 @@ export interface ModeSettings {
 const PLACEHOLDER_DOMAIN = "example.jp";
 const PLACEHOLDER_CLIENT_ID = "REPLACE_ME.apps.googleusercontent.com";
 
-export const DOMAIN = PLACEHOLDER_DOMAIN;
+export const DOMAIN = "kouden.app";
 export const WORKERS_SUBDOMAIN = "saedgewell";
 export const STAGING_ACCESS_TEAM = "black-disk-617a.cloudflareaccess.com";
 

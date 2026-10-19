@@ -23,8 +23,16 @@ describe("deployBlockers", () => {
 	});
 	it("本番に仮のドメインと Client ID が残っている間はデプロイを止める", () => {
 		const blockers = deployBlockers("production");
-		expect(blockers.some((b) => b.includes("ドメイン"))).toBe(true);
+		expect(blockers.some((b) => b.includes("ドメイン"))).toBe(false);
 		expect(blockers.some((b) => b.includes("googleClientId"))).toBe(true);
+		const original = structuredClone(MODES.production);
+		try {
+			MODES.production.domain = "example.jp";
+			MODES.production.origin = "https://example.jp";
+			expect(deployBlockers("production").some((b) => b.includes("ドメインが仮の値"))).toBe(true);
+		} finally {
+			MODES.production = original;
+		}
 	});
 
 	it("staging は workers.dev を使い、Access が設定されていればデプロイできる", () => {

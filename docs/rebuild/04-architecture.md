@@ -11,11 +11,11 @@ flowchart TB
 
   subgraph CF["Cloudflare"]
     access["Cloudflare Access"]
-    subgraph app["Worker: kouden-app（example.jp）"]
+    subgraph app["Worker: kouden-app（kouden.app）"]
       hono["Hono ルーター<br/>JSX SSR + htmx"]
       ledger["DO: KoudenLedger<br/>（香典帳 1 冊 = 1 個）"]
     end
-    adminw["Worker: kouden-admin（admin.example.jp）"]
+    adminw["Worker: kouden-admin（admin.kouden.app）"]
     d1[("D1: kouden-db")]
     r2[("R2: kouden-files")]
     assets["Static Assets<br/>CSS / JS / 画像"]
@@ -45,11 +45,11 @@ flowchart TB
 | D1 | `kouden-db` | 横断データ（[03 §2](./03-domain-model.md#2-d1-スキーマ)） |
 | R2 | `kouden-files` | 返礼品画像・供物写真（非公開。Worker 経由で権限確認して配信）。キーは `koudens/{koudenId}/return-items/{objectId}` で、画像を差し替えるたびに新しい ID にする。配信は `GET /k/:id/files/return-items/:objectId`（メンバーのみ。URL の香典帳 ID でキーを組み立てるので、他の香典帳の画像は読めない）で、`Cache-Control: private, max-age=31536000, immutable`。アップロードは JPEG・PNG・WebP の 5 MB まで。形式はブラウザの申告ではなく先頭のバイト列で判定する |
 | Static Assets | `kouden-app` に同梱 | Tailwind のビルド成果物、htmx、自前の小さなスクリプト |
-| Email Service | `send_email` binding | リマインドメール（`noreply@example.jp`） |
+| Email Service | `send_email` binding | リマインドメール（`noreply@kouden.app`） |
 | Rate Limiting | `AUTH_RATE_LIMITER` / `WRITE_RATE_LIMITER` ほか | ログイン・書き込み・招待受諾の回数制限 |
 | Cron Triggers | 毎日 03:00 JST | 期限切れセッション・招待の削除、`deleting` の香典帳の再処理、統計の整合確認 |
 
-**ドメイン**: `example.jp`（本番）、`admin.example.jp`（運営者）、`staging.example.jp`（ステージング、Access で保護）、`admin-staging.example.jp`（ステージングの運営者画面。Universal SSL の証明書は 1 階層のサブドメインまでなので `admin.staging.` にしない）。
+**ドメイン**: `kouden.app`（本番、2026-10-19 に Cloudflare Registrar で取得）、`admin.kouden.app`（運営者）。ステージングは `kouden-app-staging.saedgewell.workers.dev`・`kouden-admin-staging.saedgewell.workers.dev`（Access で保護）。
 
 ## 2. リポジトリ構成
 
@@ -141,7 +141,7 @@ GET /k/:koudenId/gifts
 
 ### Cloudflare Access（運営者）
 
-- `admin.example.jp` 全体を Access アプリケーションにし、ポリシーで運営者のメールアドレスだけを許可する。
+- `admin.kouden.app` 全体を Access アプリケーションにし、ポリシーで運営者のメールアドレスだけを許可する。
 - `kouden-admin` は `Cf-Access-Jwt-Assertion` を Access の公開鍵（`https://<team>.cloudflareaccess.com/cdn-cgi/access/certs`）で検証し（`iss` = チームのドメイン、`aud` = アプリケーションの AUD タグ、RS256）、`email` を監査ログに記録する。JWT がない・検証できない場合は 403、Access の設定（チームのドメイン・AUD）がない場合は 500 で、迂回しない。
 - ローカル（`development`）だけは Access を通らないので、設定の `devEmail` を運営者として扱う。staging / production の `devEmail` は空で、空でなければ `deployBlockers` がデプロイを止める。
 - **`kouden-admin` は DO に接続しない**（M5 で決定。当初は `script_name` 指定の binding で参照する予定だった）。運営者画面の機能（検索・購入・紐づけ・ダッシュボード）は D1 だけで足り、香典帳の中身（個人情報）に届く経路を最初から持たない方が安全なため。件数は統計の投影（`kouden_stats`）を使う。運営者が `plan` を変えても DO には知らせないので、利用者が開いている画面の残り件数の表示は次の読み込みまで古いまま（上限の判定は毎回 D1 の値を使うので正しい）。
@@ -177,7 +177,7 @@ GET /k/:koudenId/gifts
 
 ```
 ブラウザ（香典帳の画面を開くと）
-  new WebSocket('wss://example.jp/k/:koudenId/ws')
+  new WebSocket('wss://kouden.app/k/:koudenId/ws')
 Worker
   session + kouden-access を通過し、Origin が自分のオリジンと一致したら（他サイトからの接続を拒否）、
   caller 情報（JSON を URL エンコード）をヘッダー X-Kouden-Caller に付けて DO の fetch へ転送
@@ -343,7 +343,7 @@ class CloudflareMailer implements Mailer { /* env.EMAIL.send(...) */ }
 // 問題があれば ResendMailer に差し替える
 ```
 
-- 送信元: `noreply@example.jp`。SPF・DKIM・DMARC は Email Service のドメイン登録で設定される。
+- 送信元: `noreply@kouden.app`。SPF・DKIM・DMARC は Email Service のドメイン登録で設定される。
 - 送信するのは香典返しのリマインドのみ。DO のアラームから送る。
 - 宛先はオーナーと、通知を希望した編集者（D1 `kouden_members.notify_reminders`。編集者がメンバーの画面で自分で切り替える）。
 - 期限は四十九日の行事の日付。その 14 日前と 3 日前の 9:00（日本時間）に、未対応の件数（いただいた額（連名は按分）が 0 円より多い差出人のうち、香典返しがないか「未対応」の人数。一括提案の対象と同じ条件）を知らせる。未対応が 0 件のとき・アーカイブ中は送らない。行事の日付を変えると予定を作り直し、すでに過ぎた分は送らない。
@@ -354,8 +354,8 @@ class CloudflareMailer implements Mailer { /* env.EMAIL.send(...) */ }
 | 環境 | Worker 名 | D1 / R2 | 公開範囲 |
 |---|---|---|---|
 | ローカル（`development`） | `bun run dev`（`cf dev` + Tailwind の監視）。運営者画面は `apps/admin` の `bun run dev`（ポート 5174。`apps/app` と同じローカル D1 を見る） | `.cloudflare/state` の模擬環境 | 開発者のみ |
-| ステージング | `kouden-app-staging` / `kouden-admin-staging` | `kouden-db-staging` / `kouden-files-staging` | `staging.example.jp`・`admin-staging.example.jp`。Access で開発者・運営者のみ |
-| 本番 | `kouden-app` / `kouden-admin` | `kouden-db` / `kouden-files` | `example.jp` |
+| ステージング | `kouden-app-staging` / `kouden-admin-staging` | `kouden-db-staging` / `kouden-files-staging` | `kouden-app-staging.saedgewell.workers.dev`・`kouden-admin-staging.saedgewell.workers.dev`。Access で開発者・運営者のみ |
+| 本番 | `kouden-app` / `kouden-admin` | `kouden-db` / `kouden-files` | `kouden.app` |
 
 環境は `cf` の mode で切り替える（`--mode staging` など）。Worker 名・ドメイン・D1 名は `deploy.settings.ts` に集約している。DO の名前空間は Worker ごとに独立するため、Worker 名を分ければ環境ごとに自動で分離される。
 
