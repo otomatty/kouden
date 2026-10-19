@@ -1083,7 +1083,8 @@ function reverseBook(
 				price: l.unitPrice,
 				quantity: l.quantity,
 			}));
-			values.return_items_cost = lines.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0);
+			// return_items_cost は旧DBでは表の明細（return_record_items）の合計で、トリガーが入れる。
+			// 旧アプリも JSON の明細を書くときは変えないので、ここでも書かない（#194 の再計算と食い違わない）。
 		}
 		// 実DBの BEFORE トリガー trigger_update_return_entry_total_amount に合わせる。
 		// total_amount は香典＋供物、旧明細の合計は return_items_cost（ROLLBACK.md 参照）。

@@ -1077,11 +1077,19 @@ describe("rollback plan and PostgreSQL", () => {
 			).toEqual([
 				{
 					total_amount: 15000,
-					return_items_cost: 4000,
+					// JSON の明細は書き戻すが、return_items_cost は旧DBの表の明細の合計（0）のまま。
+					return_items_cost: 0,
 					additional_return_amount: 14000,
-					profit_loss: 11000,
+					profit_loss: 15000,
 				},
 			]);
+			expect(
+				(
+					await db.query<{ items: unknown[] }>(
+						"SELECT return_items AS items FROM return_entry_records",
+					)
+				).rows[0]!.items,
+			).toHaveLength(1);
 		} finally {
 			await db.close();
 		}
