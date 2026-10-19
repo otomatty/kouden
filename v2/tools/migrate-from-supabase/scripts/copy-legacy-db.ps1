@@ -41,7 +41,8 @@ function Save-Dump([string]$file, [string[]]$options) {
 	$script = supabase db dump --workdir $PWD --db-url $dumpUrl --dry-run @options  # リポジトリの supabase/config.toml を読まない
 	if ($LASTEXITCODE -ne 0) { throw "dump $file の準備に失敗しました (exit $LASTEXITCODE)" }
 	# 出力は bash 側でファイルへ書く（PowerShell 5.1 のリダイレクトは UTF-16 になるため）。
-	$script = @($script | Where-Object { $_ -notmatch '^export PGPASSWORD=' }) -replace '^set -euo pipefail$', ('set -euo pipefail' + "`n" + 'exec > "$DUMP_OUT"')
+	# Windows 版の pg_dump / pg_dumpall は長いオプションの省略形を受け付けないため、正式名に直す。
+	$script = @($script | Where-Object { $_ -notmatch '^export PGPASSWORD=' }) -replace '^set -euo pipefail$', ('set -euo pipefail' + "`n" + 'exec > "$DUMP_OUT"') -replace '--quote-all-identifier(?!s)', '--quote-all-identifiers'
 	[IO.File]::WriteAllText("$PWD\$file.sh", ($script -join "`n") + "`n")
 	$env:PGPASSWORD = [Uri]::UnescapeDataString("$prodPassword")
 	$env:DUMP_OUT = "$file.part"
