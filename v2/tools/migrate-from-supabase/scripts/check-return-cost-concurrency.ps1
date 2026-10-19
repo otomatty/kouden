@@ -1,6 +1,7 @@
 ﻿# 返礼明細を複数の接続から同時に書き、return_items_cost が明細の合計と一致するかを確かめる（ROLLBACK-REHEARSAL.md の 4）。
 # リハーサル用の DB にだけ使う。PG* の環境変数（PGHOST・PGUSER・PGPASSWORD など）で接続し、最後に追加した明細を消す。
 param(
+	[Parameter(Mandatory)][string]$ProjectRef,
 	[Parameter(Mandatory)][string]$Record1,
 	[Parameter(Mandatory)][string]$Record2,
 	[Parameter(Mandatory)][string]$ItemMaster,
@@ -8,8 +9,11 @@ param(
 	[int]$Writers = 8
 )
 $ErrorActionPreference = 'Stop'
-if ($env:PGUSER -notmatch '^postgres\.[a-z0-9]{20}$' -or $env:PGUSER -match 'tcqnsslsaizqwjuyvoyu') { throw 'PGUSER がリハーサル用ではありません' }
-$tag = 'rehearsal-concurrency'
+# 接続先が、指定したリハーサル用プロジェクトであること（本番の ref は受け付けない）を確かめる。
+if ($ProjectRef -notmatch '^[a-z0-9]{20}$' -or $ProjectRef -eq 'tcqnsslsaizqwjuyvoyu') { throw 'ProjectRef にリハーサル用プロジェクトの ref を指定してください' }
+if ($env:PGUSER -ne "postgres.$ProjectRef") { throw 'PGUSER が指定したリハーサル用プロジェクトではありません' }
+# 実行ごとに別の印を付け、その実行で追加した明細だけを消す。
+$tag = "rehearsal-concurrency-$([guid]::NewGuid())"
 function Invoke-Sql([string]$sql) {
 	$out = psql -X -q -A -t -v ON_ERROR_STOP=1 -c $sql
 	if ($LASTEXITCODE -ne 0) { throw "psql failed: $sql" }
@@ -26,7 +30,6 @@ function Wait-Sql($procs) {
 }
 $check = "select r.id || ' cost=' || r.return_items_cost || ' items=' || coalesce(sum(i.price * i.quantity), 0) || ' lines=' || count(i.id) from public.return_entry_records r left join public.return_record_items i on i.return_record_id = r.id where r.id in ('$Record1', '$Record2') group by r.id, r.return_items_cost order by r.id"
 
-Invoke-Sql "delete from public.return_record_items where notes = '$tag'" | Out-Null
 try {
 	# 1. 同じ返礼記録へ同時に追加する。各トランザクションは追加後に待つので、互いに重なる。
 	$procs = 1..$Writers | ForEach-Object {
