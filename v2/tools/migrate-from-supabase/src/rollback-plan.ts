@@ -567,19 +567,21 @@ function reverseBook(
 	for (const r of old.relationships)
 		if (!now.relationships.some((x) => x.id === r.id)) remove("relationships", relationId(r.id));
 	if (!sameRows(old.relationships, now.relationships)) {
+		// 旧アプリは並び順を保存せず、毎回「既定 → 名前」で並べる（src/app/_actions/relationships.ts）。
+		// v2 の並び順は旧形式で表せないので止めず、旧画面で並びが変わることを知らせる。
 		const legacyOrder = after.relationships
 			.filter((r) => r.kouden_id === book)
 			.toSorted(
 				(a, b) =>
-					new Date(String(a.created_at)).getTime() - new Date(String(b.created_at)).getTime() ||
-					String(a.name).localeCompare(String(b.name)),
+					Number(b.is_default === true) - Number(a.is_default === true) ||
+					String(a.name).localeCompare(String(b.name), "ja"),
 			)
 			.map((r) => r.id);
 		const expectedOrder = now.relationships
 			.toSorted((a, b) => a.sortOrder - b.sortOrder)
 			.map((r) => relationId(r.id));
 		if (!eq(legacyOrder, expectedOrder))
-			block("relationship_order_requires_mapping", base.koudenId);
+			notice("relationship_order_not_rolled_back", base.koudenId);
 	}
 	const itemOrderChanged = !sameRows(
 		old.returnItems.map((r) => ({ id: r.id, sortOrder: r.sortOrder })),
@@ -838,7 +840,8 @@ function reverseBook(
 				}),
 			);
 			if ("attendance_type" in values) {
-				if (g.attendance === null) block("attendance_required", g.id);
+				// 旧DBの参列区分は必須。未選択は旧アプリの登録フォームの既定値（ABSENT）で書き戻す。
+				if (g.attendance === null) notice("attendance_defaulted_to_absent", g.id);
 				values.attendance_type = {
 					attended: "FUNERAL",
 					condolence_visit: "CONDOLENCE_VISIT",
@@ -970,20 +973,38 @@ function reverseBook(
 				unsupported(p, prev, ["organization", "position"]);
 		}
 	}
+	/** 香典の削除に伴って消す旧の返礼記録 */
+	const deletedRecords = new Set<string>();
 	for (const g of old.gifts)
 		if (!now.gifts.some((x) => x.id === g.id)) {
 			// 香典の旧監査履歴・ロックは CASCADE で消えるため、SQL が削除前に退避・照合する。
 			const id = giftOldId(g);
-			// 連携行の削除は旧 DB のトリガーで他テーブルにも影響するため、この版では停止する。
+			// 供物・弔電の紐づけの削除は旧 DB のトリガーで他の合計にも影響するため、この版では停止する。
 			const references = [
 				...before.offering_entries,
 				...before.offering_allocations,
 				...before.offering_photos,
 				...before.telegrams,
-				...before.return_entry_records,
 			].some((r) => r.kouden_entry_id === id || r.offering_id === id);
+			// 旧アプリは香典を消すとき返礼記録を CASCADE で消す（src/app/_actions/entries.ts）。同じく消す。
+			// 旧明細のある返礼記録は v2 に移していない明細があり得るので止める。
+			const records = before.return_entry_records.filter((r) => r.kouden_entry_id === id);
 			if (references) block("delete_has_legacy_dependents", g.id);
-			else remove(giftTable(g.kind), id);
+			else if (
+				records.some((r) => before.return_record_items.some((l) => l.return_record_id === r.id))
+			)
+				block("legacy_return_lines_require_manual_mapping", g.id);
+			else {
+				remove(giftTable(g.kind), id);
+				for (const r of records) {
+					remove("return_entry_records", String(r.id));
+					deletedRecords.add(String(r.id));
+					// v2 に返礼が残っていても、旧形式では香典なしの返礼記録を持てない。
+					const returnId = newId.return(String(r.kouden_entry_id));
+					if (now.returns.some((x) => x.id === returnId))
+						notice("return_removed_with_entry", returnId);
+				}
+			}
 		}
 	/** 今の返礼が使う旧の返礼記録。削除した返礼を同じ人に作り直した場合は、記録を消さずに使う。 */
 	const claimedRecords = new Set<string>();
@@ -1090,6 +1111,7 @@ function reverseBook(
 			(row) => newId.return(String(row.kouden_entry_id)) === r.id,
 		);
 		if (records.some((row) => claimedRecords.has(String(row.id)))) continue;
+		if (records.length && records.every((row) => deletedRecords.has(String(row.id)))) continue;
 		if (records.length > 1) block("merged_return_requires_manual_mapping", r.id);
 		// 記録がなく旧香典の「返礼済み」の印だけから作った返礼は、印を戻す先を確かめていない。
 		// 記録を消しても旧香典の「返礼済み」の印が残ると、旧画面は返礼済みと表示する。印の列は本番にないこともあり書かない。
