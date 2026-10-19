@@ -2588,9 +2588,9 @@ export class KoudenLedger extends DurableObject<Env> {
 
 		const contributors = new Map<string, ContributorView[]>();
 		const ids = gifts.map((g) => g.id);
-		// SQLite の変数の上限を避けるため、一定数ごとに読む
-		for (let i = 0; i < ids.length; i += 500) {
-			const chunk = ids.slice(i, i + 500);
+		// Durable Objects の SQLite は 1 文の変数が 100 個までなので、100 件ごとに読む
+		for (let i = 0; i < ids.length; i += 100) {
+			const chunk = ids.slice(i, i + 100);
 			const rows = this.all<ContributorRow>(
 				`SELECT gc.gift_id, gc.person_id, p.name, p.name_kana, p.organization, r.name AS relationship_name,
                 gc.is_primary, gc.share_amount

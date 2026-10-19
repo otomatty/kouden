@@ -741,7 +741,7 @@ describe("rollback plan and PostgreSQL", () => {
 			["追加品", 2],
 		]);
 	});
-	it("uses the creation time of a new relationship and refuses incompatible ordering", () => {
+	it("uses the creation time of a new relationship and notes ordering the legacy app cannot keep", () => {
 		const source = sourceFixture();
 		const current = exportedFixture(source);
 		current.ledgers[0]!.tables.relationships.push({
@@ -757,17 +757,33 @@ describe("rollback plan and PostgreSQL", () => {
 		expect(plan.after.relationships[0]!.created_at).toBe("2026-10-14T00:00:00.000Z");
 		current.ledgers[0]!.tables.relationships.push({
 			id: "new-relationship-2",
-			name: "次の関係",
-			sort_order: 0,
+			// 名前順では先頭、v2 の並び順では最後
+			name: "AAA",
+			sort_order: 99,
 			is_hidden: 0,
 			created_at: "2026-10-15T00:00:00.000Z",
 			updated_at: "2026-10-15T00:00:00.000Z",
 		});
-		expect(
-			planRollback(source, current).blockers.some(
-				(b) => b.code === "relationship_order_requires_mapping",
-			),
-		).toBe(true);
+		// 旧アプリは並び順を保存せず「既定 → 名前」で並べるため、止めずに知らせる。
+		const reordered = planRollback(source, current);
+		expect(reordered.blockers).toEqual([]);
+		expect(reordered.notices).toContainEqual({
+			code: "relationship_order_not_rolled_back",
+			entityId: current.manifest.koudens[0]!.id,
+		});
+	});
+	it("writes a koden without attendance as the legacy default ABSENT", () => {
+		const source = sourceFixture();
+		const current = exportedFixture(source);
+		const gift = current.ledgers[0]!.tables.gifts[0]!;
+		gift.attendance = null;
+		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual([]);
+		expect(plan.notices).toContainEqual({
+			code: "attendance_defaulted_to_absent",
+			entityId: gift.id,
+		});
+		expect(plan.after.kouden_entries[0]!.attendance_type).toBe("ABSENT");
 	});
 	it("adds offerings, telegrams, a catalog item and a return without losing NULLs", async () => {
 		const source = sourceFixture();
@@ -1339,16 +1355,60 @@ describe("rollback plan and PostgreSQL", () => {
 			await db.close();
 		}
 	});
-	it("still blocks deleting an entry that legacy rows reference", () => {
-		const source = sourceWithReturn();
+	it("deletes an entry together with its return record like the legacy app", async () => {
+		const source = sourceWithCounts(sourceWithReturn().data);
 		const current = exportedFixture(source);
 		const t = current.ledgers[0]!.tables;
 		t.gifts[0]!.deleted_at = at;
 		t.persons[0]!.deleted_at = at;
 		t.returns[0]!.deleted_at = at;
 		const plan = planRollback(source, current);
+		expect(plan.blockers).toEqual([]);
+		expect(plan.after.kouden_entries).toEqual([]);
+		expect(plan.after.return_entry_records).toEqual([]);
+		const db = await database(source);
+		try {
+			await installLegacyAuth(db, source, "audit");
+			await db.exec(legacyLocks);
+			await db.exec(rollbackSql(plan, "apply"));
+			expect(
+				(
+					await db.query(
+						"SELECT (SELECT count(*) FROM kouden_entries)::int AS entries, (SELECT count(*) FROM return_entry_records)::int AS records",
+					)
+				).rows,
+			).toEqual([{ entries: 0, records: 0 }]);
+			await db.exec(rollbackSql(plan, "verify"));
+			// 同じ計画の再実行は書き込まずに成功する。
+			await db.exec(rollbackSql(plan, "apply"));
+		} finally {
+			await db.close();
+		}
+	});
+	it("still blocks deleting an entry whose return record has legacy lines", () => {
+		const source = sourceWithReturn();
+		source.data["public.return_record_items"] = [
+			{
+				id: "70000000-0000-4000-8000-000000000003",
+				return_record_id: source.data["public.return_entry_records"]![0]!.id,
+				return_item_master_id: source.data["public.return_items"]![0]!.id,
+				price: 1000,
+				quantity: 1,
+				notes: null,
+				created_by: ids.user,
+				created_at: at,
+				updated_at: at,
+			},
+		];
+		const counted = sourceWithCounts(source.data);
+		const current = exportedFixture(counted);
+		const t = current.ledgers[0]!.tables;
+		t.gifts[0]!.deleted_at = at;
+		t.persons[0]!.deleted_at = at;
+		t.returns[0]!.deleted_at = at;
+		const plan = planRollback(counted, current);
 		expect(plan.blockers).toContainEqual({
-			code: "delete_has_legacy_dependents",
+			code: "legacy_return_lines_require_manual_mapping",
 			entityId: t.gifts[0]!.id,
 		});
 		expect(plan.after.kouden_entries).toEqual(plan.before.kouden_entries);

@@ -138,6 +138,22 @@ describe("KoudenLedger", () => {
 		expect(gifts).toHaveLength(1);
 	});
 
+	it("いただきものが 100 件を超えても差出人つきで一覧できる", async () => {
+		const { caller, ledger } = setup({ plan: "paid" });
+		const [wake] = unwrap(await ledger.listEvents(caller));
+		for (let i = 0; i < 101; i++) {
+			unwrap(
+				await ledger.createAtReception(
+					caller,
+					reception(wake!.id, { amount: "1000", name: `差出人${i}` }),
+				),
+			);
+		}
+		const gifts = unwrap(await ledger.listGifts(caller, {}));
+		expect(gifts).toHaveLength(101);
+		expect(gifts.every((g) => g.contributors.length === 1)).toBe(true);
+	});
+
 	it("閲覧者は書き込めない", async () => {
 		const { caller, ledger } = setup();
 		const [wake] = unwrap(await ledger.listEvents(caller));
