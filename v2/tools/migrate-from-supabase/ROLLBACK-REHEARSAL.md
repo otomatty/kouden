@@ -24,17 +24,22 @@ v2 をローカルで動かすのは、Cloudflare に一時リソースを作ら
 パスワード・鍵はチャット・issue・PR・リポジトリに書かない。パスワード管理ツールに保存し、作業する端末の環境変数で渡す。
 
 1. Supabase のダッシュボードでリハーサル用プロジェクトを作る。名前は `kouden-rollback-rehearsal`、リージョンは Tokyo。選べるなら Postgres 15（本番は 15.8）にし、選べなければ版の違いを結果に記録する。Free プランの組織で作れる稼働中のプロジェクトは 2 つまでで、本番と合わせて上限になる。
-2. Authentication の設定で、新規登録（Allow new users to sign up）を無効にし、Site URL を `http://localhost:8788` にする。旧アプリは 6 桁の認証コードでログインするため、Email Templates の Magic Link の本文を、リンク（`{{ .ConfirmationURL }}`）ではなくコード（`{{ .Token }}`）を含むものにする。複製した `auth.users` には実在の利用者のメールアドレスが入る。独自の SMTP は設定しない（既定の送信は組織のメンバー宛てにしか届かない）。自分以外のアドレスにメールを送る操作をしない。
+2. Authentication の設定で、新規登録（Allow new users to sign up）を無効にし、Site URL を `http://localhost:8788`、Redirect URLs に `http://localhost:8788/**` を設定する。旧アプリへのログインは Google 認証で行う（手順 5）。複製した `auth.users` には実在の利用者のメールアドレスが入るため、独自の SMTP は設定せず、メールを送る操作をしない。
 3. Database の SSL Configuration から CA 証明書をダウンロードし、Git 管理外に置く。環境変数 `PGSSLROOTCERT` にそのパスを設定する。
 4. [PostgreSQL のクライアント](https://www.postgresql.org/download/windows/)（`psql`・`pg_dump`・`pg_dumpall`。本番の 15 以上の版）と Git for Windows（Git Bash）を入れて PATH を通す。Docker は使わない。
 5. Git 管理外の作業フォルダ `v2/.migration-data/rollback-rehearsal-<日付>/` を作り、ACL を自分だけに絞る。dump には利用者の個人情報とパスワードのハッシュが入る。
 6. スクリプトを実行する PowerShell の環境変数に、本番とリハーサル用の Session pooler の接続文字列（5432 番ポート）を設定する。Free プランの Direct connection は IPv6 のみのため、Session pooler を使う。パスワードに記号があれば URL エンコードする。
 
+パスワード・鍵を含む値は、画面と履歴に残らないよう `Read-Host -AsSecureString` で入力する。`$env:X = '…'` と直接書く、または `-AsSecureString` なしの `Read-Host` を使うと、値が画面や PowerShell の履歴ファイルに残る（2026-10-19 のリハーサルで、鍵と接続文字列が端末に残った）。
+
 ```powershell
-$env:PROD_DB_URL = 'postgresql://postgres.<本番ref>:<パスワード>@<pooler>:5432/postgres'
-$env:REHEARSAL_DB_URL = 'postgresql://postgres.<リハーサル用ref>:<パスワード>@<pooler>:5432/postgres'
+function Read-Secret([string]$prompt) { [Runtime.InteropServices.Marshal]::PtrToStringBSTR([Runtime.InteropServices.Marshal]::SecureStringToBSTR((Read-Host -AsSecureString $prompt))) }
+$env:PROD_DB_URL = Read-Secret 'PROD_DB_URL'
+$env:REHEARSAL_DB_URL = Read-Secret 'REHEARSAL_DB_URL'
 $env:PGSSLROOTCERT = '<CA 証明書のパス>'
 ```
+
+CA 証明書は本番とリハーサル用で同じもの（Supabase Root 2021 CA）だった。
 
 スクリプトは psql・pg_dump にパスワードを `PGPASSWORD` で渡し、`sslmode=verify-full` で証明書を検証する。パスワードはコマンドの引数やファイルに残さない。
 
@@ -106,9 +111,11 @@ group by 1 order by 2 desc limit 5;
 
 1. `bun scripts/rehearsal-session.ts new-user` で、`legacy_user_id` のない新しいユーザー（メールは `example.test`）とセッションを作る。
 2. 移行済みのオーナーとして招待リンクを発行し、新しいユーザーのセッションでリンクを開いて受諾する。
-3. リハーサル用の Admin API（`auth.admin.createUser`。メールは送らない）で旧 Auth ユーザーを作り、`on_auth_user_created` で `profiles` の行ができたことを確かめる。v2 のユーザー ID と旧 Auth ID を `user-map.json` に書く。
+3. リハーサル用の Admin API（`POST https://<ref>.supabase.co/auth/v1/admin/users`、`email_confirm: true`。メールは送らない）で旧 Auth ユーザーを作り、`on_auth_user_created` で `profiles` の行ができたことを確かめる。v2 のユーザー ID と旧 Auth ID を `user-map.json` に書く。
 
-画像の逆転送では、`SUPABASE_SECRET_KEY` にリハーサル用の Secret key を設定する。
+Admin API に Secret key（`sb_secret_…`）を使うときは、PowerShell 5.1 の `Invoke-RestMethod` に `-UserAgent` を付ける。既定の User-Agent（`Mozilla/5.0 …`）だと、Supabase がブラウザからの利用とみなして 403 で拒否する。
+
+画像の逆転送では、`SUPABASE_SECRET_KEY` にリハーサル用の Secret key を `Read-Secret` で設定し、終わったら消す。
 
 [ROLLBACK.md](./ROLLBACK.md) の「取得・計画」「画像の逆転送」「書き戻し・照合」に従い、`export` → `plan` → `images` → `apply` → `verify` を行う。トークンは `ROLLBACK_DEV_TOKEN=dev-rollback-token`、`--project-ref` はリハーサル用の ref、接続は 2 で設定した環境変数を使う。
 
@@ -130,7 +137,7 @@ group by 1 order by 2 desc limit 5;
 
 切り戻した台帳を含む 10 冊を選び、旧アプリ（リハーサル用）と v2（ローカル）で、香典・供物・弔電・返礼の件数と合計、メンバーと権限、画像を見比べる。
 
-- 旧アプリ: `.env.local` をリハーサル用の URL・鍵にして `http://localhost:8788` で起動する。自分のメールアドレスで認証コードのログインを行う（既定の送信で自分にだけ届く。複製に自分のアカウントがなければ、新規登録を一時的に有効にして作る）。他の利用者としてはログインできないため、`verify` が `passed` になった後に、リハーサル用の旧 DB で自分を比較する 10 冊の閲覧者に追加する。書き戻しの照合が終わった後なので、照合には影響しない。
+- 旧アプリ: `.env.local` をリハーサル用の URL・publishable key にして `http://localhost:8788` で起動する。ログインは Google 認証にする。リハーサル用の Google OAuth クライアントを一時的に作り（リダイレクト URI は `https://<リハーサル用ref>.supabase.co/auth/v1/callback`）、リハーサル用の Supabase の Google プロバイダに設定する。複製した `auth.identities` の Google の ID でそのまま自分のアカウントに入れる。他の利用者としてはログインできないため、`verify` が `passed` になった後に、リハーサル用の旧 DB で自分を比較する 10 冊の閲覧者に追加する。
 - v2: 比較する台帳のオーナーのセッションをローカル D1 に追加して開く（手順 2 と同じ方法）。
 
 ## 6. 記録と後片付け
@@ -139,6 +146,12 @@ group by 1 order by 2 desc limit 5;
 
 終わったら次を行う。
 
-- リハーサル用プロジェクトを削除する（複製した個人情報と認証情報を残さない）。
+- リハーサル用プロジェクトを削除する（複製した個人情報と認証情報を残さない）。一時的に作った Google OAuth クライアントも削除する。
 - 作業フォルダの dump・スナップショット・レポート・ローカルの v2 の保存先を削除する。結果の記録に必要なのは件数と所要時間だけ。
-- 環境変数からパスワードを消す。
+- 環境変数からパスワードを消し、端末の表示を消す（`Clear-Host`）。旧アプリ用の `.env.local` と v2 の `.dev.vars` も消す。
+
+## Windows での注意（2026-10-19）
+
+- `v2/apps/app` の `bun run dev` は Windows の bun で `&` を使えず失敗する。`bun run serve` で起動する。`cf dev` が `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)` で落ちることがあるので、そのときは起動し直す。
+- 端末を開き直すと PG* の環境変数が消え、CLI は `rollback_database_target_mismatch` で止まる（安全側）。作業フォルダに移り、接続設定を作り直す。
+- 結果の記録は [#193](https://github.com/otomatty/kouden/issues/193) のコメントにある。
