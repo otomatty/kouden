@@ -33,7 +33,10 @@ v2 をローカルで動かすのは、Cloudflare に一時リソースを作ら
 パスワード・鍵を含む値は、画面と履歴に残らないよう `Read-Host -AsSecureString` で入力する。`$env:X = '…'` と直接書く、または `-AsSecureString` なしの `Read-Host` を使うと、値が画面や PowerShell の履歴ファイルに残る（2026-10-19 のリハーサルで、鍵と接続文字列が端末に残った）。
 
 ```powershell
-function Read-Secret([string]$prompt) { [Runtime.InteropServices.Marshal]::PtrToStringBSTR([Runtime.InteropServices.Marshal]::SecureStringToBSTR((Read-Host -AsSecureString $prompt))) }
+function Read-Secret([string]$prompt) {
+  $b = [Runtime.InteropServices.Marshal]::SecureStringToBSTR((Read-Host -AsSecureString $prompt))
+  try { [Runtime.InteropServices.Marshal]::PtrToStringBSTR($b) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($b) }
+}
 $env:PROD_DB_URL = Read-Secret 'PROD_DB_URL'
 $env:REHEARSAL_DB_URL = Read-Secret 'REHEARSAL_DB_URL'
 $env:PGSSLROOTCERT = '<CA 証明書のパス>'
@@ -137,7 +140,7 @@ Admin API に Secret key（`sb_secret_…`）を使うときは、PowerShell 5.1
 
 切り戻した台帳を含む 10 冊を選び、旧アプリ（リハーサル用）と v2（ローカル）で、香典・供物・弔電・返礼の件数と合計、メンバーと権限、画像を見比べる。
 
-- 旧アプリ: `.env.local` をリハーサル用の URL・publishable key にして `http://localhost:8788` で起動する。ログインは Google 認証にする。リハーサル用の Google OAuth クライアントを一時的に作り（リダイレクト URI は `https://<リハーサル用ref>.supabase.co/auth/v1/callback`）、リハーサル用の Supabase の Google プロバイダに設定する。複製した `auth.identities` の Google の ID でそのまま自分のアカウントに入れる。他の利用者としてはログインできないため、`verify` が `passed` になった後に、リハーサル用の旧 DB で自分を比較する 10 冊の閲覧者に追加する。
+- 旧アプリ: `.env.local` をリハーサル用の URL・publishable key にして（既存の `.env.local` は先に `.env.local.before-rehearsal` へ退避する） `http://localhost:8788` で起動する。ログインは Google 認証にする。リハーサル用の Google OAuth クライアントを一時的に作り（リダイレクト URI は `https://<リハーサル用ref>.supabase.co/auth/v1/callback`）、リハーサル用の Supabase の Google プロバイダに設定する。複製した `auth.identities` の Google の ID でそのまま自分のアカウントに入れる。他の利用者としてはログインできないため、`verify` が `passed` になった後に、リハーサル用の旧 DB で自分を比較する 10 冊の閲覧者に追加する。
 - v2: 比較する台帳のオーナーのセッションをローカル D1 に追加して開く（手順 2 と同じ方法）。
 
 ## 6. 記録と後片付け
@@ -148,7 +151,7 @@ Admin API に Secret key（`sb_secret_…`）を使うときは、PowerShell 5.1
 
 - リハーサル用プロジェクトを削除する（複製した個人情報と認証情報を残さない）。一時的に作った Google OAuth クライアントも削除する。
 - 作業フォルダの dump・スナップショット・レポート・ローカルの v2 の保存先を削除する。結果の記録に必要なのは件数と所要時間だけ。
-- 環境変数からパスワードを消し、端末の表示を消す（`Clear-Host`）。旧アプリ用の `.env.local` と v2 の `.dev.vars` も消す。
+- 環境変数からパスワードを消し、端末の表示を消す（`Clear-Host`）。旧アプリ用の `.env.local` は、退避した `.env.local.before-rehearsal` があれば戻し、なければ消す。v2 の `.dev.vars` にリハーサル用の値を足した場合は、その値だけを消す。
 
 ## Windows での注意（2026-10-19）
 
