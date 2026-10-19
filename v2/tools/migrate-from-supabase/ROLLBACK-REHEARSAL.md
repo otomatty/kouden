@@ -77,7 +77,7 @@ psql -X -q -A -t -d postgres -f extract.sql -o cutover\source-snapshot.json
 
 v2 をローカルで起動する。保存先は環境変数 `KOUDEN_LOCAL_STATE` で作業フォルダ内の新しいフォルダ（例: `v2-state-1` の絶対パス）にし、普段の開発データと分ける。新しい保存先の D1 は空なので、同じ `KOUDEN_LOCAL_STATE` のまま `v2/apps/app` で `bun run db:migrate:local` を実行してから `bun run dev` で起動する。[README](./README.md) の手順で `prepare` → `import` → `verify` を行う。投入先は `http://localhost:5173`、トークンは `IMPORT_DEV_TOKEN=dev-import-token`。`verify` が `passed` になったら、変更する前に一度 `rollback export` → `plan` を行い、変更 0 件・ブロッカー 0 件を確認する。
 
-画面から変更するときは、`v2/e2e/scripts/prepare.ts` と同じ方法で、操作する移行済みユーザーのセッションをローカル D1 の `sessions` に追加し、Cookie `__Host-kouden_session` に設定する。
+画面から変更するときは、`v2/apps/app` で `bun scripts/rehearsal-session.ts` を使う（同じ `KOUDEN_LOCAL_STATE` で実行する）。`kouden <旧香典帳ID>` で v2 の香典帳 ID とメンバー（user_id・ロール）を、`session <user_id>` でそのユーザーのセッションを出す。出た token を Cookie `__Host-kouden_session`（Secure・Path=/）に設定する。出力は ID と token だけで、氏名・メールは出さない。
 
 ## 3. v2 で変更し、書き戻す
 
@@ -104,7 +104,7 @@ group by 1 order by 2 desc limit 5;
 
 新規ユーザーは次の順で用意する。ローカルの v2 は Google ログインを使えないため、新しいユーザーもセッションを直接作る。
 
-1. ローカル D1 の `users` に、`legacy_user_id` のない新しいユーザー（`google_sub` は仮の値、メールは `example.test` のアドレス）を追加し、そのセッションを作る。
+1. `bun scripts/rehearsal-session.ts new-user` で、`legacy_user_id` のない新しいユーザー（メールは `example.test`）とセッションを作る。
 2. 移行済みのオーナーとして招待リンクを発行し、新しいユーザーのセッションでリンクを開いて受諾する。
 3. リハーサル用の Admin API（`auth.admin.createUser`。メールは送らない）で旧 Auth ユーザーを作り、`on_auth_user_created` で `profiles` の行ができたことを確かめる。v2 のユーザー ID と旧 Auth ID を `user-map.json` に書く。
 
