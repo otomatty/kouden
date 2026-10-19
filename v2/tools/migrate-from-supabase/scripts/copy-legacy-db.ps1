@@ -37,7 +37,8 @@ for ($d = Split-Path (Get-Command git).Source; $d; $d = Split-Path $d) {
 }
 if (-not $gitBash) { throw 'Git for Windows の bash.exe が見つかりません' }
 function Save-Dump([string]$file, [string[]]$options) {
-	if (Test-Path $file) { return }  # 復元だけをやり直す場合は使い回す
+	# 同じ時点の dump で復元だけをやり直すときは使い回す。本番の今の状態を複製し直すときは新しい作業フォルダで実行する。
+	if (Test-Path $file) { return }
 	$script = supabase db dump --workdir $PWD --db-url $dumpUrl --dry-run @options  # リポジトリの supabase/config.toml を読まない
 	if ($LASTEXITCODE -ne 0) { throw "dump $file の準備に失敗しました (exit $LASTEXITCODE)" }
 	# 出力は bash 側でファイルへ書く（PowerShell 5.1 のリダイレクトは UTF-16 になるため）。

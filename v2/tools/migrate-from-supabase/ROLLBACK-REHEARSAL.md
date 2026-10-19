@@ -49,7 +49,7 @@ $env:PGSSLROOTCERT = '<CA 証明書のパス>'
 
 `copy-legacy-db.ps1` は次を行う。接続先が逆のときと、空でないプロジェクト（public の表、Auth のユーザー、Storage のバケット・ファイルのいずれかがある）への復元は止める。
 
-1. 本番を roles・schema・data の 3 つに分けて保存する（既にあれば使い回す）。`supabase db dump --dry-run` で Supabase の絞り込みを入れた pg_dump のスクリプトだけを出させ、ホストの pg_dump で実行する。`supabase db dump` 自身は Docker 内の pg_dump を使い、ホストの CA 証明書で検証できないため。
+1. 本番を roles・schema・data の 3 つに分けて保存する。既にあれば使い回すので、同じ時点の dump で復元だけをやり直すときはそのまま再実行し、本番の今の状態を複製し直すときは新しい作業フォルダで実行する。`supabase db dump --dry-run` で Supabase の絞り込みを入れた pg_dump のスクリプトだけを出させ、ホストの pg_dump で実行する。`supabase db dump` 自身は Docker 内の pg_dump を使い、ホストの CA 証明書で検証できないため。
 2. auth・storage の表に付けた独自トリガー（新規ユーザーの `profiles` を作る `on_auth_user_created` など）と RLS ポリシー（`auth.users` の本人読み取りなど）は dump に含まれないため、本番の定義を読み取り、リハーサル用にないものだけを作る SQL を用意する。Supabase が管理する表でポリシーの作成を拒まれた場合は警告を出して飛ばし、比較スクリプトの差分に残る。
 3. リハーサル用へ 1 トランザクションで復元する。データの投入中だけトリガーを止める。
 4. 複製された `pg_cron` のジョブ（無料の香典帳を 14 日で自動アーカイブする `archive_free_koudens_daily`）を止める。リハーサル中に状態が変わり、前提照合が崩れるのを防ぐ。
