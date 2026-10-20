@@ -9,6 +9,16 @@ $prodRef = 'tcqnsslsaizqwjuyvoyu'
 if (-not $env:PROD_DB_URL -or (-not $DumpOnly -and -not $env:REHEARSAL_DB_URL)) { throw 'PROD_DB_URL と REHEARSAL_DB_URL を設定してください' }
 if (-not $env:PGSSLROOTCERT -or -not (Test-Path $env:PGSSLROOTCERT)) { throw 'PGSSLROOTCERT に Supabase の CA 証明書のパスを設定してください' }
 if (-not $DumpOnly -and $env:REHEARSAL_DB_URL -match $prodRef) { throw 'REHEARSAL_DB_URL が本番を指しています' }
+if ($DumpOnly) {
+	# バックアップは必ずその時点の dump にする。前の dump を使い回さず、個人情報を Git に載せない。
+	if (@('roles.sql', 'schema.sql', 'data.sql', 'managed-objects.sql', 'manifest.json') | Where-Object { Test-Path $_ }) {
+		throw '-DumpOnly は新しい空の作業フォルダで実行してください（前の dump を使い回しません）'
+	}
+	if ((git rev-parse --is-inside-work-tree 2>$null) -eq 'true') {
+		git check-ignore -q (Join-Path $PWD 'data.sql')
+		if ($LASTEXITCODE -ne 0) { throw '作業フォルダが Git の管理対象です。v2/.migration-data/ などの Git 管理外のフォルダで実行してください' }
+	}
+}
 if ($env:PROD_DB_URL -notmatch $prodRef) { throw 'PROD_DB_URL が本番を指していません' }
 
 # psql にはパスワードを引数でなく PGPASSWORD で渡し、証明書を検証する。
