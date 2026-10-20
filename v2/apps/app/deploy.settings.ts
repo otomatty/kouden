@@ -27,7 +27,10 @@ export interface ModeSettings {
 	rateLimitNamespaces: { auth: string; write: string; invite: string };
 	/** Google OAuth クライアント ID（秘密情報ではない） */
 	googleClientId: string;
-	/** staging / rehearsal 全体を守る Access。rehearsal だけは取り込み口と同じ専用 AUD を使う */
+	/**
+	 * アプリ全体を守る Access。staging / rehearsal は常に必須で、rehearsal だけは取り込み口と同じ専用 AUD を使う。
+	 * production は一般公開まで設定して運営者限定にし、公開するときに空に戻してデプロイし直す
+	 */
 	access: { teamDomain: string; aud: string };
 	/**
 	 * 旧アプリからのデータ移行の取り込み口（/internal/import/*、05 §2）。Cloudflare Access のサービストークンで守る。
@@ -116,13 +119,23 @@ export const MODES: Record<Mode, ModeSettings> = {
 		billingEnabled: true,
 		rateLimitNamespaces: { auth: "1001", write: "1002", invite: "1003" },
 		googleClientId: "148244071330-8sros0m9gbf0udl6ap50t0u51ti2qijl.apps.googleusercontent.com",
-		access: { teamDomain: "", aud: "" },
+		// 一般公開（#200）までは運営者限定。公開するときに空に戻してデプロイし直す
+		access: {
+			teamDomain: ACCESS_TEAM,
+			aud: "9b8008d042386d97bd443a4271f72dfc801dbe213850ca12367588d53e0ee4de",
+		},
 		importAccess: { teamDomain: "", aud: "" },
 		importDevToken: "",
 		rollbackAccess: { teamDomain: "", aud: "" },
 		rollbackDevToken: "",
 	},
 };
+
+/** アプリ全体に Access を要求するか。production は access が設定されている間（一般公開前）だけ要求する */
+export function appAccessRequired(mode: Mode): boolean {
+	if (mode === "staging" || mode === "rehearsal") return true;
+	return mode === "production" && MODES.production.access.aud !== "";
+}
 
 /** 未指定は development とし、未知の mode は設定を選ぶ前に拒否する。 */
 export function resolveMode(mode: string | undefined): Mode {
@@ -153,6 +166,16 @@ export function deployBlockers(mode: Mode): string[] {
 		(!s.access.teamDomain.endsWith(".cloudflareaccess.com") || !s.access.aud)
 	) {
 		blockers.push(`${mode} の access.teamDomain と access.aud を設定してください`);
+	}
+	if (mode === "production") {
+		const { teamDomain, aud } = s.access;
+		if (
+			(teamDomain === "") !== (aud === "") ||
+			(teamDomain !== "" && !teamDomain.endsWith(".cloudflareaccess.com"))
+		)
+			blockers.push(
+				"production の access は teamDomain と aud の両方を設定するか、両方を空にしてください",
+			);
 	}
 	if (mode === "rehearsal") {
 		if (s.d1.id !== undefined)

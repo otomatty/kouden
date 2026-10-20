@@ -41,6 +41,13 @@ describe("staging の Access", () => {
 		expect((await get("/internal/import/summary", "import-jwt")).status).toBe(200);
 	});
 
+	it("Stripe の Webhook だけは Access なしで届き、署名で検証される", async () => {
+		const post = { method: "POST", body: "{}" };
+		expect((await app.request("/webhooks/stripe", post, staging)).status).toBe(400);
+		expect((await app.request("/webhooks/stripe-other", post, staging)).status).toBe(403);
+		expect((await get("/webhooks/stripe")).status).toBe(403);
+	});
+
 	it("Access の設定が消えた場合も公開しない", async () => {
 		const response = await app.request("/healthz", {}, { ...staging, APP_ACCESS_AUD: "" });
 		expect(response.status).toBe(503);
