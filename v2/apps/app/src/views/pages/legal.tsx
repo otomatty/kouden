@@ -12,7 +12,7 @@ const OPERATOR = {
 } as const;
 
 /** 3 ページの施行日。公開日に合わせる */
-const EFFECTIVE_DATE = "2026年11月1日";
+const EFFECTIVE_DATE = "2026年10月21日";
 
 const LegalLayout: FC<{ title: string; children: Child }> = ({ title, children }) => (
 	<div class={`${ui.container} max-w-3xl space-y-6`}>
