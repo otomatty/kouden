@@ -1,8 +1,7 @@
 /**
  * 環境（mode）ごとの設定。cloudflare.config.ts とスクリプトの両方から参照する。
  *
- * TODO(M0): ドメインと Google OAuth クライアントを用意したら、`DOMAIN` と各 mode の
- * `googleClientId` を実際の値に置き換える。置き換えるまでは `deployBlockers` がデプロイを止める。
+ * `DOMAIN` と `googleClientId` が仮の値のままなら `deployBlockers` がデプロイを止める。
  */
 export type Mode = "development" | "staging" | "rehearsal" | "production";
 
@@ -47,9 +46,10 @@ export interface ModeSettings {
 const PLACEHOLDER_DOMAIN = "example.jp";
 const PLACEHOLDER_CLIENT_ID = "REPLACE_ME.apps.googleusercontent.com";
 
-export const DOMAIN = PLACEHOLDER_DOMAIN;
+export const DOMAIN = "kouden.app";
 export const WORKERS_SUBDOMAIN = "saedgewell";
-export const STAGING_ACCESS_TEAM = "black-disk-617a.cloudflareaccess.com";
+/** アカウントの Zero Trust 組織（staging・本番の運営者画面で共通） */
+export const ACCESS_TEAM = "black-disk-617a.cloudflareaccess.com";
 
 /** ローカル開発用の D1 の ID（ローカルの永続化ファイル名を決めるためだけに使う） */
 export const LOCAL_D1_ID = "00000000-0000-4000-8000-00000000d1d1";
@@ -81,7 +81,7 @@ export const MODES: Record<Mode, ModeSettings> = {
 		rateLimitNamespaces: { auth: "2001", write: "2002", invite: "2003" },
 		googleClientId: "569940434834-tubk2ub196e34na7e97tqt44ljrn97vq.apps.googleusercontent.com",
 		access: {
-			teamDomain: STAGING_ACCESS_TEAM,
+			teamDomain: ACCESS_TEAM,
 			aud: "f32cfcbc9bfda4f2aee49b8b1d832542300f77f17c97924bfb7359f9e3ada00d",
 		},
 		importAccess: { teamDomain: "", aud: "" },
@@ -115,7 +115,7 @@ export const MODES: Record<Mode, ModeSettings> = {
 		mailFrom: `noreply@${DOMAIN}`,
 		billingEnabled: true,
 		rateLimitNamespaces: { auth: "1001", write: "1002", invite: "1003" },
-		googleClientId: PLACEHOLDER_CLIENT_ID,
+		googleClientId: "148244071330-8sros0m9gbf0udl6ap50t0u51ti2qijl.apps.googleusercontent.com",
 		access: { teamDomain: "", aud: "" },
 		importAccess: { teamDomain: "", aud: "" },
 		importDevToken: "",

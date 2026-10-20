@@ -24,7 +24,6 @@
 
 | 項目 | 現状 | 決める時期 |
 |---|---|---|
-| ドメイン名 | Cloudflare Registrar で新規取得予定。ドキュメント内では `example.jp` と表記 | M0 着手前 |
 | Excel 生成ライブラリ | Workers 上で動作するものを PoC で選定（[04 §8](./04-architecture.md#8-帳票出力)） | M4 着手前 |
 | Google OAuth のブランド確認 | 取得ドメインで Search Console 所有確認が必要 | M0 |
 | Cloudflare Email Service | ベータ版。GA 前に問題があれば Resend に差し替え（`Mailer` で抽象化済み） | M3 |

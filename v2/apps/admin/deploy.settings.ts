@@ -11,7 +11,7 @@ import {
 	type Mode as AppMode,
 	resolveMode as resolveAppMode,
 	WORKERS_SUBDOMAIN,
-	STAGING_ACCESS_TEAM,
+	ACCESS_TEAM,
 } from "../app/deploy.settings.ts";
 
 export type Mode = Exclude<AppMode, "rehearsal">;
@@ -58,7 +58,7 @@ export const MODES: Record<Mode, AdminModeSettings> = {
 		d1: APP_MODES.staging.d1,
 		appOrigin: APP_MODES.staging.origin,
 		access: {
-			teamDomain: STAGING_ACCESS_TEAM,
+			teamDomain: ACCESS_TEAM,
 			aud: "2b070c052a3073c94fbf21764ef9d841306f2b5954905f4cfbc019699d8374bd",
 		},
 		devEmail: "",
@@ -69,7 +69,10 @@ export const MODES: Record<Mode, AdminModeSettings> = {
 		domain: `admin.${DOMAIN}`,
 		d1: APP_MODES.production.d1,
 		appOrigin: APP_MODES.production.origin,
-		access: { teamDomain: PLACEHOLDER_TEAM, aud: PLACEHOLDER_AUD },
+		access: {
+			teamDomain: ACCESS_TEAM,
+			aud: "0db03f10b99088b6b4d8f053f5dd56a50d6cdcdf10b2166572d126fb09b4bd19",
+		},
 		devEmail: "",
 	},
 };

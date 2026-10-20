@@ -92,7 +92,7 @@
 - **却下した案**: Cloudflare Access をエンドユーザー認証に使う案。Zero Trust はログインしたユーザー 1 人ごとにシートを消費し、無料枠 50 人を超えるとログインがブロックされる。一般向け有料サービスには不適。
 
 ### ADR-T04 運営者画面は別 Worker + Cloudflare Access
-- **決定**: `admin.example.jp` に `kouden-admin` Worker を置き、ホスト全体を Cloudflare Access（Google IdP、運営者のメールのみ許可）で保護する。Worker 側でも `Cf-Access-Jwt-Assertion` を検証する。
+- **決定**: `admin.kouden.app` に `kouden-admin` Worker を置き、ホスト全体を Cloudflare Access（Google IdP、運営者のメールのみ許可）で保護する。Worker 側でも `Cf-Access-Jwt-Assertion` を検証する。
 - **理由**: 本体 Worker に管理機能のコードを入れない。運営者は数名なので Zero Trust 無料枠に収まる。
 
 ### ADR-T05 データ配置: 香典帳ごとの Durable Object + D1
@@ -108,11 +108,11 @@
 - **却下した案**: CRDT による文字単位の同時編集（クライアントアプリが重くなり方針に反する）。
 
 ### ADR-T07 メールは Cloudflare Email Service
-- **決定**: `send_email` binding で `noreply@example.jp` から送る。`Mailer` インターフェースで抽象化する。
+- **決定**: `send_email` binding で `noreply@kouden.app` から送る。`Mailer` インターフェースで抽象化する。
 - **リスク**: Email Sending はベータ版。問題があれば Resend 実装に差し替える。
 
 ### ADR-T08 独自ドメインを Cloudflare Registrar で取得
-- **決定**: アプリ `example.jp`、運営者画面 `admin.example.jp`、ステージング `staging.example.jp`。
+- **決定**: アプリ `kouden.app`、運営者画面 `admin.kouden.app`（2026-10-19 取得）。ステージングは独自ドメインを使わず `workers.dev` に置く。
 - **理由**: Email Sending は Cloudflare 上の自ドメインからしか送れない。Google ログインのブランド確認にもドメインが必要。
 
 ### ADR-T09 決済は Stripe Checkout（一回払い）
