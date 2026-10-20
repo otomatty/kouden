@@ -124,11 +124,8 @@ export const MODES: Record<Mode, ModeSettings> = {
 			teamDomain: ACCESS_TEAM,
 			aud: "9b8008d042386d97bd443a4271f72dfc801dbe213850ca12367588d53e0ee4de",
 		},
-		// 最終移行の投入・照合の間だけ開く（kouden.app/internal/import の Service Auth）。終わったら空に戻してデプロイし直す
-		importAccess: {
-			teamDomain: ACCESS_TEAM,
-			aud: "09809dfe1be1c7370e17f55daa6eaaf08fce6285a2dbb37096c6c7cb8dd0f0b4",
-		},
+		// 最終移行（2026-10-20、#199）の投入・照合を終えたので閉じた。再投入するときだけ一時的に設定する
+		importAccess: { teamDomain: "", aud: "" },
 		importDevToken: "",
 		rollbackAccess: { teamDomain: "", aud: "" },
 		rollbackDevToken: "",
