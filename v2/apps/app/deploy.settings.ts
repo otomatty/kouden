@@ -119,7 +119,11 @@ export const MODES: Record<Mode, ModeSettings> = {
 		billingEnabled: true,
 		rateLimitNamespaces: { auth: "1001", write: "1002", invite: "1003" },
 		googleClientId: "148244071330-8sros0m9gbf0udl6ap50t0u51ti2qijl.apps.googleusercontent.com",
-		access: { teamDomain: "", aud: "" },
+		// 一般公開（#200）までは運営者限定。公開するときに空に戻してデプロイし直す
+		access: {
+			teamDomain: ACCESS_TEAM,
+			aud: "9b8008d042386d97bd443a4271f72dfc801dbe213850ca12367588d53e0ee4de",
+		},
 		importAccess: { teamDomain: "", aud: "" },
 		importDevToken: "",
 		rollbackAccess: { teamDomain: "", aud: "" },
