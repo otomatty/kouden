@@ -17,6 +17,21 @@ describe("公開ページ", () => {
 		},
 	);
 
+	it.each(["/terms", "/privacy", "/legal/tokushoho"])(
+		"%s は準備中ではなく本文を表示する",
+		async (path) => {
+			const html = await (await app.request(path, {}, env)).text();
+			expect(html).not.toContain("準備中");
+			expect(html).toContain("施行");
+		},
+	);
+
+	it("特定商取引法に基づく表記に販売価格を表示する", async () => {
+		const html = await (await app.request("/legal/tokushoho", {}, env)).text();
+		expect(html).toContain("販売価格");
+		expect(html).toContain("2,980");
+	});
+
 	it("存在しないページは 404", async () => {
 		const res = await app.request("/no-such-page", {}, env);
 		expect(res.status).toBe(404);

@@ -6,7 +6,7 @@ import { Layout } from "../views/layout.tsx";
 import { DashboardPage } from "../views/pages/dashboard.tsx";
 import { FaqPage } from "../views/pages/faq.tsx";
 import { HomePage } from "../views/pages/home.tsx";
-import { LegalPlaceholderPage } from "../views/pages/legal.tsx";
+import { PrivacyPage, TermsPage, TokushohoPage } from "../views/pages/legal.tsx";
 import { PricingPage } from "../views/pages/pricing.tsx";
 
 export const pageRoutes = new Hono<AppEnv>();
@@ -62,17 +62,17 @@ pageRoutes.get("/faq", (c) =>
 	),
 );
 
-const LEGAL_PAGES = {
-	"/terms": "利用規約",
-	"/privacy": "プライバシーポリシー",
-	"/legal/tokushoho": "特定商取引法に基づく表記",
-} as const;
+const LEGAL_PAGES = [
+	["/terms", "利用規約", TermsPage],
+	["/privacy", "プライバシーポリシー", PrivacyPage],
+	["/legal/tokushoho", "特定商取引法に基づく表記", TokushohoPage],
+] as const;
 
-for (const [path, title] of Object.entries(LEGAL_PAGES)) {
+for (const [path, title, Page] of LEGAL_PAGES) {
 	pageRoutes.get(path, (c) =>
 		c.html(
 			<Layout title={title} user={c.get("user")}>
-				<LegalPlaceholderPage title={title} />
+				<Page />
 			</Layout>,
 		),
 	);
