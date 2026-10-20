@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deployBlockers, MODES } from "../deploy.settings.ts";
+import { appAccessRequired, deployBlockers, MODES } from "../deploy.settings.ts";
 
 describe("deployBlockers", () => {
 	it("切り戻しの抽出は専用の Access 設定が必要", () => {
@@ -31,6 +31,31 @@ describe("deployBlockers", () => {
 			const blockers = deployBlockers("production");
 			expect(blockers.some((b) => b.includes("ドメインが仮の値"))).toBe(true);
 			expect(blockers.some((b) => b.includes("googleClientId"))).toBe(true);
+		} finally {
+			MODES.production = original;
+		}
+	});
+
+	it("本番は access を設定している間だけ Access を要求し、片方だけの設定ではデプロイしない", () => {
+		expect(appAccessRequired("staging")).toBe(true);
+		expect(appAccessRequired("development")).toBe(false);
+		const original = structuredClone(MODES.production);
+		try {
+			MODES.production.access = { teamDomain: "", aud: "" };
+			expect(appAccessRequired("production")).toBe(false);
+			MODES.production.access = { teamDomain: "team.cloudflareaccess.com", aud: "prod-aud" };
+			expect(appAccessRequired("production")).toBe(true);
+			expect(deployBlockers("production")).toEqual([]);
+			for (const access of [
+				{ teamDomain: "team.cloudflareaccess.com", aud: "" },
+				{ teamDomain: "", aud: "prod-aud" },
+				{ teamDomain: "team.example.com", aud: "prod-aud" },
+			]) {
+				MODES.production.access = access;
+				expect(deployBlockers("production").some((b) => b.includes("production の access"))).toBe(
+					true,
+				);
+			}
 		} finally {
 			MODES.production = original;
 		}

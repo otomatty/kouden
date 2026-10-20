@@ -125,6 +125,7 @@ M0 のコードは揃っていますが、以下は Cloudflare・Google・GitHub
    - `production` には承認者（Required reviewers）を設定する
 5. **ステージングを Cloudflare Access で保護**: `kouden-app-staging.saedgewell.workers.dev` を Access アプリケーションにし、開発者のメールのみ許可する。
 6. **運営者画面を Cloudflare Access で保護**: Zero Trust で `admin.<ドメイン>` と `kouden-admin-staging.saedgewell.workers.dev` を Self-hosted アプリケーションにし、ポリシーで運営者のメールアドレスだけを許可する。チームのドメイン（`<team>.cloudflareaccess.com`）と各アプリケーションの AUD タグを `apps/admin/deploy.settings.ts` の `access` に設定する（設定するまで `deployBlockers` がデプロイを止める）
+6b. **一般公開までは本番も Cloudflare Access で運営者限定にする**: Zero Trust で `kouden.app` 全体を Self-hosted アプリケーションにし、運営者のメールだけを許可する。Stripe の Webhook が届くよう、`kouden.app/webhooks/stripe` を別のアプリケーションにして Bypass（Everyone）のポリシーを付ける（アプリ側でも POST `/webhooks/stripe` だけは Access を求めず、署名で検証する）。全体のアプリの AUD を `apps/app/deploy.settings.ts` の production の `access` に設定する。設定している間は Worker も Access の JWT を検証する。一般公開（#200）では `access` を空に戻してデプロイし、全体のアプリを削除する
 7. **Stripe の設定**（ステージングはテストモード、本番はライブモード）:
    - Webhook のエンドポイント: `https://<ドメイン>/webhooks/stripe`。送るイベントは `checkout.session.completed`・`checkout.session.async_payment_succeeded`・`checkout.session.async_payment_failed`・`charge.refunded`。表示される署名シークレット（`whsec_...`）を `STRIPE_WEBHOOK_SECRET` に登録する
    - シークレットキー（`sk_...`。制限付きキーなら Checkout Sessions の書き込み権限）を `STRIPE_SECRET_KEY` に登録する

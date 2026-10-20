@@ -1,5 +1,5 @@
 import { bindings, defineConfig, exports, triggers } from "cf/config";
-import { MODES, resolveMode } from "./deploy.settings.ts";
+import { appAccessRequired, MODES, resolveMode } from "./deploy.settings.ts";
 import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
 
 export default defineConfig(({ mode }) => {
@@ -34,9 +34,7 @@ export default defineConfig(({ mode }) => {
 			},
 			env: {
 				APP_ORIGIN: bindings.text(s.origin),
-				APP_ACCESS_REQUIRED: bindings.text(
-					["staging", "rehearsal"].includes(resolveMode(mode)) ? "true" : "false",
-				),
+				APP_ACCESS_REQUIRED: bindings.text(appAccessRequired(resolveMode(mode)) ? "true" : "false"),
 				APP_ACCESS_TEAM_DOMAIN: bindings.text(s.access.teamDomain),
 				APP_ACCESS_AUD: bindings.text(s.access.aud),
 				GOOGLE_CLIENT_ID: bindings.text(s.googleClientId),
