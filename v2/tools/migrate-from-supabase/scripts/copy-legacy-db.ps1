@@ -1,12 +1,30 @@
 ﻿# 旧本番 DB をリハーサル用プロジェクトへ複製する（ROLLBACK-REHEARSAL.md の 1）。
 # Git 管理外の作業フォルダで実行する。接続文字列は環境変数 PROD_DB_URL / REHEARSAL_DB_URL、
 # CA 証明書は PGSSLROOTCERT で渡す。本番には dump（読み取り）と SELECT だけを行う。
+# -DumpOnly は最終移行前のバックアップ用で、dump だけを作って復元しない（REHEARSAL_DB_URL は不要）。
+param([switch]$DumpOnly)
 $ErrorActionPreference = 'Stop'
 $prodRef = 'tcqnsslsaizqwjuyvoyu'
 
-if (-not $env:PROD_DB_URL -or -not $env:REHEARSAL_DB_URL) { throw 'PROD_DB_URL と REHEARSAL_DB_URL を設定してください' }
+if (-not $env:PROD_DB_URL -or (-not $DumpOnly -and -not $env:REHEARSAL_DB_URL)) { throw 'PROD_DB_URL と REHEARSAL_DB_URL を設定してください' }
 if (-not $env:PGSSLROOTCERT -or -not (Test-Path $env:PGSSLROOTCERT)) { throw 'PGSSLROOTCERT に Supabase の CA 証明書のパスを設定してください' }
-if ($env:REHEARSAL_DB_URL -match $prodRef) { throw 'REHEARSAL_DB_URL が本番を指しています' }
+if (-not $DumpOnly -and $env:REHEARSAL_DB_URL -match $prodRef) { throw 'REHEARSAL_DB_URL が本番を指しています' }
+if ($DumpOnly) {
+	# バックアップは必ずその時点の dump にする。前の dump を使い回さず、個人情報を Git に載せない。
+	if (@('roles.sql', 'schema.sql', 'data.sql', 'managed-objects.sql', 'manifest.json') | Where-Object { Test-Path $_ }) {
+		throw '-DumpOnly は新しい空の作業フォルダで実行してください（前の dump を使い回しません）'
+	}
+	# Git 管理外のフォルダでは git が stderr に書く。PowerShell 5.1 は Stop のままだとそれで止まるので、ここだけ Continue にする。
+	$ErrorActionPreference = 'Continue'
+	try { $insideGit = "$(git rev-parse --is-inside-work-tree 2>&1)"; $gitExit = $LASTEXITCODE }
+	finally { $ErrorActionPreference = 'Stop' }
+	# Git 管理外（not a git repository）以外の失敗では、管理対象かどうか分からないので止める。
+	if ($gitExit -ne 0 -and $insideGit -notmatch 'not a git repository') { throw "Git の判定に失敗しました: $insideGit" }
+	if ($gitExit -eq 0 -and $insideGit -eq 'true') {
+		git check-ignore -q (Join-Path $PWD 'data.sql')
+		if ($LASTEXITCODE -ne 0) { throw '作業フォルダが Git の管理対象です。v2/.migration-data/ などの Git 管理外のフォルダで実行してください' }
+	}
+}
 if ($env:PROD_DB_URL -notmatch $prodRef) { throw 'PROD_DB_URL が本番を指していません' }
 
 # psql にはパスワードを引数でなく PGPASSWORD で渡し、証明書を検証する。
@@ -21,8 +39,10 @@ function Invoke-Psql([string]$url, [string[]]$options) {
 }
 
 # 復元先が作ったばかりの空のプロジェクトであること（public の表、Auth のユーザー、Storage のバケット・ファイルがない）を確かめる。
+if (-not $DumpOnly) {
 $used = Invoke-Psql $env:REHEARSAL_DB_URL @('-A', '-t', '-c', "select (select count(*) from pg_tables where schemaname = 'public') + (select count(*) from auth.users) + (select count(*) from storage.buckets) + (select count(*) from storage.objects)")
 if ([int]$used -ne 0) { throw 'リハーサル用のプロジェクトに既存の表・ユーザー・ファイルがあります。作ったばかりの空のプロジェクトに復元してください' }
+}
 
 # supabase db dump は Docker 内の pg_dump を使うため、ホストの CA 証明書で検証できない。
 # --dry-run で同じ絞り込みの pg_dump スクリプトだけを出させ、ホストの pg_dump（Git Bash）で verify-full のまま実行する。
@@ -75,6 +95,16 @@ select format('do `$t`$ begin if not exists (select 1 from pg_policies where sch
 from pg_policies where schemaname in ('auth', 'storage')
 "@)
 $dumped = Get-Date
+
+if ($DumpOnly) {
+	# 保管先へ送る前後で照合できるよう、サイズと SHA-256 を残す。
+	$files = 'roles.sql', 'schema.sql', 'data.sql', 'managed-objects.sql'
+	$rows = foreach ($f in $files) { [pscustomobject]@{ name = $f; size = (Get-Item $f).Length; sha256 = (Get-FileHash $f -Algorithm SHA256).Hash.ToLower() } }
+	[IO.File]::WriteAllText("$PWD\manifest.json", (ConvertTo-Json @($rows)))
+	$rows | Format-Table -AutoSize
+	"dump: {0:n0} 秒" -f ($dumped - $start).TotalSeconds
+	return
+}
 
 Invoke-Psql $env:REHEARSAL_DB_URL @('--single-transaction', '-f', 'roles.sql', '-f', 'schema.sql', '-c', 'SET session_replication_role = replica', '-f', 'data.sql', '-c', 'SET session_replication_role = origin', '-f', 'managed-objects.sql')
 $restored = Get-Date

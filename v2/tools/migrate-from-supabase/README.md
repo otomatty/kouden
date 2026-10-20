@@ -33,7 +33,7 @@ bun run migrate prepare \
 
 上記は構造例であり、実行には移行対象の各テーブルが必要。空のテーブルも件数 `0` と空配列を含める。必要なキーは `auth.users`、`public.profiles`、`public.koudens`、`public.kouden_roles`、`public.kouden_members`、`public.kouden_purchases`、`public.relationships`、`public.kouden_entries`、`public.offerings`、`public.offering_allocations`、`public.offering_entries`、`public.offering_photos`、`public.telegrams`、`public.return_items`、`public.return_entry_records`、`public.return_record_items`。`auth.users` は `id`・`email`・`created_at`・`identities`（`provider`・`provider_id`）だけを使い、パスワードやセッションは不要。
 
-抽出は Codex の Supabase コネクタで単一の読み取り専用 SELECT として行う。CLI は抽出済みファイルを受け取る。移行時の最終抽出では旧アプリの書き込みを停止し、別途 DB 全体のバックアップを取得する。
+抽出は Codex の Supabase コネクタで単一の読み取り専用 SELECT として行う。CLI は抽出済みファイルを受け取る。移行時の最終抽出では旧アプリの書き込みを停止し、別途 DB 全体のバックアップを取得する。バックアップは、Git 管理外でアクセスを自分だけに絞った新しい空のフォルダ（`v2/.migration-data/final-backup-<日付>/` など）に移ってから、リポジトリの絶対パスで `& '<リポジトリ>\v2\tools\migrate-from-supabase\scripts\copy-legacy-db.ps1' -DumpOnly` を実行し（既存の dump があるフォルダや Git の管理対象のフォルダでは止まる）、復元に使う 4 ファイル（`roles.sql`・`schema.sql`・`data.sql`・`managed-objects.sql`）と `manifest.json`（サイズ・SHA-256）を作り、R2 の `kouden-legacy-archive` の `backups/` に 1 年間保管する。
 
 ### 返礼品画像・旧供物写真がある場合
 
