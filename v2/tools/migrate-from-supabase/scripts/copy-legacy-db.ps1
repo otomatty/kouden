@@ -14,7 +14,11 @@ if ($DumpOnly) {
 	if (@('roles.sql', 'schema.sql', 'data.sql', 'managed-objects.sql', 'manifest.json') | Where-Object { Test-Path $_ }) {
 		throw '-DumpOnly は新しい空の作業フォルダで実行してください（前の dump を使い回しません）'
 	}
-	if ((git rev-parse --is-inside-work-tree 2>$null) -eq 'true') {
+	# Git 管理外のフォルダでは git が stderr に書く。PowerShell 5.1 は Stop のままだとそれで止まるので、ここだけ Continue にする。
+	$ErrorActionPreference = 'Continue'
+	$insideGit = git rev-parse --is-inside-work-tree 2>$null
+	$ErrorActionPreference = 'Stop'
+	if ($insideGit -eq 'true') {
 		git check-ignore -q (Join-Path $PWD 'data.sql')
 		if ($LASTEXITCODE -ne 0) { throw '作業フォルダが Git の管理対象です。v2/.migration-data/ などの Git 管理外のフォルダで実行してください' }
 	}
