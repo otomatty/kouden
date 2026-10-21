@@ -58,7 +58,18 @@ GitHub Actions の「v2 Deploy」を手動で実行します（`staging` / `prod
 
 GitHub Environments に登録するシークレット: `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`、`GOOGLE_CLIENT_SECRET`、`SESSION_SECRET`、`STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`
 
-Stripe の Webhook は `https://<ドメイン>/webhooks/stripe` に、`checkout.session.completed`・`checkout.session.async_payment_succeeded`・`checkout.session.async_payment_failed`・`charge.refunded` を送ります。Cloudflare Access で保護しているホスト（staging）で決済を有効にするときは、`/webhooks/stripe` を別の Access アプリケーションにして Bypass（Everyone）のポリシーを付けます（Worker 側の除外だけでは Access を通れません）。
+Stripe の Webhook は `https://<ドメイン>/webhooks/stripe` に、`checkout.session.completed`・`checkout.session.async_payment_succeeded`・`checkout.session.async_payment_failed`・`charge.refunded` を送ります。
+
+### Cloudflare Access
+
+Zero Trust で次の Self-hosted アプリケーションを作り、運営者のメールアドレスだけを許可します。
+
+- 運営者画面: `admin.kouden.app` と `kouden-admin-staging.saedgewell.workers.dev`。AUD は `apps/admin/deploy.settings.ts` の `access` に設定する
+- staging の利用者向けアプリ: `kouden-app-staging.saedgewell.workers.dev`。AUD は `apps/app/deploy.settings.ts` の staging の `access` に設定する
+
+チームのドメイン（`<team>.cloudflareaccess.com`）も同じ `access` に設定します。設定が欠けていると `deployBlockers` がデプロイを止めます。
+
+staging で決済を有効にするときは、`kouden-app-staging.saedgewell.workers.dev/webhooks/stripe` を別のアプリケーションにして Bypass（Everyone）のポリシーを付けます（Worker 側の除外だけでは Access を通れません）。
 
 ## `cf`（ベータ）の注意点
 
