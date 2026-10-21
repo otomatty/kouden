@@ -3,9 +3,8 @@ import type { FC } from "hono/jsx";
 import type { SessionUser } from "../../auth/session-store.ts";
 import type { Transfer } from "../../kouden/members.ts";
 import type { KoudenListItem } from "../../kouden/store.ts";
-import { Field, FormAlert, type FormValues, Input } from "../components/form.tsx";
+import { Field, FormAlert, type FormValues, Input, ui } from "@kouden/ui";
 import { formatDateTime } from "../format.ts";
-import { ui } from "../ui.ts";
 
 /** 香典帳一覧（E2-3）。アーカイブ済みは別タブ（E2-4） */
 export const DashboardPage: FC<{
@@ -28,7 +27,7 @@ export const DashboardPage: FC<{
 			</p>
 		)}
 		{transfers.map((t) => (
-			<p role="status" class="rounded-lg border-2 border-accent bg-surface px-4 py-3 text-sm">
+			<p role="status" class={ui.noticeEmphasis}>
 				{t.fromName} さんから「{t.koudenTitle}」のオーナーの譲渡を依頼されています。{" "}
 				<a href={`/k/${t.koudenId}/members`} class={ui.link}>
 					確認する

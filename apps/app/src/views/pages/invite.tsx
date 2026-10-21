@@ -1,7 +1,7 @@
 import { ROLES } from "@kouden/domain";
 import type { Child, FC } from "hono/jsx";
 import type { InvitationState, InvitationView } from "../../kouden/members.ts";
-import { ui } from "../ui.ts";
+import { ui } from "@kouden/ui";
 
 const STATE_MESSAGES: Record<Exclude<InvitationState, "valid">, string> = {
 	revoked: "この招待リンクは無効になっています。",

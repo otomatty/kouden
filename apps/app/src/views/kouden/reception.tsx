@@ -2,17 +2,8 @@ import { ATTENDANCES, type FieldErrors, GIFT_KINDS, type GiftKind } from "@koude
 import type { Child, FC } from "hono/jsx";
 import type { KoudenContext } from "../../kouden/store.ts";
 import type { LedgerEvent, LedgerRelationship, PersonView } from "../../ledger/types.ts";
-import {
-	Field,
-	FormAlert,
-	type FormValues,
-	Hidden,
-	Input,
-	Select,
-	Textarea,
-} from "../components/form.tsx";
+import { Field, FormAlert, type FormValues, Hidden, Input, Select, Textarea, ui } from "@kouden/ui";
 import { yen } from "../format.ts";
-import { ui } from "../ui.ts";
 import { PersonCandidates } from "./person-candidates.tsx";
 
 /** 登録直後に大きく表示する内容（E4-1） */
@@ -50,7 +41,7 @@ export const ReceptionPage: FC<ReceptionProps> = (props) => {
 						aria-current={e.id === props.eventId ? "page" : undefined}
 						class={`rounded-full border px-4 py-1.5 text-sm ${
 							e.id === props.eventId
-								? "border-accent bg-accent text-white"
+								? "border-accent bg-accent text-surface"
 								: "border-line bg-surface text-ink hover:bg-paper"
 						}`}
 					>
@@ -102,7 +93,7 @@ export const ReceptionPanel: FC<ReceptionProps> = ({
 		<div id="reception-panel" class="space-y-4">
 			{/* 読み上げは画面の上の SrStatus が行う（receptionAnnouncement） */}
 			{done && (
-				<div class="rounded-xl border-2 border-accent bg-surface p-5 text-center shadow-sm">
+				<div class={`${ui.cardEmphasis} text-center shadow-sm`}>
 					<p class="text-sm text-muted">{done.eventName} の受付番号</p>
 					<p class="text-7xl leading-tight font-bold tabular-nums text-accent">
 						{done.receiptNo ?? "—"}
@@ -143,7 +134,7 @@ export const ReceptionPanel: FC<ReceptionProps> = ({
 									checked={kind === value}
 									class="peer sr-only"
 								/>
-								<span class="block cursor-pointer rounded-lg border border-line px-4 py-2 text-sm peer-checked:border-accent peer-checked:bg-accent peer-checked:text-white peer-focus-visible:outline-2 peer-focus-visible:outline-accent">
+								<span class="block cursor-pointer rounded-lg border border-line px-4 py-2 text-sm peer-checked:border-accent peer-checked:bg-accent peer-checked:text-surface peer-focus-visible:outline-2 peer-focus-visible:outline-accent">
 									{label}
 								</span>
 							</label>

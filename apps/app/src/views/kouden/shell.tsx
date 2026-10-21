@@ -2,7 +2,7 @@ import { ROLES } from "@kouden/domain";
 import type { Child, FC } from "hono/jsx";
 import type { KoudenContext } from "../../kouden/store.ts";
 import type { Caller } from "../../ledger/types.ts";
-import { ui } from "../ui.ts";
+import { ui } from "@kouden/ui";
 
 export type KoudenTab =
 	| "top"

@@ -1,6 +1,6 @@
 import { FREE_GIFT_LIMIT } from "@kouden/domain";
 import type { FC } from "hono/jsx";
-import { ui } from "../ui.ts";
+import { ui } from "@kouden/ui";
 
 const FAQ = [
 	{

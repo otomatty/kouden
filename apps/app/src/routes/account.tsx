@@ -6,7 +6,7 @@ import { log } from "../lib/logger.ts";
 import { clearSessionCookie, requireUser } from "../middleware/session.ts";
 import type { AppEnv } from "../types.ts";
 import type { FieldErrors } from "@kouden/domain";
-import type { FormValues } from "../views/components/form.tsx";
+import type { FormValues } from "@kouden/ui";
 import { Layout } from "../views/layout.tsx";
 import { AccountDeletedPage, AccountPage } from "../views/pages/account.tsx";
 import { type Ctx, formValues } from "./helpers.tsx";

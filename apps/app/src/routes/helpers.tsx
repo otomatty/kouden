@@ -4,7 +4,7 @@ import type { Child } from "hono/jsx";
 import { ledgerFor } from "../ledger/client.ts";
 import type { LedgerError, LedgerResult } from "../ledger/types.ts";
 import type { AppEnv } from "../types.ts";
-import type { FormValues } from "../views/components/form.tsx";
+import type { FormValues } from "@kouden/ui";
 import { type KoudenTab, KoudenShell } from "../views/kouden/shell.tsx";
 import { Layout } from "../views/layout.tsx";
 import { ErrorPage } from "../views/pages/error.tsx";

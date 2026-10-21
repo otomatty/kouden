@@ -1,17 +1,26 @@
-/* 利用者向けアプリ（apps/app）と運営者画面（apps/admin）で共有する色・フォント */
+/*
+ * 利用者向けアプリ（apps/app）と運営者画面（apps/admin）で共有する色・フォント。
+ * 色は墨と白のモノトーン（和色）で、画面からはここの役割名（ink・paper など）だけを使う。
+ * Tailwind の既定の色（gray-500・white など）や色コードを画面に直接書かない。
+ */
 @theme {
 	--font-sans:
 		"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", Meiryo, system-ui,
 		sans-serif;
 
-	--color-paper: #f7f5f0;
-	--color-surface: #ffffff;
-	--color-ink: #23262b;
-	--color-muted: #6b6f76;
-	--color-line: #e2ded4;
-	/* 紫紺 */
-	--color-accent: #3b3a6b;
-	--color-accent-strong: #2d2c55;
+	/* 白練（しろねり）: ページの地 */
+	--color-paper: #f3f3f2;
+	/* 胡粉（ごふん）: カード・入力欄の面、黒地の上の文字 */
+	--color-surface: #fffffc;
+	/* 墨: 本文 */
+	--color-ink: #2b2b2b;
+	/* 鈍色（にびいろ）: 補足の文字。白練の上でもコントラスト比 4.5 以上になるよう少し濃くしている */
+	--color-muted: #666666;
+	/* 白鼠（しろねず）: 罫線・枠 */
+	--color-line: #dcdddd;
+	/* 漆黒: 主ボタン・選択中・フォーカス */
+	--color-accent: #1a1a1a;
+	/* 臙脂（えんじ）: エラーと削除。見落とすと困るものだけはモノトーンの例外にする */
 	--color-danger: #9b2c2c;
 }
 

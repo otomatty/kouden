@@ -2,17 +2,8 @@ import { type FieldErrors, formatYen, GIFT_KINDS, personLabel } from "@kouden/do
 import type { FC } from "hono/jsx";
 import type { KoudenContext } from "../../kouden/store.ts";
 import type { History, LedgerRelationship, PersonDetail, PersonView } from "../../ledger/types.ts";
-import {
-	Field,
-	FormAlert,
-	type FormValues,
-	Hidden,
-	Input,
-	Select,
-	Textarea,
-} from "../components/form.tsx";
+import { Field, FormAlert, type FormValues, Hidden, Input, Select, Textarea, ui } from "@kouden/ui";
 import { yen } from "../format.ts";
-import { ui } from "../ui.ts";
 import { LiveRegion } from "./shell.tsx";
 import { type ConflictField, ConflictDiff } from "../components/conflict.tsx";
 import { HistoryList } from "../components/history.tsx";

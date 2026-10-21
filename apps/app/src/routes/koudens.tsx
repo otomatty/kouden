@@ -30,7 +30,7 @@ import { CALLER_HEADER, type LedgerResult, type PersonView } from "../ledger/typ
 import { koudenAccess, writeRateLimit } from "../middleware/kouden-access.tsx";
 import { requireUser } from "../middleware/session.ts";
 import type { AppEnv } from "../types.ts";
-import type { FormValues } from "../views/components/form.tsx";
+import type { FormValues } from "@kouden/ui";
 import { GiftEditPage, giftFormValues } from "../views/kouden/gift-edit.tsx";
 import { GiftResults, GiftsPage } from "../views/kouden/gifts.tsx";
 import { PersonCandidates } from "../views/kouden/person-candidates.tsx";

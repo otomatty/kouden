@@ -77,6 +77,10 @@
     },
     "packages/ui": {
       "name": "@kouden/ui",
+      "dependencies": {
+        "@kouden/domain": "workspace:*",
+        "hono": "4.13.13",
+      },
       "devDependencies": {
         "typescript": "7.0.2",
       },

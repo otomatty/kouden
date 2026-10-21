@@ -3,8 +3,7 @@ import type { FC } from "hono/jsx";
 import { returnItemImageUrl } from "../../kouden/files.ts";
 import type { KoudenContext } from "../../kouden/store.ts";
 import type { Caller, ReturnItemView, ReturnRuleView } from "../../ledger/types.ts";
-import { Field, Hidden, Input, Select, Textarea } from "../components/form.tsx";
-import { ui } from "../ui.ts";
+import { Field, Hidden, Input, Select, Textarea, ui } from "@kouden/ui";
 import { MoveButtons } from "./settings.tsx";
 import { LiveRegion } from "./shell.tsx";
 

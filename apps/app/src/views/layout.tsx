@@ -1,7 +1,7 @@
 import { raw } from "hono/html";
 import type { Child, FC } from "hono/jsx";
 import type { SessionUser } from "../auth/session-store.ts";
-import { ui } from "./ui.ts";
+import { ui } from "@kouden/ui";
 
 const SITE_NAME = "香典帳";
 
@@ -40,7 +40,8 @@ export const Layout: FC<{
 						"葬儀の受付から香典返しまで。香典・供物・弔電をスマホで記録し、家族とリアルタイムに共有できる香典帳アプリです。"
 					}
 				/>
-				<meta name="theme-color" content="#3b3a6b" />
+				{/* theme.css の --color-ink */}
+				<meta name="theme-color" content="#2b2b2b" />
 				{/* ファビコンは未作成。/favicon.ico への 404 を避ける */}
 				<link rel="icon" href="data:," />
 				<link rel="stylesheet" href={`/assets/app.css?v=${__ASSET_VERSION__}`} />

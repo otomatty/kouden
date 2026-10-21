@@ -1,6 +1,5 @@
 import type { FC } from "hono/jsx";
-import { ui } from "../ui.ts";
-import type { FormValues } from "./form.tsx";
+import { type FormValues, ui } from "@kouden/ui";
 
 export interface ConflictField {
 	name: string;
@@ -29,12 +28,12 @@ export const ConflictDiff: FC<{
 		(f) => (mine[f.name]?.trim() ?? "") !== (latest[f.name]?.trim() ?? ""),
 	);
 	return (
-		<div role="alert" class="space-y-3 rounded-lg border border-danger/40 bg-danger/5 p-4 text-sm">
-			<p class="font-medium text-danger">
+		<div role="alert" class={`${ui.alert} space-y-3`}>
+			<p class="font-medium">
 				開いている間に他の人がこの記録を更新しました。違いを確認して、自分の入力で上書きするか、破棄してください。
 			</p>
 			{changed.length > 0 ? (
-				<table class={`${ui.table} bg-surface`}>
+				<table class={`${ui.table} bg-surface text-ink`}>
 					<thead>
 						<tr>
 							<th class={ui.th} scope="col">
@@ -61,9 +60,9 @@ export const ConflictDiff: FC<{
 					</tbody>
 				</table>
 			) : (
-				<p>入力内容と最新の内容に違いはありません。</p>
+				<p class="text-ink">入力内容と最新の内容に違いはありません。</p>
 			)}
-			<p>
+			<p class="text-ink">
 				下の「保存する」で自分の入力を保存します。{" "}
 				<a href={discardHref} class={ui.link}>
 					自分の入力を破棄して最新の内容を表示

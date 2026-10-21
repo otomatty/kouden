@@ -11,7 +11,7 @@ import type { FC } from "hono/jsx";
 import { parseDiff } from "../../ledger/diff.ts";
 import type { History } from "../../ledger/types.ts";
 import { formatDateTime } from "../format.ts";
-import { ui } from "../ui.ts";
+import { ui } from "@kouden/ui";
 
 const FIELD_LABELS: Record<string, string> = {
 	event_id: "行事",

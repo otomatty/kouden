@@ -1,6 +1,6 @@
 import { FREE_GIFT_LIMIT, PAID_PRICE_JPY, formatYen } from "@kouden/domain";
 import type { FC } from "hono/jsx";
-import { ui } from "../ui.ts";
+import { ui } from "@kouden/ui";
 
 const FEATURES = [
 	{
