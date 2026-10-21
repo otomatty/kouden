@@ -1,0 +1,15 @@
+# 公開済みの履歴にある gitleaks の検出（2026-10-21 に確認）。1 行 = 1 件（コミット:ファイル:ルール:行）
+# 履歴は書き換えず、本物の鍵なら無効にして作り直す
+
+# AGENTS.md / legacy/AGENTS.md: Stripe のテストモードの鍵（sk_test_）の記載
+c289afbfc18b28e59be9c270a83733c8296acc16:AGENTS.md:stripe-access-token:961
+061b39e74bace962355b32ec96249d7fa683d7c2:AGENTS.md:stripe-access-token:961
+22c0783d28a11f5a161440429d852104d775b41d:AGENTS.md:stripe-access-token:961
+0e32c38f5e6ad50298fdc442cb311ee682d7197e:legacy/AGENTS.md:stripe-access-token:260
+bc1a11fd897478fa1b1168d2cc54aa0bbd5f88a7:legacy/AGENTS.md:stripe-access-token:260
+
+# Slack の Webhook URL（GitHub のシークレットスキャンで解決済み）
+3f174c46a291f704ea3519601bcb29771db17097:docs/security/environment-variables.md:slack-webhook-url:32
+
+# 旧アプリの JWT
+909efcbeb7eb28848c2ba5e34c93554a8373c9f1:.env.example:jwt:6

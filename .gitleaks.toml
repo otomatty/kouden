@@ -1,0 +1,10 @@
+# gitleaks（Secrets ワークフロー）の設定。既定のルールに誤検知の許可リストを足す
+# 検査済みの個々の検出は .gitleaksignore に書く
+[extend]
+useDefault = true
+
+# R2 のオブジェクトキー（koudens/...）は API キーではない
+[[allowlists]]
+description = "R2 のオブジェクトキー"
+targetRules = ["generic-api-key"]
+regexes = ['''^koudens/''']
