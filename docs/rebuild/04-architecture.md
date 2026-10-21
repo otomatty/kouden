@@ -56,7 +56,7 @@ flowchart TB
 Bun workspaces によるモノレポ。
 
 ```
-v2/                              # 切り替えまでの間、旧実装と同居させる（ADR-T13）
+kouden/                          # リポジトリの直下（旧実装は legacy/。ADR-T13）
 ├── apps/
 │   ├── app/                     # kouden-app Worker
 │   │   ├── cloudflare.config.ts # Worker の設定（mode ごと）
@@ -360,9 +360,9 @@ class CloudflareMailer implements Mailer { /* env.EMAIL.send(...) */ }
 環境は `cf` の mode で切り替える（`--mode staging` など）。Worker 名・ドメイン・D1 名は `deploy.settings.ts` に集約している。DO の名前空間は Worker ごとに独立するため、Worker 名を分ければ環境ごとに自動で分離される。
 
 **GitHub Actions**
-1. `v2-ci.yml`（PR と `main` への push、`v2/` 配下の変更時）: `oxfmt --check` → `oxlint` → 型チェック → `vitest`（`@cloudflare/vitest-plugin` で D1・DO を含めて Workers ランタイム上で実行）→ `cf build`
+1. `v2-ci.yml`（PR と `main` への push。`legacy/` だけの変更では動かない）: `oxfmt --check` → `oxlint` → 型チェック → `vitest`（`@cloudflare/vitest-plugin` で D1・DO を含めて Workers ランタイム上で実行）→ `cf build`
 2. `v2-deploy.yml`（手動実行。`staging` / `production` を選ぶ）: 設定の検査（app・admin）→ テスト → D1 マイグレーション → `cf deploy --secrets-file` → （初回のみ）D1 マイグレーション → 運営者画面の `cf deploy`。GitHub の Environments でシークレットと承認ルールを管理する
-3. `v2-ci.yml` の `e2e` ジョブ（同じ条件）: `v2/e2e` の Playwright を実行する。ローカルの `cf dev`（利用者向けアプリと運営者画面）を専用の保存先（`e2e/.state`）で起動し、D1 にテスト用の利用者とセッションを直接入れて、Google のログインを通さずにログイン済みとして操作する。受付・一覧・行内編集のキーボード操作、招待とリアルタイム反映（2 つのブラウザ）、香典返し・印刷・Excel、アカウント、運営者画面を通し、各画面を axe で検査する。ステージングは Access と Google のログインがあるため、デプロイ後の E2E は行わない
+3. `v2-ci.yml` の `e2e` ジョブ（同じ条件）: `e2e/` の Playwright を実行する。ローカルの `cf dev`（利用者向けアプリと運営者画面）を専用の保存先（`e2e/.state`）で起動し、D1 にテスト用の利用者とセッションを直接入れて、Google のログインを通さずにログイン済みとして操作する。受付・一覧・行内編集のキーボード操作、招待とリアルタイム反映（2 つのブラウザ）、香典返し・印刷・Excel、アカウント、運営者画面を通し、各画面を axe で検査する。ステージングは Access と Google のログインがあるため、デプロイ後の E2E は行わない
 
 ## 11. 運用
 

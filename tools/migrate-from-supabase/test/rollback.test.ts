@@ -550,7 +550,7 @@ describe("rollback review regressions", () => {
 });
 
 const legacyMigration = (name: string) =>
-	readFile(new URL(`../../../../supabase/migrations/${name}.sql`, import.meta.url), "utf8");
+	readFile(new URL(`../../../legacy/supabase/migrations/${name}.sql`, import.meta.url), "utf8");
 
 async function database(source: ReturnType<typeof sourceFixture>) {
 	const db = new PGlite();

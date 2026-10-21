@@ -1,266 +1,87 @@
-あなたは優秀なAIコーディングエージェントです。
-以下のガイドラインに則って、香典帳（Kouden）プロジェクトの実装作業を行なってください。
-
----
-
-## v2（Cloudflare 版）について
-
-リポジトリ直下の Next.js + Supabase 実装は、Cloudflare Workers 版へ全面的に作り直し中です。
-新しい実装は `v2/`（独立した Bun ワークスペース）にあり、設計は `docs/rebuild/` にあります。
-`v2/` の作業では、以下の旧実装向けのガイドラインではなく `v2/README.md` と `docs/rebuild/` に従ってください。
+あなたは優秀な AI コーディングエージェントです。
+以下のガイドラインに則って、香典帳（Kouden）プロジェクトの実装作業を行ってください。
 
 ---
 
 ## 概要
 
-香典帳（Kouden）は、葬儀・法要における香典・供物の記録・管理を行う **Next.js 15 App Router** の Web アプリケーションです。
+香典帳（Kouden）は、葬儀・法要における香典・供物の記録・管理を行う Web アプリケーションです。
+Cloudflare Workers 上で動き、https://kouden.app で公開しています（2026-10-21）。
 
-本リポジトリは **Server Actions 中心のモノリス構成**です。ビジネスロジックは `src/app/_actions` にドメイン単位で配置し、UI は `src/app` のルートグループと `src/components` で構成します。
-
-詳細なコーディング規約は `.cursor/rules/` 配下のルールファイルを参照してください。
+- 開発・コマンド・デプロイの手順: [`README.md`](README.md)
+- 設計（要件・ドメインモデル・アーキテクチャ・決定事項）: [`docs/rebuild/`](docs/rebuild/README.md)
+- 旧アプリ（Next.js + Supabase）: [`legacy/`](legacy/)。停止済みで、参照用に残している。保守・CI・デプロイはしないので、明示的に頼まれない限り変更しない
 
 ---
 
 ## 技術スタック
 
-| カテゴリ | 技術 |
-|---------|------|
-| フレームワーク | Next.js 15 (App Router) |
-| 言語 | TypeScript |
-| スタイル | Tailwind CSS, shadcn/ui |
-| 状態管理 | Jotai (`src/store`) |
-| バックエンド | Supabase (PostgreSQL) |
-| バリデーション | Zod (`src/schemas`) |
-| ランタイム / パッケージマネージャー | Bun |
-| Linter / Formatter | Biome |
-| テスト | Vitest (単体), Playwright (E2E) |
-| ホスティング | Vercel |
+| カテゴリ     | 技術                                                                                                   |
+| ------------ | ------------------------------------------------------------------------------------------------------ |
+| ランタイム   | Cloudflare Workers（D1 / Durable Objects / R2 / Email Service）                                        |
+| CLI・ビルド  | `cf`（ベータ）+ Vite                                                                                   |
+| 画面         | Hono JSX（サーバー側で HTML 生成）+ htmx + Tailwind CSS                                                |
+| 認証         | Google OIDC（自前実装）+ D1 のセッション。運営者画面は Cloudflare Access                               |
+| 決済         | Stripe（SDK を使わず REST API を呼ぶ）                                                                 |
+| 言語・ツール | TypeScript / Bun（ワークスペース）/ Oxlint / oxfmt / Vitest（`@cloudflare/vitest-plugin`）/ Playwright |
 
 ---
 
-## ディレクトリ構造
+## ディレクトリ
 
-```plaintext
-.
-├── database/                    # PostgreSQL テーブル定義・マイグレーション
-│   ├── *.sql                    # テーブル定義 (テーブル名.sql)
-│   └── migrations/              # マイグレーション SQL
-│
-├── docs/                        # プロジェクト開発ドキュメント
-│   ├── database/                # DB 構造調査クエリ
-│   ├── developments/            # 開発メモ・設計資料
-│   └── security/                # セキュリティ関連
-│
-├── e2e/                         # Playwright E2E テスト
-│
-├── src/
-│   ├── app/                     # Next.js App Router
-│   │   ├── (protected)/         # 認証必須ページ
-│   │   ├── (public)/            # 公開ページ
-│   │   ├── (system)/            # 管理画面
-│   │   ├── _actions/            # Server Actions (ドメイン別)
-│   │   │   ├── koudens/         # 香典帳 CRUD
-│   │   │   ├── return-records/  # お返し記録
-│   │   │   ├── offerings/       # 供物
-│   │   │   └── ...
-│   │   └── api/                 # API Routes (複雑な API)
-│   │
-│   ├── components/              # React コンポーネント
-│   │   ├── ui/                  # shadcn/ui コンポーネント
-│   │   └── custom/              # カスタム共通コンポーネント
-│   │
-│   ├── schemas/                 # Zod バリデーションスキーマ
-│   ├── types/                   # TypeScript 型定義
-│   ├── lib/                     # 共通ライブラリ (Supabase クライアント, エラー処理等)
-│   ├── hooks/                   # カスタムフック
-│   ├── utils/                   # ユーティリティ関数
-│   ├── store/                   # Jotai atoms (クライアント状態)
-│   ├── config/                  # アプリ設定
-│   ├── context/                 # React Context
-│   └── docs/                    # ユーザー向けドキュメント (マニュアル等)
-│
-└── .cursor/rules/               # AI・開発者向けコーディングルール
-```
-
----
-
-## レイヤーの責務
-
-### `src/app/_actions` — Server Actions
-
-- ビジネスロジックの中心。シンプルな CRUD はここに配置する
-- ドメイン単位でサブディレクトリに分割する (例: `koudens/`, `return-records/`)
-- ファイル先頭に `"use server"` を記述する
-- Supabase クライアントは `@/lib/supabase/server` または `@/lib/supabase/admin` から取得する
-- エラーは `@/lib/errors` の `ActionResult` / `withActionResult` パターンで返す
-- テストは `__tests__/` または同一ディレクトリの `*.test.ts` に配置する
-
-### `src/app/api` — API Routes
-
-- Webhook、外部連携、ストリーミングなど Server Actions に不向きな処理を担当する
-- Stripe Webhook、CSRF トークン発行、Cron ジョブ等がここに配置される
-
-### `src/schemas` — バリデーション
-
-- Zod スキーマをドメイン単位で定義する
-- フォーム入力のバリデーションと型推論 (`z.infer`) に使用する
-
-### `src/lib` — 共通ライブラリ
-
-- Supabase クライアント (`lib/supabase/`)
-- エラーハンドリング (`lib/errors.ts`)
-- ロガー (`lib/logger.ts`)
-- セキュリティ関連ユーティリティ
-
-### `src/components` — UI コンポーネント
-
-- `components/ui/`: shadcn/ui ベースのプリミティブ
-- `components/custom/`: プロジェクト固有の再利用コンポーネント
-- ページ固有のコンポーネントは `src/app/(protected)/<route>/_components/` にコロケーションする
-
-### `src/store` — クライアント状態
-
-- Jotai atoms で UI 状態を管理する
-- サーバー状態は Supabase 経由で取得し、必要に応じてクライアントでキャッシュする
-
-### `database/` — データベース定義
-
-- テーブル定義は `テーブル名.sql` 形式
-- RLS (Row Level Security) ポリシーを必ず設定する
-- マイグレーションは `database/migrations/` に配置する
+| パス                           | 内容                                                                                      |
+| ------------------------------ | ----------------------------------------------------------------------------------------- |
+| `apps/app/`                    | 利用者向け Worker（`kouden-app`）と香典帳の Durable Object（`KoudenLedger`、1 冊 = 1 DO） |
+| `apps/admin/`                  | 運営者画面（`kouden-admin`）。Access の背後に置き、D1 だけを使う                          |
+| `packages/domain/`             | 業務ルール（入力検証・権限・金額の按分など。純粋な TypeScript）                           |
+| `packages/ui/`                 | app と admin で共有するクラス名と色・フォント                                             |
+| `tools/migrate-from-supabase/` | 旧アプリのデータの変換・投入・照合 CLI（移行は 2026-10-20 に完了）                        |
+| `e2e/`                         | Playwright の E2E とアクセシビリティの検査                                                |
+| `docs/rebuild/`                | 設計ドキュメント                                                                          |
+| `legacy/`                      | 旧アプリ（参照用）                                                                        |
 
 ---
 
 ## コーディング原則
 
-### ロジックと UI の分離
-
-- コンポーネントは表示に専念し、データ操作は Server Actions に委譲する
-- 共通ロジックは `src/hooks` (React 依存) または `src/utils` (純粋関数) に配置する
-
-### Server Actions と API Routes の使い分け
-
-| 用途 | 配置先 |
-|------|--------|
-| フォーム送信、CRUD | `src/app/_actions` |
-| Webhook、外部 API 連携 | `src/app/api` |
-| 認証が必要な操作 | Server Actions 内でセッションから `auth.getUser()` で取得 |
-
-### エラーハンドリング
-
-- Server Actions は `ActionResult<T>` 型で成功/失敗を返す
-- クライアントから渡された `userId` は信用せず、必ずセッションから取得する
-- Supabase エラーは `KoudenError` でラップし、ユーザーにわかりやすいメッセージを返す
-
-### 認証・認可
-
-- 認証: Supabase Auth (Google OAuth)
-- 認可: RLS ポリシー + アプリ層の権限チェック (`permissions.ts`)
-- 管理画面: `(system)/admin` ルートグループ
+- 設計の決定は `docs/rebuild/01-decisions.md`（ADR）に従う。方針を変える場合は ADR を更新する
+- 権限は `packages/domain/src/permissions.ts` の `can(role, action)` で判定し、香典帳への到達は D1 のメンバーシップで確かめる（D1 / DO はブラウザに公開しないので RLS はない）
+- 環境ごとの設定（Worker 名・ドメイン・D1・Access など）は `apps/*/deploy.settings.ts` に集約する。`deployBlockers` が仮の値や危険な設定のデプロイを止める
+- DO のスキーマは `apps/app/src/ledger/schema.ts` の `MIGRATIONS` の末尾に追加する（適用済みの要素は変更しない）。D1 は `apps/app/migrations/` に連番で追加する
+- 本番には実際の利用者のデータがある。DO・D1 の構造を変える変更は、staging で確かめてから本番にデプロイする
+- 秘密情報（API キー・トークン・接続文字列）をコード・ログ・Issue・PR に書かない
 
 ---
 
-## テスト
+## 検証
 
-| 種類 | フレームワーク | 配置場所 |
-|------|--------------|---------|
-| 単体テスト | Vitest | 対象ファイルと同ディレクトリの `*.test.ts` |
-| E2E テスト | Playwright | `e2e/*.spec.ts` |
-
-- テストは Arrange / Act / Assert パターンで記述する
-- Server Actions のテストでは Supabase クライアントをモックする
-- 実行: `bun run test -- --run`
-
-詳細は `.cursor/rules/testings-guideline.mdc` を参照。
-
----
-
-## AI エージェントへの作業指示
-
-機能追加・修正時は、以下の手順で作業してください。
-
-### 1. 影響範囲の特定
-
-変更対象のドメインに対応する `_actions` サブディレクトリを特定する。
-
-```
-例: お返し記録の修正 → src/app/_actions/return-records/
-例: 香典帳 CRUD → src/app/_actions/koudens/
-```
-
-### 2. 関連ファイルの確認
-
-| 変更内容 | 確認・更新するファイル |
-|---------|---------------------|
-| バリデーション追加 | `src/schemas/<domain>.ts` |
-| 型定義追加 | `src/types/<domain>.ts` |
-| DB スキーマ変更 | `database/<table>.sql`, `database/migrations/` |
-| UI 変更 | `src/app/(protected)/<route>/`, `src/components/` |
-| クライアント状態 | `src/store/<domain>.ts` |
-
-### 3. 実装
-
-1. 必要に応じて Zod スキーマ・型定義を追加/更新
-2. Server Action を実装 (既存パターンに合わせる)
-3. UI コンポーネントを更新
-4. テストを追加・更新
-
-### 4. 検証
+リポジトリの直下で実行する。
 
 ```bash
-export PATH="$HOME/.bun/bin:$PATH"
-bun run test -- --run    # 単体テスト
-bun run build            # ビルド確認
+bun install
+bun run fmt:check
+bun run lint
+bun run typecheck
+bun run test
 ```
 
-### コミットメッセージ
+E2E は `bun run e2e`（詳しくは README）。CI（`.github/workflows/v2-ci.yml`）も同じ検査を行う。
 
-Conventional Commits 形式を使用する。詳細は `.cursor/rules/commit-message-rule.mdc` を参照。
+## デプロイ
+
+GitHub Actions の「v2 Deploy」を手動で実行する（`staging` / `production`）。production は承認と `main` ブランチが必要。
+
+## コミットメッセージ
+
+Conventional Commits 形式を使用する。
 
 ```
-feat(koudens): 香典帳の複製機能を追加
-fix(return-records): 一括更新時のバリデーションエラーを修正
-docs: AGENTS.md のアーキテクチャ記述を更新
+feat(app): 供物の写真を添付できるようにする
+fix(admin): 検索結果の並び順を直す
+docs: AGENTS.md を更新する
 ```
 
----
+## Windows での注意
 
-## 関連ルールファイル
-
-| ルール | 内容 |
-|--------|------|
-| `.cursor/rules/project-stack.mdc` | 技術スタック |
-| `.cursor/rules/logic-style.mdc` | Server Actions / API Routes の配置 |
-| `.cursor/rules/components-style.mdc` | コンポーネントのコーディングスタイル |
-| `.cursor/rules/database-rules.mdc` | DB 設計・RLS |
-| `.cursor/rules/error-handling-guidelines.mdc` | エラーハンドリング |
-| `.cursor/rules/testings-guideline.mdc` | テスト方針 |
-| `.cursor/rules/commit-message-rule.mdc` | コミットメッセージ規約 |
-
----
-
-## Cursor Cloud specific instructions
-
-### 概要
-
-香典帳（Kouden）は葬儀・法要における香典管理のための Next.js 15 Webアプリケーションです。ランタイム/パッケージマネージャーに Bun、バックエンドに Supabase、リンターに Biome を使用しています。
-
-### コマンド一覧
-
-| タスク | コマンド |
-|--------|---------|
-| 依存関係インストール | `bun install` |
-| 開発サーバー起動 | `bun dev`（ポート 8788） |
-| ビルド | `bun run build` |
-| リント | `bun run lint`（Biome） |
-| ユニットテスト | `bun run test -- --run` |
-| Storybook | `bun run storybook`（ポート 6006） |
-
-### 環境セットアップの注意点
-
-- Bun が `$PATH` に含まれている必要があります。アップデートスクリプトにより `~/.bun/bin/bun` にインストールされます。コマンド実行前に `export PATH="$HOME/.bun/bin:$PATH"` を実行してください。
-- `.env.local` ファイルが必要です。`.env.example` からコピーし、最低限 `CSRF_SECRET`（`openssl rand -hex 32` で生成）、`STRIPE_SECRET_KEY`（プレースホルダー `sk_test_placeholder` でもビルド可能）、`GOOGLE_SERVICE_ACCOUNT_EMAIL` を設定してください。また、README.md に記載の Supabase 認証情報（`NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`、`SUPABASE_SECRET_KEY`）も設定が必要です。
-- `bun run lint` はプロジェクト既存のリント違反（約441件）により終了コード 1 で終了します。内訳は `noConsoleLog` や命名規則に関する警告・エラーです。これらは既知の技術的負債であり、明示的に依頼されない限り修正不要です。終了コード 1 は想定通りの動作です。
-- ユニットテストは Vitest で実行します（`bun run test -- --run`）。全366テストがパスします。`survey-modal` テストは設計上スキップされています。
-- Supabase 環境変数は必須です。`NEXT_PUBLIC_SUPABASE_URL` と `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` が未設定の場合、`src/lib/supabase/middleware.ts` がモジュールロード時に throw するため、アプリが正しく起動・動作しません。プレースホルダー値でもビルドと起動は可能ですが、認証やデータ機能には有効な認証情報が必要です。
-- `UPSTASH_REDIS_REST_URL` または `UPSTASH_REDIS_REST_TOKEN` が未設定の場合、もしくは Upstash への通信が失敗した場合、レート制限はインメモリ `Map` にフォールバックします。ローカル開発では問題ありません。
+- `apps/app` の `bun run dev` は Windows の bun で `&` を使えず失敗する。`bun run serve` で起動する
+- PowerShell 5.1 でスクリプトを書くときは UTF-8（BOM 付き）で保存し、秘密は `Read-Host -AsSecureString` で入力する

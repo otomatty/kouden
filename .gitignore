@@ -13,9 +13,16 @@ apps/*/public/assets/app.css
 # ライブラリからコピーするファイル（scripts/copy-vendor.ts）
 apps/*/public/assets/htmx.min.js
 apps/*/public/assets/admin.css
-# E2E（v2/e2e）の保存先と結果
+# E2E（e2e/）の保存先と結果
 e2e/.state/
 e2e/test-results/
 e2e/playwright-report/
 # Supabase の抽出データ（個人情報を含むため Git に追加しない）
 .migration-data/
+# 旧アプリ（legacy/）の生成物
+legacy/.next/
+legacy/out/
+legacy/next-env.d.ts
+legacy/.vercel
+legacy/coverage/
+*.tsbuildinfo

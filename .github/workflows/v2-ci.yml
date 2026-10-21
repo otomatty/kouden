@@ -2,21 +2,15 @@ name: v2 CI
 
 on:
   pull_request:
-    paths:
-      - "v2/**"
-      - ".github/workflows/v2-*.yml"
+    paths-ignore:
+      - "legacy/**"
   push:
     branches: [main]
-    paths:
-      - "v2/**"
-      - ".github/workflows/v2-*.yml"
+    paths-ignore:
+      - "legacy/**"
 
 permissions:
   contents: read
-
-defaults:
-  run:
-    working-directory: v2
 
 jobs:
   check:
@@ -54,7 +48,7 @@ jobs:
       - name: Build
         run: bun run build
 
-  # ローカルの cf dev（利用者向けアプリ・運営者画面）に対する Playwright の E2E とアクセシビリティの検査（v2/e2e）
+  # ローカルの cf dev（利用者向けアプリ・運営者画面）に対する Playwright の E2E とアクセシビリティの検査（e2e/）
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -76,7 +70,7 @@ jobs:
 
       # @playwright/test と同じ版の Chromium を入れる
       - name: Install Chromium
-        working-directory: v2/e2e
+        working-directory: e2e
         run: bunx playwright install --with-deps chromium
 
       - name: E2E
@@ -88,6 +82,6 @@ jobs:
         with:
           name: e2e-report
           path: |
-            v2/e2e/playwright-report/
-            v2/e2e/test-results/
+            e2e/playwright-report/
+            e2e/test-results/
           retention-days: 7
