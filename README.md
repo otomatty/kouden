@@ -43,7 +43,7 @@ Google ログインを試すときは、`.dev.vars` の `GOOGLE_CLIENT_SECRET` �
 | `bun run build`                | 本番用ビルド                               |
 | `bun run e2e`                  | E2E とアクセシビリティの検査               |
 
-E2E は初回に `cd e2e && bunx playwright install chromium` を実行します。5173・5174 番を使うので、`bun run dev` を止めてから実行してください。
+E2E は初回に `cd e2e && bunx playwright install chromium` を実行します。5173・5174 番を使うので、`apps/app` と `apps/admin` の開発サーバーを両方止めてから実行してください。
 
 ## スキーマの変更
 
@@ -69,7 +69,7 @@ Zero Trust で次の Self-hosted アプリケーションを作り、運営者�
 
 チームのドメイン（`<team>.cloudflareaccess.com`）も同じ `access` に設定します。設定が欠けていると `deployBlockers` がデプロイを止めます。
 
-staging で決済を有効にするときは、`kouden-app-staging.saedgewell.workers.dev/webhooks/stripe` を別のアプリケーションにして Bypass（Everyone）のポリシーを付けます（Worker 側の除外だけでは Access を通れません）。
+staging で決済を有効にするときは、`apps/app/deploy.settings.ts` の staging の `billingEnabled` を `true` にし、Stripe のテストモードの `STRIPE_SECRET_KEY`・`STRIPE_WEBHOOK_SECRET` を `staging` の Environment に登録してからデプロイします。あわせて `kouden-app-staging.saedgewell.workers.dev/webhooks/stripe` を別の Access アプリケーションにして Bypass（Everyone）のポリシーを付けます（Worker 側の除外だけでは Access を通れません）。
 
 ## `cf`（ベータ）の注意点
 
