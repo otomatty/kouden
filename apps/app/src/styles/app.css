@@ -12,7 +12,7 @@
 	@bottom-center {
 		content: counter(page) " / " counter(pages);
 		font-size: 9pt;
-		color: #6b6f76;
+		color: #666666; /* --color-muted（ページ余白の中では変数が効かないため直接書く） */
 	}
 }
 
@@ -25,13 +25,13 @@
 	}
 	.print-table th,
 	.print-table td {
-		border: 1px solid #b8b4aa;
+		border: 1px solid #afafb0; /* 銀鼠。印刷で薄れないよう --color-line より濃くする */
 		padding: 3pt 5pt;
 		text-align: left;
 		vertical-align: top;
 	}
 	.print-table th {
-		background: #f0eee8;
+		background: var(--color-paper);
 		font-weight: 600;
 		white-space: nowrap;
 	}

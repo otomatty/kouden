@@ -2,8 +2,7 @@ import type { FieldErrors } from "@kouden/domain";
 import type { FC } from "hono/jsx";
 import type { OwnedKouden } from "../../auth/account.ts";
 import type { SessionUser } from "../../auth/session-store.ts";
-import { Field, FormAlert, type FormValues, Input } from "../components/form.tsx";
-import { ui } from "../ui.ts";
+import { Field, FormAlert, type FormValues, Input, ui } from "@kouden/ui";
 
 /** アカウント（E1-4, E1-5）: 表示名・ログアウト・アカウントの削除 */
 export const AccountPage: FC<{

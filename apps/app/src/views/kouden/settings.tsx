@@ -10,9 +10,8 @@ import type { FC } from "hono/jsx";
 import type { PurchaseView } from "../../billing/purchases.ts";
 import type { KoudenContext } from "../../kouden/store.ts";
 import type { Caller, LedgerEvent, LedgerRelationship } from "../../ledger/types.ts";
-import { Field, FormAlert, type FormValues, Hidden, Input, Select } from "../components/form.tsx";
+import { Field, FormAlert, type FormValues, Hidden, Input, Select, ui } from "@kouden/ui";
 import { formatDate, jstDateOf } from "../format.ts";
-import { ui } from "../ui.ts";
 import { LiveRegion } from "./shell.tsx";
 
 const EVENT_KIND_OPTIONS = Object.entries(EVENT_KINDS).map(([value, label]) => ({ value, label }));

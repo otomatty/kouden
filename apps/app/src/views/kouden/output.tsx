@@ -2,7 +2,7 @@ import type { FC } from "hono/jsx";
 import type { KoudenContext } from "../../kouden/store.ts";
 import type { LedgerEvent } from "../../ledger/types.ts";
 import { formatDate } from "../format.ts";
-import { ui } from "../ui.ts";
+import { ui } from "@kouden/ui";
 import { RETURN_FILTERS } from "./returns.tsx";
 
 /** 印刷・出力（E7-2, E7-3）: 印刷用ページと Excel の入口 */

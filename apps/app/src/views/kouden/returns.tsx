@@ -15,9 +15,8 @@ import type {
 	ReturnsBoard,
 	ReturnView,
 } from "../../ledger/types.ts";
-import { Hidden } from "../components/form.tsx";
+import { Hidden, ui } from "@kouden/ui";
 import { formatDate, yen } from "../format.ts";
-import { ui } from "../ui.ts";
 import { LiveRegion } from "./shell.tsx";
 
 /** 一覧の絞り込み: すべて / 未作成 / 状況 */
@@ -42,17 +41,15 @@ export interface ProposalRow {
 }
 
 const STATUS_BADGE: Record<ReturnStatus, string> = {
-	pending: "bg-danger/10 text-danger",
-	arranged: "bg-accent/10 text-accent-strong",
-	shipped: "bg-paper text-ink",
-	handed_on_day: "bg-paper text-ink",
-	not_required: "bg-paper text-muted",
+	pending: ui.badgeDanger,
+	arranged: ui.badgeAccent,
+	shipped: ui.badgeInk,
+	handed_on_day: ui.badgeInk,
+	not_required: ui.badge,
 };
 
 export const StatusBadge: FC<{ status: ReturnStatus }> = ({ status }) => (
-	<span class={`inline-block rounded-full px-2 py-0.5 text-xs ${STATUS_BADGE[status]}`}>
-		{RETURN_STATUSES[status]}
-	</span>
+	<span class={STATUS_BADGE[status]}>{RETURN_STATUSES[status]}</span>
 );
 
 const linesSummary = (ret: ReturnView) =>

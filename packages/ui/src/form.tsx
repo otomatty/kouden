@@ -1,6 +1,6 @@
 import type { FieldErrors } from "@kouden/domain";
 import type { Child, FC } from "hono/jsx";
-import { ui } from "../ui.ts";
+import { ui } from "./ui.ts";
 
 /** フォームの再表示用の値（送信された文字列をそのまま保持する） */
 export type FormValues = Record<string, string | undefined>;

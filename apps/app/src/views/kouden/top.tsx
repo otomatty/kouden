@@ -3,7 +3,7 @@ import type { FC } from "hono/jsx";
 import type { KoudenContext } from "../../kouden/store.ts";
 import type { Caller, Overview } from "../../ledger/types.ts";
 import { formatDate, formatDateTime, yen } from "../format.ts";
-import { ui } from "../ui.ts";
+import { ui } from "@kouden/ui";
 import { LiveRegion } from "./shell.tsx";
 
 /** 香典帳トップ: 合計・行事別・種別別・関係別・最近の登録（E7-1）。他の人の変更で取り直す（E8-1） */

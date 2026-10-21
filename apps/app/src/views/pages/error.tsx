@@ -1,5 +1,5 @@
 import type { FC } from "hono/jsx";
-import { ui } from "../ui.ts";
+import { ui } from "@kouden/ui";
 
 const MESSAGES = {
 	403: ["この操作はできません", "閲覧のみの権限か、アーカイブ中の香典帳です。"],

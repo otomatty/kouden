@@ -10,18 +10,9 @@ import type { FC } from "hono/jsx";
 import type { KoudenContext } from "../../kouden/store.ts";
 import type { Caller, History, ReturnDetail, ReturnItemView } from "../../ledger/types.ts";
 import { ConflictDiff, type ConflictField } from "../components/conflict.tsx";
-import {
-	Field,
-	FormAlert,
-	type FormValues,
-	Hidden,
-	Input,
-	Select,
-	Textarea,
-} from "../components/form.tsx";
+import { Field, FormAlert, type FormValues, Hidden, Input, Select, Textarea, ui } from "@kouden/ui";
 import { HistoryList } from "../components/history.tsx";
 import { formatDate } from "../format.ts";
-import { ui } from "../ui.ts";
 import { StatusBadge } from "./returns.tsx";
 
 const STATUS_OPTIONS = Object.entries(RETURN_STATUSES).map(([value, label]) => ({ value, label }));

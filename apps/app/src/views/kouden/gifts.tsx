@@ -2,9 +2,8 @@ import { formatYen, GIFT_KINDS, type GiftFilter, personLabel } from "@kouden/dom
 import type { FC } from "hono/jsx";
 import type { KoudenContext } from "../../kouden/store.ts";
 import type { GiftView, LedgerEvent, LedgerRelationship } from "../../ledger/types.ts";
-import { Field, Input, Select } from "../components/form.tsx";
+import { Field, Input, Select, ui } from "@kouden/ui";
 import { yen } from "../format.ts";
-import { ui } from "../ui.ts";
 import { LiveRegion } from "./shell.tsx";
 
 /** いただきもの一覧（E4-6 の絞り込み・検索） */

@@ -12,7 +12,7 @@ import {
 	type ReturnRow,
 } from "../../output/rows.ts";
 import { formatDate } from "../format.ts";
-import { ui } from "../ui.ts";
+import { ui } from "@kouden/ui";
 
 /**
  * 印刷用ページ（E7-2, 04 §8）。アプリの枠（ヘッダー・タブ）を付けず、A4 に収まる表だけを出す。

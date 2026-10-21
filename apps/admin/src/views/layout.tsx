@@ -31,7 +31,7 @@ export const AdminLayout: FC<{
 				<a href="#main" class={ui.skipLink}>
 					本文へ移動
 				</a>
-				<header class="border-b border-line bg-ink text-white">
+				<header class="border-b border-line bg-ink text-surface">
 					<div class={`${ui.containerWide} flex h-14 items-center justify-between gap-4`}>
 						<span class="font-semibold tracking-widest">香典帳 運営者画面</span>
 						<span class="text-sm opacity-80">{adminEmail}</span>

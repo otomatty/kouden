@@ -14,7 +14,7 @@ import type { Hono } from "hono";
 import { deleteFile, isObjectId, putReturnItemImage, returnItemImageKey } from "../kouden/files.ts";
 import type { LedgerResult } from "../ledger/types.ts";
 import type { AppEnv } from "../types.ts";
-import type { FormValues } from "../views/components/form.tsx";
+import type { FormValues } from "@kouden/ui";
 import { ReturnEditPage, returnFormValues } from "../views/kouden/return-edit.tsx";
 import {
 	ReturnItemsSection,

@@ -3,9 +3,8 @@ import type { FC } from "hono/jsx";
 import type { Invitation, Member, Transfer } from "../../kouden/members.ts";
 import { INVITE_EXPIRY_DAYS } from "../../kouden/members.ts";
 import type { KoudenContext } from "../../kouden/store.ts";
-import { Hidden } from "../components/form.tsx";
+import { Hidden, ui } from "@kouden/ui";
 import { formatDateTime } from "../format.ts";
-import { ui } from "../ui.ts";
 import { LiveRegion } from "./shell.tsx";
 
 /** 作成直後だけ表示する招待リンク（トークンは保存していないので、後から表示できない） */
@@ -51,10 +50,7 @@ export const MembersPage: FC<{
 			)}
 
 			{transfer && transfer.toUserId === userId && (
-				<section
-					class="space-y-3 rounded-xl border-2 border-accent bg-surface p-6"
-					aria-labelledby="transfer-request"
-				>
+				<section class={`${ui.cardEmphasis} space-y-3`} aria-labelledby="transfer-request">
 					<h2 id="transfer-request" class={ui.h2}>
 						オーナーの譲渡の依頼
 					</h2>
@@ -82,10 +78,7 @@ export const MembersPage: FC<{
 			)}
 
 			{newInvite && (
-				<section
-					class="space-y-4 rounded-xl border-2 border-accent bg-surface p-6"
-					aria-labelledby="new-invite"
-				>
+				<section class={`${ui.cardEmphasis} space-y-4`} aria-labelledby="new-invite">
 					<h2 id="new-invite" class={ui.h2}>
 						招待リンク（{ROLES[newInvite.role]}）
 					</h2>

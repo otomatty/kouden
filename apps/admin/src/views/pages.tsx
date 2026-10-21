@@ -1,5 +1,5 @@
 import { formatYen, ROLES } from "@kouden/domain";
-import { ui } from "@kouden/ui";
+import { Field, FormAlert, Input, ui } from "@kouden/ui";
 import type { Child, FC } from "hono/jsx";
 import type {
 	AuditLog,
@@ -91,12 +91,9 @@ export const SearchPage: FC<{ q: string; users: UserRow[]; koudens: KoudenRow[] 
 }) => (
 	<div class="space-y-6">
 		<form method="get" action="/search" class="flex flex-wrap items-end gap-2">
-			<div class="grow space-y-1">
-				<label for="q" class={ui.label}>
-					メールアドレス・表示名・香典帳の名前・ID
-				</label>
-				<input id="q" name="q" value={q} class={ui.input} type="search" />
-			</div>
+			<Field label="メールアドレス・表示名・香典帳の名前・ID" name="q" class="grow">
+				<Input name="q" type="search" values={{ q }} />
+			</Field>
 			<button type="submit" class={ui.buttonSecondary}>
 				検索
 			</button>
@@ -313,7 +310,7 @@ export const KoudenPage: FC<{ kouden: KoudenDetail; children?: Child }> = ({
 					class={`${ui.cardTight} space-y-3`}
 				>
 					<h3 class={ui.h3}>手動で有料にする</h3>
-					<ReasonField id="grant-reason" />
+					<ReasonField idPrefix="grant" />
 					<button type="submit" class={ui.buttonSecondary}>
 						有料にする（0 円の購入として記録）
 					</button>
@@ -323,13 +320,10 @@ export const KoudenPage: FC<{ kouden: KoudenDetail; children?: Child }> = ({
 	</div>
 );
 
-const ReasonField: FC<{ id: string }> = ({ id }) => (
-	<div class="space-y-1">
-		<label for={id} class={ui.label}>
-			理由（監査ログに残ります）
-		</label>
-		<input id={id} name="reason" required maxlength={200} class={ui.input} />
-	</div>
+const ReasonField: FC<{ idPrefix: string }> = ({ idPrefix }) => (
+	<Field label="理由（監査ログに残ります）" name="reason" idPrefix={idPrefix}>
+		<Input name="reason" idPrefix={idPrefix} values={{}} required maxlength={200} />
+	</Field>
 );
 
 const PurchasesTable: FC<{
@@ -421,12 +415,9 @@ export const LegacyListPage: FC<{ q: string; unlinkedOnly: boolean; rows: Legacy
 			以外のアドレスなど）を、本人確認のうえ新しい Google アカウントに紐づけます（ADR-P17）。
 		</p>
 		<form method="get" action="/legacy" class="flex flex-wrap items-end gap-3">
-			<div class="grow space-y-1">
-				<label for="q" class={ui.label}>
-					旧サービスのメールアドレス・名前
-				</label>
-				<input id="q" name="q" value={q} type="search" class={ui.input} />
-			</div>
+			<Field label="旧サービスのメールアドレス・名前" name="q" class="grow">
+				<Input name="q" type="search" values={{ q }} />
+			</Field>
 			<label class="flex items-center gap-2 text-sm">
 				<input type="checkbox" name="all" value="1" checked={!unlinkedOnly} class="size-4" />
 				紐づけ済みも表示
@@ -475,11 +466,7 @@ export const LinkPage: FC<{
 	error?: string | undefined;
 }> = ({ legacy, email, candidates, error }) => (
 	<div class="space-y-6">
-		{error && (
-			<p role="alert" class={ui.alert}>
-				{error}
-			</p>
-		)}
+		<FormAlert message={error} />
 		<dl class={`${ui.card} grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm`}>
 			<dt class="text-muted">旧サービスのメールアドレス</dt>
 			<dd class="break-all">{legacy.email}</dd>
@@ -493,12 +480,9 @@ export const LinkPage: FC<{
 			action={`/legacy/${legacy.legacyUserId}/link`}
 			class="flex flex-wrap items-end gap-2"
 		>
-			<div class="grow space-y-1">
-				<label for="email" class={ui.label}>
-					本人の新しい Google アカウントのメールアドレス
-				</label>
-				<input id="email" name="email" type="email" value={email} class={ui.input} />
-			</div>
+			<Field label="本人の新しい Google アカウントのメールアドレス" name="email" class="grow">
+				<Input name="email" type="email" values={{ email }} />
+			</Field>
 			<button type="submit" class={ui.buttonSecondary}>
 				アカウントを探す
 			</button>

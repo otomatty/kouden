@@ -1,5 +1,5 @@
 import type { FC } from "hono/jsx";
-import { ui } from "../ui.ts";
+import { ui } from "@kouden/ui";
 
 export const LOGIN_ERRORS = {
 	cancelled: "ログインがキャンセルされました。",
@@ -18,7 +18,7 @@ export const LoginPage: FC<{ startUrl: string; error?: LoginErrorCode }> = ({
 		<div class={`${ui.card} space-y-6 text-center`}>
 			<h1 class={ui.h1}>ログイン</h1>
 			{error ? (
-				<p role="alert" class="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">
+				<p role="alert" class={ui.alert}>
 					{LOGIN_ERRORS[error]}
 				</p>
 			) : null}
