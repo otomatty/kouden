@@ -29,7 +29,7 @@ bun run db:migrate:local
 bun run dev                      # http://localhost:5173（Windows は bun run serve）
 ```
 
-運営者画面は別のターミナルで `cd apps/admin && bun run dev`（http://localhost:5174）。`apps/app` と同じローカル D1 を使い、`deploy.settings.ts` の `devEmail` を運営者として扱います。
+運営者画面は別のターミナルで `cd apps/admin && bun run dev`（http://localhost:5174）。`apps/app` と同じローカル D1 を使い、`deploy.settings.ts` の `devEmail` を運営者として扱います。2 つの `cf dev` が同じ SQLite ファイルを開くので、同時に書き込むと `database is locked`（SQLITE_BUSY）になることがあります（ローカルだけの現象です）。
 
 Google ログインを試すときは、`.dev.vars` の `GOOGLE_CLIENT_SECRET` と `apps/app/deploy.settings.ts` の `development` の `googleClientId` を設定します（リダイレクト URI は `http://localhost:5173/auth/google/callback`）。
 
@@ -54,11 +54,11 @@ E2E は初回に `cd e2e && bunx playwright install chromium` を実行します
 
 ## デプロイ
 
-GitHub Actions の「v2 Deploy」を手動で実行します（`staging` / `production`）。production は承認と `main` ブランチが必要です。環境ごとの設定は `apps/*/deploy.settings.ts` にあります。
+GitHub Actions の「v2 Deploy」を手動で実行します（`staging` / `production`）。production は承認と `main` ブランチが必要です。D1 のマイグレーションはデプロイの中で自動的に適用されます（初回は D1 の作成後に適用）。環境ごとの設定は `apps/*/deploy.settings.ts` にあります。
 
 GitHub Environments に登録するシークレット: `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`、`GOOGLE_CLIENT_SECRET`、`SESSION_SECRET`、`STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`
 
-Stripe の Webhook は `https://<ドメイン>/webhooks/stripe` に、`checkout.session.completed`・`checkout.session.async_payment_succeeded`・`checkout.session.async_payment_failed`・`charge.refunded` を送ります。
+Stripe の Webhook は `https://<ドメイン>/webhooks/stripe` に、`checkout.session.completed`・`checkout.session.async_payment_succeeded`・`checkout.session.async_payment_failed`・`charge.refunded` を送ります。Cloudflare Access で保護しているホスト（staging）で決済を有効にするときは、`/webhooks/stripe` を別の Access アプリケーションにして Bypass（Everyone）のポリシーを付けます（Worker 側の除外だけでは Access を通れません）。
 
 ## `cf`（ベータ）の注意点
 
