@@ -4,6 +4,8 @@
 	"printWidth": 100,
 	"ignorePatterns": [
 		".migration-data/**",
+		"legacy/**",
+		"docs/**",
 		"**/.cloudflare/**",
 		"**/node_modules/**",
 		"bun.lock",

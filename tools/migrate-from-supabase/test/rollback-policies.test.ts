@@ -288,7 +288,7 @@ async function withOfferingTriggers(source: ReturnType<typeof sourceWithCounts>,
 		...(aligned
 			? [
 					new URL(
-						"../../../../supabase/migrations/20261018000000_align_return_amount_triggers_with_deployed.sql",
+						"../../../legacy/supabase/migrations/20261018000000_align_return_amount_triggers_with_deployed.sql",
 						import.meta.url,
 					),
 				]

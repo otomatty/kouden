@@ -1,6 +1,6 @@
 # 移行リハーサルの記録（2026-10-13）
 
-関連: [#168](https://github.com/otomatty/kouden/issues/168)、[#169](https://github.com/otomatty/kouden/issues/169)。実行手順は [移行 CLI README](../../v2/tools/migrate-from-supabase/README.md#一時環境でのリハーサル)。時刻は特記がなければ JST。
+関連: [#168](https://github.com/otomatty/kouden/issues/168)、[#169](https://github.com/otomatty/kouden/issues/169)。実行手順は [移行 CLI README](../../tools/migrate-from-supabase/README.md#一時環境でのリハーサル)。時刻は特記がなければ JST。
 
 ## 結果
 

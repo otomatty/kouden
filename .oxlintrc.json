@@ -24,6 +24,8 @@
 	},
 	"ignorePatterns": [
 		".migration-data/**",
+		"legacy/**",
+		"docs/**",
 		"**/.cloudflare/**",
 		"**/node_modules/**",
 		"**/dist/**",

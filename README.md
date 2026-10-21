@@ -1,7 +1,7 @@
-# 香典帳 v2（Cloudflare 版）
+# 香典帳（Cloudflare 版）
 
-Cloudflare Workers 上に作り直している新しい香典帳です。設計は [`docs/rebuild/`](../docs/rebuild/README.md) を参照してください。
-切り替えまでは、リポジトリ直下の旧実装（Next.js + Supabase）と同居しています。
+Cloudflare Workers 上の香典帳です（https://kouden.app 、2026-10-21 公開）。設計は [`docs/rebuild/`](docs/rebuild/README.md) を参照してください。
+旧実装（Next.js + Supabase）は停止済みで、参照用に [`legacy/`](legacy/) に残しています（保守・デプロイはしません）。
 
 | 項目        | 技術                                                                                                |
 | ----------- | --------------------------------------------------------------------------------------------------- |
@@ -14,7 +14,7 @@ Cloudflare Workers 上に作り直している新しい香典帳です。設計�
 ## ディレクトリ
 
 ```
-v2/
+kouden/
 ├── apps/app/          # 利用者向け Worker（kouden-app）と香典帳の DO（KoudenLedger）
 │   └── src/
 │       ├── ledger/    # KoudenLedger: 香典帳 1 冊分の SQLite（スキーマ・マイグレーション・RPC）
@@ -25,7 +25,9 @@ v2/
 ├── packages/domain/   # 業務ルール（入力検証・権限・検索の正規化・金額の按分など。純粋な TypeScript）
 ├── packages/ui/       # app と admin で共有するクラス名（ui.ts）と色・フォント（theme.css）
 ├── tools/migrate-from-supabase/  # 旧アプリ（Supabase）の変換・投入・照合 CLI（prepare / import / verify）
-└── e2e/               # Playwright の E2E とアクセシビリティの検査（axe）
+├── e2e/               # Playwright の E2E とアクセシビリティの検査（axe）
+├── docs/rebuild/      # 設計（要件・ドメインモデル・アーキテクチャ・移行計画）
+└── legacy/            # 旧アプリ（Next.js + Supabase）。参照用
 ```
 
 ## ローカル開発
@@ -35,7 +37,6 @@ v2/
 必要なもの: Bun 1.4 以上、Node.js 22 以上（`cf` が使う）
 
 ```sh
-cd v2
 bun install
 
 cd apps/app
@@ -47,13 +48,13 @@ bun run dev                      # http://localhost:5173
 運営者画面は別のターミナルで起動します（`apps/app` と同じローカル D1 を見ます。Access は通さず、`deploy.settings.ts` の `devEmail` を運営者として扱います）。2 つの `cf dev` が同じ SQLite ファイルを開くため、両方で同時に書き込むと `database is locked`（SQLITE_BUSY）になることがあります（ローカルだけの現象です）。
 
 ```sh
-cd v2/apps/admin
+cd apps/admin
 bun run dev                      # http://localhost:5174
 ```
 
 Google ログインを試すには、OAuth クライアントの値を `.dev.vars` の `GOOGLE_CLIENT_SECRET` と `apps/app/deploy.settings.ts` の `development` の `googleClientId` に設定してください（承認済みのリダイレクト URI に `http://localhost:5173/auth/google/callback` を追加しておく）。
 
-## よく使うコマンド（`v2/` で実行）
+## よく使うコマンド（リポジトリの直下で実行）
 
 | コマンド                       | 内容                                                                 |
 | ------------------------------ | -------------------------------------------------------------------- |
@@ -75,12 +76,12 @@ Google ログインを試すには、OAuth クライアントの値を `.dev.var
 D1 のマイグレーションファイルは `cf d1 migrations create` で作成するか、`apps/app/migrations/` に連番で追加します。
 DO（KoudenLedger）のスキーマは `apps/app/src/ledger/schema.ts` の `MIGRATIONS` の末尾に追加します（各 DO が次に呼ばれたときに適用されます。適用済みの要素は変更しないでください）。
 
-## E2E（`v2/e2e`）
+## E2E（`e2e/`）
 
 Playwright で、利用者向けアプリ（:5173）と運営者画面（:5174）の `cf dev` を起動して画面を操作し、各画面を axe（WCAG 2.1 A/AA）で検査します。
 
 ```sh
-cd v2/e2e
+cd e2e
 bunx playwright install chromium   # 初回のみ
 bun run e2e                        # = scripts/prepare.ts → playwright test
 ```
@@ -135,7 +136,7 @@ M0 のコードは揃っていますが、以下は Cloudflare・Google・GitHub
 
 ## `cf`（ベータ）の注意点
 
-ベータ版のため、いくつか回避策を入れています（詳細は [ADR-T15](../docs/rebuild/01-decisions.md#adr-t15-cli-は-cfベータ-vite-を使う)）。
+ベータ版のため、いくつか回避策を入れています（詳細は [ADR-T15](docs/rebuild/01-decisions.md#adr-t15-cli-は-cfベータ-vite-を使う)）。
 
 - ログのリアルタイム表示は `cf` にまだないので、Workers Logs のダッシュボードか `npx wrangler tail <Worker 名>` を使う。
 - シークレットは `cf deploy --secrets-file` で渡す（`cf` に 1 件だけ登録するコマンドがまだない）。

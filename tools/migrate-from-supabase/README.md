@@ -5,7 +5,7 @@ v2 から旧環境への書き戻しは [切り戻し CLI の手順と対応範�
 Supabase コネクタで抽出した全件スナップショットを変換し、移行専用 API から D1・DO・R2 に投入して読み戻す。Bun 1.4 以上が必要。実行はこのディレクトリで行う。
 
 ```sh
-cd v2/tools/migrate-from-supabase
+cd tools/migrate-from-supabase
 bun run migrate --help
 ```
 
@@ -33,7 +33,7 @@ bun run migrate prepare \
 
 上記は構造例であり、実行には移行対象の各テーブルが必要。空のテーブルも件数 `0` と空配列を含める。必要なキーは `auth.users`、`public.profiles`、`public.koudens`、`public.kouden_roles`、`public.kouden_members`、`public.kouden_purchases`、`public.relationships`、`public.kouden_entries`、`public.offerings`、`public.offering_allocations`、`public.offering_entries`、`public.offering_photos`、`public.telegrams`、`public.return_items`、`public.return_entry_records`、`public.return_record_items`。`auth.users` は `id`・`email`・`created_at`・`identities`（`provider`・`provider_id`）だけを使い、パスワードやセッションは不要。
 
-抽出は Codex の Supabase コネクタで単一の読み取り専用 SELECT として行う。CLI は抽出済みファイルを受け取る。移行時の最終抽出では旧アプリの書き込みを停止し、別途 DB 全体のバックアップを取得する。バックアップは、Git 管理外でアクセスを自分だけに絞った新しい空のフォルダ（`v2/.migration-data/final-backup-<日付>/` など）に移ってから、リポジトリの絶対パスで `& '<リポジトリ>\v2\tools\migrate-from-supabase\scripts\copy-legacy-db.ps1' -DumpOnly` を実行し（既存の dump があるフォルダや Git の管理対象のフォルダでは止まる）、復元に使う 4 ファイル（`roles.sql`・`schema.sql`・`data.sql`・`managed-objects.sql`）と `manifest.json`（サイズ・SHA-256）を作り、R2 の `kouden-legacy-archive` の `backups/` に 1 年間保管する。
+抽出は Codex の Supabase コネクタで単一の読み取り専用 SELECT として行う。CLI は抽出済みファイルを受け取る。移行時の最終抽出では旧アプリの書き込みを停止し、別途 DB 全体のバックアップを取得する。バックアップは、Git 管理外でアクセスを自分だけに絞った新しい空のフォルダ（`.migration-data/final-backup-<日付>/` など）に移ってから、リポジトリの絶対パスで `& '<リポジトリ>\tools\migrate-from-supabase\scripts\copy-legacy-db.ps1' -DumpOnly` を実行し（既存の dump があるフォルダや Git の管理対象のフォルダでは止まる）、復元に使う 4 ファイル（`roles.sql`・`schema.sql`・`data.sql`・`managed-objects.sql`）と `manifest.json`（サイズ・SHA-256）を作り、R2 の `kouden-legacy-archive` の `backups/` に 1 年間保管する。
 
 ### 返礼品画像・旧供物写真がある場合
 
@@ -114,7 +114,7 @@ bun run migrate verify \
 | `missing_access_credentials`                    | Access サービストークンの環境変数を設定したか          |
 | `dev_token_requires_loopback`                   | リモート接続で `IMPORT_DEV_TOKEN` を解除したか         |
 
-`plan.json`、元スナップショット、画像、警告の詳細には個人情報が含まれる。`v2/.migration-data/` は Git・lint・format の対象から除外している。出力はローカルの制限付きフォルダに保存すること。Unix の mode 指定は Windows の ACL を設定するものではない。
+`plan.json`、元スナップショット、画像、警告の詳細には個人情報が含まれる。`.migration-data/` は Git・lint・format の対象から除外している。出力はローカルの制限付きフォルダに保存すること。Unix の mode 指定は Windows の ACL を設定するものではない。
 
 - 旧供物写真は件数と DO の対応・説明・登録者・日時、R2 のキー・サイズ・SHA-256 を照合する。R2 に写真がない場合は台帳の取り込み前に停止する。
 - `common` / `gift` / `funeral` スキーマは移行しない。旧アプリは組織機能を撤去済みで、本番 `common` の組織データ（オーナーの試作用 6 行）は 2026-10-18 に削除した（[#190](https://github.com/otomatty/kouden/issues/190)）。初回抽出（2026-10-13）の元スナップショットには 6 行が残る。非空のテーブルがあれば `unmapped_schema_data` の警告を出す。
@@ -122,7 +122,7 @@ bun run migrate verify \
 - 照合は上記の集計・D1 行・画像に対する検査であり、DO のすべてのテキスト内容や画面表示まで保証するものではない。切り替え前の 10 冊の目視比較は別途行う。
 - `passed` でも変換警告は残り得る。切り替える前に、下の「最終抽出の警告の判断基準」と突き合わせる。
 - 故人名の確認は、移行済みで未確認の香典帳を開いたオーナーに案内する。設定画面の「確認して保存する」で確認日時を保存する。D1 の `0007_deceased_name_confirmation.sql` の適用が必要。確認は投入・照合と取り込み口の無効化を終えてから行う。再取り込みは元の仮の名前へ戻すため確認状態も未確認に戻り、確認後の名前・更新日時は元の投入計画との照合対象から変わる。
-- Supabase への逆変換・切り戻し、画面比較を含むリハーサル、本番切り替えは [#168](https://github.com/otomatty/kouden/issues/168) の残作業。初回投入・再投入と自動照合の実測結果は [2026-10-13 の記録](../../../docs/rebuild/06-migration-rehearsal-20261013.md) を参照。
+- Supabase への逆変換・切り戻し、画面比較を含むリハーサル、本番切り替えは [#168](https://github.com/otomatty/kouden/issues/168) の残作業。初回投入・再投入と自動照合の実測結果は [2026-10-13 の記録](../../docs/rebuild/06-migration-rehearsal-20261013.md) を参照。
 
 ### 最終抽出の警告の判断基準
 
@@ -169,7 +169,7 @@ where btrim(k.title) = '';
 ## 検証
 
 ```sh
-# v2/ で実行
+# リポジトリの直下で実行
 bun run --filter @kouden/migrate-from-supabase test
 bun run --filter @kouden/domain test
 bun run --filter @kouden/app test

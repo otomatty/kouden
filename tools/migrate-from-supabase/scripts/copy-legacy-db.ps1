@@ -22,7 +22,7 @@ if ($DumpOnly) {
 	if ($gitExit -ne 0 -and $insideGit -notmatch 'not a git repository') { throw "Git の判定に失敗しました: $insideGit" }
 	if ($gitExit -eq 0 -and $insideGit -eq 'true') {
 		git check-ignore -q (Join-Path $PWD 'data.sql')
-		if ($LASTEXITCODE -ne 0) { throw '作業フォルダが Git の管理対象です。v2/.migration-data/ などの Git 管理外のフォルダで実行してください' }
+		if ($LASTEXITCODE -ne 0) { throw '作業フォルダが Git の管理対象です。リポジトリの .migration-data/ などの Git 管理外のフォルダで実行してください' }
 	}
 }
 if ($env:PROD_DB_URL -notmatch $prodRef) { throw 'PROD_DB_URL が本番を指していません' }

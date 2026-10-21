@@ -15,7 +15,7 @@ PGlite では確認できない次の点もここで確かめる。
 | -------- | ------------------------------------------------------------------------------------------------------- |
 | 旧 DB    | 新しい Supabase プロジェクト（以下「リハーサル用」）。組織 Saedgewell、リージョン `ap-northeast-1`      |
 | 旧アプリ | リポジトリ直下の Next.js をローカルで起動し、リハーサル用に接続する（`http://localhost:8788`）          |
-| v2       | `v2/apps/app` をローカルで起動する（`http://localhost:5173`）。取り込み・切り戻しは開発用トークンを使う |
+| v2       | `apps/app` をローカルで起動する（`http://localhost:5173`）。取り込み・切り戻しは開発用トークンを使う |
 
 v2 をローカルで動かすのは、Cloudflare に一時リソースを作らずに済み、ログイン済みのセッションを用意して画面から変更できるため。`--mode rehearsal` の一時環境は Google ログインを使わず、画面からの変更ができない。
 
@@ -27,7 +27,7 @@ v2 をローカルで動かすのは、Cloudflare に一時リソースを作ら
 2. Authentication の設定で、新規登録（Allow new users to sign up）を無効にし、Site URL を `http://localhost:8788`、Redirect URLs に `http://localhost:8788/**` を設定する。旧アプリへのログインは Google 認証で行う（手順 5）。複製した `auth.users` には実在の利用者のメールアドレスが入るため、独自の SMTP は設定せず、メールを送る操作をしない。
 3. Database の SSL Configuration から CA 証明書をダウンロードし、Git 管理外に置く。環境変数 `PGSSLROOTCERT` にそのパスを設定する。
 4. [PostgreSQL のクライアント](https://www.postgresql.org/download/windows/)（`psql`・`pg_dump`・`pg_dumpall`。本番の 15 以上の版）と Git for Windows（Git Bash）を入れて PATH を通す。Docker は使わない。
-5. Git 管理外の作業フォルダ `v2/.migration-data/rollback-rehearsal-<日付>/` を作り、ACL を自分だけに絞る。dump には利用者の個人情報とパスワードのハッシュが入る。
+5. Git 管理外の作業フォルダ `.migration-data/rollback-rehearsal-<日付>/` を作り、ACL を自分だけに絞る。dump には利用者の個人情報とパスワードのハッシュが入る。
 6. スクリプトを実行する PowerShell の環境変数に、本番とリハーサル用の Session pooler の接続文字列（5432 番ポート）を設定する。Free プランの Direct connection は IPv6 のみのため、Session pooler を使う。パスワードに記号があれば URL エンコードする。
 
 パスワード・鍵を含む値は、画面と履歴に残らないよう `Read-Host -AsSecureString` で入力する。`$env:X = '…'` と直接書く、または `-AsSecureString` なしの `Read-Host` を使うと、値が画面や PowerShell の履歴ファイルに残る（2026-10-19 のリハーサルで、鍵と接続文字列が端末に残った）。
@@ -48,11 +48,11 @@ CA 証明書は本番とリハーサル用で同じもの（Supabase Root 2021 C
 
 ## 1. 旧本番 DB を複製する
 
-[Backup and Restore using the CLI](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore) に従う。手順は `scripts/` の 2 つのスクリプトにまとめてある。1・2 のコマンドはすべて、準備 5 の作業フォルダ（`v2/.migration-data/rollback-rehearsal-<日付>/`）をカレントにして実行する。dump・比較結果・スナップショットはそこに出る。
+[Backup and Restore using the CLI](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore) に従う。手順は `scripts/` の 2 つのスクリプトにまとめてある。1・2 のコマンドはすべて、準備 5 の作業フォルダ（`.migration-data/rollback-rehearsal-<日付>/`）をカレントにして実行する。dump・比較結果・スナップショットはそこに出る。
 
 ```powershell
-& <リポジトリ>\v2\tools\migrate-from-supabase\scripts\copy-legacy-db.ps1
-& <リポジトリ>\v2\tools\migrate-from-supabase\scripts\compare-legacy-db.ps1
+& <リポジトリ>\tools\migrate-from-supabase\scripts\copy-legacy-db.ps1
+& <リポジトリ>\tools\migrate-from-supabase\scripts\compare-legacy-db.ps1
 ```
 
 `copy-legacy-db.ps1` は次を行う。接続先が逆のときと、空でないプロジェクト（public の表、Auth のユーザー、Storage のバケット・ファイルのいずれかがある）への復元は止める。
@@ -73,7 +73,7 @@ Storage は DB の行（`storage.objects`）だけが複製され、本体は複
 
 ここからの psql とこのリポジトリの CLI は、リハーサル用への接続を [ROLLBACK.md](./ROLLBACK.md) の「書き戻し・照合」の表と同じ環境変数で受け取る（`PGHOST` は pooler のホスト、`PGUSER` は `postgres.<リハーサル用ref>`、`PGPASSWORD`、`PGSSLMODE=verify-full`、`PGSSLROOTCERT`）。
 
-初回抽出の `v2/.migration-data/20261013T050857Z/extract.sql` は `project_ref` に本番の ref を書いている。リハーサル用の ref に置き換えたコピーを作り、psql で出力する。モデルや会話を経由させない。
+初回抽出の `.migration-data/20261013T050857Z/extract.sql` は `project_ref` に本番の ref を書いている。リハーサル用の ref に置き換えたコピーを作り、psql で出力する。モデルや会話を経由させない。
 
 ```powershell
 New-Item -ItemType Directory cutover
@@ -83,9 +83,9 @@ psql -X -q -A -t -d postgres -f extract.sql -o cutover\source-snapshot.json
 
 切り戻しの `apply` / `verify` は、接続先とこのスナップショットの `project_ref` を照合する。本番の ref のスナップショットでは、リハーサル用に書き込めない。
 
-v2 をローカルで起動する。保存先は環境変数 `KOUDEN_LOCAL_STATE` で作業フォルダ内の新しいフォルダ（例: `v2-state-1` の絶対パス）にし、普段の開発データと分ける。新しい保存先の D1 は空なので、同じ `KOUDEN_LOCAL_STATE` のまま `v2/apps/app` で `bun run db:migrate:local` を実行してから `bun run dev` で起動する。[README](./README.md) の手順で `prepare` → `import` → `verify` を行う。投入先は `http://localhost:5173`、トークンは `IMPORT_DEV_TOKEN=dev-import-token`。`verify` が `passed` になったら、変更する前に一度 `rollback export` → `plan` を行い、変更 0 件・ブロッカー 0 件を確認する。
+v2 をローカルで起動する。保存先は環境変数 `KOUDEN_LOCAL_STATE` で作業フォルダ内の新しいフォルダ（例: `v2-state-1` の絶対パス）にし、普段の開発データと分ける。新しい保存先の D1 は空なので、同じ `KOUDEN_LOCAL_STATE` のまま `apps/app` で `bun run db:migrate:local` を実行してから `bun run dev` で起動する。[README](./README.md) の手順で `prepare` → `import` → `verify` を行う。投入先は `http://localhost:5173`、トークンは `IMPORT_DEV_TOKEN=dev-import-token`。`verify` が `passed` になったら、変更する前に一度 `rollback export` → `plan` を行い、変更 0 件・ブロッカー 0 件を確認する。
 
-画面から変更するときは、`v2/apps/app` で `bun scripts/rehearsal-session.ts` を使う（同じ `KOUDEN_LOCAL_STATE` で実行する）。`kouden <旧香典帳ID>` で v2 の香典帳 ID とメンバー（user_id・ロール）を、`session <user_id>` でそのユーザーのセッションを出す。出た token を Cookie `__Host-kouden_session`（Secure・Path=/）に設定する。出力は ID と token だけで、氏名・メールは出さない。
+画面から変更するときは、`apps/app` で `bun scripts/rehearsal-session.ts` を使う（同じ `KOUDEN_LOCAL_STATE` で実行する）。`kouden <旧香典帳ID>` で v2 の香典帳 ID とメンバー（user_id・ロール）を、`session <user_id>` でそのユーザーのセッションを出す。出た token を Cookie `__Host-kouden_session`（Secure・Path=/）に設定する。出力は ID と token だけで、氏名・メールは出さない。
 
 ## 3. v2 で変更し、書き戻す
 
@@ -155,6 +155,6 @@ Admin API に Secret key（`sb_secret_…`）を使うときは、PowerShell 5.1
 
 ## Windows での注意（2026-10-19）
 
-- `v2/apps/app` の `bun run dev` は Windows の bun で `&` を使えず失敗する。`bun run serve` で起動する。`cf dev` が `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)` で落ちることがあるので、そのときは起動し直す。
+- `apps/app` の `bun run dev` は Windows の bun で `&` を使えず失敗する。`bun run serve` で起動する。`cf dev` が `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)` で落ちることがあるので、そのときは起動し直す。
 - 端末を開き直すと PG* の環境変数が消え、CLI は `rollback_database_target_mismatch` で止まる（安全側）。作業フォルダに移り、接続設定を作り直す。
 - 結果の記録は [#193](https://github.com/otomatty/kouden/issues/193) のコメントにある。

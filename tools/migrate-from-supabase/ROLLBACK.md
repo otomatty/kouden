@@ -45,7 +45,7 @@ Accessでは[具体的なパスの設定が優先される](https://developers.c
 
 ## 取得・計画
 
-`v2/tools/migrate-from-supabase` で実行する。各出力先は未作成のディレクトリを指定し、親の `.migration-data` は先に作る。
+`tools/migrate-from-supabase` で実行する。各出力先は未作成のディレクトリを指定し、親の `.migration-data` は先に作る。
 
 ```sh
 bun run rollback export --url https://<v2-host> --writes-stopped --out ../../.migration-data/rollback-export
