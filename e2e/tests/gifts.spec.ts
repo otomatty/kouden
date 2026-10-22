@@ -26,10 +26,10 @@ test.describe("いただきものの登録（E4-1）をキーボードだけで�
 		await page.keyboard.press("Enter");
 
 		// 同じ画面に戻り、登録した内容を上に出す。次の入力のため氏名の欄に戻り、その説明として読み上げる
-		await expect(created).toHaveText(/^登録しました。通夜 No\.1、佐藤 一郎 様、香典 /);
+		await expect(created).toHaveText(/^登録しました。葬儀 No\.1、佐藤 一郎 様、香典 /);
 		await expect(name).toBeFocused();
 		await expect(name).toHaveValue("");
-		await expect(name).toHaveAccessibleDescription(/^登録しました。通夜 No\.1、佐藤 一郎 様/);
+		await expect(name).toHaveAccessibleDescription(/^登録しました。葬儀 No\.1、佐藤 一郎 様/);
 		await expectAccessible(page, "いただきものの登録（登録後）");
 
 		// 香典で金額がないとエラー。最初のエラーの欄（金額）にフォーカスが移る

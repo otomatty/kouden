@@ -2,7 +2,7 @@ import { ATTENDANCES, type FieldErrors, GIFT_KINDS, type GiftKind } from "@koude
 import type { Child, FC } from "hono/jsx";
 import type { KoudenContext } from "../../kouden/store.ts";
 import type { LedgerEvent, LedgerRelationship, PersonView } from "../../ledger/types.ts";
-import { Field, FormAlert, type FormValues, Input, Select, Textarea, ui } from "@kouden/ui";
+import { Field, FormAlert, type FormValues, Hidden, Input, Select, Textarea, ui } from "@kouden/ui";
 import { yen } from "../format.ts";
 import { PersonCandidates } from "./person-candidates.tsx";
 
@@ -109,14 +109,19 @@ export const GiftNewPage: FC<GiftNewProps> = ({
 			<form method="post" action={`${base}/gifts`} class={`${ui.cardTight} space-y-4`} novalidate>
 				<FormAlert errors={errors} message={message} />
 
-				<Field label="行事" name="eventId" error={errors.eventId}>
-					<Select
-						name="eventId"
-						values={values}
-						errors={errors}
-						options={events.map((e) => ({ value: e.id, label: e.name }))}
-					/>
-				</Field>
+				{/* 行事が 1 つ（既定の「葬儀」だけ）なら選ばせない */}
+				{events.length > 1 ? (
+					<Field label="行事" name="eventId" error={errors.eventId}>
+						<Select
+							name="eventId"
+							values={values}
+							errors={errors}
+							options={events.map((e) => ({ value: e.id, label: e.name }))}
+						/>
+					</Field>
+				) : (
+					<Hidden name="eventId" value={values.eventId ?? ""} />
+				)}
 
 				<fieldset class="space-y-2">
 					<legend class={ui.label}>種別</legend>

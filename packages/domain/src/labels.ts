@@ -12,7 +12,7 @@ export const GIFT_KIND_VALUES = Object.keys(GIFT_KINDS) as [GiftKind, ...GiftKin
 /** 行事の種類（03 §3 events.kind） */
 export const EVENT_KINDS = {
 	wake: "通夜",
-	funeral: "告別式",
+	funeral: "葬儀・告別式",
 	memorial_49: "四十九日",
 	memorial_1y: "一周忌",
 	memorial_other: "その他の法要",
@@ -30,10 +30,12 @@ export const ATTENDANCES = {
 export type Attendance = keyof typeof ATTENDANCES;
 export const ATTENDANCE_VALUES = Object.keys(ATTENDANCES) as [Attendance, ...Attendance[]];
 
-/** 香典帳の作成時に用意する行事（E2-1） */
+/**
+ * 香典帳の作成時に用意する行事（E2-1）。通夜と告別式の香典は「葬儀」にまとめる。
+ * 分けたい人や、四十九日などの法要は設定で足す（08 §7.1）
+ */
 export const DEFAULT_EVENTS: readonly { kind: EventKind; name: string }[] = [
-	{ kind: "wake", name: EVENT_KINDS.wake },
-	{ kind: "funeral", name: EVENT_KINDS.funeral },
+	{ kind: "funeral", name: "葬儀" },
 ];
 
 /** 香典帳の作成時に用意する関係（E2-1）。名前の変更・追加・非表示はユーザーが行える */

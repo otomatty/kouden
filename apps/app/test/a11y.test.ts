@@ -8,7 +8,7 @@ async function setup() {
 	const created = await taro.request("/k", formPost({ deceasedName: "山田 一郎", title: "" }));
 	const koudenId = created.headers.get("location")?.split("/").pop() ?? "";
 	const form = await (await taro.request(`/k/${koudenId}/gifts/new`)).text();
-	const eventId = /name="eventId"[^>]*><option value="([^"]+)"/.exec(form)?.[1] ?? "";
+	const eventId = /name="eventId"(?:[^>]*><option)? value="([^"]+)"/.exec(form)?.[1] ?? "";
 	return { taro, koudenId, eventId };
 }
 
@@ -34,7 +34,7 @@ describe("読み上げとフォーカス（02 非機能要件: アクセシビ�
 		expect(res.status).toBe(303);
 		const html = await (await taro.request(res.headers.get("location") ?? "")).text();
 		expect(html).toMatch(
-			/<p id="created-gift" role="status"[^>]*>登録しました。通夜 No\.1、佐藤 一郎 様、香典 ¥10,000。/,
+			/<p id="created-gift" role="status"[^>]*>登録しました。葬儀 No\.1、佐藤 一郎 様、香典 ¥10,000。/,
 		);
 		expect(html).toMatch(
 			/<input[^>]*name="name"[^>]*autofocus[^>]*aria-describedby="created-gift"/,

@@ -24,20 +24,28 @@ function unwrap<T>(result: LedgerResult<T>): T {
 const entry = (eventId: string, fields: Record<string, string>) =>
 	giftEntrySchema.parse({ eventId, kind: "koden", ...fields });
 
+/** 既定の「葬儀」に「通夜」を足して [葬儀, 通夜] を返す（行事が 2 つ要るテスト用） */
+async function twoEvents(ledger: ReturnType<typeof setup>["ledger"], caller: Caller) {
+	unwrap(await ledger.createEvent(caller, { kind: "wake", name: "通夜", date: null }));
+	return unwrap(await ledger.listEvents(caller));
+}
+
 describe("KoudenLedger", () => {
 	it("初回の呼び出しで既定の行事と関係を用意する", async () => {
 		const { caller, ledger } = setup();
 		const events = unwrap(await ledger.listEvents(caller));
-		expect(events.map((e) => e.name)).toEqual(["通夜", "告別式"]);
+		expect(events.map((e) => ({ kind: e.kind, name: e.name }))).toEqual([
+			{ kind: "funeral", name: "葬儀" },
+		]);
 		const rels = unwrap(await ledger.listRelationships(caller));
 		expect(rels.map((r) => r.name)).toEqual(["親族", "友人", "会社関係", "近所", "その他"]);
 		// 2 回目以降は増えない
-		expect(unwrap(await ledger.listEvents(caller))).toHaveLength(2);
+		expect(unwrap(await ledger.listEvents(caller))).toHaveLength(1);
 	});
 
 	it("番号は行事ごとに 1 から連番で、同時に登録しても重複しない", async () => {
 		const { caller, ledger } = setup({ plan: "paid" });
-		const [wake, funeral] = unwrap(await ledger.listEvents(caller));
+		const [funeral, wake] = await twoEvents(ledger, caller);
 		const results = await Promise.all(
 			Array.from({ length: 10 }, (_, i) =>
 				ledger.createGift(caller, entry(wake!.id, { amount: "5000", name: `参列者${i}` })),
@@ -54,12 +62,12 @@ describe("KoudenLedger", () => {
 
 	it("登録すると差出人・変更ログが作られ、合計に反映される", async () => {
 		const { caller, ledger } = setup();
-		const [wake] = unwrap(await ledger.listEvents(caller));
+		const [funeral] = unwrap(await ledger.listEvents(caller));
 		const rels = unwrap(await ledger.listRelationships(caller));
 		const created = unwrap(
 			await ledger.createGift(
 				caller,
-				entry(wake!.id, {
+				entry(funeral!.id, {
 					amount: "10000",
 					name: "山田 太郎",
 					nameKana: "ヤマダ タロウ",
@@ -96,9 +104,9 @@ describe("KoudenLedger", () => {
 
 	it("既存の差出人を選んで登録できる（名寄せ）", async () => {
 		const { caller, ledger } = setup();
-		const [wake, funeral] = unwrap(await ledger.listEvents(caller));
+		const [funeral, wake] = await twoEvents(ledger, caller);
 		const first = unwrap(
-			await ledger.createGift(caller, entry(wake!.id, { amount: "5000", name: "佐藤 一郎" })),
+			await ledger.createGift(caller, entry(funeral!.id, { amount: "5000", name: "佐藤 一郎" })),
 		);
 		const candidates = unwrap(await ledger.listPersons(caller, { q: "さとう", limit: 5 }));
 		expect(candidates).toEqual([]);
@@ -107,7 +115,7 @@ describe("KoudenLedger", () => {
 
 		await ledger.createGift(
 			caller,
-			giftEntrySchema.parse({ eventId: funeral!.id, kind: "kyoka", personId: first.personId }),
+			giftEntrySchema.parse({ eventId: wake!.id, kind: "kyoka", personId: first.personId }),
 		);
 		const person = unwrap(await ledger.getPerson(caller, first.personId));
 		expect(person.giftCount).toBe(2);
@@ -117,10 +125,10 @@ describe("KoudenLedger", () => {
 
 	it("カナの表記ゆれ（ひらがな・半角）でも検索できる", async () => {
 		const { caller, ledger } = setup();
-		const [wake] = unwrap(await ledger.listEvents(caller));
+		const [funeral] = unwrap(await ledger.listEvents(caller));
 		await ledger.createGift(
 			caller,
-			entry(wake!.id, { amount: "5000", name: "鈴木 次郎", nameKana: "スズキ ジロウ" }),
+			entry(funeral!.id, { amount: "5000", name: "鈴木 次郎", nameKana: "スズキ ジロウ" }),
 		);
 		for (const q of ["すずき", "ｽｽﾞｷ", "スズキジロウ", "鈴木"]) {
 			expect(unwrap(await ledger.listPersons(caller, { q }))).toHaveLength(1);
@@ -131,10 +139,10 @@ describe("KoudenLedger", () => {
 
 	it("いただきものが 100 件を超えても差出人つきで一覧できる", async () => {
 		const { caller, ledger } = setup({ plan: "paid" });
-		const [wake] = unwrap(await ledger.listEvents(caller));
+		const [funeral] = unwrap(await ledger.listEvents(caller));
 		for (let i = 0; i < 101; i++) {
 			unwrap(
-				await ledger.createGift(caller, entry(wake!.id, { amount: "1000", name: `差出人${i}` })),
+				await ledger.createGift(caller, entry(funeral!.id, { amount: "1000", name: `差出人${i}` })),
 			);
 		}
 		const gifts = unwrap(await ledger.listGifts(caller, {}));
@@ -144,36 +152,38 @@ describe("KoudenLedger", () => {
 
 	it("閲覧者は書き込めない", async () => {
 		const { caller, ledger } = setup();
-		const [wake] = unwrap(await ledger.listEvents(caller));
+		const [funeral] = unwrap(await ledger.listEvents(caller));
 		const viewer = { ...caller, userId: "user-2", role: "viewer" as const };
-		const res = await ledger.createGift(viewer, entry(wake!.id, { amount: "1", name: "x" }));
+		const res = await ledger.createGift(viewer, entry(funeral!.id, { amount: "1", name: "x" }));
 		expect(res).toEqual({ ok: false, error: { code: "forbidden" } });
 		expect(unwrap(await ledger.listGifts(viewer, {}))).toEqual([]);
 	});
 
 	it(`無料版は ${FREE_GIFT_LIMIT} 件まで`, async () => {
 		const { caller, ledger } = setup();
-		const [wake] = unwrap(await ledger.listEvents(caller));
+		const [funeral] = unwrap(await ledger.listEvents(caller));
 		for (let i = 0; i < FREE_GIFT_LIMIT; i++) {
-			unwrap(await ledger.createGift(caller, entry(wake!.id, { amount: "1000", name: `p${i}` })));
+			unwrap(
+				await ledger.createGift(caller, entry(funeral!.id, { amount: "1000", name: `p${i}` })),
+			);
 		}
-		const over = await ledger.createGift(caller, entry(wake!.id, { amount: "1000", name: "x" }));
+		const over = await ledger.createGift(caller, entry(funeral!.id, { amount: "1000", name: "x" }));
 		expect(over).toEqual({ ok: false, error: { code: "limit_reached", limit: FREE_GIFT_LIMIT } });
 		// 有料なら登録できる
 		const paid = await ledger.createGift(
 			{ ...caller, plan: "paid" },
-			entry(wake!.id, { amount: "1000", name: "x" }),
+			entry(funeral!.id, { amount: "1000", name: "x" }),
 		);
 		expect(paid.ok).toBe(true);
 	});
 
 	it("楽観ロック: 古い version での更新は conflict になる", async () => {
 		const { caller, ledger } = setup();
-		const [wake] = unwrap(await ledger.listEvents(caller));
+		const [funeral] = unwrap(await ledger.listEvents(caller));
 		const { giftId } = unwrap(
-			await ledger.createGift(caller, entry(wake!.id, { amount: "5000", name: "x" })),
+			await ledger.createGift(caller, entry(funeral!.id, { amount: "5000", name: "x" })),
 		);
-		const input: GiftInput = { eventId: wake!.id, kind: "koden", amount: 10000 } as GiftInput;
+		const input: GiftInput = { eventId: funeral!.id, kind: "koden", amount: 10000 } as GiftInput;
 		expect(unwrap(await ledger.updateGift(caller, giftId, 1, input))).toEqual({ version: 2 });
 		expect(await ledger.updateGift(caller, giftId, 1, { ...input, amount: 3000 })).toEqual({
 			ok: false,
@@ -191,7 +201,7 @@ describe("KoudenLedger", () => {
 
 	it("行事を移すと、移した先で番号を振り直す", async () => {
 		const { caller, ledger } = setup();
-		const [wake, funeral] = unwrap(await ledger.listEvents(caller));
+		const [funeral, wake] = await twoEvents(ledger, caller);
 		await ledger.createGift(caller, entry(funeral!.id, { amount: "1", name: "a" }));
 		const { giftId } = unwrap(
 			await ledger.createGift(caller, entry(wake!.id, { amount: "1", name: "b" })),
@@ -209,9 +219,9 @@ describe("KoudenLedger", () => {
 
 	it("連名: 差出人の追加・負担額・代表者の変更・削除", async () => {
 		const { caller, ledger } = setup();
-		const [wake] = unwrap(await ledger.listEvents(caller));
+		const [funeral] = unwrap(await ledger.listEvents(caller));
 		const { giftId, personId: a } = unwrap(
-			await ledger.createGift(caller, entry(wake!.id, { amount: "10000", name: "A" })),
+			await ledger.createGift(caller, entry(funeral!.id, { amount: "10000", name: "A" })),
 		);
 		let v = unwrap(
 			await ledger.addContributor(caller, giftId, 1, {
@@ -254,18 +264,18 @@ describe("KoudenLedger", () => {
 
 	it("関係での絞り込みは代表者の関係で行う（関係別の集計と一致させる）", async () => {
 		const { caller, ledger } = setup();
-		const [wake] = unwrap(await ledger.listEvents(caller));
+		const [funeral] = unwrap(await ledger.listEvents(caller));
 		const [family, friend] = unwrap(await ledger.listRelationships(caller));
 		const { giftId } = unwrap(
 			await ledger.createGift(
 				caller,
-				entry(wake!.id, { amount: "10000", name: "A", relationshipId: family!.id }),
+				entry(funeral!.id, { amount: "10000", name: "A", relationshipId: family!.id }),
 			),
 		);
 		const b = unwrap(
 			await ledger.createGift(
 				caller,
-				entry(wake!.id, { amount: "1000", name: "B", relationshipId: friend!.id }),
+				entry(funeral!.id, { amount: "1000", name: "B", relationshipId: friend!.id }),
 			),
 		);
 		unwrap(
@@ -282,9 +292,9 @@ describe("KoudenLedger", () => {
 
 	it("連名の負担額・代表者の変更でも最終更新日時が進む", async () => {
 		const { caller, ledger } = setup();
-		const [wake] = unwrap(await ledger.listEvents(caller));
+		const [funeral] = unwrap(await ledger.listEvents(caller));
 		const { giftId, personId } = unwrap(
-			await ledger.createGift(caller, entry(wake!.id, { amount: "1000", name: "A" })),
+			await ledger.createGift(caller, entry(funeral!.id, { amount: "1000", name: "A" })),
 		);
 		const before = unwrap(await ledger.getGift(caller, giftId)).updatedAt;
 		await new Promise((r) => setTimeout(r, 5));
@@ -300,9 +310,9 @@ describe("KoudenLedger", () => {
 
 	it("連名の負担額の合計は金額を超えられない（金額を下げる場合も）", async () => {
 		const { caller, ledger } = setup();
-		const [wake] = unwrap(await ledger.listEvents(caller));
+		const [funeral] = unwrap(await ledger.listEvents(caller));
 		const { giftId, personId } = unwrap(
-			await ledger.createGift(caller, entry(wake!.id, { amount: "10000", name: "A" })),
+			await ledger.createGift(caller, entry(funeral!.id, { amount: "10000", name: "A" })),
 		);
 		const over = await ledger.addContributor(caller, giftId, 1, {
 			person: { type: "new", input: { name: "B", organization: undefined } },
@@ -317,7 +327,7 @@ describe("KoudenLedger", () => {
 			}),
 		).version;
 		const lowered = await ledger.updateGift(caller, giftId, v, {
-			eventId: wake!.id,
+			eventId: funeral!.id,
 			kind: "koden",
 			amount: 5000,
 		} as GiftInput);
@@ -327,14 +337,14 @@ describe("KoudenLedger", () => {
 
 	it("行事: 記録があるものと最後の 1 つは削除できない。並べ替えできる", async () => {
 		const { caller, ledger } = setup();
-		const [wake, funeral] = unwrap(await ledger.listEvents(caller));
+		const [funeral, wake] = await twoEvents(ledger, caller);
 		await ledger.createGift(caller, entry(wake!.id, { amount: "1", name: "a" }));
 		expect(await ledger.deleteEvent(caller, wake!.id)).toMatchObject({
 			ok: false,
 			error: { message: "記録がある行事は削除できません" },
 		});
-		unwrap(await ledger.moveEvent(caller, funeral!.id, "up"));
-		expect(unwrap(await ledger.listEvents(caller)).map((e) => e.name)).toEqual(["告別式", "通夜"]);
+		unwrap(await ledger.moveEvent(caller, wake!.id, "up"));
+		expect(unwrap(await ledger.listEvents(caller)).map((e) => e.name)).toEqual(["通夜", "葬儀"]);
 		unwrap(await ledger.deleteEvent(caller, funeral!.id));
 		const { id } = unwrap(
 			await ledger.createEvent(caller, {
@@ -348,18 +358,18 @@ describe("KoudenLedger", () => {
 
 	it("関係: 使用中は削除できず、非表示にはできる", async () => {
 		const { caller, ledger } = setup();
-		const [wake] = unwrap(await ledger.listEvents(caller));
+		const [funeral] = unwrap(await ledger.listEvents(caller));
 		const [family] = unwrap(await ledger.listRelationships(caller));
 		await ledger.createGift(
 			caller,
-			entry(wake!.id, { amount: "1", name: "a", relationshipId: family!.id }),
+			entry(funeral!.id, { amount: "1", name: "a", relationshipId: family!.id }),
 		);
 		expect((await ledger.deleteRelationship(caller, family!.id)).ok).toBe(false);
 		unwrap(await ledger.setRelationshipHidden(caller, family!.id, true));
 		// 非表示の関係は新しく選べない
 		const res = await ledger.createGift(
 			caller,
-			entry(wake!.id, { amount: "1", name: "b", relationshipId: family!.id }),
+			entry(funeral!.id, { amount: "1", name: "b", relationshipId: family!.id }),
 		);
 		expect(res).toMatchObject({ ok: false, error: { field: "relationshipId" } });
 
@@ -378,11 +388,11 @@ describe("KoudenLedger", () => {
 				"INSERT INTO koudens (id, title, deceased_name, owner_user_id, created_at, updated_at) VALUES (?, 't', 'd', 'user-1', '', '')",
 			).bind(caller.koudenId),
 		]);
-		const [wake] = unwrap(await ledger.listEvents(caller));
-		await ledger.createGift(caller, entry(wake!.id, { amount: "3000", name: "a" }));
+		const [funeral] = unwrap(await ledger.listEvents(caller));
+		await ledger.createGift(caller, entry(funeral!.id, { amount: "3000", name: "a" }));
 		await ledger.createGift(
 			caller,
-			giftEntrySchema.parse({ eventId: wake!.id, kind: "kyoka", name: "b" }),
+			giftEntrySchema.parse({ eventId: funeral!.id, kind: "kyoka", name: "b" }),
 		);
 		expect(await runDurableObjectAlarm(ledger)).toBe(true);
 		const stats = await env.DB.prepare("SELECT * FROM kouden_stats WHERE kouden_id = ?")
@@ -393,8 +403,8 @@ describe("KoudenLedger", () => {
 
 	it("deleteAll で中身をすべて消し、遅れて届いた要求でも台帳を作り直さない", async () => {
 		const { caller, ledger } = setup();
-		const [wake] = unwrap(await ledger.listEvents(caller));
-		await ledger.createGift(caller, entry(wake!.id, { amount: "1", name: "a" }));
+		const [funeral] = unwrap(await ledger.listEvents(caller));
+		await ledger.createGift(caller, entry(funeral!.id, { amount: "1", name: "a" }));
 		await ledger.deleteAll();
 		const tables = () =>
 			runInDurableObject(ledger, (_obj, state) =>
@@ -407,7 +417,7 @@ describe("KoudenLedger", () => {
 		expect(await tables()).toEqual([]);
 
 		// 削除の直前に権限確認を通った要求が、削除後に届いた場合
-		const late = await ledger.createGift(caller, entry(wake!.id, { amount: "1", name: "b" }));
+		const late = await ledger.createGift(caller, entry(funeral!.id, { amount: "1", name: "b" }));
 		expect(late).toEqual({ ok: false, error: { code: "not_found" } });
 		expect(await ledger.listEvents(caller)).toEqual({ ok: false, error: { code: "not_found" } });
 		expect(await tables()).toEqual([]);

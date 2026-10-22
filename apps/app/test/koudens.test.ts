@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { ledgerFor } from "../src/ledger/client.ts";
 import { formPost, HANAKO, makeApp, TARO } from "./helpers.ts";
 
-/** ログインして香典帳を 1 冊作り、その ID と、登録で使う行事（先頭の「通夜」）の ID を返す */
+/** ログインして香典帳を 1 冊作り、その ID と、登録で使う行事（既定の「葬儀」）の ID を返す */
 async function setup() {
 	const taro = makeApp(TARO);
 	await taro.login();
@@ -11,7 +11,7 @@ async function setup() {
 	expect(created.status).toBe(303);
 	const koudenId = created.headers.get("location")?.split("/").pop() ?? "";
 	const form = await (await taro.request(`/k/${koudenId}/gifts/new`)).text();
-	const eventId = /name="eventId"[^>]*><option value="([^"]+)"/.exec(form)?.[1] ?? "";
+	const eventId = /name="eventId"(?:[^>]*><option)? value="([^"]+)"/.exec(form)?.[1] ?? "";
 	expect(eventId).not.toBe("");
 	return { taro, koudenId, eventId };
 }
@@ -34,8 +34,9 @@ describe("香典帳の作成と一覧", () => {
 		expect(list).toContain("故 山田 一郎 様");
 		expect(list).toContain(`/k/${koudenId}`);
 		const settings = await (await taro.request(`/k/${koudenId}/settings`)).text();
-		expect(settings).toContain('value="通夜"');
-		expect(settings).toContain('value="告別式"');
+		// 行事は「葬儀」1 つだけ（通夜・告別式はまとめる）
+		expect(settings).toContain('value="葬儀"');
+		expect(settings).not.toContain('value="通夜"');
 		expect(settings).toContain('value="会社関係"');
 	});
 
@@ -75,7 +76,7 @@ describe("いただきものの登録", () => {
 		expect(location.pathname).toBe(`/k/${koudenId}/gifts/new`);
 		expect(location.searchParams.get("event")).toBe(eventId);
 		const page = await (await taro.request(`${location.pathname}${location.search}`)).text();
-		expect(page).toContain("登録しました。通夜 No.1、鈴木 次郎 様、香典 ¥10,000。");
+		expect(page).toContain("登録しました。葬儀 No.1、鈴木 次郎 様、香典 ¥10,000。");
 		expect(page).toContain(`href="/k/${koudenId}/gifts/${location.searchParams.get("created")}"`);
 		// 氏名の欄は空に戻り、直前の登録結果を説明として読み上げる
 		expect(page).toMatch(/name="name"[^>]*value=""[^>]*aria-describedby="created-gift"/);
@@ -85,22 +86,33 @@ describe("いただきものの登録", () => {
 			formPost({ eventId, kind: "koden", name: "田中 三郎", amount: "5000" }),
 		);
 		const next = await (await taro.request(second.headers.get("location") ?? "")).text();
-		expect(next).toContain("登録しました。通夜 No.2、田中 三郎 様、香典 ¥5,000。");
+		expect(next).toContain("登録しました。葬儀 No.2、田中 三郎 様、香典 ¥5,000。");
 	});
 
-	it("選んだ行事で登録し、戻った画面でもその行事を選んでおく", async () => {
-		const { taro, koudenId } = await setup();
+	it("行事が 1 つなら行事を選ばせない", async () => {
+		const { taro, koudenId, eventId } = await setup();
 		const form = await (await taro.request(`/k/${koudenId}/gifts/new`)).text();
-		const funeral = /<option value="([^"]+)"[^>]*>告別式<\/option>/.exec(form)?.[1] ?? "";
-		expect(funeral).not.toBe("");
+		expect(form).toContain(`<input type="hidden" name="eventId" value="${eventId}"`);
+		expect(form).not.toContain('<select id="f-eventId"');
+	});
+
+	it("行事を足すと選べるようになり、選んだ行事で登録して、戻った画面でもその行事を選んでおく", async () => {
+		const { taro, koudenId } = await setup();
+		expect(
+			(await taro.request(`/k/${koudenId}/events`, formPost({ kind: "wake", name: "通夜" })))
+				.status,
+		).toBe(303);
+		const form = await (await taro.request(`/k/${koudenId}/gifts/new`)).text();
+		const wake = /<option value="([^"]+)"[^>]*>通夜<\/option>/.exec(form)?.[1] ?? "";
+		expect(wake).not.toBe("");
 		const res = await taro.request(
 			`/k/${koudenId}/gifts`,
-			formPost({ eventId: funeral, kind: "kyoka", organization: "ABC 商事", itemName: "生花" }),
+			formPost({ eventId: wake, kind: "kyoka", organization: "ABC 商事", itemName: "生花" }),
 		);
 		expect(res.status).toBe(303);
 		const page = await (await taro.request(res.headers.get("location") ?? "")).text();
-		expect(page).toContain("登録しました。告別式 No.1、ABC 商事 様、供花。");
-		expect(page).toMatch(new RegExp(`<option value="${funeral}" selected`));
+		expect(page).toContain("登録しました。通夜 No.1、ABC 商事 様、供花。");
+		expect(page).toMatch(new RegExp(`<option value="${wake}" selected`));
 	});
 
 	it("入力エラーは 422 でフォームに表示する", async () => {

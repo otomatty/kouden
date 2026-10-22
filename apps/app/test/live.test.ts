@@ -39,7 +39,7 @@ async function setupPair() {
 	const created = await taro.request("/k", formPost({ deceasedName: "山田 一郎" }));
 	const koudenId = created.headers.get("location")?.split("/").pop() ?? "";
 	const form = await (await taro.request(`/k/${koudenId}/gifts/new`)).text();
-	const eventId = /name="eventId"[^>]*><option value="([^"]+)"/.exec(form)?.[1] ?? "";
+	const eventId = /name="eventId"(?:[^>]*><option)? value="([^"]+)"/.exec(form)?.[1] ?? "";
 	const hanako = makeApp(HANAKO);
 	await hanako.login();
 	const hanakoId = (
