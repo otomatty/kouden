@@ -27,6 +27,11 @@ export function createApp(deps: AppDeps = {}) {
 		await next();
 		c.res.headers.set("Referrer-Policy", "no-referrer");
 	});
+	// 写真で登録（08 案 D）の画面だけ、カメラを自分のサイトに許す（ほかの画面は禁止のまま）
+	app.use("/k/:koudenId/gifts/scan", async (c, next) => {
+		await next();
+		c.res.headers.set("Permissions-Policy", "camera=(self), microphone=(), geolocation=()");
+	});
 	app.use(securityHeaders);
 	app.use(csrfProtection);
 	app.use(session);

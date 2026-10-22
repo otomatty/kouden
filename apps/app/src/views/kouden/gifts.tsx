@@ -18,7 +18,9 @@ export const GiftsPage: FC<{
 	relationships: LedgerRelationship[];
 	filter: GiftFilter;
 	notice?: string | undefined;
-}> = ({ kouden, gifts, events, relationships, filter, notice }) => {
+	/** 写真で登録（08 案 D）の画面。読み取りが無効なら出さない */
+	scanHref?: string | undefined;
+}> = ({ kouden, gifts, events, relationships, filter, notice, scanHref }) => {
 	const base = `/k/${kouden.id}`;
 	const values = {
 		event: filter.eventId,
@@ -41,6 +43,11 @@ export const GiftsPage: FC<{
 					<a href={`${base}/gifts/new`} class={`${ui.buttonPrimary} w-full sm:w-auto`}>
 						いただきものを登録する
 					</a>
+					{scanHref && (
+						<a href={scanHref} class={`${ui.buttonSecondary} w-full sm:w-auto`}>
+							写真で登録する
+						</a>
+					)}
 					{/* 表での入力は PC だけ（ADR-P19） */}
 					<a href={`${base}/gifts/sheet`} class={`${ui.buttonSecondary} max-md:hidden`}>
 						表で入力する

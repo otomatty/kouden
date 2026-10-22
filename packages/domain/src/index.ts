@@ -12,6 +12,7 @@ export {
 } from "./search.ts";
 export { nowIso } from "./time.ts";
 export { buildPostalShards, type PostalAddress, type PostalShards } from "./postal.ts";
+export { type PhotoDraft, type PhotoReading, photoReadingSchema, toPhotoDraft } from "./photo.ts";
 export { allocateAmount, type ContributorShare } from "./allocation.ts";
 export { can, type Action } from "./permissions.ts";
 export { joinNotes, personLabel } from "./format.ts";

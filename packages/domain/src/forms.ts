@@ -370,6 +370,8 @@ export const sheetRequestSchema = z.object({
 				postalCode: sheetCell,
 				address: sheetCell,
 				relationshipId: sheetCell,
+				/** 表の列ではない。写真で登録（08 案 D）の下書きが新しい行を作るときだけ使う */
+				organization: sheetCell,
 			}),
 		)
 		.min(1)

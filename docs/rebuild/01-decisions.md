@@ -192,6 +192,9 @@
   - 写真はアプリ（サーバー・R2・D1・DO）に保存しない（2026-10-22 決定）。読み取りと確認の間だけブラウザのメモリに置き（下書きと見比べるため）、登録か破棄で捨てる。
   - カメラを使うため、`Permissions-Policy` の `camera` を自分のサイトだけ許す（今は全面禁止）。
   - 速く読み取る仕組みは [08](./08-gift-entry-ux.md) 案 D（連続撮影・自動シャッター・裏での読み取り）。
+  - 土台を実装した（2026-10-22）: 画面 `/k/:id/gifts/scan`（`public/assets/gift-scan.js`）、読み取りの API `POST /k/:id/gifts/read`（写真を本文で送り、下書きの形の JSON を返す。5MB まで、JPEG・PNG・WebP。`Cache-Control: no-store`）、下書きの登録は表で入力と同じ `POST /k/:id/gifts/sheet`（新しい行だけ団体名も受け取る）。読み取りの実装は `src/photo/reader.ts` の `PhotoReader` で差し替える。読み取りの出力は信用せず、`photoReadingSchema` で形と長さを確かめ、`toPhotoDraft` で金額（「金壱萬円」など）と郵便番号をそろえる。
+  - 送り先は `deploy.settings.ts` の `photoReader` で選ぶ。`"off"` なら画面・API・リンクを出さない。`"fake"`（写真を読まずに見本を返す）は development でだけ使え、ほかの環境では `deployBlockers` がデプロイを止める。送り先を決めてプライバシーポリシーを直すまで、staging・本番は `"off"`。
+  - 写真の画面だけ `Permissions-Policy` の `camera=(self)` にする（ほかの画面は禁止のまま）。撮った写真の表示のため、CSP の `img-src` に `blob:` を足した。
 
 ### ADR-T17 郵便番号から住所を入れるデータは、日本郵便の公開データを Static Assets に置く（2026-10-22）
 - **決定**: 日本郵便の「住所の郵便番号（1レコード1行、UTF-8形式）」を、郵便番号の先頭 3 桁ごとの JSON（`/postal/<3 桁>.json`）に変換して Static Assets に置く。画面は入力された郵便番号の先頭 3 桁のファイルだけを読み、都道府県・市区町村・町域を住所の欄に入れる（[08](./08-gift-entry-ux.md) 案 E）。データは Git に入れず、デプロイのたびに最新のものを取得して作る（`bun run postal -- --download`）。

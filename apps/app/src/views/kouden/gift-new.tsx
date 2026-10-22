@@ -89,16 +89,26 @@ const candidatesTrigger = (base: string) => ({
 });
 
 /** いただきものの登録（E4-1, E4-3。08 案 A）。行事の合計と、登録の欄・最近の登録 */
-export const GiftNewPage: FC<GiftEntryProps & { summary: EntrySummaryData }> = ({
-	summary,
-	...props
-}) => (
+export const GiftNewPage: FC<
+	GiftEntryProps & {
+		summary: EntrySummaryData;
+		/** 写真で登録（08 案 D）の画面。読み取りが無効なら出さない */
+		scanHref?: string | undefined;
+	}
+> = ({ summary, scanHref, ...props }) => (
 	<div class="mx-auto max-w-xl space-y-4">
 		<div class="flex flex-wrap items-baseline justify-between gap-2">
 			<h2 class={ui.h2}>いただきものの登録</h2>
-			<a href={`/k/${props.kouden.id}/gifts`} class={`${ui.link} text-sm`}>
-				一覧に戻る
-			</a>
+			<p class="flex gap-4 text-sm">
+				{scanHref && (
+					<a href={scanHref} class={ui.link}>
+						写真で登録する
+					</a>
+				)}
+				<a href={`/k/${props.kouden.id}/gifts`} class={ui.link}>
+					一覧に戻る
+				</a>
+			</p>
 		</div>
 		<EntrySummary kouden={props.kouden} summary={summary} />
 		<GiftEntryPanel {...props} />

@@ -8,7 +8,8 @@ export const securityHeaders: MiddlewareHandler<AppEnv> = secureHeaders({
 		defaultSrc: ["'self'"],
 		scriptSrc: ["'self'", NONCE],
 		styleSrc: ["'self'"],
-		imgSrc: ["'self'", "data:", "https://lh3.googleusercontent.com"],
+		// blob: は写真で登録（08 案 D）の撮った写真。ブラウザのメモリの中だけに置き、送り先は読み取りの API だけ
+		imgSrc: ["'self'", "data:", "blob:", "https://lh3.googleusercontent.com"],
 		connectSrc: ["'self'"],
 		fontSrc: ["'self'"],
 		objectSrc: ["'none'"],

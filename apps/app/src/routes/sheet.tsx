@@ -29,7 +29,8 @@ import {
 
 /**
  * 表で入力（08 案 C、ADR-P19）。PC だけで使う。
- * 画面は表を出すだけで、保存は gift-sheet.js が JSON で送る（行ごとに作成・更新し、行ごとに結果を返す）
+ * 画面は表を出すだけで、保存は gift-sheet.js が JSON で送る（行ごとに作成・更新し、行ごとに結果を返す）。
+ * 写真で登録（08 案 D）の下書きも、同じ API で新しい行として保存する
  */
 
 /** 保存の結果（行ごと）。values は保存した形（金額の書き方・郵便番号のハイフンをそろえたもの） */
@@ -88,7 +89,8 @@ function sheetValues(
 }
 
 /** 何も入れていない行（保存しない） */
-const isBlank = (row: SheetRowInput) => SHEET_COLUMNS.every((c) => row[c].trim() === "");
+const isBlank = (row: SheetRowInput) =>
+	SHEET_COLUMNS.every((c) => row[c].trim() === "") && row.organization.trim() === "";
 
 async function createRow(c: Ctx, eventId: string, row: SheetRowInput): Promise<SheetRowResult> {
 	if (isBlank(row)) return { key: row.key, status: "skipped" };
@@ -97,6 +99,7 @@ async function createRow(c: Ctx, eventId: string, row: SheetRowInput): Promise<S
 		kind: "koden",
 		name: row.name,
 		nameKana: row.nameKana,
+		organization: row.organization,
 		amount: row.amount,
 		postalCode: row.postalCode,
 		address: row.address,

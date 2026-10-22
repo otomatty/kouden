@@ -4,6 +4,7 @@ import type { StripeClient } from "./billing/stripe.ts";
 import type { KoudenContext } from "./kouden/store.ts";
 import type { Caller } from "./ledger/types.ts";
 import type { ImportAccessVerifier } from "./migration/auth.ts";
+import type { PhotoReader } from "./photo/reader.ts";
 
 /** アプリ全体で使う依存。テストでは差し替える */
 export interface AppDeps {
@@ -18,6 +19,8 @@ export interface AppDeps {
 	verifyRollbackAccess?: (env: Env) => ImportAccessVerifier;
 	/** staging 全体の Access。取り込み用の検証とは別の AUD を使う */
 	verifyAppAccess?: (env: Env) => ImportAccessVerifier;
+	/** 写真の読み取り。省略時は PHOTO_READER の設定に合う実装（"off" なら null） */
+	photoReader?: (env: Env) => PhotoReader | null;
 }
 
 export interface AppEnv {
@@ -30,6 +33,8 @@ export interface AppEnv {
 		now: Date;
 		/** Stripe の API（シークレットが未設定なら null） */
 		stripe: () => StripeClient | null;
+		/** 写真の読み取り（無効なら null） */
+		photoReader: () => PhotoReader | null;
 		secureHeadersNonce?: string;
 		/** /k/:koudenId 配下でのみ設定される（kouden-access ミドルウェア） */
 		kouden: KoudenContext;

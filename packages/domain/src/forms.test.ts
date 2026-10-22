@@ -243,6 +243,7 @@ describe("sheetRequestSchema", () => {
 			postalCode: "",
 			address: "",
 			relationshipId: "",
+			organization: "",
 		});
 	});
 

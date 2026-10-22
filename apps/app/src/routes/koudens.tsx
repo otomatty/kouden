@@ -85,6 +85,7 @@ import { registerBillingRoutes } from "./billing.tsx";
 import { registerOutputRoutes } from "./output.tsx";
 import { registerReturnRoutes } from "./returns.tsx";
 import { registerMergeRoutes } from "./merge.tsx";
+import { registerScanRoutes, scanHref } from "./scan.tsx";
 import { registerSheetRoutes } from "./sheet.tsx";
 
 // ---- 香典帳の作成 -------------------------------------------------------------
@@ -216,7 +217,12 @@ async function renderGiftNew(
 		c,
 		"いただきものの登録",
 		"gifts",
-		<GiftNewPage {...props} summary={ctx.summary} describeCreated />,
+		<GiftNewPage
+			{...props}
+			summary={ctx.summary}
+			scanHref={scanHref(c, ctx.summary.eventId)}
+			describeCreated
+		/>,
 		{ status },
 	);
 }
@@ -368,8 +374,9 @@ k.get("/persons/candidates", async (c) => {
 	);
 });
 
-// 表で入力（08 案 C）。/gifts/:giftId より先に登録する
+// 表で入力（08 案 C）・写真で登録（08 案 D）。/gifts/:giftId より先に登録する
 registerSheetRoutes(k);
+registerScanRoutes(k);
 
 // ---- いただきもの -------------------------------------------------------------
 
@@ -403,6 +410,7 @@ k.get("/gifts", async (c) => {
 			relationships={relationships.value}
 			filter={filter}
 			notice={noticeOf(c)}
+			scanHref={scanHref(c)}
 		/>,
 		{ wide: true },
 	);
