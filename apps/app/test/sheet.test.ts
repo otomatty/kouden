@@ -228,6 +228,49 @@ describe("表で入力（08 案 C）", () => {
 		);
 	});
 
+	it("同じ差出人の 2 行をまとめて保存しても、後の行（金額だけの変更）を競合にしない", async () => {
+		const { taro, koudenId, eventId, save } = await setup();
+		const [first] = await rowsOf(await save([{ key: "a", name: "佐藤", amount: "1000" }]));
+		// 同じ差出人の 2 件目（既存の差出人を選んで登録）
+		await taro.request(
+			`/k/${koudenId}/gifts`,
+			formPost({ eventId, kind: "koden", personId: first?.personId ?? "", amount: "2000" }),
+		);
+		const html = await (await taro.request(`/k/${koudenId}/gifts/sheet`)).text();
+		const secondGiftId = [...html.matchAll(/data-gift-id="([^"]+)"/g)]
+			.map((m) => m[1])
+			.find((id) => id !== first?.giftId);
+		const base = { personId: first?.personId, personVersion: 1, name: "佐藤", address: "東京都" };
+		const results = await rowsOf(
+			await save([
+				{ ...base, key: "a", giftId: first?.giftId, giftVersion: 1, amount: "1000" },
+				{ ...base, key: "b", giftId: secondGiftId, giftVersion: 1, amount: "3000" },
+			]),
+		);
+		expect(results).toMatchObject([
+			{ key: "a", status: "saved", personVersion: 2 },
+			{ key: "b", status: "saved", personVersion: 2, giftVersion: 2 },
+		]);
+		expect(await (await taro.request(`/k/${koudenId}/gifts`)).text()).toContain(
+			"2 件・香典 ¥4,000",
+		);
+	});
+
+	it("写真の下書きを送り直したとき、待つ間に直した団体名も保存する", async () => {
+		const { taro, koudenId, save } = await setup();
+		const row = {
+			key: "d1",
+			requestId: "3f1d0c2e-0000-4000-8000-000000000002",
+			organization: "A 商事",
+			amount: "1000",
+		};
+		const [first] = await rowsOf(await save([row]));
+		const [again] = await rowsOf(await save([{ ...row, organization: "B 商事 一同" }]));
+		expect(again).toMatchObject({ status: "saved", giftId: first?.giftId, personVersion: 2 });
+		const person = await (await taro.request(`/k/${koudenId}/persons/${first?.personId}`)).text();
+		expect(person).toMatch(/name="organization"[^>]*value="B 商事 一同"/);
+	});
+
 	it("非表示にした関係は、その関係の差出人の行にだけ選択肢として残り、金額を直しても消えない", async () => {
 		const { taro, koudenId, save } = await setup();
 		const form = await (await taro.request(`/k/${koudenId}/gifts/new`)).text();

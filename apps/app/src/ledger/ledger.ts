@@ -168,6 +168,9 @@ const MERGE_FILL_FIELDS = [
 /** 作成の要求（createGift の requestId）を覚えておくキーの接頭辞と期間 */
 const CREATE_REQUEST_PREFIX = "create-request:";
 const CREATE_REQUEST_TTL_MS = 86_400_000;
+/** 古い要求を最後に消した時刻（接頭辞の外に置き、一覧に含めない） */
+const CREATE_REQUEST_PRUNED_AT_KEY = "create-request-pruned-at";
+const CREATE_REQUEST_PRUNE_INTERVAL_MS = 3_600_000;
 
 /** 業務ルール違反。transactionSync の中で投げるとロールバックされ、呼び出し元には LedgerError として返る */
 class LedgerFailure extends Error {
@@ -594,7 +597,9 @@ export class KoudenLedger extends DurableObject<Env> {
 
 	/**
 	 * 表の 1 行の保存（08 案 C）。差出人と香典を 1 つのトランザクションで直す。
-	 * どちらかが開いた後に他の人に更新されていたら、どちらも保存しない
+	 * 直す側が開いた後に他の人に更新されていたら、どちらも保存しない。
+	 * 直さない側は version を確かめず、今の version を返す（同じ差出人の行をまとめて貼り付けたとき、
+	 * 先の行が差出人を直して version が進んでも、後の行の金額だけの保存を競合にしない）
 	 */
 	async updateSheetRow(
 		caller: Caller,
@@ -618,18 +623,20 @@ export class KoudenLedger extends DurableObject<Env> {
 				if (v === undefined) throw new LedgerFailure({ code: "not_found" });
 				return v;
 			};
+			const giftVersion = versionOf("gifts", row.giftId);
+			const personVersion = versionOf("persons", row.personId);
 			if (
-				versionOf("gifts", row.giftId) !== row.giftVersion ||
-				versionOf("persons", row.personId) !== row.personVersion
+				(row.gift && giftVersion !== row.giftVersion) ||
+				(row.person && personVersion !== row.personVersion)
 			) {
 				throw new LedgerFailure({ code: "conflict" });
 			}
 			const person = row.person
 				? this.applyPersonUpdate(caller, now, row.personId, row.personVersion, row.person)
-				: { version: row.personVersion };
+				: { version: personVersion };
 			const gift = row.gift
 				? this.applyGiftUpdate(caller, now, row.giftId, row.giftVersion, row.gift)
-				: { version: row.giftVersion };
+				: { version: giftVersion };
 			return { giftVersion: gift.version, personVersion: person.version };
 		});
 	}
@@ -2659,13 +2666,18 @@ export class KoudenLedger extends DurableObject<Env> {
 
 	/**
 	 * 作成の要求（requestId）と結果を DO のストレージに残す（DO のスキーマは変えない）。
-	 * 送り直しは数分のうちに届くので、1 日より古いものは消す
+	 * 送り直しは数分のうちに届くので、1 日より古いものは消す（1 時間に 1 回まとめて）
 	 */
 	private rememberCreateRequest(key: string, now: string, result: CreatedGift): void {
 		const kv = this.ctx.storage.kv;
-		const cutoff = new Date(Date.parse(now) - CREATE_REQUEST_TTL_MS).toISOString();
-		for (const [oldKey, value] of kv.list<{ at: string }>({ prefix: CREATE_REQUEST_PREFIX })) {
-			if (value.at < cutoff) kv.delete(oldKey);
+		// 古いものを消すのは 1 時間に 1 回（作成のたびに全件を読まない）
+		const prunedAt = kv.get<string>(CREATE_REQUEST_PRUNED_AT_KEY);
+		if (!prunedAt || Date.parse(now) - Date.parse(prunedAt) >= CREATE_REQUEST_PRUNE_INTERVAL_MS) {
+			const cutoff = new Date(Date.parse(now) - CREATE_REQUEST_TTL_MS).toISOString();
+			for (const [oldKey, value] of kv.list<{ at: string }>({ prefix: CREATE_REQUEST_PREFIX })) {
+				if (value.at < cutoff) kv.delete(oldKey);
+			}
+			kv.put(CREATE_REQUEST_PRUNED_AT_KEY, now);
 		}
 		kv.put(key, { at: now, result });
 	}

@@ -121,13 +121,17 @@ async function createRow(c: Ctx, eventId: string, row: SheetRowInput): Promise<S
 	if (result.value.replayed) {
 		// 送り直し。最初の応答が届かない間に行を直していたら、作った記録（version 1）に今の内容を重ねる
 		// （version 1 のまま確かめるので、その後に他の人が直していれば競合になる）
-		return updateRow(c, {
-			...row,
-			giftId: result.value.giftId,
-			giftVersion: 1,
-			personId: result.value.personId,
-			personVersion: 1,
-		});
+		return updateRow(
+			c,
+			{
+				...row,
+				giftId: result.value.giftId,
+				giftVersion: 1,
+				personId: result.value.personId,
+				personVersion: 1,
+			},
+			{ withOrganization: true },
+		);
 	}
 	const person = parsed.data.person.type === "new" ? parsed.data.person.input : undefined;
 	return {
@@ -150,9 +154,14 @@ async function createRow(c: Ctx, eventId: string, row: SheetRowInput): Promise<S
 
 /**
  * 保存済みの行を直す。表の列だけを今の内容に重ね、ほかの項目（電話・備考・品名など）は残す。
- * 差出人と香典はそれぞれ version で、開いた後の他の人の変更を検出する
+ * 差出人と香典はそれぞれ version で、開いた後の他の人の変更を検出する。
+ * withOrganization は団体名も重ねる（写真で登録の下書きを送り直したとき。表に団体名の列はない）
  */
-async function updateRow(c: Ctx, row: SheetRowInput): Promise<SheetRowResult> {
+async function updateRow(
+	c: Ctx,
+	row: SheetRowInput,
+	{ withOrganization = false }: { withOrganization?: boolean } = {},
+): Promise<SheetRowResult> {
 	const caller = c.get("caller");
 	const { giftId, personId } = row;
 	if (!giftId || !personId || row.giftVersion === undefined || row.personVersion === undefined) {
@@ -176,6 +185,7 @@ async function updateRow(c: Ctx, row: SheetRowInput): Promise<SheetRowResult> {
 		postalCode: row.postalCode,
 		address: row.address,
 		relationshipId: row.relationshipId,
+		...(withOrganization ? { organization: row.organization } : {}),
 	});
 	const giftParsed = giftSchema.safeParse({ ...giftFormValues(gift.value), amount: row.amount });
 	if (!personParsed.success || !giftParsed.success) {
@@ -196,17 +206,20 @@ async function updateRow(c: Ctx, row: SheetRowInput): Promise<SheetRowResult> {
 		(p.nameKana ?? null) !== current.nameKana ||
 		(p.postalCode ?? null) !== current.postalCode ||
 		(p.address ?? null) !== current.address ||
-		(p.relationshipId ?? null) !== current.relationshipId;
+		(p.relationshipId ?? null) !== current.relationshipId ||
+		(p.organization ?? null) !== current.organization;
 	const giftChanged = (giftParsed.data.amount ?? null) !== gift.value.amount;
 
-	let { personVersion, giftVersion } = row;
+	// 変えない側は今の version を返す（表の列は保存されている内容と同じなので、そのまま続けて直せる）
+	let personVersion = current.version;
+	let giftVersion = gift.value.version;
 	if (personChanged || giftChanged) {
 		// 差出人と香典は 1 つのトランザクションで直す（片方だけ保存しない）
 		const r = await ledger(c).updateSheetRow(caller, {
 			giftId,
-			giftVersion,
+			giftVersion: row.giftVersion,
 			personId,
-			personVersion,
+			personVersion: row.personVersion,
 			person: personChanged ? p : undefined,
 			gift: giftChanged ? giftParsed.data : undefined,
 		});

@@ -285,6 +285,39 @@ describe("KoudenLedger", () => {
 		);
 		expect(saved).toEqual({ giftVersion: 3, personVersion: 2 });
 		expect(unwrap(await ledger.getGift(caller, giftId)).amount).toBe(7000);
+
+		// 直さない側（差出人）の version は確かめず、今の version を返す
+		const amountOnly = unwrap(
+			await ledger.updateSheetRow(caller, {
+				giftId,
+				giftVersion: 3,
+				personId,
+				personVersion: 1,
+				gift: { ...gift, amount: 8000 } as GiftInput,
+			}),
+		);
+		expect(amountOnly).toEqual({ giftVersion: 4, personVersion: 2 });
+	});
+
+	it("古い作成の要求を消すのは 1 時間に 1 回", async () => {
+		const { caller, ledger } = setup();
+		const [funeral] = unwrap(await ledger.listEvents(caller));
+		const give = (requestId: string) =>
+			ledger.createGift(caller, entry(funeral!.id, { amount: "1", name: "a" }), requestId);
+		unwrap(await give("first"));
+		await runInDurableObject(ledger, (_obj, state) => {
+			state.storage.kv.put("create-request:user-1:old", { at: "2000-01-01T00:00:00.000Z" });
+		});
+		// 直前に消したばかりなので、次の作成では消さない
+		unwrap(await give("second"));
+		const keys = await runInDurableObject(ledger, (_obj, state) =>
+			[...state.storage.kv.list({ prefix: "create-request:" })].map(([k]) => k).toSorted(),
+		);
+		expect(keys).toEqual([
+			"create-request:user-1:first",
+			"create-request:user-1:old",
+			"create-request:user-1:second",
+		]);
 	});
 
 	it("連名: 差出人の追加・負担額・代表者の変更・削除", async () => {
