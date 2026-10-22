@@ -29,13 +29,7 @@ pageRoutes.get("/", async (c) => {
 		const notice = key && key in notices ? notices[key as keyof typeof notices] : undefined;
 		return c.html(
 			<Layout title="香典帳一覧" user={user}>
-				<DashboardPage
-					user={user}
-					koudens={koudens}
-					tab={tab}
-					notice={notice}
-					transfers={transfers}
-				/>
+				<DashboardPage koudens={koudens} tab={tab} notice={notice} transfers={transfers} />
 			</Layout>,
 		);
 	}
