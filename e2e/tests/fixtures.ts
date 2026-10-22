@@ -45,14 +45,13 @@ export async function createKouden(page: Page, deceasedName: string): Promise<st
 	return new URL(page.url()).pathname;
 }
 
-/** 受付画面で香典を 1 件登録する（受付画面を開いた状態で呼ぶ） */
+/** いただきものの登録画面で香典を 1 件登録する（登録画面を開いた状態で呼ぶ） */
 export async function registerKoden(page: Page, name: string, amount: number) {
 	await page.getByLabel("氏名").fill(name);
-	await page.getByLabel("金額").fill(String(amount));
-	await page.getByRole("button", { name: "登録する" }).click();
-	await expect(page.locator("#sr-status")).toContainText(`${name} 様`);
-	// 読み上げは差し替えと同時に出るが、新しい氏名の欄に htmx の入力の監視が付くのは settle の後。
-	// その前に入力すると候補の検索が出ないので、settle で移るフォーカスを待つ
+	await page.getByLabel("金額", { exact: true }).fill(String(amount));
+	await page.getByRole("button", { name: "登録して次へ" }).click();
+	// 画面を読み直さずに、登録した内容を上に出す。次の入力のため氏名の欄にフォーカスがある
+	await expect(page.locator("#created-gift")).toContainText(`${name} 様`);
 	await expect(page.getByLabel("氏名")).toBeFocused();
 }
 

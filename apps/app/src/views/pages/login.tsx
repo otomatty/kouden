@@ -30,8 +30,8 @@ const Icon: FC<{ children?: Child }> = ({ children }) => (
 
 const POINTS = [
 	{
-		title: "受付でスマホから記録",
-		body: "登録するとその場で受付番号を表示します。",
+		title: "スマホでもパソコンでも記録",
+		body: "氏名と金額だけで登録でき、住所は後から補えます。",
 		icon: (
 			<>
 				<rect x="6" y="2.5" width="12" height="19" rx="2.5" />
@@ -104,7 +104,7 @@ export const LoginPage: FC<{ startUrl: string; error?: LoginErrorCode }> = ({
 						id="login-intro"
 						class="text-2xl leading-normal font-semibold tracking-wide sm:text-3xl"
 					>
-						<span class="inline-block">葬儀の受付から、</span>
+						<span class="inline-block">香典の記録から、</span>
 						<span class="inline-block">香典返しまで。</span>
 					</p>
 					<p class="leading-relaxed text-muted">

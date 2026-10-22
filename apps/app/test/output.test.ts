@@ -8,14 +8,10 @@ async function setup() {
 	await taro.login();
 	const created = await taro.request("/k", formPost({ deceasedName: "山田 一郎" }));
 	const koudenId = created.headers.get("location")?.split("/").pop() ?? "";
-	const reception = await (await taro.request(`/k/${koudenId}/reception`)).text();
-	const eventIds = [...reception.matchAll(/<option value="([^"]+)"[^>]*>([^<]+)<\/option>/g)];
-	const eventId = /name="eventId" value="([^"]+)"/.exec(reception)?.[1] ?? eventIds[0]?.[1] ?? "";
+	const form = await (await taro.request(`/k/${koudenId}/gifts/new`)).text();
+	const eventId = /name="eventId"(?:[^>]*><option)? value="([^"]+)"/.exec(form)?.[1] ?? "";
 	const give = (fields: Record<string, string>, event = eventId) =>
-		taro.request(
-			`/k/${koudenId}/reception`,
-			formPost({ eventId: event, kind: "koden", ...fields }),
-		);
+		taro.request(`/k/${koudenId}/gifts`, formPost({ eventId: event, kind: "koden", ...fields }));
 	return { taro, koudenId, eventId, give };
 }
 
@@ -43,7 +39,7 @@ async function unzipXlsx(res: Response): Promise<Record<string, string>> {
 }
 
 describe("印刷・出力（E7-2, E7-3）", () => {
-	it("芳名一覧: 行事ごとに受付番号順で並べ、住所・連名・合計を出す", async () => {
+	it("芳名一覧: 行事ごとに番号順で並べ、住所・連名・合計を出す", async () => {
 		const { taro, koudenId, give } = await setup();
 		await give({
 			name: "佐藤 一郎",
@@ -64,7 +60,7 @@ describe("印刷・出力（E7-2, E7-3）", () => {
 		expect(html).toContain("鈴木商店");
 		expect(html).toContain("供花：スタンド花 × 1");
 		expect(html).toContain("うち香典 2 件・合計 ¥15,000");
-		// 受付番号の順
+		// 番号の順
 		expect(html.indexOf("佐藤 一郎")).toBeLessThan(html.indexOf("鈴木商店"));
 		// アプリの枠（タブ）は出さない
 		expect(html).not.toContain("香典帳のメニュー");

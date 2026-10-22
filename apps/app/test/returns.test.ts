@@ -19,10 +19,10 @@ async function setup() {
 	await taro.login();
 	const created = await taro.request("/k", formPost({ deceasedName: "山田 一郎" }));
 	const koudenId = created.headers.get("location")?.split("/").pop() ?? "";
-	const reception = await (await taro.request(`/k/${koudenId}/reception`)).text();
-	const eventId = /name="eventId" value="([^"]+)"/.exec(reception)?.[1] ?? "";
+	const form = await (await taro.request(`/k/${koudenId}/gifts/new`)).text();
+	const eventId = /name="eventId"(?:[^>]*><option)? value="([^"]+)"/.exec(form)?.[1] ?? "";
 	const give = (name: string, amount: string) =>
-		taro.request(`/k/${koudenId}/reception`, formPost({ eventId, kind: "koden", name, amount }));
+		taro.request(`/k/${koudenId}/gifts`, formPost({ eventId, kind: "koden", name, amount }));
 	return { taro, koudenId, eventId, give };
 }
 

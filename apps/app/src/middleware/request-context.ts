@@ -1,6 +1,7 @@
 import { createMiddleware } from "hono/factory";
 import { stripeClient } from "../billing/stripe.ts";
 import { log } from "../lib/logger.ts";
+import { photoReaderFor } from "../photo/reader.ts";
 import type { AppDeps, AppEnv } from "../types.ts";
 
 /** リクエスト ID・現在時刻の設定と、アクセスログの出力 */
@@ -15,6 +16,9 @@ export function requestContext(deps: AppDeps) {
 				: c.env.STRIPE_SECRET_KEY
 					? stripeClient(c.env.STRIPE_SECRET_KEY)
 					: null,
+		);
+		c.set("photoReader", () =>
+			deps.photoReader ? deps.photoReader(c.env) : photoReaderFor(c.env),
 		);
 		c.set("user", null);
 		c.set("sessionToken", null);

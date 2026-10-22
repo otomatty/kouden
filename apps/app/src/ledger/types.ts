@@ -129,13 +129,15 @@ export interface Overview {
 	recent: GiftView[];
 }
 
-export interface ReceptionResult {
+export interface CreatedGift {
 	giftId: string;
 	receiptNo: number;
 	eventId: string;
 	eventName: string;
 	personId: string;
 	personLabel: string;
+	/** 同じ requestId の 2 回目以降（作らずに、最初に作った記録を返した） */
+	replayed?: boolean;
 }
 
 /** WebSocket の接続要求で、Worker が確認済みの呼び出し元を DO に渡すヘッダー（JSON を URL エンコード） */
@@ -250,7 +252,7 @@ export interface ReturnDetail extends ReturnView {
 /** 印刷用ページと Excel の元データ（E7-2, E7-3） */
 export interface OutputData {
 	events: LedgerEvent[];
-	/** 行事の順 → 受付番号の順 */
+	/** 行事の順 → 番号の順 */
 	gifts: GiftView[];
 	/** ふりがなの順 */
 	persons: PersonView[];

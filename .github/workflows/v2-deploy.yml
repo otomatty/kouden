@@ -55,6 +55,12 @@ jobs:
       - name: Test
         run: bun run test
 
+      # 郵便番号から住所を入れるデータ（docs/rebuild/08 案 E）。日本郵便の最新のデータから、デプロイのたびに作る。
+      # 外部のサイトに頼るので、D1 を変える前に作る（取得に失敗したら、何も変えずに止まる）
+      - name: Build postal code data
+        working-directory: apps/app
+        run: bun run postal -- --download
+
       # 初回（DB 作成前）はスキップされる
       - name: Apply D1 migrations
         working-directory: apps/app

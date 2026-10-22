@@ -26,6 +26,8 @@ const TEST_BINDINGS = {
 	ROLLBACK_ACCESS_TEAM_DOMAIN: "",
 	ROLLBACK_ACCESS_AUD: "",
 	ROLLBACK_DEV_TOKEN: "test-rollback-token",
+	// 写真の読み取りは仮の実装。失敗などはテストの中で差し替える（AppDeps.photoReader）
+	PHOTO_READER: "fake",
 } as const;
 const TEST_D1 = ["DB"] as const;
 const TEST_R2 = ["FILES"] as const;

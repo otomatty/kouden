@@ -7,6 +7,7 @@ import {
 	ATTENDANCE_VALUES,
 	EVENT_KIND_VALUES,
 	EVENT_KINDS,
+	type GiftKind,
 	GIFT_KIND_VALUES,
 	RETURN_METHOD_VALUES,
 	RETURN_RATIO_VALUES,
@@ -24,12 +25,75 @@ function blankToUndefined(value: unknown): unknown {
 	return trimmed === "" ? undefined : trimmed;
 }
 
-/** 「１０，０００円」「¥10,000」などを数値にする。数値にできない文字列はそのまま返して検証で弾く */
+const KANJI_DIGITS: Record<string, number> = {
+	〇: 0,
+	零: 0,
+	一: 1,
+	壱: 1,
+	二: 2,
+	弐: 2,
+	三: 3,
+	参: 3,
+	四: 4,
+	五: 5,
+	伍: 5,
+	六: 6,
+	七: 7,
+	八: 8,
+	九: 9,
+};
+const SMALL_UNITS: Record<string, number> = { 十: 10, 百: 100, 千: 1000 };
+
+/**
+ * 金額の書き方を数値にする。「10000」「１０，０００円」「¥10,000」のほか、香典袋の書き方
+ * 「1万」「1万5千」「五千円」「金壱萬円也」も読む（08 案 A）。読めなければ undefined
+ */
+export function parseYenText(text: string): number | undefined {
+	const s = text
+		.normalize("NFKC")
+		.replace(/^\s*金/, "")
+		.replace(/也\s*$/, "")
+		.replace(/[\s,、円圓¥]/g, "")
+		.replace(/萬/g, "万")
+		.replace(/[阡仟]/g, "千")
+		.replace(/[佰陌]/g, "百")
+		.replace(/拾/g, "十");
+	if (s === "") return undefined;
+	if (/^\d+$/.test(s)) return Number(s);
+	let total = 0;
+	let section = 0;
+	let num: number | undefined;
+	for (let i = 0; i < s.length; i++) {
+		const ch = s.charAt(i);
+		const digits = /^\d+(?:\.\d+)?/.exec(s.slice(i))?.[0];
+		if (digits) {
+			num = Number(digits);
+			i += digits.length - 1;
+		} else if (ch in KANJI_DIGITS) {
+			num = (num ?? 0) * 10 + (KANJI_DIGITS[ch] ?? 0);
+		} else if (ch in SMALL_UNITS) {
+			section += (num ?? 1) * (SMALL_UNITS[ch] ?? 1);
+			num = undefined;
+		} else if (ch === "万") {
+			// 「万」だけ（係数を書かない）なら 1 万。「0万」「〇萬」の 0 は 0 として読む
+			total += (num === undefined && section === 0 ? 1 : section + (num ?? 0)) * 10_000;
+			section = 0;
+			num = undefined;
+		} else {
+			return undefined;
+		}
+	}
+	// 「1.1万」は浮動小数点の誤差で 11000.000000000002 になるので、誤差だけを丸める（「1.5円」などは読まない）
+	const value = total + section + (num ?? 0);
+	const rounded = Math.round(value);
+	return Math.abs(value - rounded) < 1e-6 ? rounded : undefined;
+}
+
+/** 金額・数量の入力を数値にする。数値にできない文字列はそのまま返して検証で弾く */
 function toInteger(value: unknown): unknown {
 	if (typeof value !== "string") return value;
-	const normalized = value.normalize("NFKC").replace(/[\s,円¥]/g, "");
-	if (normalized === "") return undefined;
-	return /^\d+$/.test(normalized) ? Number(normalized) : normalized;
+	if (value.trim() === "") return undefined;
+	return parseYenText(value) ?? value.trim();
 }
 
 const requiredText = (label: string, max: number) =>
@@ -209,11 +273,39 @@ function refineGift(v: { kind: string; amount?: number | undefined }, ctx: z.Ref
 export const giftSchema = z.object(giftFields).superRefine(refineGift);
 export type GiftInput = z.output<typeof giftSchema>;
 
+/** 種別ごとの欄（08 案 A）。登録画面はほかの欄を隠し、送られても使わない */
+export const GIFT_KIND_FIELDS: Record<
+	GiftKind,
+	readonly ("amount" | "itemName" | "quantity" | "message")[]
+> = {
+	koden: ["amount"],
+	kumotsu: ["amount", "itemName", "quantity"],
+	kyoka: ["amount", "itemName", "quantity"],
+	choden: ["message"],
+	other: ["amount", "itemName", "quantity"],
+};
+
 /**
- * 受付での登録。いただきものと差出人を一度に入力する。
+ * 登録画面の送信値から、選んだ種別で隠している欄を外す
+ * （種別を切り替える前に入れた金額が、弔電で「金額は入れられない」エラーにならないように）
+ */
+export function pickGiftEntryFields<T extends Record<string, string | undefined>>(values: T): T {
+	// 種別は自身のキーだけを引く（「constructor」などの継承したキーで例外にしない。不正な種別は検証で弾く）
+	const kind = values.kind;
+	if (kind === undefined || !Object.hasOwn(GIFT_KIND_FIELDS, kind)) return values;
+	const fields = GIFT_KIND_FIELDS[kind as GiftKind];
+	const picked = { ...values };
+	for (const key of ["amount", "itemName", "quantity", "message"] as const) {
+		if (!fields.includes(key)) delete picked[key];
+	}
+	return picked;
+}
+
+/**
+ * いただきものの登録。いただきものと差出人を一度に入力する。
  * 既存の差出人を選んだ場合（personId あり）は、差出人の入力欄は使わない（E5-1）。
  */
-export const receptionSchema = z
+export const giftEntrySchema = z
 	.object({ ...giftFields, personId: optionalId, ...personFields })
 	.superRefine((v, ctx) => {
 		refineGift(v, ctx);
@@ -241,8 +333,62 @@ export const receptionSchema = z
 					: ({ type: "existing", personId } as const),
 		}),
 	);
-export type ReceptionInput = z.output<typeof receptionSchema>;
-export type ContributorRef = ReceptionInput["person"];
+export type GiftEntryInput = z.output<typeof giftEntrySchema>;
+export type ContributorRef = GiftEntryInput["person"];
+
+// ---- 表で入力（08 案 C） --------------------------------------------------
+
+/** 表の列（香典の 1 件 = 1 行）。順番は画面の列の順で、貼り付けもこの順に入れる */
+export const SHEET_COLUMNS = [
+	"name",
+	"nameKana",
+	"amount",
+	"postalCode",
+	"address",
+	"relationshipId",
+] as const;
+export type SheetColumn = (typeof SHEET_COLUMNS)[number];
+
+/** 1 回に保存できる行の数（貼り付けた行をまとめて保存する） */
+export const SHEET_MAX_ROWS = 200;
+
+const sheetCell = z.string().max(2000).default("");
+
+/**
+ * 表からの保存の要求。行ごとの値は文字列のまま受け取り、行ごとに giftEntrySchema・personSchema で検証する
+ * （1 行のエラーで、ほかの行の保存を止めない）
+ */
+export const sheetRequestSchema = z.object({
+	eventId: z.string().min(1).max(64),
+	rows: z
+		.array(
+			z.object({
+				/** 画面の行の識別子（応答をどの行に返すか） */
+				key: z.string().min(1).max(64),
+				giftId: z.string().max(64).optional(),
+				giftVersion: z.number().int().optional(),
+				personId: z.string().max(64).optional(),
+				personVersion: z.number().int().optional(),
+				name: sheetCell,
+				nameKana: sheetCell,
+				amount: sheetCell,
+				postalCode: sheetCell,
+				address: sheetCell,
+				relationshipId: sheetCell,
+				/** 表の列ではない。写真で登録（08 案 D）の下書きが新しい行を作るときだけ使う */
+				organization: sheetCell,
+				/**
+				 * 新しい行の作成を 1 回にするための値（画面が行ごとに作る UUID）。応答が届かずに送り直しても、
+				 * 同じ値なら最初に作った記録を返す
+				 */
+				requestId: z.string().min(1).max(64).optional(),
+			}),
+		)
+		.min(1)
+		.max(SHEET_MAX_ROWS),
+});
+export type SheetRequest = z.output<typeof sheetRequestSchema>;
+export type SheetRowInput = SheetRequest["rows"][number];
 
 /** 連名の差出人を追加する（既存の差出人を選ぶか、氏名・団体名で新規作成） */
 export const contributorAddSchema = z

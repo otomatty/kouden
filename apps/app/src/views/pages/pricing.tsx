@@ -3,7 +3,7 @@ import type { FC } from "hono/jsx";
 import { ui } from "@kouden/ui";
 
 const COMMON = [
-	"受付番号の自動採番",
+	"香典袋と照合できる番号の自動採番",
 	"家族・親族との共同編集（招待リンク）",
 	"香典返しの提案・管理",
 	"印刷用ページ・Excel 出力",

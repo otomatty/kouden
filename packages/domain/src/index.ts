@@ -2,11 +2,20 @@ export * from "./forms.ts";
 export { uuidv7 } from "./id.ts";
 export * from "./labels.ts";
 export { FREE_GIFT_LIMIT, PAID_PRICE_JPY, formatYen } from "./plan.ts";
-export { buildSearchText, escapeLike, toSearchKey } from "./search.ts";
+export {
+	buildSearchText,
+	escapeLike,
+	findDuplicatePersons,
+	groupDuplicates,
+	parseReceiptNo,
+	toSearchKey,
+} from "./search.ts";
 export { nowIso } from "./time.ts";
+export { buildPostalShards, type PostalAddress, type PostalShards } from "./postal.ts";
+export { type PhotoDraft, type PhotoReading, photoReadingSchema, toPhotoDraft } from "./photo.ts";
 export { allocateAmount, type ContributorShare } from "./allocation.ts";
 export { can, type Action } from "./permissions.ts";
-export { personLabel } from "./format.ts";
+export { joinNotes, personLabel } from "./format.ts";
 export {
 	DEFAULT_RATIO,
 	findRule,

@@ -15,7 +15,7 @@ import { ui } from "@kouden/ui";
 
 const FIELD_LABELS: Record<string, string> = {
 	event_id: "行事",
-	receipt_no: "受付番号",
+	receipt_no: "番号",
 	kind: "種別",
 	amount: "金額",
 	item_name: "品名",
@@ -47,6 +47,8 @@ const FIELD_LABELS: Record<string, string> = {
 	ship_postal_code: "送付先の郵便番号",
 	ship_address: "送付先の住所",
 	ship_phone: "送付先の電話番号",
+	merged_from: "まとめた差出人",
+	merged_into: "まとめた先",
 };
 
 const OP_LABELS: Record<string, string> = {
@@ -75,7 +77,12 @@ function formatValue(key: string, value: unknown, names: Record<string, string>)
 		const v = value as { name?: string; unitPrice?: number; quantity?: number };
 		return `${v.name ?? ""} ${formatYen(v.unitPrice ?? 0)} × ${v.quantity ?? 1}`;
 	}
-	if (key === "event_id" || key === "relationship_id" || key === "person_id") {
+	if (
+		key === "event_id" ||
+		key === "relationship_id" ||
+		key === "person_id" ||
+		key === "merged_into"
+	) {
 		return typeof value === "string" ? (names[value] ?? "（削除済み）") : "";
 	}
 	if (key === "contributors") {
@@ -101,17 +108,20 @@ function fieldLabel(key: string, names: Record<string, string>): string {
 	return FIELD_LABELS[key] ?? key;
 }
 
+/** 差出人の統合（E5-2）で、まとめた相手を記録する項目 */
+const MERGE_KEYS = new Set(["merged_from", "merged_into"]);
+
 /** 記録ごとの変更履歴（E8-4）。新しい順 */
 export const HistoryList: FC<{ history: History }> = ({ history }) => (
 	<details class={`${ui.cardTight} text-sm`}>
 		<summary class="cursor-pointer font-medium">変更履歴（{history.entries.length} 件）</summary>
 		<ol class="mt-3 space-y-3">
 			{history.entries.map((e) => {
-				// 登録は登録時の内容（空の項目を除く）、変更は変更前後を表示する
+				// 登録は登録時の内容（空の項目を除く）、変更・統合は変更前後を表示する
 				const changes =
-					e.op === "update" || e.op === "create"
+					e.op === "update" || e.op === "create" || e.op === "merge"
 						? Object.entries(parseDiff(e.diff)).filter(
-								([, [, after]]) => e.op === "update" || (after !== null && after !== ""),
+								([, [, after]]) => e.op !== "create" || (after !== null && after !== ""),
 							)
 						: [];
 				return (
@@ -126,8 +136,10 @@ export const HistoryList: FC<{ history: History }> = ({ history }) => (
 								{changes.map(([key, [before, after]]) => (
 									<li>
 										{fieldLabel(key, history.names)}:{" "}
-										{/* 登録時の内容と、変更前が記録されていない連名の変更は「後」だけを出す */}
-										{e.op === "create" || (key.startsWith("contributor:") && before === null) ? (
+										{/* 登録時の内容・まとめた相手と、変更前が記録されていない連名の変更は「後」だけを出す */}
+										{e.op === "create" ||
+										MERGE_KEYS.has(key) ||
+										(key.startsWith("contributor:") && before === null) ? (
 											formatValue(key, after, history.names)
 										) : (
 											<>

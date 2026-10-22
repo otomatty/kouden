@@ -4,19 +4,10 @@ import type { KoudenContext } from "../../kouden/store.ts";
 import type { Caller } from "../../ledger/types.ts";
 import { ui } from "@kouden/ui";
 
-export type KoudenTab =
-	| "top"
-	| "reception"
-	| "gifts"
-	| "persons"
-	| "returns"
-	| "output"
-	| "members"
-	| "settings";
+export type KoudenTab = "top" | "gifts" | "persons" | "returns" | "output" | "members" | "settings";
 
 const TABS: readonly { tab: KoudenTab; label: string; path: string }[] = [
 	{ tab: "top", label: "トップ", path: "" },
-	{ tab: "reception", label: "受付", path: "/reception" },
 	{ tab: "gifts", label: "いただきもの", path: "/gifts" },
 	{ tab: "persons", label: "差出人", path: "/persons" },
 	{ tab: "returns", label: "香典返し", path: "/returns" },
@@ -118,7 +109,7 @@ export const KoudenShell: FC<{
 /**
  * スクリーンリーダー向けの読み上げ領域。画面を開いたときから置いておき（後から足した領域は読み上げられないことがある）、
  * htmx の応答に `<SrStatus oob>…</SrStatus>` を含めると中身だけが差し替わって読み上げられる。
- * 受付の登録結果・差出人の候補の件数など、フォーカスの外で変わる内容を知らせる。
+ * 差出人の候補の件数・行の中で保存した結果など、フォーカスの外で変わる内容を知らせる。
  */
 export const SrStatus: FC<{ oob?: boolean; children?: Child }> = ({ oob, children }) => (
 	<p id="sr-status" role="status" class="sr-only" hx-swap-oob={oob ? "innerHTML" : undefined}>
@@ -135,9 +126,17 @@ export const LiveRegion: FC<{
 	entities: readonly string[];
 	url?: string | undefined;
 	class?: string;
+	/** htmx の応答の中で、同じ id の部分を out-of-band で差し替える（自分の操作の結果を反映する） */
+	oob?: boolean;
 	children?: Child;
-}> = ({ id, entities, url, class: className, children }) => (
-	<div id={id} data-live={entities.join(",")} data-live-url={url} class={className}>
+}> = ({ id, entities, url, class: className, oob, children }) => (
+	<div
+		id={id}
+		data-live={entities.join(",")}
+		data-live-url={url}
+		class={className}
+		hx-swap-oob={oob ? "outerHTML" : undefined}
+	>
 		<p data-stale-notice hidden role="status" class={`${ui.notice} mb-3`}>
 			他の人の変更があります。{" "}
 			<a href="" class={ui.link}>

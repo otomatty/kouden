@@ -61,6 +61,8 @@ export default defineConfig(({ mode }) => {
 				ROLLBACK_ACCESS_TEAM_DOMAIN: bindings.text(s.rollbackAccess.teamDomain),
 				ROLLBACK_ACCESS_AUD: bindings.text(s.rollbackAccess.aud),
 				ROLLBACK_DEV_TOKEN: bindings.text(s.rollbackDevToken),
+				// 写真から読み取る（08 案 D）の送り先。"off" なら画面と API を出さない
+				PHOTO_READER: bindings.text(s.photoReader),
 				LEDGER: bindings.durableObject({ worker: s.workerName, exportName: "KoudenLedger" }),
 				AUTH_RATE_LIMITER: bindings.rateLimit({
 					namespace: s.rateLimitNamespaces.auth,

@@ -362,9 +362,5 @@ inviteRoutes.post("/invite/:token", requireUser, async (c) => {
 		},
 		{ entity: "member", entityId: user.id, op: "create", diff: { role: [null, invitation.role] } },
 	);
-	// 編集者は受付画面へ（E3-2: リンク → ログイン → 受付）
-	return c.redirect(
-		`/k/${invitation.koudenId}${invitation.role === "editor" ? "/reception" : ""}`,
-		303,
-	);
+	return c.redirect(`/k/${invitation.koudenId}`, 303);
 });

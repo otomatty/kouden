@@ -181,7 +181,7 @@ export const EventsSection: FC<{
 					行事
 				</h2>
 				<p class="text-sm text-muted">
-					受付番号は行事ごとに 1 から振ります。記録がある行事は削除できません。
+					番号は行事ごとに 1 から振ります。記録がある行事は削除できません。
 				</p>
 				<ul class="space-y-3">
 					{events.map((e, i) =>
@@ -292,7 +292,7 @@ export const RelationshipsSection: FC<{
 					故人との関係
 				</h2>
 				<p class="text-sm text-muted">
-					受付で選べる関係です。使用中の関係は削除できませんが、非表示にすると選択肢から外れます。
+					いただきものの登録で選べる関係です。使用中の関係は削除できませんが、非表示にすると選択肢から外れます。
 				</p>
 				<ul class="space-y-3">
 					{relationships.map((r, i) =>

@@ -11,6 +11,7 @@
 | 05 | [移行計画](./05-migration-plan.md) | 実装マイルストーン、Supabase からのデータ移行、切り替え手順 |
 | 06 | [移行リハーサルの記録（2026-10-13）](./06-migration-rehearsal-20261013.md) | 一時環境への実データ投入・再投入・自動照合と削除確認 |
 | 07 | [旧アプリの停止と転送](./07-legacy-cutover.md) | 切り替え当日のメンテナンス・解除・301 転送の手順 |
+| 08 | [いただきものの登録をかんたんにする](./08-gift-entry-ux.md) | 受付機能の廃止後の、登録の UX の案・決まったこと・残っていること |
 
 実装は [リポジトリの直下](../../README.md) にある。
 
@@ -28,3 +29,4 @@
 | Google OAuth のブランド確認 | 取得ドメインで Search Console 所有確認が必要 | M0 |
 | Cloudflare Email Service | ベータ版。GA 前に問題があれば Resend に差し替え（`Mailer` で抽象化済み） | M3 |
 | `cf` CLI / Vite plugin 2.0 | ベータ版。回避策と撤退条件は [ADR-T15](./01-decisions.md#adr-t15-cli-は-cfベータ-vite-を使う) | 正式版リリース時 |
+| 写真の読み取りの送り先（Claude API / Workers AI） | [08](./08-gift-entry-ux.md) §7。実物の香典袋で精度と費用を比べる | 案 D の実装の前 |

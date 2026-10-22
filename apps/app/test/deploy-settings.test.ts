@@ -21,6 +21,20 @@ describe("deployBlockers", () => {
 			MODES.staging = original;
 		}
 	});
+	it("写真の読み取りの仮の実装（fake）は development の外にデプロイしない", () => {
+		expect(MODES.development.photoReader).toBe("fake");
+		for (const mode of ["staging", "rehearsal", "production"] as const) {
+			expect(MODES[mode].photoReader).toBe("off");
+			const original = structuredClone(MODES[mode]);
+			try {
+				MODES[mode].photoReader = "fake";
+				expect(deployBlockers(mode).some((b) => b.includes("photoReader"))).toBe(true);
+			} finally {
+				MODES[mode] = original;
+			}
+		}
+	});
+
 	it("本番は仮のドメイン・Client ID が残っていればデプロイを止める", () => {
 		expect(deployBlockers("production")).toEqual([]);
 		const original = structuredClone(MODES.production);

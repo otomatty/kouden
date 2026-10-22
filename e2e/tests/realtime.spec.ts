@@ -22,16 +22,16 @@ test("招待で参加したメンバーの画面に、他の人の登録が読�
 		const inviteUrl = await owner.getByRole("textbox", { name: "招待リンク" }).inputValue();
 		expect(inviteUrl).toMatch(/\/invite\//);
 
-		// 招待された人が参加する（編集者は受付画面へ進む）
+		// 招待された人が参加する（香典帳のトップへ進む）
 		await editor.goto(new URL(inviteUrl).pathname);
 		await expectAccessible(editor, "招待");
 		await editor.getByRole("button", { name: "参加する" }).click();
-		await editor.waitForURL((url) => url.pathname === `${base}/reception`);
+		await editor.waitForURL((url) => url.pathname === base);
 		await editor.goto(`${base}/gifts`);
 		await expect(editor.getByText("まだいただきものがありません")).toBeVisible();
 
-		// オーナーが受付で登録すると、編集者の一覧に現れる。閲覧中のメンバーも互いに見える
-		await owner.goto(`${base}/reception`);
+		// オーナーが登録すると、編集者の一覧に現れる。閲覧中のメンバーも互いに見える
+		await owner.goto(`${base}/gifts/new`);
 		await expect(owner.getByText(`閲覧中: ${USERS.liveEditor.name}`)).toBeVisible();
 		await expect(editor.getByText(`閲覧中: ${USERS.liveOwner.name}`)).toBeVisible();
 		await registerKoden(owner, "中村 六郎", 10000);

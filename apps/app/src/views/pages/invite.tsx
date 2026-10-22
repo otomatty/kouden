@@ -48,7 +48,7 @@ export const InvitePage: FC<{
 			<p>
 				<span class={ui.badge}>{ROLES[invitation.role]}</span>
 				<span class="ml-2 text-sm text-muted">
-					{invitation.role === "editor" ? "受付・記録の入力や編集ができます" : "閲覧のみできます"}
+					{invitation.role === "editor" ? "記録の入力や編集ができます" : "閲覧のみできます"}
 				</span>
 			</p>
 			{error && (

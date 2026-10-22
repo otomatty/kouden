@@ -38,8 +38,8 @@ async function setupPair() {
 	await taro.login();
 	const created = await taro.request("/k", formPost({ deceasedName: "山田 一郎" }));
 	const koudenId = created.headers.get("location")?.split("/").pop() ?? "";
-	const reception = await (await taro.request(`/k/${koudenId}/reception`)).text();
-	const eventId = /name="eventId" value="([^"]+)"/.exec(reception)?.[1] ?? "";
+	const form = await (await taro.request(`/k/${koudenId}/gifts/new`)).text();
+	const eventId = /name="eventId"(?:[^>]*><option)? value="([^"]+)"/.exec(form)?.[1] ?? "";
 	const hanako = makeApp(HANAKO);
 	await hanako.login();
 	const hanakoId = (
@@ -64,7 +64,7 @@ describe("リアルタイム同期", () => {
 		await t.waitFor((m) => m.type === "presence" && (m.users as unknown[]).length === 2);
 
 		await hanako.request(
-			`/k/${koudenId}/reception`,
+			`/k/${koudenId}/gifts`,
 			formPost({ eventId, kind: "koden", name: "鈴木", amount: "5000" }),
 		);
 		const changed = await t.waitFor((m) => m.type === "changed" && m.entity === "gift");
@@ -85,7 +85,7 @@ describe("リアルタイム同期", () => {
 		const { taro, hanako, koudenId, eventId } = await setupPair();
 		const t = await connect(taro, koudenId);
 		await t.waitFor((m) => m.type === "hello");
-		await hanako.request(`/k/${koudenId}/reception`, {
+		await hanako.request(`/k/${koudenId}/gifts`, {
 			...formPost({ eventId, kind: "koden", name: "a", amount: "1" }, { htmx: true }),
 			headers: {
 				"content-type": "application/x-www-form-urlencoded",
@@ -162,7 +162,7 @@ describe("リアルタイム同期", () => {
 		const before = await seqOf();
 		expect(before).toBeGreaterThan(0);
 		await taro.request(
-			`/k/${koudenId}/reception`,
+			`/k/${koudenId}/gifts`,
 			formPost({ eventId, kind: "koden", name: "a", amount: "1" }),
 		);
 		expect(await seqOf()).toBe(before + 2);
@@ -177,7 +177,7 @@ describe("リアルタイム同期", () => {
 	it("POST の結果として返す画面（入力エラーなど）にも表示時の位置を埋め込む", async () => {
 		const { taro, koudenId, eventId } = await setupPair();
 		const res = await taro.request(
-			`/k/${koudenId}/reception`,
+			`/k/${koudenId}/gifts`,
 			formPost({ eventId, kind: "koden", name: "a" }),
 		);
 		expect(res.status).toBe(422);
@@ -191,7 +191,7 @@ describe("リアルタイム同期", () => {
 		};
 		const last = before.changes.at(-1)?.seq ?? 0;
 		await taro.request(
-			`/k/${koudenId}/reception`,
+			`/k/${koudenId}/gifts`,
 			formPost({ eventId, kind: "koden", name: "a", amount: "1" }),
 		);
 		const after = (await (await taro.request(`/k/${koudenId}/changes?since=${last}`)).json()) as {

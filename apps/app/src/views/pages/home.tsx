@@ -5,8 +5,8 @@ import { GoogleButton } from "../components/google-button.tsx";
 
 const FEATURES = [
 	{
-		title: "受付で、何人でも同時に入力",
-		body: "スマホで芳名と金額を登録すると受付番号が表示されます。複数の受付係が同時に入力しても番号は重なりません。",
+		title: "香典・供物・弔電をまとめて記録",
+		body: "氏名と金額だけで登録でき、住所や関係は後から補えます。同じ方からの香典と供花は 1 人にまとめられます。",
 	},
 	{
 		title: "家族とリアルタイムに共有",
@@ -31,7 +31,7 @@ export const HomePage: FC = () => (
 				<span class="inline-block">家族みんなで。</span>
 			</h1>
 			<p class="mx-auto mt-6 max-w-2xl leading-relaxed text-muted">
-				葬儀の受付から香典返しまで。香典・供物・弔電をスマホで記録し、家族とリアルタイムに共有できます。
+				香典の記録から香典返しまで。香典・供物・弔電をスマホやパソコンで記録し、家族とリアルタイムに共有できます。
 			</p>
 			<div class="mt-10 flex flex-col items-center gap-3">
 				<GoogleButton href="/login" class="w-full sm:w-auto">

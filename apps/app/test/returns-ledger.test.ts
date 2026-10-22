@@ -1,6 +1,6 @@
 import {
 	eventSchema,
-	receptionSchema,
+	giftEntrySchema,
 	returnItemSchema,
 	returnRuleSchema,
 	returnSchema,
@@ -38,17 +38,17 @@ const item = (name: string, price: string) => returnItemSchema.parse({ name, pri
 
 async function withGifts() {
 	const ctx = setup();
-	const [wake] = unwrap(await ctx.ledger.listEvents(ctx.caller));
+	const [funeral] = unwrap(await ctx.ledger.listEvents(ctx.caller));
 	const give = async (name: string, amount: string) =>
 		unwrap(
-			await ctx.ledger.createAtReception(
+			await ctx.ledger.createGift(
 				ctx.caller,
-				receptionSchema.parse({ eventId: wake!.id, kind: "koden", name, amount }),
+				giftEntrySchema.parse({ eventId: funeral!.id, kind: "koden", name, amount }),
 			),
 		).personId;
 	const taro = await give("山田 太郎", "10000");
 	const jiro = await give("佐藤 次郎", "5000");
-	return { ...ctx, taro, jiro, eventId: wake!.id };
+	return { ...ctx, taro, jiro, eventId: funeral!.id };
 }
 
 describe("香典返し（DO）", () => {

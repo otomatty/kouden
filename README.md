@@ -56,6 +56,8 @@ E2E は初回に `cd e2e && bunx playwright install chromium` を実行します
 
 GitHub Actions の「v2 Deploy」を手動で実行します（`staging` / `production`）。production は承認と `main` ブランチが必要です。D1 のマイグレーションはデプロイの中で自動的に適用されます（初回は D1 の作成後に適用）。環境ごとの設定は `apps/*/deploy.settings.ts` にあります。
 
+郵便番号から住所を入れるデータ（`apps/app/public/postal/`）は Git に入れず、デプロイの中で日本郵便から取得して作ります（`bun run postal -- --download`。取得に失敗したらデプロイは止まるので、再実行します）。ローカルで試すときは、日本郵便の `utf_ken_all.zip` をダウンロードして `cd apps/app && bun run postal -- --input <ファイル>` で作ります。
+
 GitHub Environments に登録するシークレット: `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`、`GOOGLE_CLIENT_SECRET`、`SESSION_SECRET`、`STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`
 
 Stripe の Webhook は `https://<ドメイン>/webhooks/stripe` に、`checkout.session.completed`・`checkout.session.async_payment_succeeded`・`checkout.session.async_payment_failed`・`charge.refunded` を送ります。

@@ -44,6 +44,12 @@ export interface ModeSettings {
 	rollbackAccess: { teamDomain: string; aud: string };
 	/** development 専用。取り込みトークンとは別の値にする */
 	rollbackDevToken: string;
+	/**
+	 * 写真から読み取る（08 案 D、ADR-T16）の送り先。"off" なら画面と API を出さない。
+	 * "fake" は写真を読まずに見本を返す仮の実装で、development でだけ使える。
+	 * 送り先を決めてプライバシーポリシーを直すまで、staging・本番は "off" にする
+	 */
+	photoReader: "off" | "fake";
 }
 
 const PLACEHOLDER_DOMAIN = "example.jp";
@@ -72,6 +78,7 @@ export const MODES: Record<Mode, ModeSettings> = {
 		importDevToken: "dev-import-token",
 		rollbackAccess: { teamDomain: "", aud: "" },
 		rollbackDevToken: "dev-rollback-token",
+		photoReader: "fake",
 	},
 	staging: {
 		workerName: "kouden-app-staging",
@@ -91,6 +98,7 @@ export const MODES: Record<Mode, ModeSettings> = {
 		importDevToken: "",
 		rollbackAccess: { teamDomain: "", aud: "" },
 		rollbackDevToken: "",
+		photoReader: "off",
 	},
 	// 本番スナップショットを投入して削除する一時環境。通常の staging のユーザーやセッションを変更しない。
 	rehearsal: {
@@ -108,6 +116,7 @@ export const MODES: Record<Mode, ModeSettings> = {
 		importDevToken: "",
 		rollbackAccess: { teamDomain: "", aud: "" },
 		rollbackDevToken: "",
+		photoReader: "off",
 	},
 	production: {
 		workerName: "kouden-app",
@@ -126,6 +135,7 @@ export const MODES: Record<Mode, ModeSettings> = {
 		importDevToken: "",
 		rollbackAccess: { teamDomain: "", aud: "" },
 		rollbackDevToken: "",
+		photoReader: "off",
 	},
 };
 
@@ -218,6 +228,9 @@ export function deployBlockers(mode: Mode): string[] {
 		);
 	}
 	if (s.rollbackDevToken !== "") blockers.push(`${mode} に rollbackDevToken が設定されています`);
+	if (s.photoReader === "fake") {
+		blockers.push(`${mode} の photoReader が仮の実装（fake）です。development でだけ使えます`);
+	}
 	if (
 		(s.rollbackAccess.teamDomain === "") !== (s.rollbackAccess.aud === "") ||
 		(s.rollbackAccess.teamDomain !== "" &&

@@ -8,7 +8,8 @@ export const securityHeaders: MiddlewareHandler<AppEnv> = secureHeaders({
 		defaultSrc: ["'self'"],
 		scriptSrc: ["'self'", NONCE],
 		styleSrc: ["'self'"],
-		imgSrc: ["'self'", "data:", "https://lh3.googleusercontent.com"],
+		// blob: は写真で登録（08 案 D）の撮った写真。ブラウザのメモリの中だけに置き、送り先は読み取りの API だけ
+		imgSrc: ["'self'", "data:", "blob:", "https://lh3.googleusercontent.com"],
 		connectSrc: ["'self'"],
 		fontSrc: ["'self'"],
 		objectSrc: ["'none'"],
@@ -34,7 +35,19 @@ const sameOrigin = csrf({
  * Stripe の Webhook と、移行ツールが呼ぶ取り込み口（/internal/）はブラウザからの要求ではなく、
  * それぞれ署名・Access で検証するので除く
  */
-export const csrfProtection: MiddlewareHandler<AppEnv> = (c, next) =>
-	c.req.path === "/webhooks/stripe" || c.req.path.startsWith("/internal/")
-		? next()
-		: sameOrigin(c, next);
+export const csrfProtection: MiddlewareHandler<AppEnv> = async (c, next) => {
+	if (c.req.path === "/webhooks/stripe" || c.req.path.startsWith("/internal/")) return next();
+	// hono/csrf はフォームの形（form-urlencoded・multipart・text/plain）の要求だけを確かめる。
+	// JSON（表で入力の保存）など、ほかの形の要求も同じ条件（Sec-Fetch-Site が same-origin か、
+	// Origin が自分のオリジン）で確かめる。フォームの要求は hono/csrf に任せる（招待の画面は
+	// Referrer-Policy: no-referrer のため Origin が null になり、Sec-Fetch-Site で通る）
+	const unsafe = !/^(GET|HEAD|OPTIONS)$/.test(c.req.method);
+	const form = FORM_CONTENT_TYPE.test(c.req.header("Content-Type") ?? "");
+	const sameSite =
+		c.req.header("Sec-Fetch-Site") === "same-origin" || c.req.header("Origin") === c.env.APP_ORIGIN;
+	if (unsafe && !form && !sameSite) return c.text("Forbidden", 403);
+	return sameOrigin(c, next);
+};
+
+const FORM_CONTENT_TYPE =
+	/^(application\/x-www-form-urlencoded|multipart\/form-data|text\/plain)\b/i;

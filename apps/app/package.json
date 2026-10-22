@@ -4,6 +4,7 @@
 	"type": "module",
 	"scripts": {
 		"assets": "bun run css && bun scripts/copy-vendor.ts",
+		"postal": "bun scripts/build-postal.ts",
 		"css": "tailwindcss -i src/styles/app.css -o public/assets/app.css --minify",
 		"css:watch": "tailwindcss -i src/styles/app.css -o public/assets/app.css --watch=always",
 		"dev": "bun run assets && (bun run css:watch & cf dev)",
