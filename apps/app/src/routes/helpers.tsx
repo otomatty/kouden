@@ -18,6 +18,7 @@ export const NOTICES = {
 	saved: "保存しました。",
 	deceased_name_confirmed: "故人のお名前を確認しました。",
 	deleted: "削除しました。",
+	undone: "登録を取り消しました。",
 	archived: "アーカイブしました。",
 	unarchived: "アーカイブを解除しました。",
 	invited: "招待リンクを作成しました。",

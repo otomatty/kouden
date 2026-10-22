@@ -5,6 +5,7 @@ import {
 	contributorShareSchema,
 	eventSchema,
 	type FieldErrors,
+	FREE_GIFT_LIMIT,
 	giftEntrySchema,
 	giftSchema,
 	giftPhotoKey,
@@ -12,6 +13,7 @@ import {
 	parseGiftFilter,
 	personLabel,
 	personSchema,
+	pickGiftEntryFields,
 	relationshipSchema,
 	toFieldErrors,
 	versionSchema,
@@ -26,7 +28,12 @@ import {
 	updateKoudenInfo,
 } from "../kouden/store.ts";
 import { ledgerFor } from "../ledger/client.ts";
-import { CALLER_HEADER, type LedgerResult, type PersonView } from "../ledger/types.ts";
+import {
+	CALLER_HEADER,
+	type GiftView,
+	type LedgerResult,
+	type PersonView,
+} from "../ledger/types.ts";
 import { koudenAccess, writeRateLimit } from "../middleware/kouden-access.tsx";
 import { requireUser } from "../middleware/session.ts";
 import type { AppEnv } from "../types.ts";
@@ -34,8 +41,12 @@ import type { FormValues } from "@kouden/ui";
 import { GiftEditPage, giftFormValues } from "../views/kouden/gift-edit.tsx";
 import {
 	type CreatedGiftNotice,
+	createdGiftMessage,
+	EntrySummary,
+	type EntrySummaryData,
+	type GiftEntryProps,
+	GiftEntryPanel,
 	GiftNewPage,
-	type GiftNewProps,
 } from "../views/kouden/gift-new.tsx";
 import { GiftResults, GiftsPage } from "../views/kouden/gifts.tsx";
 import { candidatesAnnouncement, PersonCandidates } from "../views/kouden/person-candidates.tsx";
@@ -144,62 +155,117 @@ async function candidatesForRetry(c: Ctx, values: FormValues): Promise<PersonVie
 	return list;
 }
 
-/** 登録画面を描画する。行事は指定がなければ先頭のものを選んでおく */
-async function renderGiftNew(
-	c: Ctx,
-	rest: Omit<GiftNewProps, "kouden" | "events" | "relationships">,
-	status: 200 | 422 = 200,
-) {
+type EntryOptions = Omit<GiftEntryProps, "kouden" | "events" | "relationships" | "recent">;
+
+/** 登録画面に要るもの（行事・関係・選んだ行事の合計・自分の最近の登録）。行事は指定がなければ先頭 */
+async function entryContext(c: Ctx, requestedEventId: string | undefined) {
 	const caller = c.get("caller");
-	const [events, relationships] = await Promise.all([
+	const kouden = c.get("kouden");
+	const [events, relationships, overview, recent] = await Promise.all([
 		ledger(c).listEvents(caller),
 		ledger(c).listRelationships(caller),
+		ledger(c).overview(caller),
+		ledger(c).listMyRecentGifts(caller),
 	]);
-	if (!events.ok) return commonFailure(c, events.error);
-	if (!relationships.ok) return commonFailure(c, relationships.error);
-	const event = events.value.find((e) => e.id === rest.values.eventId) ?? events.value[0];
-	if (!event) return errorResponse(c, 404);
+	if (!events.ok) return { failure: commonFailure(c, events.error) };
+	if (!relationships.ok) return { failure: commonFailure(c, relationships.error) };
+	if (!overview.ok) return { failure: commonFailure(c, overview.error) };
+	if (!recent.ok) return { failure: commonFailure(c, recent.error) };
+	const event = events.value.find((e) => e.id === requestedEventId) ?? events.value[0];
+	if (!event) return { failure: errorResponse(c, 404) };
+	const byEvent = overview.value.byEvent.find((e) => e.eventId === event.id);
+	const summary: EntrySummaryData = {
+		eventId: event.id,
+		eventName: event.name,
+		count: byEvent?.count ?? 0,
+		kodenTotal: byEvent?.kodenTotal ?? 0,
+		remaining:
+			kouden.plan === "free"
+				? Math.max(0, FREE_GIFT_LIMIT - overview.value.totals.giftCount)
+				: null,
+	};
+	return {
+		events: events.value,
+		relationships: relationships.value,
+		recent: recent.value,
+		summary,
+	};
+}
+
+/**
+ * 登録画面を描画する。htmx の要求には差し替える部分（入力欄と最近の登録）だけを返し、
+ * 合計は out-of-band で差し替え、結果を読み上げ領域に入れる
+ */
+async function renderGiftNew(
+	c: Ctx,
+	options: EntryOptions,
+	{ status = 200, announce }: { status?: 200 | 409 | 422; announce?: string } = {},
+) {
+	const ctx = await entryContext(c, options.values.eventId);
+	if ("failure" in ctx) return ctx.failure;
+	const props = {
+		kouden: c.get("kouden"),
+		events: ctx.events,
+		relationships: ctx.relationships,
+		recent: ctx.recent,
+		...options,
+		values: { ...options.values, eventId: ctx.summary.eventId },
+	};
+	if (isHtmx(c)) {
+		return c.html(
+			<>
+				<GiftEntryPanel {...props} />
+				<EntrySummary kouden={c.get("kouden")} summary={ctx.summary} oob />
+				{announce && <SrStatus oob>{announce}</SrStatus>}
+			</>,
+			status,
+		);
+	}
 	return koudenPage(
 		c,
 		"いただきものの登録",
 		"gifts",
-		<GiftNewPage
-			kouden={c.get("kouden")}
-			events={events.value}
-			relationships={relationships.value}
-			{...rest}
-			values={{ ...rest.values, eventId: event.id }}
-		/>,
+		<GiftNewPage {...props} summary={ctx.summary} describeCreated />,
 		{ status },
 	);
+}
+
+function createdNotice(gift: GiftView): CreatedGiftNotice {
+	const primary = gift.contributors[0];
+	return {
+		giftId: gift.id,
+		receiptNo: gift.receiptNo,
+		eventName: gift.eventName,
+		personLabel: primary ? personLabel(primary) : "",
+		kind: gift.kind,
+		amount: gift.amount,
+	};
 }
 
 k.get("/gifts/new", async (c) => {
 	const caller = c.get("caller");
 	if (!can(caller.role, "ledger.write")) return errorResponse(c, 403);
-	let created: CreatedGiftNotice | undefined;
-	const createdId = c.req.query("created");
-	if (createdId) {
-		const gift = await ledger(c).getGift(caller, createdId);
-		if (gift.ok) {
-			const primary = gift.value.contributors[0];
-			created = {
-				giftId: gift.value.id,
-				receiptNo: gift.value.receiptNo,
-				eventName: gift.value.eventName,
-				personLabel: primary ? personLabel(primary) : "",
-				kind: gift.value.kind,
-				amount: gift.value.amount,
-			};
-		}
+	const eventId = c.req.query("eventId") ?? c.req.query("event");
+	// 行事の合計だけ（行事を選び直したとき・他の人が登録したとき）
+	if (c.req.query("partial") === "summary") {
+		const ctx = await entryContext(c, eventId);
+		if ("failure" in ctx) return ctx.failure;
+		return c.html(<EntrySummary kouden={c.get("kouden")} summary={ctx.summary} />);
 	}
-	return renderGiftNew(c, { values: { kind: "koden", eventId: c.req.query("event") }, created });
+	const createdId = c.req.query("created");
+	const gift = createdId ? await ledger(c).getGift(caller, createdId) : null;
+	return renderGiftNew(c, {
+		values: { kind: "koden", eventId },
+		created: gift?.ok ? createdNotice(gift.value) : undefined,
+		notice: noticeOf(c),
+	});
 });
 
 k.post("/gifts", async (c) => {
 	const caller = c.get("caller");
 	if (!can(caller.role, "ledger.write")) return errorResponse(c, 403);
-	const values = await formValues(c);
+	// 選んだ種別で隠している欄（切り替える前に入れた金額など）は使わない
+	const values = pickGiftEntryFields(await formValues(c));
 	const parsed = giftEntrySchema.safeParse(values);
 	if (!parsed.success) {
 		return renderGiftNew(
@@ -209,14 +275,14 @@ k.post("/gifts", async (c) => {
 				errors: toFieldErrors(parsed.error),
 				candidates: await candidatesForRetry(c, values),
 			},
-			422,
+			{ status: 422 },
 		);
 	}
 	const result = await ledger(c).createGift(caller, parsed.data);
 	if (!result.ok) {
 		const { error } = result;
 		if (error.code === "limit_reached") {
-			return renderGiftNew(c, { values, message: limitMessage(c, error.limit) }, 422);
+			return renderGiftNew(c, { values, message: limitMessage(c, error.limit) }, { status: 422 });
 		}
 		if (error.code === "invalid") {
 			return renderGiftNew(
@@ -226,18 +292,69 @@ k.post("/gifts", async (c) => {
 					errors: { [error.field]: error.message },
 					candidates: await candidatesForRetry(c, values),
 				},
-				422,
+				{ status: 422 },
 			);
 		}
 		return commonFailure(c, error);
 	}
-	// 続けて入力できるよう、同じ行事を選んだ登録画面に戻す
 	const created = result.value;
-	return c.redirect(
-		`${basePath(c)}/gifts/new?event=${created.eventId}&created=${created.giftId}`,
-		303,
+	// JS なし: 続けて入力できるよう、同じ行事を選んだ登録画面に戻す
+	if (!isHtmx(c)) {
+		return c.redirect(
+			`${basePath(c)}/gifts/new?event=${created.eventId}&created=${created.giftId}`,
+			303,
+		);
+	}
+	const notice: CreatedGiftNotice = {
+		giftId: created.giftId,
+		receiptNo: created.receiptNo,
+		eventName: created.eventName,
+		personLabel: created.personLabel,
+		kind: parsed.data.gift.kind,
+		amount: parsed.data.gift.amount ?? null,
+	};
+	return renderGiftNew(
+		c,
+		{ values: { kind: "koden", eventId: created.eventId }, created: notice },
+		{ announce: createdGiftMessage(notice) },
 	);
 });
+
+/** 登録画面の「取り消す」（自分が最近登録した分の削除。08 案 A） */
+async function undoFromEntry(c: Ctx, giftId: string, values: FormValues) {
+	const caller = c.get("caller");
+	const eventId = values.eventId;
+	const version = versionSchema.safeParse(values.version);
+	const gift = await ledger(c).getGift(caller, giftId);
+	if (!gift.ok) return commonFailure(c, gift.error);
+	const result = version.success
+		? await ledger(c).deleteGift(caller, giftId, version.data)
+		: ({ ok: false, error: { code: "conflict" } } as const);
+	if (!result.ok) {
+		if (result.error.code !== "conflict") return commonFailure(c, result.error);
+		return renderGiftNew(
+			c,
+			{ values: { kind: "koden", eventId }, message: UNDO_CONFLICT_MESSAGE },
+			{ status: 409 },
+		);
+	}
+	if (!isHtmx(c)) {
+		return c.redirect(`${basePath(c)}/gifts/new?event=${eventId ?? ""}&notice=undone`, 303);
+	}
+	const { receiptNo, contributors } = gift.value;
+	const primary = contributors[0];
+	const message = `${receiptNo !== null ? `No.${receiptNo} ` : ""}${
+		primary ? `${personLabel(primary)} 様の` : ""
+	}登録を取り消しました。`;
+	return renderGiftNew(
+		c,
+		{ values: { kind: "koden", eventId }, notice: message },
+		{ announce: message },
+	);
+}
+
+const UNDO_CONFLICT_MESSAGE =
+	"開いている間に他の人がこの記録を更新したため、取り消せませんでした。内容を確かめてから、いただきものの画面で削除してください。";
 
 /** 差出人の候補（htmx の部分 HTML）。氏名・団体名・ふりがなのうち、入力された欄で検索する */
 k.get("/persons/candidates", async (c) => {
@@ -413,7 +530,9 @@ k.post("/gifts/:giftId", async (c) => {
 
 k.post("/gifts/:giftId/delete", async (c) => {
 	const giftId = c.req.param("giftId");
-	const version = versionSchema.safeParse((await formValues(c)).version);
+	const values = await formValues(c);
+	if (values.from === "entry") return undoFromEntry(c, giftId, values);
+	const version = versionSchema.safeParse(values.version);
 	if (!version.success) return renderGift(c, giftId, { message: CONFLICT_MESSAGE, status: 409 });
 	const result = await ledger(c).deleteGift(c.get("caller"), giftId, version.data);
 	if (result.ok) return c.redirect(`${basePath(c)}/gifts?notice=deleted`, 303);

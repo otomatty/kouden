@@ -7,6 +7,7 @@ import {
 	ATTENDANCE_VALUES,
 	EVENT_KIND_VALUES,
 	EVENT_KINDS,
+	type GiftKind,
 	GIFT_KIND_VALUES,
 	RETURN_METHOD_VALUES,
 	RETURN_RATIO_VALUES,
@@ -24,12 +25,72 @@ function blankToUndefined(value: unknown): unknown {
 	return trimmed === "" ? undefined : trimmed;
 }
 
-/** 「１０，０００円」「¥10,000」などを数値にする。数値にできない文字列はそのまま返して検証で弾く */
+const KANJI_DIGITS: Record<string, number> = {
+	〇: 0,
+	零: 0,
+	一: 1,
+	壱: 1,
+	二: 2,
+	弐: 2,
+	三: 3,
+	参: 3,
+	四: 4,
+	五: 5,
+	伍: 5,
+	六: 6,
+	七: 7,
+	八: 8,
+	九: 9,
+};
+const SMALL_UNITS: Record<string, number> = { 十: 10, 百: 100, 千: 1000 };
+
+/**
+ * 金額の書き方を数値にする。「10000」「１０，０００円」「¥10,000」のほか、香典袋の書き方
+ * 「1万」「1万5千」「五千円」「金壱萬円也」も読む（08 案 A）。読めなければ undefined
+ */
+export function parseYenText(text: string): number | undefined {
+	const s = text
+		.normalize("NFKC")
+		.replace(/^\s*金/, "")
+		.replace(/也\s*$/, "")
+		.replace(/[\s,、円圓¥]/g, "")
+		.replace(/萬/g, "万")
+		.replace(/[阡仟]/g, "千")
+		.replace(/[佰陌]/g, "百")
+		.replace(/拾/g, "十");
+	if (s === "") return undefined;
+	if (/^\d+$/.test(s)) return Number(s);
+	let total = 0;
+	let section = 0;
+	let num: number | undefined;
+	for (let i = 0; i < s.length; i++) {
+		const ch = s.charAt(i);
+		const digits = /^\d+(?:\.\d+)?/.exec(s.slice(i))?.[0];
+		if (digits) {
+			num = Number(digits);
+			i += digits.length - 1;
+		} else if (ch in KANJI_DIGITS) {
+			num = (num ?? 0) * 10 + (KANJI_DIGITS[ch] ?? 0);
+		} else if (ch in SMALL_UNITS) {
+			section += (num ?? 1) * (SMALL_UNITS[ch] ?? 1);
+			num = undefined;
+		} else if (ch === "万") {
+			total += (section + (num ?? 0) || 1) * 10_000;
+			section = 0;
+			num = undefined;
+		} else {
+			return undefined;
+		}
+	}
+	const value = total + section + (num ?? 0);
+	return Number.isInteger(value) ? value : undefined;
+}
+
+/** 金額・数量の入力を数値にする。数値にできない文字列はそのまま返して検証で弾く */
 function toInteger(value: unknown): unknown {
 	if (typeof value !== "string") return value;
-	const normalized = value.normalize("NFKC").replace(/[\s,円¥]/g, "");
-	if (normalized === "") return undefined;
-	return /^\d+$/.test(normalized) ? Number(normalized) : normalized;
+	if (value.trim() === "") return undefined;
+	return parseYenText(value) ?? value.trim();
 }
 
 const requiredText = (label: string, max: number) =>
@@ -208,6 +269,32 @@ function refineGift(v: { kind: string; amount?: number | undefined }, ctx: z.Ref
 
 export const giftSchema = z.object(giftFields).superRefine(refineGift);
 export type GiftInput = z.output<typeof giftSchema>;
+
+/** 種別ごとの欄（08 案 A）。登録画面はほかの欄を隠し、送られても使わない */
+export const GIFT_KIND_FIELDS: Record<
+	GiftKind,
+	readonly ("amount" | "itemName" | "quantity" | "message")[]
+> = {
+	koden: ["amount"],
+	kumotsu: ["amount", "itemName", "quantity"],
+	kyoka: ["amount", "itemName", "quantity"],
+	choden: ["message"],
+	other: ["amount", "itemName", "quantity"],
+};
+
+/**
+ * 登録画面の送信値から、選んだ種別で隠している欄を外す
+ * （種別を切り替える前に入れた金額が、弔電で「金額は入れられない」エラーにならないように）
+ */
+export function pickGiftEntryFields<T extends Record<string, string | undefined>>(values: T): T {
+	const fields = GIFT_KIND_FIELDS[values.kind as GiftKind];
+	if (!fields) return values;
+	const picked = { ...values };
+	for (const key of ["amount", "itemName", "quantity", "message"] as const) {
+		if (!fields.includes(key)) delete picked[key];
+	}
+	return picked;
+}
 
 /**
  * いただきものの登録。いただきものと差出人を一度に入力する。

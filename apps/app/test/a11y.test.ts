@@ -34,11 +34,24 @@ describe("読み上げとフォーカス（02 非機能要件: アクセシビ�
 		expect(res.status).toBe(303);
 		const html = await (await taro.request(res.headers.get("location") ?? "")).text();
 		expect(html).toMatch(
-			/<p id="created-gift" role="status"[^>]*>登録しました。葬儀 No\.1、佐藤 一郎 様、香典 ¥10,000。/,
+			/<p id="created-gift">登録しました。葬儀 No\.1、佐藤 一郎 様、香典 ¥10,000。/,
 		);
 		expect(html).toMatch(
 			/<input[^>]*name="name"[^>]*autofocus[^>]*aria-describedby="created-gift"/,
 		);
+	});
+
+	it("htmx で登録すると、結果を読み上げ領域に入れ、氏名の欄には説明を付けない（二重に読まれないように）", async () => {
+		const { taro, koudenId, eventId } = await setup();
+		const res = await taro.request(
+			`/k/${koudenId}/gifts`,
+			formPost({ eventId, kind: "koden", name: "佐藤 一郎", amount: "10000" }, { htmx: true }),
+		);
+		expect(res.status).toBe(200);
+		const html = await res.text();
+		expect(srStatusOob(html)).toBe("登録しました。葬儀 No.1、佐藤 一郎 様、香典 ¥10,000。");
+		expect(html).toMatch(/<input[^>]*name="name"[^>]*autofocus/);
+		expect(html).not.toContain('aria-describedby="created-gift"');
 	});
 
 	it("差出人の候補の件数を読み上げ領域に入れ、検索語がなければ空にする", async () => {

@@ -126,9 +126,17 @@ export const LiveRegion: FC<{
 	entities: readonly string[];
 	url?: string | undefined;
 	class?: string;
+	/** htmx の応答の中で、同じ id の部分を out-of-band で差し替える（自分の操作の結果を反映する） */
+	oob?: boolean;
 	children?: Child;
-}> = ({ id, entities, url, class: className, children }) => (
-	<div id={id} data-live={entities.join(",")} data-live-url={url} class={className}>
+}> = ({ id, entities, url, class: className, oob, children }) => (
+	<div
+		id={id}
+		data-live={entities.join(",")}
+		data-live-url={url}
+		class={className}
+		hx-swap-oob={oob ? "outerHTML" : undefined}
+	>
 		<p data-stale-notice hidden role="status" class={`${ui.notice} mb-3`}>
 			他の人の変更があります。{" "}
 			<a href="" class={ui.link}>

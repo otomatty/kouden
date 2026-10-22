@@ -16,6 +16,12 @@ async function setup() {
 	return { taro, koudenId, eventId };
 }
 
+/** 読み上げ領域（SrStatus）を out-of-band で差し替える要素の中身 */
+const srStatusOf = (html: string) =>
+	/<p id="sr-status" role="status" class="sr-only" hx-swap-oob="innerHTML">([^<]*)<\/p>/.exec(
+		html,
+	)?.[1];
+
 async function addMember(koudenId: string, email: string, role: "editor" | "viewer") {
 	const user = await env.DB.prepare("SELECT id FROM users WHERE email = ?")
 		.bind(email)
@@ -160,12 +166,157 @@ describe("いただきものの登録", () => {
 		const personId = /name="personId" value="([^"]+)"/.exec(candidates)?.[1] ?? "";
 		const res = await taro.request(
 			`/k/${koudenId}/gifts`,
-			formPost({ eventId, kind: "koden", personId, name: "", amount: "五千" }),
+			formPost({ eventId, kind: "koden", personId, name: "", amount: "五千くらい" }),
 		);
 		expect(res.status).toBe(422);
 		const html = await res.text();
 		expect(html).toMatch(new RegExp(`name="personId" value="${personId}" checked`));
 		expect(html).toContain("山田 太郎");
+	});
+
+	it("htmx で登録すると、入力欄・最近の登録と、合計（out-of-band）だけを返す", async () => {
+		const { taro, koudenId, eventId } = await setup();
+		const res = await taro.request(
+			`/k/${koudenId}/gifts`,
+			formPost({ eventId, kind: "koden", name: "鈴木 次郎", amount: "1万" }, { htmx: true }),
+		);
+		expect(res.status).toBe(200);
+		const html = await res.text();
+		expect(html.startsWith('<div id="gift-entry"')).toBe(true);
+		expect(html).toContain("登録しました。葬儀 No.1、鈴木 次郎 様、香典 ¥10,000。");
+		// 氏名の欄は空に戻る
+		expect(html).toMatch(/name="name"[^>]*value=""/);
+		// 合計を差し替える
+		expect(html).toMatch(/<div id="entry-summary"[^>]*hx-swap-oob="outerHTML"/);
+		expect(html).toMatch(/1 件・香典 <span[^>]*>¥10,000<\/span>/);
+		// 自分が最近登録した分に出て、取り消せる
+		expect(html).toContain("自分が最近登録した分");
+		expect(html).toContain('aria-label="No.1 鈴木 次郎 の登録を取り消す"');
+	});
+
+	it("htmx の入力エラーは 422 で入力欄だけを返す（合計は差し替えない）", async () => {
+		const { taro, koudenId, eventId } = await setup();
+		const res = await taro.request(
+			`/k/${koudenId}/gifts`,
+			formPost({ eventId, kind: "koden", name: "山田" }, { htmx: true }),
+		);
+		expect(res.status).toBe(422);
+		const html = await res.text();
+		expect(html.startsWith('<div id="gift-entry"')).toBe(true);
+		expect(html).toContain("香典の金額を入力してください");
+	});
+
+	it("種別に要らない欄は使わない（弔電に切り替える前に入れた金額でエラーにしない）", async () => {
+		const { taro, koudenId, eventId } = await setup();
+		const res = await taro.request(
+			`/k/${koudenId}/gifts`,
+			formPost({ eventId, kind: "choden", name: "田中 商店", amount: "5000", message: "ご冥福を" }),
+		);
+		expect(res.status).toBe(303);
+		const giftId = new URL(res.headers.get("location") ?? "", "http://x").searchParams.get(
+			"created",
+		);
+		const gift = await (await taro.request(`/k/${koudenId}/gifts/${giftId}`)).text();
+		expect(gift).toContain("ご冥福を");
+		expect(gift).toMatch(/name="amount"[^>]*value=""/);
+	});
+
+	it("登録画面の合計は、行事ごとの件数と香典の合計（無料版は残りの件数）", async () => {
+		const { taro, koudenId, eventId } = await setup();
+		await taro.request(
+			`/k/${koudenId}/gifts`,
+			formPost({ eventId, kind: "koden", name: "a", amount: "3000" }),
+		);
+		await taro.request(
+			`/k/${koudenId}/gifts`,
+			formPost({ eventId, kind: "kyoka", name: "b", itemName: "生花" }),
+		);
+		const html = await (
+			await taro.request(`/k/${koudenId}/gifts/new?partial=summary&eventId=${eventId}`)
+		).text();
+		expect(html.startsWith('<div id="entry-summary"')).toBe(true);
+		expect(html).toContain("葬儀");
+		expect(html).toMatch(/2 件・香典 <span[^>]*>¥3,000<\/span>/);
+		expect(html).toContain("無料版: あと 28 件登録できます");
+	});
+
+	it("最近の登録は自分の分だけで、取り消すと一覧と合計から外れる", async () => {
+		const { taro, koudenId, eventId } = await setup();
+		const hanako = makeApp(HANAKO);
+		await hanako.login();
+		await addMember(koudenId, HANAKO.email, "editor");
+		await hanako.request(
+			`/k/${koudenId}/gifts`,
+			formPost({ eventId, kind: "koden", name: "花子が登録", amount: "1000" }),
+		);
+		const mine = await taro.request(
+			`/k/${koudenId}/gifts`,
+			formPost({ eventId, kind: "koden", name: "太郎が登録", amount: "5000" }),
+		);
+		const giftId = new URL(mine.headers.get("location") ?? "", "http://x").searchParams.get(
+			"created",
+		);
+		const page = await (await taro.request(`/k/${koudenId}/gifts/new`)).text();
+		const recent =
+			/<section aria-labelledby="recent-entries"[\s\S]*?<\/section>/.exec(page)?.[0] ?? "";
+		expect(recent).toContain("太郎が登録");
+		expect(recent).not.toContain("花子が登録");
+
+		const undo = await taro.request(
+			`/k/${koudenId}/gifts/${giftId}/delete`,
+			formPost({ version: "1", from: "entry", eventId }, { htmx: true }),
+		);
+		expect(undo.status).toBe(200);
+		const html = await undo.text();
+		expect(srStatusOf(html)).toBe("No.2 太郎が登録 様の登録を取り消しました。");
+		expect(html).toMatch(/1 件・香典 <span[^>]*>¥1,000<\/span>/);
+		expect(html).not.toContain("自分が最近登録した分");
+		const list = await (await taro.request(`/k/${koudenId}/gifts`)).text();
+		expect(list).not.toContain("太郎が登録");
+	});
+
+	it("取り消す前に他の人が更新していたら、取り消さずに知らせる", async () => {
+		const { taro, koudenId, eventId } = await setup();
+		const res = await taro.request(
+			`/k/${koudenId}/gifts`,
+			formPost({ eventId, kind: "koden", name: "a", amount: "3000" }),
+		);
+		const giftId = new URL(res.headers.get("location") ?? "", "http://x").searchParams.get(
+			"created",
+		);
+		await taro.request(
+			`/k/${koudenId}/gifts/${giftId}`,
+			formPost({ version: "1", eventId, kind: "koden", amount: "5000" }),
+		);
+		const undo = await taro.request(
+			`/k/${koudenId}/gifts/${giftId}/delete`,
+			formPost({ version: "1", from: "entry", eventId }, { htmx: true }),
+		);
+		expect(undo.status).toBe(409);
+		expect(await undo.text()).toContain("取り消せませんでした");
+		expect(await (await taro.request(`/k/${koudenId}/gifts`)).text()).toContain("¥5,000");
+	});
+
+	it("JS なしで取り消すと、登録画面に戻って知らせる", async () => {
+		const { taro, koudenId, eventId } = await setup();
+		const res = await taro.request(
+			`/k/${koudenId}/gifts`,
+			formPost({ eventId, kind: "koden", name: "a", amount: "3000" }),
+		);
+		const giftId = new URL(res.headers.get("location") ?? "", "http://x").searchParams.get(
+			"created",
+		);
+		const undo = await taro.request(
+			`/k/${koudenId}/gifts/${giftId}/delete`,
+			formPost({ version: "1", from: "entry", eventId }),
+		);
+		expect(undo.status).toBe(303);
+		expect(undo.headers.get("location")).toBe(
+			`/k/${koudenId}/gifts/new?event=${eventId}&notice=undone`,
+		);
+		expect(await (await taro.request(undo.headers.get("location") ?? "")).text()).toContain(
+			"登録を取り消しました。",
+		);
 	});
 
 	it("受付の画面はなくなった", async () => {

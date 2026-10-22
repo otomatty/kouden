@@ -355,6 +355,18 @@ export class KoudenLedger extends DurableObject<Env> {
 		);
 	}
 
+	/** 自分が最近登録したいただきもの（登録画面で取り消し・訂正に使う。08 案 A） */
+	async listMyRecentGifts(caller: Caller, limit = 5): Promise<LedgerResult<GiftView[]>> {
+		return this.read(caller, () =>
+			this.queryGifts(
+				" AND g.created_by = ?",
+				[caller.userId],
+				"g.created_at DESC, g.id DESC",
+				limit,
+			),
+		);
+	}
+
 	async listGifts(caller: Caller, filter: GiftFilter): Promise<LedgerResult<GiftView[]>> {
 		return this.read(caller, () => {
 			const where: string[] = [];

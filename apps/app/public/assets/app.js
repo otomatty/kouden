@@ -38,6 +38,69 @@
 		focusFirstInvalid(root);
 	});
 
+	// いただきものの登録の金額のボタン（08 案 A）。押すと金額の欄に入る。JS がないときは隠したまま
+	function digitsOf(value) {
+		return value.normalize("NFKC").replace(/[\s,円¥]/g, "");
+	}
+	function syncAmountChips(root) {
+		for (const group of root.querySelectorAll("[data-amount-chips]")) {
+			group.hidden = false;
+			const input = group.closest("form")?.querySelector('input[name="amount"]');
+			const current = input ? digitsOf(input.value) : "";
+			for (const chip of group.querySelectorAll("[data-amount]")) {
+				chip.setAttribute("aria-pressed", String(chip.dataset.amount === current));
+			}
+		}
+	}
+	document.addEventListener("click", (e) => {
+		const chip = e.target instanceof Element ? e.target.closest("[data-amount]") : null;
+		const input = chip?.closest("form")?.querySelector('input[name="amount"]');
+		if (!chip || !input) return;
+		input.value = Number(chip.dataset.amount).toLocaleString("ja-JP");
+		input.dispatchEvent(new Event("input", { bubbles: true }));
+	});
+	document.addEventListener("input", (e) => {
+		if (e.target instanceof HTMLInputElement && e.target.name === "amount") {
+			const form = e.target.closest("form");
+			if (form) syncAmountChips(form);
+		}
+	});
+
+	// 開閉を端末に覚えておく <details data-remember="名前">（登録画面の「＋」など）。
+	// 覚えた「開く」だけを戻す（入力エラーで開いている欄は閉じない）
+	function rememberKey(details) {
+		return `kouden:details:${details.dataset.remember}`;
+	}
+	function restoreDetails(root) {
+		for (const details of root.querySelectorAll("details[data-remember]")) {
+			try {
+				if (localStorage.getItem(rememberKey(details)) === "open") details.open = true;
+			} catch {
+				// 保存できない環境（プライベートブラウズなど）では覚えない
+			}
+		}
+	}
+	document.addEventListener(
+		"toggle",
+		(e) => {
+			const details = e.target;
+			if (!(details instanceof HTMLDetailsElement) || !details.dataset.remember) return;
+			try {
+				localStorage.setItem(rememberKey(details), details.open ? "open" : "closed");
+			} catch {
+				// 同上
+			}
+		},
+		true,
+	);
+
+	function enhance(root) {
+		syncAmountChips(root);
+		restoreDetails(root);
+	}
+	document.addEventListener("DOMContentLoaded", () => enhance(document));
+	document.addEventListener("htmx:afterSettle", () => enhance(document));
+
 	// URL の # が開閉できる項目（よくある質問の <details>）を指していたら開く
 	function openLinkedDetails() {
 		let id = "";

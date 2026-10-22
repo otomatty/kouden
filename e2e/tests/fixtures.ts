@@ -48,9 +48,9 @@ export async function createKouden(page: Page, deceasedName: string): Promise<st
 /** いただきものの登録画面で香典を 1 件登録する（登録画面を開いた状態で呼ぶ） */
 export async function registerKoden(page: Page, name: string, amount: number) {
 	await page.getByLabel("氏名").fill(name);
-	await page.getByLabel("金額").fill(String(amount));
-	await page.getByRole("button", { name: "登録する" }).click();
-	// 登録すると同じ画面に戻り、登録した内容を上に出す。次の入力のため氏名の欄にフォーカスがある
+	await page.getByLabel("金額", { exact: true }).fill(String(amount));
+	await page.getByRole("button", { name: "登録して次へ" }).click();
+	// 画面を読み直さずに、登録した内容を上に出す。次の入力のため氏名の欄にフォーカスがある
 	await expect(page.locator("#created-gift")).toContainText(`${name} 様`);
 	await expect(page.getByLabel("氏名")).toBeFocused();
 }

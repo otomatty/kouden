@@ -120,7 +120,8 @@ export const Select: FC<{
 	blank?: string;
 	required?: boolean;
 	class?: string;
-}> = ({ name, idPrefix, values, errors, options, blank, required, class: className }) => {
+	extra?: Record<string, string>;
+}> = ({ name, idPrefix, values, errors, options, blank, required, class: className, extra }) => {
 	const id = fieldId(name, idPrefix);
 	const current = values[name] ?? "";
 	return (
@@ -131,6 +132,7 @@ export const Select: FC<{
 			class={`${ui.input} ${className ?? ""}`}
 			aria-invalid={errors?.[name] ? "true" : undefined}
 			aria-describedby={errors?.[name] ? `${id}-error` : undefined}
+			{...extra}
 		>
 			{blank !== undefined && <option value="">{blank}</option>}
 			{options.map((o) => (

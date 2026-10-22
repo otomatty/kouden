@@ -13,7 +13,7 @@ test.describe("いただきものの登録（E4-1）をキーボードだけで�
 		await expectAccessible(page);
 
 		const name = page.getByLabel("氏名");
-		const amount = page.getByLabel("金額");
+		const amount = page.getByLabel("金額", { exact: true });
 		const created = page.locator("#created-gift");
 		const status = page.locator("#sr-status");
 
@@ -25,11 +25,11 @@ test.describe("いただきものの登録（E4-1）をキーボードだけで�
 		await page.keyboard.type("10000");
 		await page.keyboard.press("Enter");
 
-		// 同じ画面に戻り、登録した内容を上に出す。次の入力のため氏名の欄に戻り、その説明として読み上げる
+		// 画面を読み直さずに、登録した内容を上に出して読み上げる。次の入力のため氏名の欄に戻る
 		await expect(created).toHaveText(/^登録しました。葬儀 No\.1、佐藤 一郎 様、香典 /);
+		await expect(status).toHaveText(/^登録しました。葬儀 No\.1、佐藤 一郎 様/);
 		await expect(name).toBeFocused();
 		await expect(name).toHaveValue("");
-		await expect(name).toHaveAccessibleDescription(/^登録しました。葬儀 No\.1、佐藤 一郎 様/);
 		await expectAccessible(page, "いただきものの登録（登録後）");
 
 		// 香典で金額がないとエラー。最初のエラーの欄（金額）にフォーカスが移る
@@ -63,6 +63,41 @@ test.describe("いただきものの登録（E4-1）をキーボードだけで�
 		await page.goto(`${base}/persons`);
 		await expect(page.getByRole("row")).toHaveCount(3);
 		await expect(page.getByRole("row", { name: /佐藤 一郎/ })).toContainText("2");
+	});
+});
+
+test.describe("かんたん登録（08 案 A）", () => {
+	test("金額のボタンで登録し、種別で欄が変わり、その場で取り消せる", async ({ page }) => {
+		const base = await createKouden(page, "かんたん 確認");
+		await page.goto(`${base}/gifts/new`);
+		const amount = page.getByLabel("金額", { exact: true });
+		const summary = page.locator("#entry-summary");
+		await expect(summary).toContainText("0 件・香典 ¥0");
+
+		await page.getByLabel("氏名").fill("小川 一郎");
+		const tenThousand = page.getByRole("button", { name: "¥10,000" });
+		await tenThousand.click();
+		await expect(amount).toHaveValue("10,000");
+		await expect(tenThousand).toHaveAttribute("aria-pressed", "true");
+		await page.getByRole("button", { name: "登録して次へ" }).click();
+		await expect(page.locator("#created-gift")).toContainText("小川 一郎 様、香典 ¥10,000");
+		await expect(summary).toContainText("1 件・香典 ¥10,000");
+
+		// 弔電を選ぶと金額の欄が消え、文面の欄が出る
+		await page.locator('label:has(input[name="kind"][value="choden"])').click();
+		await expect(amount).toBeHidden();
+		await expect(page.getByLabel("弔電の文面")).toBeVisible();
+		await page.locator('label:has(input[name="kind"][value="koden"])').click();
+		await expect(amount).toBeVisible();
+		await expect(page.getByLabel("弔電の文面")).toBeHidden();
+
+		// 自分が最近登録した分から、その場で取り消せる
+		await page.getByRole("button", { name: "No.1 小川 一郎 の登録を取り消す" }).click();
+		await expect(page.locator("#sr-status")).toHaveText(
+			"No.1 小川 一郎 様の登録を取り消しました。",
+		);
+		await expect(summary).toContainText("0 件・香典 ¥0");
+		await expectAccessible(page, "いただきものの登録（取り消し後）");
 	});
 });
 
@@ -169,8 +204,8 @@ test.describe("通信が遅いとき", () => {
 		const pending = candidatesRequest("一郎");
 		await name.fill("佐藤 一郎");
 		await pending;
-		await page.getByLabel("金額").fill("1000");
-		await page.getByRole("button", { name: "登録する" }).click();
+		await page.getByLabel("金額", { exact: true }).fill("1000");
+		await page.getByRole("button", { name: "登録して次へ" }).click();
 		const created = page.locator("#created-gift");
 		await expect(created).toContainText("No.3、佐藤 一郎 様");
 		await page.waitForTimeout(2000);

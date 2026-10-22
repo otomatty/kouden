@@ -3,6 +3,8 @@ import {
 	eventSchema,
 	giftEntrySchema,
 	giftSchema,
+	parseYenText,
+	pickGiftEntryFields,
 	koudenSchema,
 	parseGiftFilter,
 	personSchema,
@@ -55,8 +57,13 @@ describe("giftEntrySchema", () => {
 	});
 
 	it("数字でない金額はエラー", () => {
-		const r = giftEntrySchema.safeParse({ ...base, amount: "五千", name: "山田" });
+		const r = giftEntrySchema.safeParse({ ...base, amount: "五千くらい", name: "山田" });
 		expect(errorsOf(r).amount).toBe("金額は数字で入力してください");
+	});
+
+	it("香典袋の書き方の金額（「1万」「五千円」）も読む", () => {
+		const r = giftEntrySchema.parse({ ...base, amount: "金壱萬円也", name: "山田" });
+		expect(r.gift.amount).toBe(10000);
 	});
 
 	it("種別が不正ならエラー", () => {
@@ -159,5 +166,63 @@ describe("香典返しのフォーム", () => {
 			quantity: 2,
 		});
 		expect(returnLineSchema.safeParse({ name: "お礼状" }).success).toBe(false);
+	});
+});
+
+describe("parseYenText", () => {
+	it.each([
+		["10000", 10000],
+		["１０，０００円", 10000],
+		["¥10,000", 10000],
+		["1万", 10000],
+		["1万5千", 15000],
+		["1.5万", 15000],
+		["1万2000", 12000],
+		["五千円", 5000],
+		["三万", 30000],
+		["十万", 100000],
+		["三十万", 300000],
+		["二万三千", 23000],
+		["千五百", 1500],
+		["金壱萬円也", 10000],
+		["金伍阡円", 5000],
+		["一〇〇〇〇", 10000],
+		["0", 0],
+	])("%s → %d", (input, expected) => {
+		expect(parseYenText(input)).toBe(expected);
+	});
+
+	it.each(["", "abc", "1.5", "五千くらい", "1-2"])("%s は読めない", (input) => {
+		expect(parseYenText(input)).toBeUndefined();
+	});
+});
+
+describe("pickGiftEntryFields", () => {
+	const values = {
+		kind: "choden",
+		amount: "5000",
+		itemName: "生花",
+		quantity: "1",
+		message: "ご冥福を",
+	};
+
+	it("弔電では文面だけを残す", () => {
+		expect(pickGiftEntryFields(values)).toEqual({ kind: "choden", message: "ご冥福を" });
+	});
+
+	it("香典では金額だけを残す", () => {
+		expect(pickGiftEntryFields({ ...values, kind: "koden" })).toEqual({
+			kind: "koden",
+			amount: "5000",
+		});
+	});
+
+	it("供花では金額・品名・数量を残す", () => {
+		expect(pickGiftEntryFields({ ...values, kind: "kyoka" })).toEqual({
+			kind: "kyoka",
+			amount: "5000",
+			itemName: "生花",
+			quantity: "1",
+		});
 	});
 });
