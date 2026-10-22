@@ -36,6 +36,7 @@ Cloudflare Workers 上で動き、https://kouden.app で公開しています（
 | `packages/domain/`             | 業務ルール（入力検証・権限・金額の按分など。純粋な TypeScript）                           |
 | `packages/ui/`                 | app と admin で共有するクラス名と色・フォント                                             |
 | `tools/migrate-from-supabase/` | 旧アプリのデータの変換・投入・照合 CLI（移行は 2026-10-20 に完了）                        |
+| `tools/screen-catalog/`        | 全画面をサンプルデータで状態ごとに描画する画面カタログ（`bun run catalog`）               |
 | `e2e/`                         | Playwright の E2E とアクセシビリティの検査                                                |
 | `docs/rebuild/`                | 設計ドキュメント                                                                          |
 | `legacy/`                      | 旧アプリ（参照用）                                                                        |

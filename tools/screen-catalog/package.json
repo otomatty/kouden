@@ -1,0 +1,23 @@
+{
+	"name": "@kouden/screen-catalog",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"catalog": "bun scripts/build.ts",
+		"catalog:serve": "bun scripts/build.ts && bun scripts/serve.ts",
+		"typecheck": "bun run --cwd ../../apps/app typegen && tsc",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@kouden/domain": "workspace:*",
+		"@kouden/ui": "workspace:*",
+		"hono": "4.13.13"
+	},
+	"devDependencies": {
+		"@kouden/admin": "workspace:*",
+		"@kouden/app": "workspace:*",
+		"@types/node": "22.20.5",
+		"typescript": "7.0.2",
+		"vitest": "5.0.4"
+	}
+}

@@ -7,14 +7,15 @@
 
 ## ディレクトリ
 
-| パス                           | 内容                                                                          |
-| ------------------------------ | ----------------------------------------------------------------------------- |
-| `apps/app/`                    | 利用者向け Worker（`kouden-app`）と香典帳の Durable Object（`KoudenLedger`）  |
-| `apps/admin/`                  | 運営者画面（`kouden-admin`）。Cloudflare Access の背後に置き、D1 だけを使う   |
-| `packages/domain/`             | 業務ルール（入力検証・権限・金額の按分など）                                  |
-| `packages/ui/`                 | app と admin で共有するクラス名と色・フォント                                 |
-| `tools/migrate-from-supabase/` | 旧アプリからのデータ移行 CLI（[手順](tools/migrate-from-supabase/README.md)） |
-| `e2e/`                         | Playwright の E2E とアクセシビリティの検査                                    |
+| パス                           | 内容                                                                           |
+| ------------------------------ | ------------------------------------------------------------------------------ |
+| `apps/app/`                    | 利用者向け Worker（`kouden-app`）と香典帳の Durable Object（`KoudenLedger`）   |
+| `apps/admin/`                  | 運営者画面（`kouden-admin`）。Cloudflare Access の背後に置き、D1 だけを使う    |
+| `packages/domain/`             | 業務ルール（入力検証・権限・金額の按分など）                                   |
+| `packages/ui/`                 | app と admin で共有するクラス名と色・フォント                                  |
+| `tools/migrate-from-supabase/` | 旧アプリからのデータ移行 CLI（[手順](tools/migrate-from-supabase/README.md)）  |
+| `tools/screen-catalog/`        | 全画面を状態ごとに並べる画面カタログ（[説明](tools/screen-catalog/README.md)） |
+| `e2e/`                         | Playwright の E2E とアクセシビリティの検査                                     |
 
 ## ローカル開発
 
@@ -42,6 +43,7 @@ Google ログインを試すときは、`.dev.vars` の `GOOGLE_CLIENT_SECRET` �
 | `bun run lint` / `bun run fmt` | Oxlint / oxfmt                             |
 | `bun run build`                | 本番用ビルド                               |
 | `bun run e2e`                  | E2E とアクセシビリティの検査               |
+| `bun run catalog`              | 画面カタログ（http://localhost:5180）      |
 
 E2E は初回に `cd e2e && bunx playwright install chromium` を実行します。5173・5174 番を使うので、`apps/app` と `apps/admin` の開発サーバーを両方止めてから実行してください。
 

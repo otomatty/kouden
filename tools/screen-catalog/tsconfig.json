@@ -1,0 +1,15 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"types": ["node"]
+	},
+	// 画面のビューは Workers の型（D1Database・Env など）を参照する。apps/app の typecheck が生成する型を使う
+	"include": [
+		"src",
+		"scripts",
+		"test",
+		"vitest.config.ts",
+		"../../apps/app/.cloudflare/types",
+		"../../apps/app/src/globals.d.ts"
+	]
+}

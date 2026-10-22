@@ -1,0 +1,859 @@
+<!doctype html>
+<html lang="ja">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+		<title>香典帳 画面カタログ</title>
+		<meta name="claude:viewport-fit-sides" content="cover" />
+		<meta name="robots" content="noindex" />
+		<link rel="icon" href="data:," />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			rel="stylesheet"
+			href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;500;700&family=Zen+Old+Mincho:wght@600&display=swap"
+		/>
+		<style>
+			/* 左に画面の一覧、右に画面の構成または 1 画面の状態を並べる。色はアプリの theme.css（墨と白）に合わせる */
+			:root {
+				--paper: #f3f3f2;
+				--surface: #fffffc;
+				--ink: #2b2b2b;
+				--muted: #666666;
+				--line: #dcdddd;
+				--accent: #1a1a1a;
+				--on-accent: #fffffc;
+				--stage: #e4e4e1;
+				--danger: #9b2c2c;
+				--font-display: "Zen Old Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif;
+				--font-body:
+					"Noto Sans JP", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", Meiryo,
+					system-ui, sans-serif;
+				--font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+				--header-h: 56px;
+				/* 固定するヘッダーの高さ（狭い画面ではヘッダーを固定しない） */
+				--sticky-top: 0px;
+				color-scheme: light;
+			}
+			@media (prefers-color-scheme: dark) {
+				:root:not([data-theme="light"]) {
+					--paper: #171716;
+					--surface: #1f1f1e;
+					--ink: #ebeae5;
+					--muted: #a3a29c;
+					--line: #393937;
+					--accent: #f3f3f2;
+					--on-accent: #1a1a1a;
+					--stage: #0e0e0d;
+					--danger: #e08a8a;
+					color-scheme: dark;
+				}
+			}
+			:root[data-theme="dark"] {
+				--paper: #171716;
+				--surface: #1f1f1e;
+				--ink: #ebeae5;
+				--muted: #a3a29c;
+				--line: #393937;
+				--accent: #f3f3f2;
+				--on-accent: #1a1a1a;
+				--stage: #0e0e0d;
+				--danger: #e08a8a;
+				color-scheme: dark;
+			}
+			* {
+				box-sizing: border-box;
+			}
+			body {
+				margin: 0;
+				background: var(--paper);
+				color: var(--ink);
+				font: 400 14px/1.7 var(--font-body);
+				-webkit-font-smoothing: antialiased;
+			}
+			body::before {
+				content: "";
+				position: fixed;
+				inset: 0 0 auto;
+				height: env(safe-area-inset-top, 0px);
+				z-index: 30;
+				background: var(--surface);
+			}
+			a {
+				color: inherit;
+			}
+			:focus-visible {
+				outline: 2px solid var(--accent);
+				outline-offset: 2px;
+			}
+			h1,
+			h2,
+			h3 {
+				text-wrap: balance;
+				margin: 0;
+			}
+			.mono {
+				font-family: var(--font-mono);
+				font-size: 12.5px;
+			}
+			.muted {
+				color: var(--muted);
+			}
+
+			/* ---- ヘッダー ---- */
+			.top {
+				position: relative;
+				z-index: 20;
+				background: var(--surface);
+				border-bottom: 1px solid var(--line);
+			}
+			.top-inner {
+				display: flex;
+				flex-wrap: wrap;
+				align-items: center;
+				gap: 8px 20px;
+				min-height: var(--header-h);
+				padding-block: 8px;
+				padding-left: max(16px, env(safe-area-inset-left, 0px));
+				padding-right: max(16px, env(safe-area-inset-right, 0px));
+			}
+			.brand {
+				display: flex;
+				align-items: baseline;
+				gap: 10px;
+				text-decoration: none;
+			}
+			.brand b {
+				font: 600 19px/1.2 var(--font-display);
+				letter-spacing: 0.18em;
+			}
+			.brand span {
+				font-size: 12px;
+				color: var(--muted);
+				letter-spacing: 0.08em;
+			}
+			@media (max-width: 639px) {
+				.stats {
+					display: none;
+				}
+			}
+			.stats {
+				font-size: 12px;
+				color: var(--muted);
+				font-variant-numeric: tabular-nums;
+			}
+			.spacer {
+				flex: 1;
+			}
+			.seg {
+				display: inline-flex;
+				border: 1px solid var(--line);
+				border-radius: 8px;
+				overflow: hidden;
+			}
+			.seg button {
+				font: inherit;
+				font-size: 12.5px;
+				padding: 5px 12px;
+				border: 0;
+				background: var(--surface);
+				color: var(--ink);
+				cursor: pointer;
+			}
+			.seg button + button {
+				border-left: 1px solid var(--line);
+			}
+			.seg button[aria-pressed="true"] {
+				background: var(--accent);
+				color: var(--on-accent);
+			}
+
+			/* ---- 本体 ---- */
+			.shell {
+				display: grid;
+				grid-template-columns: 1fr;
+			}
+			@media (min-width: 960px) {
+				:root {
+					--sticky-top: var(--header-h);
+				}
+				.top {
+					position: sticky;
+					top: env(safe-area-inset-top, 0px);
+				}
+				.shell {
+					grid-template-columns: 264px minmax(0, 1fr);
+				}
+			}
+			.side {
+				border-bottom: 1px solid var(--line);
+				background: var(--surface);
+				padding-block: 12px;
+				padding-left: max(16px, env(safe-area-inset-left, 0px));
+				padding-right: 16px;
+			}
+			@media (min-width: 960px) {
+				.side {
+					position: sticky;
+					top: calc(env(safe-area-inset-top, 0px) + var(--header-h));
+					height: calc(100dvh - var(--header-h) - env(safe-area-inset-top, 0px));
+					overflow-y: auto;
+					border-bottom: 0;
+					border-right: 1px solid var(--line);
+					padding-block: 20px 40px;
+				}
+				.side > details > summary {
+					display: none;
+				}
+			}
+			.side summary {
+				cursor: pointer;
+				font-weight: 500;
+				padding-block: 4px;
+			}
+			.side input[type="search"] {
+				width: 100%;
+				font: inherit;
+				padding: 6px 10px;
+				border: 1px solid var(--line);
+				border-radius: 8px;
+				background: var(--paper);
+				color: var(--ink);
+				margin-block: 8px 12px;
+			}
+			.nav-home {
+				display: block;
+				padding: 4px 8px;
+				border-radius: 6px;
+				text-decoration: none;
+				font-weight: 500;
+			}
+			.nav-group {
+				margin-top: 16px;
+			}
+			.nav-group h2 {
+				font-size: 11px;
+				font-weight: 500;
+				color: var(--muted);
+				letter-spacing: 0.12em;
+				padding: 0 8px 4px;
+			}
+			.nav-group ul {
+				list-style: none;
+				margin: 0;
+				padding: 0;
+			}
+			.nav-group a {
+				display: flex;
+				justify-content: space-between;
+				gap: 8px;
+				padding: 4px 8px;
+				border-radius: 6px;
+				text-decoration: none;
+			}
+			.nav-group a small {
+				color: var(--muted);
+				font-variant-numeric: tabular-nums;
+			}
+			.side a:hover {
+				background: var(--paper);
+			}
+			.side a[aria-current="page"] {
+				background: var(--accent);
+				color: var(--on-accent);
+			}
+			.side a[aria-current="page"] small {
+				color: inherit;
+				opacity: 0.75;
+			}
+			main {
+				min-width: 0;
+				padding-block: 28px 80px;
+				padding-left: max(16px, env(safe-area-inset-left, 0px));
+				padding-right: max(16px, env(safe-area-inset-right, 0px));
+			}
+			@media (min-width: 960px) {
+				main {
+					padding-left: 32px;
+					padding-right: max(32px, env(safe-area-inset-right, 0px));
+				}
+			}
+			.page {
+				display: grid;
+				gap: 36px;
+				max-width: 1480px;
+			}
+
+			/* ---- 構成（一覧） ---- */
+			.lead {
+				display: grid;
+				gap: 10px;
+				max-width: 68ch;
+			}
+			.lead h1,
+			.screen-head h1 {
+				font: 600 28px/1.35 var(--font-display);
+				letter-spacing: 0.08em;
+			}
+			.lead p {
+				margin: 0;
+			}
+			.flow {
+				display: flex;
+				flex-wrap: wrap;
+				align-items: center;
+				gap: 6px;
+				font-size: 12.5px;
+			}
+			.flow span {
+				padding: 2px 10px;
+				border: 1px solid var(--line);
+				border-radius: 999px;
+				background: var(--surface);
+			}
+			.flow i {
+				font-style: normal;
+				color: var(--muted);
+			}
+			.group {
+				display: grid;
+				gap: 14px;
+			}
+			.group-head {
+				display: grid;
+				gap: 4px;
+				border-top: 2px solid var(--ink);
+				padding-top: 10px;
+			}
+			.group-head h2 {
+				font: 600 20px/1.4 var(--font-display);
+				letter-spacing: 0.1em;
+			}
+			.group-head p {
+				margin: 0;
+				color: var(--muted);
+				max-width: 80ch;
+			}
+			.cards {
+				display: grid;
+				grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+				gap: 14px;
+			}
+			.card {
+				display: grid;
+				grid-template-rows: auto 1fr;
+				border: 1px solid var(--line);
+				border-radius: 10px;
+				background: var(--surface);
+				overflow: hidden;
+				text-decoration: none;
+				transition: border-color 0.15s;
+			}
+			.card:hover {
+				border-color: var(--accent);
+			}
+			.thumb {
+				position: relative;
+				aspect-ratio: 16 / 10;
+				max-width: 100%;
+				overflow: hidden;
+				background: var(--stage);
+				border-bottom: 1px solid var(--line);
+			}
+			.thumb iframe {
+				position: absolute;
+				top: 0;
+				left: 0;
+				width: 1280px;
+				height: 800px;
+				border: 0;
+				transform-origin: 0 0;
+				pointer-events: none;
+				background: #f3f3f2;
+			}
+			.card-body {
+				display: grid;
+				align-content: start;
+				gap: 4px;
+				padding: 10px 12px 12px;
+			}
+			.card-body h3 {
+				font-size: 14.5px;
+				font-weight: 700;
+			}
+			.card-meta {
+				display: flex;
+				flex-wrap: wrap;
+				justify-content: space-between;
+				gap: 4px 8px;
+				font-size: 12px;
+				color: var(--muted);
+			}
+			.table-wrap {
+				overflow-x: auto;
+				border: 1px solid var(--line);
+				border-radius: 10px;
+				background: var(--surface);
+			}
+			table {
+				width: 100%;
+				border-collapse: collapse;
+				font-size: 13px;
+			}
+			th,
+			td {
+				text-align: left;
+				vertical-align: top;
+				padding: 8px 12px;
+				border-bottom: 1px solid var(--line);
+			}
+			tbody tr:last-child > * {
+				border-bottom: 0;
+			}
+			th {
+				font-weight: 500;
+				color: var(--muted);
+				white-space: nowrap;
+			}
+			td.num {
+				text-align: right;
+				font-variant-numeric: tabular-nums;
+			}
+			td a {
+				text-underline-offset: 3px;
+			}
+
+			/* ---- 1 画面 ---- */
+			.screen-head {
+				display: grid;
+				gap: 10px;
+			}
+			.crumb {
+				font-size: 12.5px;
+				color: var(--muted);
+			}
+			.crumb a {
+				text-underline-offset: 3px;
+			}
+			.facts {
+				display: grid;
+				grid-template-columns: auto minmax(0, 1fr);
+				gap: 4px 16px;
+				margin: 0;
+				font-size: 13px;
+			}
+			.facts dt {
+				color: var(--muted);
+			}
+			.facts dd {
+				margin: 0;
+				min-width: 0;
+				overflow-wrap: anywhere;
+			}
+			.desc {
+				margin: 0;
+				max-width: 72ch;
+			}
+			.chips {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 6px;
+			}
+			.chip {
+				font: inherit;
+				font-size: 12.5px;
+				padding: 3px 11px;
+				border: 1px solid var(--line);
+				border-radius: 999px;
+				background: var(--surface);
+				color: var(--ink);
+				text-decoration: none;
+				cursor: pointer;
+			}
+			.chip:hover {
+				border-color: var(--accent);
+			}
+			.chip[aria-current="true"] {
+				background: var(--accent);
+				border-color: var(--accent);
+				color: var(--on-accent);
+			}
+			.state-bar {
+				position: sticky;
+				top: calc(env(safe-area-inset-top, 0px) + var(--sticky-top));
+				z-index: 10;
+				display: grid;
+				gap: 6px;
+				padding-block: 10px;
+				background: var(--paper);
+				border-bottom: 1px solid var(--line);
+			}
+			.state-bar h2 {
+				font-size: 12px;
+				font-weight: 500;
+				color: var(--muted);
+				letter-spacing: 0.1em;
+			}
+			.links {
+				display: grid;
+				gap: 8px;
+			}
+			.links h2 {
+				font-size: 12px;
+				font-weight: 500;
+				color: var(--muted);
+				letter-spacing: 0.1em;
+			}
+			.state {
+				display: grid;
+				gap: 12px;
+				scroll-margin-top: calc(var(--sticky-top) + 132px);
+			}
+			.state-head {
+				display: flex;
+				flex-wrap: wrap;
+				align-items: baseline;
+				gap: 4px 14px;
+			}
+			.state-head h3 {
+				font: 600 18px/1.4 var(--font-display);
+				letter-spacing: 0.06em;
+			}
+			.state-head p {
+				margin: 0;
+				color: var(--muted);
+				flex: 1 1 280px;
+			}
+			.state-head a {
+				font-size: 12.5px;
+				text-underline-offset: 3px;
+			}
+			.frames {
+				display: flex;
+				flex-wrap: wrap;
+				align-items: flex-start;
+				gap: 18px;
+				padding: 16px;
+				background: var(--stage);
+				border-radius: 12px;
+			}
+			.frame {
+				margin: 0;
+				display: grid;
+				gap: 6px;
+				min-width: 0;
+			}
+			.frame figcaption {
+				font-size: 11.5px;
+				color: var(--muted);
+				letter-spacing: 0.06em;
+			}
+			.frame.desktop {
+				flex: 1 1 560px;
+			}
+			.frame.mobile {
+				flex: 0 0 auto;
+				width: 320px;
+				max-width: 100%;
+			}
+			.viewport {
+				position: relative;
+				overflow: hidden;
+				border-radius: 8px;
+				box-shadow:
+					0 0 0 1px var(--line),
+					0 8px 24px -16px rgb(0 0 0 / 0.35);
+				background: #f3f3f2;
+			}
+			.viewport iframe {
+				position: absolute;
+				top: 0;
+				left: 0;
+				border: 0;
+				transform-origin: 0 0;
+				background: #f3f3f2;
+			}
+			[data-view="desktop"] .frame.mobile,
+			[data-view="mobile"] .frame.desktop {
+				display: none;
+			}
+			.empty {
+				color: var(--muted);
+			}
+			@media (prefers-reduced-motion: reduce) {
+				* {
+					transition: none !important;
+					scroll-behavior: auto !important;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<header class="top">
+			<div class="top-inner">
+				<a class="brand" href="#top" id="brand"><b>香典帳</b><span>画面カタログ</span></a>
+				<span class="stats" id="stats"></span>
+				<span class="spacer"></span>
+				<div class="seg" role="group" aria-label="表示する画面の幅">
+					<button type="button" data-view-set="both" aria-pressed="true">PC とスマホ</button>
+					<button type="button" data-view-set="desktop" aria-pressed="false">PC</button>
+					<button type="button" data-view-set="mobile" aria-pressed="false">スマホ</button>
+				</div>
+			</div>
+		</header>
+		<div class="shell">
+			<aside class="side" aria-label="画面の一覧">
+				<details id="side-details" open>
+					<summary>画面の一覧</summary>
+					<label for="filter" class="muted" style="font-size: 12px">画面を絞り込む</label>
+					<input id="filter" type="search" placeholder="例: 受付、/k/:id" autocomplete="off" />
+					<a class="nav-home" href="#top" id="nav-home">画面の構成</a>
+					<div id="nav"></div>
+				</details>
+			</aside>
+			<main id="main" data-view="both"></main>
+		</div>
+		<script id="catalog-data" type="application/json">
+			/*CATALOG_DATA*/ null
+		</script>
+		<script>
+			(() => {
+				const data = JSON.parse(document.getElementById("catalog-data").textContent);
+				const main = document.getElementById("main");
+				const nav = document.getElementById("nav");
+				const screens = data.groups.flatMap((g) => g.screens.map((s) => ({ ...s, group: g })));
+				const byId = new Map(screens.map((s) => [s.id, s]));
+				const DEVICE = { desktop: 1280, mobile: 390 };
+				const MOBILE_SCALE = 320 / 390;
+				const MAX_HEIGHT = 2600;
+
+				const esc = (s) =>
+					String(s ?? "").replace(
+						/[&<>"']/g,
+						(c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
+					);
+				const stateCount = screens.reduce((n, s) => n + s.states.length, 0);
+				document.getElementById("stats").textContent =
+					`${screens.length} 画面・${stateCount} 状態` +
+					(data.commit ? `・${data.commit}` : "") +
+					`・${new Date(data.builtAt).toLocaleDateString("ja-JP")} 作成`;
+
+				// ---- 左の一覧 ----
+				nav.innerHTML = data.groups
+					.map(
+						(g) => `<section class="nav-group" data-group="${g.id}">
+							<h2>${esc(g.title)}</h2>
+							<ul>${g.screens
+								.map(
+									(s) =>
+										`<li data-filter="${esc(`${s.title} ${s.path} ${g.title}`.toLowerCase())}"><a href="#v-${s.id}" data-screen="${s.id}"><span>${esc(s.title)}</span><small>${s.states.length}</small></a></li>`,
+								)
+								.join("")}</ul></section>`,
+					)
+					.join("");
+				document.getElementById("filter").addEventListener("input", (e) => {
+					const q = e.target.value.trim().toLowerCase();
+					for (const li of nav.querySelectorAll("li"))
+						li.hidden = q !== "" && !li.dataset.filter.includes(q);
+					for (const g of nav.querySelectorAll(".nav-group"))
+						g.hidden = [...g.querySelectorAll("li")].every((li) => li.hidden);
+				});
+
+				// ---- 表示する幅（PC / スマホ） ----
+				const setView = (view) => {
+					main.dataset.view = view;
+					for (const b of document.querySelectorAll("[data-view-set]"))
+						b.setAttribute("aria-pressed", String(b.dataset.viewSet === view));
+					try {
+						localStorage.setItem("kc-view", view);
+					} catch {}
+					layout();
+				};
+				for (const b of document.querySelectorAll("[data-view-set]"))
+					b.addEventListener("click", () => setView(b.dataset.viewSet));
+
+				// ---- 画面の構成 ----
+				const overview = () => `<div class="page">
+					<section class="lead">
+						<h1>画面の構成</h1>
+						<p>香典帳のすべての画面を、実際のビュー（Hono JSX）とサンプルデータで描画しています。画面を選ぶと、ロール・入力エラー・競合・空の状態など、状態ごとの見た目を PC とスマホの幅で並べて確認できます。プレビューの中のリンクを押すと、その先の画面に移ります。</p>
+						<div class="flow" aria-label="主な流れ">
+							<span>トップ</span><i>→</i><span>ログイン</span><i>→</i><span>香典帳一覧</span><i>→</i><span>香典帳（トップ・受付・いただきもの・差出人・香典返し・印刷・メンバー・設定）</span>
+						</div>
+					</section>
+					${data.groups
+						.map(
+							(g) => `<section class="group" aria-labelledby="g-${g.id}">
+								<div class="group-head"><h2 id="g-${g.id}">${esc(g.title)}</h2><p>${esc(g.description)}</p></div>
+								<div class="cards">${g.screens
+									.map(
+										(s) => `<a class="card" href="#v-${s.id}">
+											<div class="thumb"><iframe src="${s.states[0].file}" loading="lazy" tabindex="-1" aria-hidden="true" title=""></iframe></div>
+											<div class="card-body"><h3>${esc(s.title)}</h3>
+											<div class="card-meta"><span class="mono">${esc(s.path)}</span><span>${s.states.length} 状態</span></div></div></a>`,
+									)
+									.join("")}</div></section>`,
+						)
+						.join("")}
+					<section class="group" aria-labelledby="g-urls">
+						<div class="group-head"><h2 id="g-urls">URL と画面</h2><p>同じ URL でも、ログインの有無やロールで表示が変わります。</p></div>
+						<div class="table-wrap"><table>
+							<thead><tr><th scope="col">URL</th><th scope="col">画面</th><th scope="col">見られる人</th><th scope="col">区分</th><th scope="col" style="text-align:right">状態</th></tr></thead>
+							<tbody>${screens
+								.map(
+									(s) =>
+										`<tr><td class="mono">${s.app === "admin" ? "admin " : ""}${esc(s.path)}</td><td><a href="#v-${s.id}">${esc(s.title)}</a></td><td>${esc(s.access)}</td><td>${esc(s.group.title)}</td><td class="num">${s.states.length}</td></tr>`,
+								)
+								.join("")}</tbody></table></div>
+					</section>
+				</div>`;
+
+				// ---- 1 画面の状態 ----
+				const screenLinks = (ids) =>
+					ids.length
+						? `<div class="chips">${ids
+								.map((id) => byId.get(id))
+								.filter(Boolean)
+								.map((s) => `<a class="chip" href="#v-${s.id}">${esc(s.title)}</a>`)
+								.join("")}</div>`
+						: `<p class="empty" style="margin:0">なし</p>`;
+				const screenView = (s) => {
+					const from = screens.filter((o) => o.id !== s.id && o.to.includes(s.id)).map((o) => o.id);
+					return `<div class="page">
+						<section class="screen-head">
+							<p class="crumb" style="margin:0"><a href="#top">画面の構成</a> / ${esc(s.group.title)}</p>
+							<h1>${esc(s.title)}</h1>
+							<p class="desc">${esc(s.description)}</p>
+							<dl class="facts">
+								<dt>URL</dt><dd class="mono">${s.app === "admin" ? "admin.kouden.app " : ""}${esc(s.path)}</dd>
+								<dt>見られる人</dt><dd>${esc(s.access)}</dd>
+								<dt>ビュー</dt><dd class="mono">${esc(s.source)}</dd>
+							</dl>
+						</section>
+						<section class="links" aria-label="画面の行き来">
+							<h2>この画面から移る画面</h2>${screenLinks(s.to)}
+							<h2>この画面へ来る画面</h2>${screenLinks(from)}
+						</section>
+						<nav class="state-bar" aria-label="状態">
+							<h2>状態（${s.states.length}）</h2>
+							<div class="chips">${s.states
+								.map(
+									(st) =>
+										`<button type="button" class="chip" data-jump="${st.id}">${esc(st.label)}</button>`,
+								)
+								.join("")}</div>
+						</nav>
+						${s.states
+							.map(
+								(st) => `<section class="state" id="state-${st.id}" aria-labelledby="h-${st.id}">
+									<div class="state-head"><h3 id="h-${st.id}">${esc(st.label)}</h3>
+										<p>${esc(st.note ?? "")}</p>
+										<a href="${st.file}" target="_blank" rel="noopener">別のタブで開く</a></div>
+									<div class="frames">
+										<figure class="frame desktop"><figcaption>PC（1280px）</figcaption>
+											<div class="viewport" data-device="desktop"><iframe src="${st.file}" title="${esc(`${s.title}・${st.label}（PC）`)}"></iframe></div></figure>
+										<figure class="frame mobile"><figcaption>スマホ（390px）</figcaption>
+											<div class="viewport" data-device="mobile"><iframe src="${st.file}" title="${esc(`${s.title}・${st.label}（スマホ）`)}"></iframe></div></figure>
+									</div></section>`,
+							)
+							.join("")}
+					</div>`;
+				};
+
+				// ---- 枠の大きさ（中の画面を縮小して収める） ----
+				const heights = new WeakMap();
+				function layout() {
+					for (const vp of main.querySelectorAll(".viewport")) {
+						const device = vp.dataset.device;
+						const width = DEVICE[device];
+						const iframe = vp.querySelector("iframe");
+						const scale = device === "mobile" ? MOBILE_SCALE : vp.clientWidth / width;
+						if (!scale) continue;
+						const fallback = device === "mobile" ? 844 : 900;
+						const h = Math.min(heights.get(iframe) ?? fallback, MAX_HEIGHT);
+						iframe.style.width = `${width}px`;
+						iframe.style.height = `${h}px`;
+						iframe.style.transform = `scale(${scale})`;
+						vp.style.height = `${Math.ceil(h * scale)}px`;
+					}
+					scrollToPending();
+					for (const thumb of main.querySelectorAll(".thumb")) {
+						const iframe = thumb.querySelector("iframe");
+						iframe.style.transform = `scale(${thumb.clientWidth / 1280})`;
+					}
+				}
+				new ResizeObserver(() => layout()).observe(main);
+				window.addEventListener("message", (e) => {
+					const msg = e.data;
+					if (!msg || typeof msg !== "object") return;
+					if (msg.type === "kc-height") {
+						const iframe = [...main.querySelectorAll("iframe")].find(
+							(f) => f.contentWindow === e.source,
+						);
+						if (iframe && heights.get(iframe) !== msg.height) {
+							heights.set(iframe, msg.height);
+							layout();
+						}
+					} else if (msg.type === "kc-nav" && byId.has(msg.screen)) {
+						location.hash = `v-${msg.screen}.${msg.state}`;
+					}
+				});
+
+				// ---- 表示の切り替え（#v-画面 または #v-画面.状態） ----
+				let current;
+				// 状態へ移った直後は、枠の高さが決まるまで位置を合わせ直す（自分でスクロールしたらやめる）
+				let pending = null;
+				for (const type of ["wheel", "touchstart", "keydown"])
+					window.addEventListener(type, () => (pending = null), { passive: true });
+				function route() {
+					const m = /^#v-([\w-]+)(?:\.([\w-]+))?$/.exec(location.hash);
+					const s = m && byId.get(m[1]);
+					const id = s ? s.id : null;
+					if (id !== current) {
+						current = id;
+						main.innerHTML = s ? screenView(s) : overview();
+						document.title = s ? `${s.title} | 香典帳 画面カタログ` : "香典帳 画面カタログ";
+						for (const a of nav.querySelectorAll("a"))
+							a.toggleAttribute("aria-current", a.dataset.screen === id);
+						document.getElementById("nav-home").toggleAttribute("aria-current", !s);
+						if (matchMedia("(max-width: 959px)").matches)
+							document.getElementById("side-details").open = false;
+						for (const b of main.querySelectorAll("[data-jump]"))
+							b.addEventListener("click", () => {
+								history.replaceState(null, "", `#v-${s.id}.${b.dataset.jump}`);
+								jump(b.dataset.jump);
+							});
+						pending = null;
+						layout();
+						window.scrollTo(0, 0);
+					}
+					if (s && m[2]) jump(m[2]);
+				}
+				function jump(stateId) {
+					for (const b of main.querySelectorAll("[data-jump]"))
+						b.setAttribute("aria-current", String(b.dataset.jump === stateId));
+					pending = { stateId, until: Date.now() + 6000 };
+					scrollToPending();
+				}
+				function scrollToPending() {
+					if (!pending || Date.now() > pending.until) return;
+					document.getElementById(`state-${pending.stateId}`)?.scrollIntoView({ block: "start" });
+				}
+				for (const a of document.querySelectorAll('a[href="#top"]'))
+					a.addEventListener("click", (e) => {
+						e.preventDefault();
+						history.pushState(null, "", location.pathname + location.search);
+						route();
+					});
+				window.addEventListener("hashchange", route);
+
+				let saved = null;
+				try {
+					saved = localStorage.getItem("kc-view");
+				} catch {}
+				route();
+				setView(["both", "desktop", "mobile"].includes(saved) ? saved : "both");
+			})();
+		</script>
+	</body>
+</html>

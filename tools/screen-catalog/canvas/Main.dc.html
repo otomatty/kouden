@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="ja">
+	<head>
+		<meta charset="utf-8" />
+		<title>香典帳 画面構成</title>
+		<script src="./support.js"></script>
+	</head>
+	<body>
+		<x-dc>
+			<helmet>
+				<link
+					rel="stylesheet"
+					href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&amp;family=IBM+Plex+Mono:wght@400&amp;display=swap"
+				/>
+				<style>
+					body {
+						margin: 0;
+					}
+					a {
+						color: #2b2b2b;
+						text-decoration: none;
+					}
+					a:hover {
+						color: #1a1a1a;
+						text-decoration: underline;
+					}
+				</style>
+			</helmet>
+			<div
+				style="
+					width: 1600px;
+					height: 1440px;
+					box-sizing: border-box;
+					padding: 64px 72px;
+					display: flex;
+					flex-direction: column;
+					gap: 40px;
+					background: #f3f3f2;
+					color: #2b2b2b;
+					font-family: &quot;Noto Sans JP&quot;, &quot;Hiragino Sans&quot;, sans-serif;
+				"
+			>
+				<div
+					style="
+						display: flex;
+						justify-content: space-between;
+						align-items: flex-end;
+						gap: 40px;
+						border-bottom: 2px solid #2b2b2b;
+						padding-bottom: 24px;
+					"
+				>
+					<div style="display: flex; flex-direction: column; gap: 8px">
+						<p style="margin: 0; font-size: 15px; letter-spacing: 0.3em; color: #666666">香典帳</p>
+						<h1 style="margin: 0; font-size: 44px; font-weight: 700; letter-spacing: 0.12em">
+							画面構成
+						</h1>
+					</div>
+					<p style="margin: 0; max-width: 760px; font-size: 15px; line-height: 1.8; color: #444444">
+						39 画面・140 状態を、実際の画面と同じ見た目で
+						PC（1280px）とスマホ（390px）の幅で並べています。上のページ切り替えで区分ごとに開き、1
+						行が 1
+						画面、状態は左から右へ並びます。左の付箋に、どういうときにその状態になるかを書いています。
+					</p>
+				</div>
+
+				<div style="display: flex; flex-direction: column; gap: 12px">
+					<p style="margin: 0; font-size: 13px; letter-spacing: 0.15em; color: #666666">主な流れ</p>
+					<div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
+						<a
+							href="home--default.pc.dc.html"
+							style="
+								padding: 10px 18px;
+								border: 1px solid #dcdddd;
+								border-radius: 999px;
+								background: #fffffc;
+								font-size: 15px;
+							"
+							>トップ</a
+						>
+						<span aria-hidden="true" style="color: #666666">→</span>
+						<a
+							href="login--default.pc.dc.html"
+							style="
+								padding: 10px 18px;
+								border: 1px solid #dcdddd;
+								border-radius: 999px;
+								background: #fffffc;
+								font-size: 15px;
+							"
+							>ログイン</a
+						>
+						<span aria-hidden="true" style="color: #666666">→</span>
+						<a
+							href="dashboard--default.pc.dc.html"
+							style="
+								padding: 10px 18px;
+								border: 1px solid #dcdddd;
+								border-radius: 999px;
+								background: #fffffc;
+								font-size: 15px;
+							"
+							>香典帳一覧</a
+						>
+						<span aria-hidden="true" style="color: #666666">→</span>
+						<a
+							href="kouden-top--default.pc.dc.html"
+							style="
+								padding: 10px 18px;
+								border-radius: 999px;
+								background: #1a1a1a;
+								color: #fffffc;
+								font-size: 15px;
+							"
+							>香典帳</a
+						>
+						<span aria-hidden="true" style="color: #666666">→</span>
+						<span style="font-size: 15px; color: #444444"
+							>トップ・受付・いただきもの・差出人・香典返し・印刷・出力・メンバー・設定（タブで切り替え）</span
+						>
+					</div>
+				</div>
+
+				<div
+					style="
+						display: grid;
+						grid-template-columns: repeat(4, minmax(0, 1fr));
+						gap: 24px;
+						align-items: start;
+					"
+				>
+					<sc-for list="{{ columns }}" as="col" hint-placeholder-count="4">
+						<div style="display: flex; flex-direction: column; gap: 24px">
+							<sc-for list="{{ col.groups }}" as="g" hint-placeholder-count="2">
+								<section
+									style="
+										display: flex;
+										flex-direction: column;
+										gap: 12px;
+										padding: 20px 22px;
+										background: #fffffc;
+										border: 1px solid #dcdddd;
+										border-radius: 12px;
+									"
+								>
+									<div
+										style="
+											display: flex;
+											justify-content: space-between;
+											align-items: baseline;
+											gap: 12px;
+										"
+									>
+										<h2
+											style="margin: 0; font-size: 19px; font-weight: 700; letter-spacing: 0.06em"
+										>
+											{{ g.title }}
+										</h2>
+										<span style="font-size: 12px; color: #666666">{{ g.count }}</span>
+									</div>
+									<p style="margin: 0; font-size: 12.5px; line-height: 1.7; color: #555555">
+										{{ g.note }}
+									</p>
+									<div style="display: flex; flex-direction: column">
+										<sc-for list="{{ g.screens }}" as="s" hint-placeholder-count="4">
+											<a
+												href="{{ s.href }}"
+												style="
+													display: flex;
+													flex-direction: column;
+													gap: 2px;
+													padding: 9px 0;
+													border-top: 1px solid #ebebea;
+												"
+											>
+												<span
+													style="
+														display: flex;
+														justify-content: space-between;
+														gap: 8px;
+														font-size: 14px;
+														font-weight: 500;
+													"
+													>{{ s.title }}<span
+														style="
+															font-weight: 400;
+															font-size: 12px;
+															color: #666666;
+															white-space: nowrap;
+														"
+														>{{ s.states }}</span
+													></span
+												>
+												<span
+													style="
+														font-family: &quot;IBM Plex Mono&quot;, monospace;
+														font-size: 11.5px;
+														color: #666666;
+													"
+													>{{ s.path }}</span
+												>
+											</a>
+										</sc-for>
+									</div>
+								</section>
+							</sc-for>
+						</div>
+					</sc-for>
+				</div>
+			</div>
+		</x-dc>
+		<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":1440}}'>
+			class Component extends DCLogic {
+			  renderVals() {
+			    const s = (id, title, path, states, first) => ({
+			      title, path, states: states + ' 状態', href: id + '--' + (first || 'default') + '.pc.dc.html',
+			    });
+			    const g = (title, note, screens) => ({
+			      title, note, screens,
+			      count: screens.length + ' 画面',
+			    });
+			    const publicPages = g('公開ページ', 'ログインしなくても見られるページ。ヘッダーはログイン状態で変わる。', [
+			      s('home', 'トップ（サービス紹介）', '/', 1),
+			      s('pricing', '料金', '/pricing', 2, 'guest'),
+			      s('faq', 'よくある質問', '/faq', 1),
+			      s('terms', '利用規約', '/terms', 1),
+			      s('privacy', 'プライバシーポリシー', '/privacy', 1),
+			      s('tokushoho', '特定商取引法に基づく表記', '/legal/tokushoho', 1),
+			    ]);
+			    const auth = g('ログイン・招待', 'Google ログインと、招待リンクからの参加。', [
+			      s('login', 'ログイン', '/login', 5),
+			      s('invite', '招待の受諾', '/invite/:token', 7, 'guest'),
+			    ]);
+			    const account = g('香典帳一覧・アカウント', 'ログイン後の入口。香典帳の一覧・作成とアカウントの設定。', [
+			      s('dashboard', '香典帳一覧', '/', 7),
+			      s('new-kouden', '香典帳の作成', '/k/new', 2),
+			      s('account', 'アカウント', '/account', 5),
+			      s('account-deleted', 'アカウントの削除完了', '/account/delete', 1),
+			    ]);
+			    const kouden = g('香典帳', '1 冊の香典帳の中の画面。共通の枠とタブの中に表示し、ロール（オーナー・編集者・閲覧者）で操作できる範囲が変わる。', [
+			      s('kouden-top', 'トップ（集計）', '/k/:id', 6),
+			      s('reception', '受付', '/k/:id/reception', 7),
+			      s('gifts', 'いただきもの一覧', '/k/:id/gifts', 5),
+			      s('gift', 'いただきものの詳細・編集', '/k/:id/gifts/:giftId', 9),
+			      s('persons', '差出人一覧', '/k/:id/persons', 7),
+			      s('person', '差出人の詳細・編集', '/k/:id/persons/:personId', 6),
+			      s('returns', '香典返し', '/k/:id/returns', 7),
+			      s('return-settings', 'カタログ・金額帯ルール', '/k/:id/returns/settings', 4),
+			      s('return', '香典返しの詳細', '/k/:id/returns/:returnId', 6),
+			      s('output', '印刷・出力', '/k/:id/output', 2),
+			      s('members', 'メンバー', '/k/:id/members', 8),
+			      s('settings', '設定', '/k/:id/settings', 9),
+			    ]);
+			    const print = g('印刷用ページ', 'アプリの枠を付けず A4 に収める。画面では戻るリンクと印刷ボタンを出す。', [
+			      s('print-gifts', '芳名一覧', '/k/:id/print/gifts', 2),
+			      s('print-returns', '香典返しの一覧', '/k/:id/print/returns', 2),
+			      s('print-addresses', '宛名一覧', '/k/:id/print/addresses', 2),
+			    ]);
+			    const errors = g('エラー', '共通のエラー画面。', [
+			      s('error-403', '403 権限がない', '閲覧者の編集・アーカイブ中', 1),
+			      s('error-404', '404 見つからない', '存在しない URL など', 1),
+			      s('error-410', '410 旧アプリの招待リンク', '旧アプリの招待 URL', 1),
+			      s('error-429', '429 操作が多すぎる', '書き込みの回数制限', 1),
+			      s('error-500', '500 サーバーエラー', '予期しないエラー', 1),
+			    ]);
+			    const admin = g('運営者画面', 'admin.kouden.app。Cloudflare Access の背後にあり、差出人の個人情報は表示しない。', [
+			      s('admin-dashboard', 'ダッシュボード', '/', 2),
+			      s('admin-search', '検索', '/search', 3),
+			      s('admin-user', 'ユーザーの詳細', '/users/:id', 2),
+			      s('admin-kouden', '香典帳の詳細', '/koudens/:id', 4),
+			      s('admin-legacy', '旧ユーザーの紐づけ', '/legacy', 3),
+			      s('admin-link', '旧アカウントに紐づける', '/legacy/:id/link', 3),
+			      s('admin-audit', '監査ログ', '/audit', 2),
+			    ]);
+			    return {
+			      columns: [
+			        { groups: [publicPages, auth] },
+			        { groups: [account, print] },
+			        { groups: [kouden] },
+			        { groups: [admin, errors] },
+			      ],
+			    };
+			  }
+			}
+		</script>
+	</body>
+</html>
