@@ -83,13 +83,25 @@ test.describe("かんたん登録（08 案 A）", () => {
 		await expect(page.locator("#created-gift")).toContainText("小川 一郎 様、香典 ¥10,000");
 		await expect(summary).toContainText("1 件・香典 ¥10,000");
 
-		// 弔電を選ぶと金額の欄が消え、文面の欄が出る
+		// 種別に要る欄だけを出す。香典: 金額、供花: 金額・品名・数量、弔電: 文面
+		const itemName = page.getByLabel("品名");
+		const quantity = page.getByLabel("数量");
+		const message = page.getByLabel("弔電の文面");
+		await expect(itemName).toBeHidden();
+		await expect(quantity).toBeHidden();
+		await expect(message).toBeHidden();
+		await page.locator('label:has(input[name="kind"][value="kyoka"])').click();
+		await expect(amount).toBeVisible();
+		await expect(itemName).toBeVisible();
+		await expect(quantity).toBeVisible();
 		await page.locator('label:has(input[name="kind"][value="choden"])').click();
 		await expect(amount).toBeHidden();
-		await expect(page.getByLabel("弔電の文面")).toBeVisible();
+		await expect(itemName).toBeHidden();
+		await expect(message).toBeVisible();
 		await page.locator('label:has(input[name="kind"][value="koden"])').click();
 		await expect(amount).toBeVisible();
-		await expect(page.getByLabel("弔電の文面")).toBeHidden();
+		await expect(itemName).toBeHidden();
+		await expect(message).toBeHidden();
 
 		// 自分が最近登録した分から、その場で取り消せる
 		await page.getByRole("button", { name: "No.1 小川 一郎 の登録を取り消す" }).click();

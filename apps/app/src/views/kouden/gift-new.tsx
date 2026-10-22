@@ -444,17 +444,18 @@ const RecentEntries: FC<{ kouden: KoudenContext; recent: GiftView[]; eventId: st
 					const label = `${g.receiptNo !== null ? `No.${g.receiptNo} ` : ""}${who}`;
 					return (
 						<li class="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-sm">
-							<span class="w-16 shrink-0 text-muted tabular-nums">
+							<span class="w-12 shrink-0 text-muted tabular-nums">
 								{g.receiptNo !== null ? `No.${g.receiptNo}` : "—"}
 							</span>
-							<span class="min-w-0 flex-1 break-words">
+							{/* 狭い画面では、氏名を詰めずにボタンを次の行へ送る */}
+							<span class="min-w-[7em] flex-1 break-words">
 								{who}
 								{g.kind !== "koden" && (
 									<span class="ml-1 text-muted">（{GIFT_KINDS[g.kind]}）</span>
 								)}
 							</span>
 							<span class="tabular-nums">{yen(g.amount)}</span>
-							<span class="flex gap-2">
+							<span class="ml-auto flex gap-2">
 								<a
 									href={`${base}/gifts/${g.id}`}
 									class={ui.buttonSmall}

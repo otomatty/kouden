@@ -16,15 +16,16 @@
 	}
 }
 
-/* いただきものの登録（08 案 A）: 選んだ種別に要らない欄を隠す。JS がなくても効く */
-@layer components {
-	form:has(input[name="kind"][value="koden"]:checked) [data-hide-for~="koden"],
-	form:has(input[name="kind"][value="kumotsu"]:checked) [data-hide-for~="kumotsu"],
-	form:has(input[name="kind"][value="kyoka"]:checked) [data-hide-for~="kyoka"],
-	form:has(input[name="kind"][value="choden"]:checked) [data-hide-for~="choden"],
-	form:has(input[name="kind"][value="other"]:checked) [data-hide-for~="other"] {
-		display: none;
-	}
+/*
+ * いただきものの登録（08 案 A）: 選んだ種別に要らない欄を隠す。JS がなくても効く。
+ * 欄の枠に grid などの表示のクラスが付いていても隠れるよう、レイヤーの外に置く（レイヤーの外が優先される）
+ */
+form:has(input[name="kind"][value="koden"]:checked) [data-hide-for~="koden"],
+form:has(input[name="kind"][value="kumotsu"]:checked) [data-hide-for~="kumotsu"],
+form:has(input[name="kind"][value="kyoka"]:checked) [data-hide-for~="kyoka"],
+form:has(input[name="kind"][value="choden"]:checked) [data-hide-for~="choden"],
+form:has(input[name="kind"][value="other"]:checked) [data-hide-for~="other"] {
+	display: none;
 }
 
 @layer components {
