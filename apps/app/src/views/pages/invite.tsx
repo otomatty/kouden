@@ -2,6 +2,7 @@ import { ROLES } from "@kouden/domain";
 import type { Child, FC } from "hono/jsx";
 import type { InvitationState, InvitationView } from "../../kouden/members.ts";
 import { ui } from "@kouden/ui";
+import { GoogleButton } from "../components/google-button.tsx";
 
 const STATE_MESSAGES: Record<Exclude<InvitationState, "valid">, string> = {
 	revoked: "この招待リンクは無効になっています。",
@@ -63,12 +64,12 @@ export const InvitePage: FC<{
 				</form>
 			) : (
 				<>
-					<a
+					<GoogleButton
 						href={`/auth/google/start?return_to=${encodeURIComponent(path)}`}
-						class={`${ui.buttonPrimary} w-full`}
+						class="w-full"
 					>
-						Google アカウントでログインして参加
-					</a>
+						Google でログインして参加
+					</GoogleButton>
 					<p class="text-xs text-muted">
 						初めての方は、Google アカウントでログインすると自動で登録されます。
 					</p>

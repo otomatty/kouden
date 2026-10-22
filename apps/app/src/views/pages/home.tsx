@@ -1,6 +1,7 @@
 import { FREE_GIFT_LIMIT, PAID_PRICE_JPY, formatYen } from "@kouden/domain";
 import type { FC } from "hono/jsx";
 import { ui } from "@kouden/ui";
+import { GoogleButton } from "../components/google-button.tsx";
 
 const FEATURES = [
 	{
@@ -33,9 +34,9 @@ export const HomePage: FC = () => (
 				葬儀の受付から香典返しまで。香典・供物・弔電をスマホで記録し、家族とリアルタイムに共有できます。
 			</p>
 			<div class="mt-10 flex flex-col items-center gap-3">
-				<a href="/login" class={ui.buttonPrimary}>
-					Google アカウントで始める
-				</a>
+				<GoogleButton href="/login" class="w-full sm:w-auto">
+					Google でログインして始める
+				</GoogleButton>
 				<p class="text-sm text-muted">{FREE_GIFT_LIMIT} 件まで無料でお使いいただけます</p>
 			</div>
 		</section>

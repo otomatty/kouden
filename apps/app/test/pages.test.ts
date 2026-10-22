@@ -58,6 +58,13 @@ describe("公開ページ", () => {
 		expect(faq).toContain('id="legacy-account"');
 	});
 
+	it("トップの「始める」も Google のボタンにする", async () => {
+		const html = await (await app.request("/", {}, env)).text();
+		expect(html).toMatch(
+			/<a href="\/login" class="[^"]*bg-google[^"]*">[\s\S]*?Google でログインして始める/,
+		);
+	});
+
 	it("ログインしていればヘッダーにユーザーメニュー（設定・ログアウト）を出す", async () => {
 		const taro = makeApp(TARO);
 		await taro.login();
