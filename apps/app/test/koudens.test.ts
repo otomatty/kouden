@@ -133,6 +133,18 @@ describe("いただきものの登録", () => {
 		expect(html).toContain('value="山田"');
 	});
 
+	it("種別でない値（constructor など）を送っても 500 にせず、入力エラーにする", async () => {
+		const { taro, koudenId, eventId } = await setup();
+		for (const kind of ["constructor", "__proto__", "toString"]) {
+			const res = await taro.request(
+				`/k/${koudenId}/gifts`,
+				formPost({ eventId, kind, name: "山田", amount: "1000" }),
+			);
+			expect(res.status).toBe(422);
+			expect(await res.text()).toContain("入力内容を確認してください");
+		}
+	});
+
 	it("同じ人の候補を出し、選ぶと同じ差出人にまとまる", async () => {
 		const { taro, koudenId, eventId } = await setup();
 		await taro.request(

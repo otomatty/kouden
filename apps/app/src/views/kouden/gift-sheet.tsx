@@ -58,7 +58,6 @@ export const GiftSheetPage: FC<{
 	rows: SheetRowView[];
 }> = ({ kouden, events, eventId, relationships, summary, rows }) => {
 	const base = `/k/${kouden.id}`;
-	const options = relationships.filter((r) => !r.isHidden);
 	const blank: SheetRowView = {
 		key: "",
 		receiptNo: null,
@@ -149,14 +148,19 @@ export const GiftSheetPage: FC<{
 						</thead>
 						<tbody>
 							{rows.map((row, i) => (
-								<SheetRow kouden={kouden} row={row} position={i + 1} options={options} />
+								<SheetRow
+									kouden={kouden}
+									row={row}
+									position={i + 1}
+									relationships={relationships}
+								/>
 							))}
 							{Array.from({ length: BLANK_ROWS }, (_, i) => (
 								<SheetRow
 									kouden={kouden}
 									row={{ ...blank, key: `new-${i}` }}
 									position={rows.length + i + 1}
-									options={options}
+									relationships={relationships}
 								/>
 							))}
 						</tbody>
@@ -167,7 +171,7 @@ export const GiftSheetPage: FC<{
 				</button>
 				{/* gift-sheet.js が行を足すときの見本 */}
 				<template data-sheet-row>
-					<SheetRow kouden={kouden} row={blank} position={0} options={options} />
+					<SheetRow kouden={kouden} row={blank} position={0} relationships={relationships} />
 				</template>
 			</div>
 			<script src={`/assets/gift-sheet.js?v=${__ASSET_VERSION__}`} defer></script>
@@ -179,9 +183,12 @@ const SheetRow: FC<{
 	kouden: KoudenContext;
 	row: SheetRowView;
 	position: number;
-	options: LedgerRelationship[];
-}> = ({ kouden, row, position, options }) => {
+	relationships: LedgerRelationship[];
+}> = ({ kouden, row, position, relationships }) => {
 	const statusId = row.key ? `sheet-status-${row.key}` : undefined;
+	// 非表示の関係は選ばせない。ただし、この行の差出人がすでに選んでいる関係は残す
+	// （選択肢になければ未選択で送られ、ほかの列を直しただけで関係が消えてしまう）
+	const options = relationships.filter((r) => !r.isHidden || r.id === row.values.relationshipId);
 	if (row.readOnlyReason) {
 		return (
 			<tr data-row data-key={row.key} class="bg-paper text-muted">
@@ -229,7 +236,7 @@ const SheetRow: FC<{
 							<option value="">（未選択）</option>
 							{options.map((r) => (
 								<option value={r.id} selected={r.id === row.values.relationshipId}>
-									{r.name}
+									{r.isHidden ? `${r.name}（非表示）` : r.name}
 								</option>
 							))}
 						</select>

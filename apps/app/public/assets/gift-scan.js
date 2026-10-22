@@ -246,7 +246,7 @@
 		photo.src = url;
 		photo.alt = `撮った写真（${shots} 枚目）`;
 		list.append(card);
-		drafts.set(key, { card, blob, url, auto, state: "queued" });
+		drafts.set(key, { card, blob, url, auto, state: "queued", requestId: crypto.randomUUID() });
 		setStatus(card, "読み取りを待っています…");
 		queue.push(key);
 		refreshCounts();
@@ -389,7 +389,8 @@
 			setStatus(draft.card, "登録しています…");
 		}
 		const rows = targets.map(([key, draft]) => {
-			const row = { key, relationshipId: "" };
+			// 送り直しても同じ値を送る（応答が届かずに送り直しても二重に登録しない）
+			const row = { key, requestId: draft.requestId, relationshipId: "" };
 			for (const name of FIELDS) row[name] = field(draft.card, name)?.value ?? "";
 			return row;
 		});

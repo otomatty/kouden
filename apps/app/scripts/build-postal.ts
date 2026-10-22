@@ -6,7 +6,7 @@
  *   bun run postal -- --download             # 日本郵便から取得して変換する
  *   bun run postal -- --input utf_ken_all.zip # 手元のファイル（.zip / .csv）を変換する
  */
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { buildPostalShards } from "@kouden/domain";
@@ -27,7 +27,8 @@ if (values.download === Boolean(values.input)) {
 
 async function readSource(): Promise<Uint8Array> {
 	if (values.input) return new Uint8Array(readFileSync(values.input));
-	const res = await fetch(SOURCE_URL);
+	// 応答がないままデプロイを止め続けないよう、待つのは 2 分まで
+	const res = await fetch(SOURCE_URL, { signal: AbortSignal.timeout(120_000) });
 	if (!res.ok) throw new Error(`郵便番号データを取得できませんでした: ${res.status} ${SOURCE_URL}`);
 	return new Uint8Array(await res.arrayBuffer());
 }
@@ -54,10 +55,14 @@ if (count < 100_000) {
 	process.exit(1);
 }
 
+// 一時ディレクトリにすべて書いてから入れ替える（書き込みの途中で失敗しても、欠けたデータを残さない）
 const outDir = path.join(import.meta.dirname, "..", "public/postal");
-rmSync(outDir, { recursive: true, force: true });
-mkdirSync(outDir, { recursive: true });
+const tmpDir = `${outDir}.tmp`;
+rmSync(tmpDir, { recursive: true, force: true });
+mkdirSync(tmpDir, { recursive: true });
 for (const [prefix, shard] of shards) {
-	writeFileSync(path.join(outDir, `${prefix}.json`), JSON.stringify(shard));
+	writeFileSync(path.join(tmpDir, `${prefix}.json`), JSON.stringify(shard));
 }
+rmSync(outDir, { recursive: true, force: true });
+renameSync(tmpDir, outDir);
 console.log(`public/postal に ${shards.size} ファイル（郵便番号 ${count} 件）を書き出しました`);

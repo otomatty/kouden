@@ -165,6 +165,10 @@ const MERGE_FILL_FIELDS = [
 	"phone",
 ] as const satisfies readonly (keyof PersonFields)[];
 
+/** 作成の要求（createGift の requestId）を覚えておくキーの接頭辞と期間 */
+const CREATE_REQUEST_PREFIX = "create-request:";
+const CREATE_REQUEST_TTL_MS = 86_400_000;
+
 /** 業務ルール違反。transactionSync の中で投げるとロールバックされ、呼び出し元には LedgerError として返る */
 class LedgerFailure extends Error {
 	constructor(readonly error: LedgerError) {
@@ -504,8 +508,21 @@ export class KoudenLedger extends DurableObject<Env> {
 
 	// ---- いただきもの -------------------------------------------------------
 
-	/** いただきものの登録（E4-1, E4-2）。番号は行事ごとの連番で、同時に登録しても重複しない */
-	async createGift(caller: Caller, input: GiftEntryInput): Promise<LedgerResult<CreatedGift>> {
+	/**
+	 * いただきものの登録（E4-1, E4-2）。番号は行事ごとの連番で、同時に登録しても重複しない。
+	 * requestId（画面が新しい行ごとに作る値）があれば、同じ値での 2 回目以降は作らずに最初の結果を返す
+	 * （保存の応答が届かずに送り直しても、二重に登録しない）
+	 */
+	async createGift(
+		caller: Caller,
+		input: GiftEntryInput,
+		requestId?: string,
+	): Promise<LedgerResult<CreatedGift>> {
+		const requestKey = requestId ? `${CREATE_REQUEST_PREFIX}${caller.userId}:${requestId}` : null;
+		const prior = requestKey
+			? this.ctx.storage.kv.get<{ at: string; result: CreatedGift }>(requestKey)
+			: undefined;
+		if (prior) return { ok: true, value: prior.result };
 		return this.mutate(caller, "ledger.write", (now) => {
 			const event = this.first<{ id: string; name: string; next_receipt_no: number }>(
 				"SELECT id, name, next_receipt_no FROM events WHERE id = ? AND deleted_at IS NULL",
@@ -551,7 +568,7 @@ export class KoudenLedger extends DurableObject<Env> {
 				...diffOf(null, record),
 				contributors: [null, [person.id]],
 			});
-			return {
+			const result: CreatedGift = {
 				giftId,
 				receiptNo,
 				eventId: event.id,
@@ -559,6 +576,8 @@ export class KoudenLedger extends DurableObject<Env> {
 				personId: person.id,
 				personLabel: personLabel(person),
 			};
+			if (requestKey) this.rememberCreateRequest(requestKey, now, result);
+			return result;
 		});
 	}
 
@@ -568,43 +587,95 @@ export class KoudenLedger extends DurableObject<Env> {
 		version: number,
 		input: GiftInput,
 	): Promise<LedgerResult<{ version: number }>> {
+		return this.mutate(caller, "ledger.write", (now) =>
+			this.applyGiftUpdate(caller, now, giftId, version, input),
+		);
+	}
+
+	/**
+	 * 表の 1 行の保存（08 案 C）。差出人と香典を 1 つのトランザクションで直す。
+	 * どちらかが開いた後に他の人に更新されていたら、どちらも保存しない
+	 */
+	async updateSheetRow(
+		caller: Caller,
+		row: {
+			giftId: string;
+			giftVersion: number;
+			personId: string;
+			personVersion: number;
+			/** 変えないなら undefined */
+			person?: PersonInput | undefined;
+			gift?: GiftInput | undefined;
+		},
+	): Promise<LedgerResult<{ giftVersion: number; personVersion: number }>> {
 		return this.mutate(caller, "ledger.write", (now) => {
-			const current = this.lockGift(giftId, version);
-			const next: Row = this.giftRecord(input);
-			if (input.eventId !== current.event_id) {
-				// 行事を移したら、移した先の行事で番号を振り直す
-				const event = this.first<{ next_receipt_no: number }>(
-					"SELECT next_receipt_no FROM events WHERE id = ? AND deleted_at IS NULL",
-					input.eventId,
-				);
-				if (!event) throw invalid("eventId", "行事が見つかりません");
-				next.receipt_no = event.next_receipt_no;
-				this.sql.exec(
-					"UPDATE events SET next_receipt_no = next_receipt_no + 1 WHERE id = ?",
-					input.eventId,
-				);
+			// 先に両方の version を確かめる（片方だけ直してから競合に気づくことがないように）
+			const versionOf = (table: "gifts" | "persons", id: string) => {
+				const v = this.first<{ version: number }>(
+					`SELECT version FROM ${table} WHERE id = ? AND deleted_at IS NULL`,
+					id,
+				)?.version;
+				if (v === undefined) throw new LedgerFailure({ code: "not_found" });
+				return v;
+			};
+			if (
+				versionOf("gifts", row.giftId) !== row.giftVersion ||
+				versionOf("persons", row.personId) !== row.personVersion
+			) {
+				throw new LedgerFailure({ code: "conflict" });
 			}
+			const person = row.person
+				? this.applyPersonUpdate(caller, now, row.personId, row.personVersion, row.person)
+				: { version: row.personVersion };
+			const gift = row.gift
+				? this.applyGiftUpdate(caller, now, row.giftId, row.giftVersion, row.gift)
+				: { version: row.giftVersion };
+			return { giftVersion: gift.version, personVersion: person.version };
+		});
+	}
+
+	private applyGiftUpdate(
+		caller: Caller,
+		now: string,
+		giftId: string,
+		version: number,
+		input: GiftInput,
+	): { version: number } {
+		const current = this.lockGift(giftId, version);
+		const next: Row = this.giftRecord(input);
+		if (input.eventId !== current.event_id) {
+			// 行事を移したら、移した先の行事で番号を振り直す
+			const event = this.first<{ next_receipt_no: number }>(
+				"SELECT next_receipt_no FROM events WHERE id = ? AND deleted_at IS NULL",
+				input.eventId,
+			);
+			if (!event) throw invalid("eventId", "行事が見つかりません");
+			next.receipt_no = event.next_receipt_no;
 			this.sql.exec(
-				`UPDATE gifts SET event_id = ?, receipt_no = ?, kind = ?, amount = ?, item_name = ?, quantity = ?,
+				"UPDATE events SET next_receipt_no = next_receipt_no + 1 WHERE id = ?",
+				input.eventId,
+			);
+		}
+		this.sql.exec(
+			`UPDATE gifts SET event_id = ?, receipt_no = ?, kind = ?, amount = ?, item_name = ?, quantity = ?,
                           message = ?, attendance = ?, notes = ?, updated_by = ?, updated_at = ?
           WHERE id = ?`,
-				next.event_id ?? null,
-				next.receipt_no ?? current.receipt_no,
-				next.kind ?? null,
-				next.amount ?? null,
-				next.item_name ?? null,
-				next.quantity ?? null,
-				next.message ?? null,
-				next.attendance ?? null,
-				next.notes ?? null,
-				caller.userId,
-				now,
-				giftId,
-			);
-			this.assertSharesWithinAmount(giftId, "amount");
-			this.log(caller, now, "gift", giftId, "update", diffOf(current, next));
-			return { version: version + 1 };
-		});
+			next.event_id ?? null,
+			next.receipt_no ?? current.receipt_no,
+			next.kind ?? null,
+			next.amount ?? null,
+			next.item_name ?? null,
+			next.quantity ?? null,
+			next.message ?? null,
+			next.attendance ?? null,
+			next.notes ?? null,
+			caller.userId,
+			now,
+			giftId,
+		);
+		this.assertSharesWithinAmount(giftId, "amount");
+		this.log(caller, now, "gift", giftId, "update", diffOf(current, next));
+		return { version: version + 1 };
 	}
 
 	async deleteGift(caller: Caller, giftId: string, version: number): Promise<LedgerResult<null>> {
@@ -745,39 +816,49 @@ export class KoudenLedger extends DurableObject<Env> {
 		version: number,
 		input: PersonInput,
 	): Promise<LedgerResult<{ version: number }>> {
-		return this.mutate(caller, "ledger.write", (now) => {
-			const current = this.first<Row>(
-				`SELECT name, name_kana, organization, position, relationship_id, postal_code, address, phone,
+		return this.mutate(caller, "ledger.write", (now) =>
+			this.applyPersonUpdate(caller, now, personId, version, input),
+		);
+	}
+
+	private applyPersonUpdate(
+		caller: Caller,
+		now: string,
+		personId: string,
+		version: number,
+		input: PersonInput,
+	): { version: number } {
+		const current = this.first<Row>(
+			`SELECT name, name_kana, organization, position, relationship_id, postal_code, address, phone,
                 notes, version
            FROM persons WHERE id = ? AND deleted_at IS NULL`,
-				personId,
-			);
-			if (!current) throw new LedgerFailure({ code: "not_found" });
-			if (current.version !== version) throw new LedgerFailure({ code: "conflict" });
-			const next = this.personRecord(input, current.relationship_id as string | null);
-			this.sql.exec(
-				`UPDATE persons SET name = ?, name_kana = ?, organization = ?, position = ?, relationship_id = ?,
+			personId,
+		);
+		if (!current) throw new LedgerFailure({ code: "not_found" });
+		if (current.version !== version) throw new LedgerFailure({ code: "conflict" });
+		const next = this.personRecord(input, current.relationship_id as string | null);
+		this.sql.exec(
+			`UPDATE persons SET name = ?, name_kana = ?, organization = ?, position = ?, relationship_id = ?,
                             postal_code = ?, address = ?, phone = ?, notes = ?, search_text = ?,
                             version = version + 1, updated_by = ?, updated_at = ?
           WHERE id = ?`,
-				next.name,
-				next.name_kana,
-				next.organization,
-				next.position,
-				next.relationship_id,
-				next.postal_code,
-				next.address,
-				next.phone,
-				next.notes,
-				this.searchText(next),
-				caller.userId,
-				now,
-				personId,
-			);
-			const { version: _v, ...before } = current;
-			this.log(caller, now, "person", personId, "update", diffOf(before, next));
-			return { version: version + 1 };
-		});
+			next.name,
+			next.name_kana,
+			next.organization,
+			next.position,
+			next.relationship_id,
+			next.postal_code,
+			next.address,
+			next.phone,
+			next.notes,
+			this.searchText(next),
+			caller.userId,
+			now,
+			personId,
+		);
+		const { version: _v, ...before } = current;
+		this.log(caller, now, "person", personId, "update", diffOf(before, next));
+		return { version: version + 1 };
 	}
 
 	/**
@@ -2574,6 +2655,19 @@ export class KoudenLedger extends DurableObject<Env> {
 		if (row && row.amount !== null && row.shares !== null && row.shares > row.amount) {
 			throw invalid(field, "連名の負担額の合計が金額を超えています");
 		}
+	}
+
+	/**
+	 * 作成の要求（requestId）と結果を DO のストレージに残す（DO のスキーマは変えない）。
+	 * 送り直しは数分のうちに届くので、1 日より古いものは消す
+	 */
+	private rememberCreateRequest(key: string, now: string, result: CreatedGift): void {
+		const kv = this.ctx.storage.kv;
+		const cutoff = new Date(Date.parse(now) - CREATE_REQUEST_TTL_MS).toISOString();
+		for (const [oldKey, value] of kv.list<{ at: string }>({ prefix: CREATE_REQUEST_PREFIX })) {
+			if (value.at < cutoff) kv.delete(oldKey);
+		}
+		kv.put(key, { at: now, result });
 	}
 
 	private contributorIds(giftId: string): string[] {

@@ -287,8 +287,10 @@ export const GIFT_KIND_FIELDS: Record<
  * （種別を切り替える前に入れた金額が、弔電で「金額は入れられない」エラーにならないように）
  */
 export function pickGiftEntryFields<T extends Record<string, string | undefined>>(values: T): T {
-	const fields = GIFT_KIND_FIELDS[values.kind as GiftKind];
-	if (!fields) return values;
+	// 種別は自身のキーだけを引く（「constructor」などの継承したキーで例外にしない。不正な種別は検証で弾く）
+	const kind = values.kind;
+	if (kind === undefined || !Object.hasOwn(GIFT_KIND_FIELDS, kind)) return values;
+	const fields = GIFT_KIND_FIELDS[kind as GiftKind];
 	const picked = { ...values };
 	for (const key of ["amount", "itemName", "quantity", "message"] as const) {
 		if (!fields.includes(key)) delete picked[key];
@@ -372,6 +374,11 @@ export const sheetRequestSchema = z.object({
 				relationshipId: sheetCell,
 				/** 表の列ではない。写真で登録（08 案 D）の下書きが新しい行を作るときだけ使う */
 				organization: sheetCell,
+				/**
+				 * 新しい行の作成を 1 回にするための値（画面が行ごとに作る UUID）。応答が届かずに送り直しても、
+				 * 同じ値なら最初に作った記録を返す
+				 */
+				requestId: z.string().min(1).max(64).optional(),
 			}),
 		)
 		.min(1)

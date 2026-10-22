@@ -113,6 +113,10 @@
 			data.giftVersion = Number(row.dataset.giftVersion);
 			data.personId = row.dataset.personId;
 			data.personVersion = Number(row.dataset.personVersion);
+		} else {
+			// 新しい行は、送り直しても同じ値を送る（応答が届かずに送り直しても二重に登録しない）
+			row.dataset.requestId ||= crypto.randomUUID();
+			data.requestId = row.dataset.requestId;
 		}
 		return data;
 	}
@@ -173,8 +177,6 @@
 	/** 保存の結果を行に入れる。保存できたら true */
 	function apply(row, result) {
 		clearErrors(row);
-		if (result.personVersion !== undefined)
-			row.dataset.personVersion = String(result.personVersion);
 		if (result.status === "saved") {
 			row.dataset.giftId = result.giftId;
 			row.dataset.giftVersion = String(result.giftVersion);

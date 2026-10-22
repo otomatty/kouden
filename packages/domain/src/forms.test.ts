@@ -208,6 +208,13 @@ describe("pickGiftEntryFields", () => {
 		message: "ご冥福を",
 	};
 
+	it.each(["constructor", "toString", "__proto__", "unknown"])(
+		"種別でない値（%s）はそのまま返す（検証で弾く）",
+		(kind) => {
+			expect(pickGiftEntryFields({ ...values, kind })).toEqual({ ...values, kind });
+		},
+	);
+
 	it("弔電では文面だけを残す", () => {
 		expect(pickGiftEntryFields(values)).toEqual({ kind: "choden", message: "ご冥福を" });
 	});

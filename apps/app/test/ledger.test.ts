@@ -223,6 +223,70 @@ describe("KoudenLedger", () => {
 		});
 	});
 
+	it("同じ requestId の登録は 1 回だけ作り、2 回目以降は最初の結果を返す（人ごと）", async () => {
+		const { caller, ledger } = setup();
+		const [funeral] = unwrap(await ledger.listEvents(caller));
+		const input = entry(funeral!.id, { amount: "5000", name: "佐藤" });
+		const first = unwrap(await ledger.createGift(caller, input, "req-1"));
+		const again = unwrap(await ledger.createGift(caller, input, "req-1"));
+		expect(again).toEqual(first);
+		expect(unwrap(await ledger.listGifts(caller, {}))).toHaveLength(1);
+		// 別の人の同じ値は別の要求
+		const other = unwrap(await ledger.createGift({ ...caller, userId: "user-2" }, input, "req-1"));
+		expect(other.receiptNo).toBe(2);
+		// requestId がなければ毎回作る
+		unwrap(await ledger.createGift(caller, input));
+		expect(unwrap(await ledger.listGifts(caller, {}))).toHaveLength(3);
+	});
+
+	it("1 日より古い作成の要求は、次の作成のときに消す", async () => {
+		const { caller, ledger } = setup();
+		const [funeral] = unwrap(await ledger.listEvents(caller));
+		await ledger.listEvents(caller);
+		await runInDurableObject(ledger, (_obj, state) => {
+			state.storage.kv.put("create-request:user-1:old", { at: "2000-01-01T00:00:00.000Z" });
+		});
+		unwrap(await ledger.createGift(caller, entry(funeral!.id, { amount: "1", name: "a" }), "new"));
+		const keys = await runInDurableObject(ledger, (_obj, state) =>
+			[...state.storage.kv.list({ prefix: "create-request:" })].map(([k]) => k),
+		);
+		expect(keys).toEqual(["create-request:user-1:new"]);
+	});
+
+	it("表の 1 行の保存: 香典が他の人に更新されていたら、差出人も保存しない", async () => {
+		const { caller, ledger } = setup();
+		const [funeral] = unwrap(await ledger.listEvents(caller));
+		const { giftId, personId } = unwrap(
+			await ledger.createGift(caller, entry(funeral!.id, { amount: "5000", name: "佐藤" })),
+		);
+		const gift = { eventId: funeral!.id, kind: "koden" } as const;
+		unwrap(await ledger.updateGift(caller, giftId, 1, { ...gift, amount: 6000 } as GiftInput));
+		const stale = await ledger.updateSheetRow(caller, {
+			giftId,
+			giftVersion: 1,
+			personId,
+			personVersion: 1,
+			person: personSchema.parse({ name: "佐藤", address: "東京都" }),
+			gift: { ...gift, amount: 7000 } as GiftInput,
+		});
+		expect(stale).toEqual({ ok: false, error: { code: "conflict" } });
+		const person = unwrap(await ledger.getPerson(caller, personId));
+		expect(person).toMatchObject({ address: null, version: 1 });
+
+		const saved = unwrap(
+			await ledger.updateSheetRow(caller, {
+				giftId,
+				giftVersion: 2,
+				personId,
+				personVersion: 1,
+				person: personSchema.parse({ name: "佐藤", address: "東京都" }),
+				gift: { ...gift, amount: 7000 } as GiftInput,
+			}),
+		);
+		expect(saved).toEqual({ giftVersion: 3, personVersion: 2 });
+		expect(unwrap(await ledger.getGift(caller, giftId)).amount).toBe(7000);
+	});
+
 	it("連名: 差出人の追加・負担額・代表者の変更・削除", async () => {
 		const { caller, ledger } = setup();
 		const [funeral] = unwrap(await ledger.listEvents(caller));

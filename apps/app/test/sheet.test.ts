@@ -194,6 +194,95 @@ describe("表で入力（08 案 C）", () => {
 		expect(person).toMatch(/name="organization"[^>]*value="ABC 商事 一同"/);
 	});
 
+	it("同じ requestId の新しい行を送り直しても、二重に登録しない", async () => {
+		const { taro, koudenId, save } = await setup();
+		const row = {
+			key: "new-0",
+			requestId: "3f1d0c2e-0000-4000-8000-000000000001",
+			name: "a",
+			amount: "1000",
+		};
+		const [first] = await rowsOf(await save([row]));
+		const [again] = await rowsOf(await save([row]));
+		expect(again).toMatchObject({
+			status: "saved",
+			giftId: first?.giftId,
+			personId: first?.personId,
+			receiptNo: 1,
+		});
+		expect(await (await taro.request(`/k/${koudenId}/gifts`)).text()).toContain(
+			"1 件・香典 ¥1,000",
+		);
+	});
+
+	it("非表示にした関係は、その関係の差出人の行にだけ選択肢として残り、金額を直しても消えない", async () => {
+		const { taro, koudenId, save } = await setup();
+		const form = await (await taro.request(`/k/${koudenId}/gifts/new`)).text();
+		const relationshipId =
+			/<option value="([0-9a-f-]{36})"[^>]*>友人<\/option>/.exec(form)?.[1] ?? "";
+		expect(relationshipId).not.toBe("");
+		const [created] = await rowsOf(
+			await save([{ key: "a", name: "佐藤", amount: "5000", relationshipId }]),
+		);
+		await taro.request(
+			`/k/${koudenId}/relationships/${relationshipId}/hide`,
+			formPost({ hidden: "1" }),
+		);
+
+		const html = await (await taro.request(`/k/${koudenId}/gifts/sheet`)).text();
+		const row =
+			new RegExp(`<tr[^>]*data-gift-id="${created?.giftId}"[\\s\\S]*?</tr>`).exec(html)?.[0] ?? "";
+		expect(row).toMatch(
+			new RegExp(`<option value="${relationshipId}" selected="">[^<]*（非表示）</option>`),
+		);
+		// 新しい行では選べない
+		expect(html.match(/（非表示）<\/option>/g)).toHaveLength(1);
+
+		const [updated] = await rowsOf(
+			await save([
+				{
+					key: "a",
+					giftId: created?.giftId,
+					giftVersion: 1,
+					personId: created?.personId,
+					personVersion: 1,
+					name: "佐藤",
+					amount: "10000",
+					relationshipId,
+				},
+			]),
+		);
+		expect(updated).toMatchObject({ status: "saved", giftVersion: 2, personVersion: 1 });
+		const person = await (await taro.request(`/k/${koudenId}/persons/${created?.personId}`)).text();
+		expect(person).toMatch(new RegExp(`<option value="${relationshipId}" selected="">`));
+	});
+
+	it("差出人と金額を一緒に直したとき、香典が他の人に更新されていれば、どちらも保存しない", async () => {
+		const { taro, koudenId, eventId, save } = await setup();
+		const [created] = await rowsOf(await save([{ key: "a", name: "佐藤", amount: "5000" }]));
+		await taro.request(
+			`/k/${koudenId}/gifts/${created?.giftId}`,
+			formPost({ version: "1", eventId, kind: "koden", amount: "6000" }),
+		);
+		const [stale] = await rowsOf(
+			await save([
+				{
+					key: "a",
+					giftId: created?.giftId,
+					giftVersion: 1,
+					personId: created?.personId,
+					personVersion: 1,
+					name: "佐藤",
+					amount: "7000",
+					address: "東京都千代田区",
+				},
+			]),
+		);
+		expect(stale).toMatchObject({ status: "conflict" });
+		const person = await (await taro.request(`/k/${koudenId}/persons/${created?.personId}`)).text();
+		expect(person).not.toContain("東京都千代田区");
+	});
+
 	it("表で直せない行を API で直そうとしても変えない", async () => {
 		const { taro, koudenId, eventId, save } = await setup();
 		const created = await taro.request(

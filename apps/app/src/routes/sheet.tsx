@@ -14,6 +14,7 @@ import {
 } from "@kouden/domain";
 import type { Hono } from "hono";
 import type { GiftView, PersonView } from "../ledger/types.ts";
+import { log } from "../lib/logger.ts";
 import type { AppEnv } from "../types.ts";
 import { giftFormValues } from "../views/kouden/gift-edit.tsx";
 import { GiftSheetPage, type SheetRowView } from "../views/kouden/gift-sheet.tsx";
@@ -48,15 +49,10 @@ type SheetRowResult =
 	| { key: string; status: "skipped" }
 	| SheetRowFailure;
 
-/** 保存できなかった行。差出人だけ保存できた場合は、新しい差出人の version を返す */
+/** 保存できなかった行 */
 type SheetRowFailure =
-	| { key: string; status: "invalid"; errors: FieldErrors; personVersion?: number }
-	| {
-			key: string;
-			status: "conflict" | "limit" | "error";
-			message: string;
-			personVersion?: number;
-	  };
+	| { key: string; status: "invalid"; errors: FieldErrors }
+	| { key: string; status: "conflict" | "limit" | "error"; message: string };
 
 const formatAmount = (amount: number | null | undefined) =>
 	amount === null || amount === undefined ? "" : amount.toLocaleString("ja-JP");
@@ -107,7 +103,7 @@ async function createRow(c: Ctx, eventId: string, row: SheetRowInput): Promise<S
 	});
 	if (!parsed.success)
 		return { key: row.key, status: "invalid", errors: toFieldErrors(parsed.error) };
-	const result = await ledger(c).createGift(c.get("caller"), parsed.data);
+	const result = await ledger(c).createGift(c.get("caller"), parsed.data, row.requestId);
 	if (!result.ok) {
 		const { error } = result;
 		if (error.code === "limit_reached") {
@@ -192,17 +188,19 @@ async function updateRow(c: Ctx, row: SheetRowInput): Promise<SheetRowResult> {
 		(p.relationshipId ?? null) !== current.relationshipId;
 	const giftChanged = (giftParsed.data.amount ?? null) !== gift.value.amount;
 
-	let personVersion = row.personVersion;
-	if (personChanged) {
-		const r = await ledger(c).updatePerson(caller, personId, row.personVersion, p);
+	let { personVersion, giftVersion } = row;
+	if (personChanged || giftChanged) {
+		// 差出人と香典は 1 つのトランザクションで直す（片方だけ保存しない）
+		const r = await ledger(c).updateSheetRow(caller, {
+			giftId,
+			giftVersion,
+			personId,
+			personVersion,
+			person: personChanged ? p : undefined,
+			gift: giftChanged ? giftParsed.data : undefined,
+		});
 		if (!r.ok) return failure(row.key, r.error);
-		personVersion = r.value.version;
-	}
-	let giftVersion = row.giftVersion;
-	if (giftChanged) {
-		const r = await ledger(c).updateGift(caller, giftId, row.giftVersion, giftParsed.data);
-		if (!r.ok) return { ...failure(row.key, r.error), personVersion };
-		giftVersion = r.value.version;
+		({ personVersion, giftVersion } = r.value);
 	}
 	return {
 		key: row.key,
@@ -301,7 +299,16 @@ export function registerSheetRoutes(k: Hono<AppEnv>) {
 		// 行の順に 1 つずつ保存する（番号を表の順に振る。1 行の失敗でほかの行を止めない）
 		const results: SheetRowResult[] = [];
 		for (const row of rows) {
-			results.push(row.giftId ? await updateRow(c, row) : await createRow(c, eventId, row));
+			try {
+				results.push(row.giftId ? await updateRow(c, row) : await createRow(c, eventId, row));
+			} catch (err) {
+				// 1 行の失敗で、保存できた行の結果を失わない（行の内容はログに出さない）
+				log("error", "sheet_row_failed", {
+					requestId: c.get("requestId"),
+					error: err instanceof Error ? err.name : "unknown",
+				});
+				results.push({ key: row.key, status: "error", message: "保存できませんでした" });
+			}
 		}
 		return c.json({ rows: results });
 	});
