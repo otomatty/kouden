@@ -1,7 +1,7 @@
 import { raw } from "hono/html";
 import type { Child, FC } from "hono/jsx";
 import type { SessionUser } from "../auth/session-store.ts";
-import { ui } from "@kouden/ui";
+import { UserMenu, ui } from "@kouden/ui";
 
 const SITE_NAME = "香典帳";
 
@@ -77,16 +77,13 @@ const Header: FC<{ user: SessionUser | null; hideLoginLink?: boolean | undefined
 			</a>
 			<nav aria-label="アカウント" class="flex items-center gap-4 text-sm">
 				{user ? (
-					<>
-						<a href="/account" class="hidden text-muted hover:text-ink sm:inline">
-							{user.displayName} さん
-						</a>
-						<form method="post" action="/logout">
-							<button type="submit" class={ui.buttonSecondary}>
-								ログアウト
-							</button>
-						</form>
-					</>
+					<UserMenu
+						name={user.displayName}
+						detail={user.email}
+						avatarUrl={user.avatarUrl}
+						settingsHref="/account"
+						logout={{ action: "/logout" }}
+					/>
 				) : (
 					<>
 						<a href="/pricing" class="text-muted hover:text-ink">

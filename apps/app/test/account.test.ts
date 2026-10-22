@@ -34,7 +34,8 @@ describe("表示名の変更（E1-5）", () => {
 		expect(saved.headers.get("location")).toBe("/account?notice=saved");
 		const page = await (await taro.request("/account?notice=saved")).text();
 		expect(page).toContain("表示名を保存しました。");
-		expect(page).toContain("山田（長男） さん");
+		// ヘッダーのユーザーメニュー
+		expect(page).toMatch(/data-user-menu[\s\S]*?山田（長男）/);
 	});
 
 	it("ログインしていなければログイン画面へ", async () => {

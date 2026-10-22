@@ -1,4 +1,4 @@
-import { ui } from "@kouden/ui";
+import { UserMenu, ui } from "@kouden/ui";
 import { raw } from "hono/html";
 import type { Child, FC } from "hono/jsx";
 
@@ -34,7 +34,13 @@ export const AdminLayout: FC<{
 				<header class="border-b border-line bg-ink text-surface">
 					<div class={`${ui.containerWide} flex h-14 items-center justify-between gap-4`}>
 						<span class="font-semibold tracking-widest">香典帳 運営者画面</span>
-						<span class="text-sm opacity-80">{adminEmail}</span>
+						{/* Access のログアウト（/cdn-cgi/access/logout）。運営者画面には設定の画面がない */}
+						<UserMenu
+							name={adminEmail}
+							detail="運営者"
+							logout={{ href: "/cdn-cgi/access/logout" }}
+							tone="dark"
+						/>
 					</div>
 				</header>
 				<nav aria-label="運営者画面のメニュー" class="border-b border-line bg-surface">

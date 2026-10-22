@@ -50,5 +50,19 @@
 		if (el instanceof HTMLDetailsElement) el.open = true;
 	}
 	document.addEventListener("DOMContentLoaded", openLinkedDetails);
+
+	// ヘッダーのユーザーメニュー（<details data-user-menu>）は、外側を押すか Esc で閉じる
+	document.addEventListener("click", (e) => {
+		for (const menu of document.querySelectorAll("details[data-user-menu][open]")) {
+			if (!(e.target instanceof Node && menu.contains(e.target))) menu.open = false;
+		}
+	});
+	document.addEventListener("keydown", (e) => {
+		if (e.key !== "Escape") return;
+		for (const menu of document.querySelectorAll("details[data-user-menu][open]")) {
+			menu.open = false;
+			menu.querySelector("summary")?.focus();
+		}
+	});
 	window.addEventListener("hashchange", openLinkedDetails);
 })();
