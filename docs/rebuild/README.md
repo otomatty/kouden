@@ -29,4 +29,4 @@
 | Google OAuth のブランド確認 | 取得ドメインで Search Console 所有確認が必要 | M0 |
 | Cloudflare Email Service | ベータ版。GA 前に問題があれば Resend に差し替え（`Mailer` で抽象化済み） | M3 |
 | `cf` CLI / Vite plugin 2.0 | ベータ版。回避策と撤退条件は [ADR-T15](./01-decisions.md#adr-t15-cli-は-cfベータ-vite-を使う) | 正式版リリース時 |
-| 既定の行事・写真の保存と読み取りの送り先 | [08](./08-gift-entry-ux.md) §7。今の登録画面は暫定 | 案 A・案 D の実装の前 |
+| 写真の読み取りの送り先（Claude API / Workers AI） | [08](./08-gift-entry-ux.md) §7。実物の香典袋で精度と費用を比べる | 案 D の実装の前 |
