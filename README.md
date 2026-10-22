@@ -1,38 +1,22 @@
-# 香典帳（Cloudflare 版）
+# 香典帳（Kouden）
 
-Cloudflare Workers 上の香典帳です（https://kouden.app 、2026-10-21 公開）。設計は [`docs/rebuild/`](docs/rebuild/README.md) を参照してください。
-旧実装（Next.js + Supabase）は停止済みで、参照用に [`legacy/`](legacy/) に残しています（保守・デプロイはしません）。
+葬儀・法要の香典・供物を記録・管理する Web アプリです。Cloudflare Workers 上で動き、https://kouden.app で公開しています。
 
-| 項目        | 技術                                                                                                |
-| ----------- | --------------------------------------------------------------------------------------------------- |
-| ランタイム  | Cloudflare Workers（D1 / Durable Objects / R2）                                                     |
-| CLI・ビルド | [`cf`](https://developers.cloudflare.com/cf/)（ベータ）+ Vite（`@cloudflare/vite-plugin` 2.0 beta） |
-| 画面        | Hono JSX（サーバー側で HTML 生成）+ htmx + Tailwind CSS                                             |
-| 認証        | Google OIDC（自前実装）+ D1 のセッション                                                            |
-| 開発ツール  | Bun / Oxlint / oxfmt / TypeScript 7 / Vitest + `@cloudflare/vitest-plugin`                          |
+- 設計（要件・ドメインモデル・アーキテクチャ・ADR）: [`docs/rebuild/`](docs/rebuild/README.md)
+- 旧アプリ（Next.js + Supabase）: [`legacy/`](legacy/)。停止済みで、参照用に残しています
 
 ## ディレクトリ
 
-```
-kouden/
-├── apps/app/          # 利用者向け Worker（kouden-app）と香典帳の DO（KoudenLedger）
-│   └── src/
-│       ├── ledger/    # KoudenLedger: 香典帳 1 冊分の SQLite（スキーマ・マイグレーション・RPC）
-│       ├── kouden/    # D1 の香典帳・メンバーシップ
-│       ├── routes/    # 画面（pages: 公開ページ、koudens: 香典帳の中）
-│       └── views/     # JSX
-├── apps/admin/        # 運営者画面（kouden-admin）。Cloudflare Access の背後に置き、D1 だけを使う（DO には接続しない）
-├── packages/domain/   # 業務ルール（入力検証・権限・検索の正規化・金額の按分など。純粋な TypeScript）
-├── packages/ui/       # app と admin で共有するクラス名（ui.ts）と色・フォント（theme.css）
-├── tools/migrate-from-supabase/  # 旧アプリ（Supabase）の変換・投入・照合 CLI（prepare / import / verify）
-├── e2e/               # Playwright の E2E とアクセシビリティの検査（axe）
-├── docs/rebuild/      # 設計（要件・ドメインモデル・アーキテクチャ・移行計画）
-└── legacy/            # 旧アプリ（Next.js + Supabase）。参照用
-```
+| パス                           | 内容                                                                          |
+| ------------------------------ | ----------------------------------------------------------------------------- |
+| `apps/app/`                    | 利用者向け Worker（`kouden-app`）と香典帳の Durable Object（`KoudenLedger`）  |
+| `apps/admin/`                  | 運営者画面（`kouden-admin`）。Cloudflare Access の背後に置き、D1 だけを使う   |
+| `packages/domain/`             | 業務ルール（入力検証・権限・金額の按分など）                                  |
+| `packages/ui/`                 | app と admin で共有するクラス名と色・フォント                                 |
+| `tools/migrate-from-supabase/` | 旧アプリからのデータ移行 CLI（[手順](tools/migrate-from-supabase/README.md)） |
+| `e2e/`                         | Playwright の E2E とアクセシビリティの検査                                    |
 
 ## ローカル開発
-
-データ移行は [移行 CLI の手順](tools/migrate-from-supabase/README.md) を参照してください。Supabase コネクタの抽出結果を入力に使い、D1・DO・R2 への投入後に JSON / Markdown の照合レポートを作成します。
 
 必要なもの: Bun 1.4 以上、Node.js 22 以上（`cf` が使う）
 
@@ -41,104 +25,57 @@ bun install
 
 cd apps/app
 cp .dev.vars.example .dev.vars   # SESSION_SECRET に `openssl rand -hex 32` の値を入れる
-bun run db:migrate:local         # ローカル D1 にマイグレーションを適用
-bun run dev                      # http://localhost:5173
+bun run db:migrate:local
+bun run dev                      # http://localhost:5173（Windows は bun run serve）
 ```
 
-運営者画面は別のターミナルで起動します（`apps/app` と同じローカル D1 を見ます。Access は通さず、`deploy.settings.ts` の `devEmail` を運営者として扱います）。2 つの `cf dev` が同じ SQLite ファイルを開くため、両方で同時に書き込むと `database is locked`（SQLITE_BUSY）になることがあります（ローカルだけの現象です）。
+運営者画面は別のターミナルで `cd apps/admin && bun run dev`（http://localhost:5174）。`apps/app` と同じローカル D1 を使い、`deploy.settings.ts` の `devEmail` を運営者として扱います。2 つの `cf dev` が同じ SQLite ファイルを開くので、同時に書き込むと `database is locked`（SQLITE_BUSY）になることがあります（ローカルだけの現象です）。
 
-```sh
-cd apps/admin
-bun run dev                      # http://localhost:5174
-```
+Google ログインを試すときは、`.dev.vars` の `GOOGLE_CLIENT_SECRET` と `apps/app/deploy.settings.ts` の `development` の `googleClientId` を設定します（リダイレクト URI は `http://localhost:5173/auth/google/callback`）。
 
-Google ログインを試すには、OAuth クライアントの値を `.dev.vars` の `GOOGLE_CLIENT_SECRET` と `apps/app/deploy.settings.ts` の `development` の `googleClientId` に設定してください（承認済みのリダイレクト URI に `http://localhost:5173/auth/google/callback` を追加しておく）。
+## コマンド（リポジトリの直下）
 
-## よく使うコマンド（リポジトリの直下で実行）
+| コマンド                       | 内容                                       |
+| ------------------------------ | ------------------------------------------ |
+| `bun run test`                 | テスト（Workers ランタイム上で D1 を含む） |
+| `bun run typecheck`            | 型チェック                                 |
+| `bun run lint` / `bun run fmt` | Oxlint / oxfmt                             |
+| `bun run build`                | 本番用ビルド                               |
+| `bun run e2e`                  | E2E とアクセシビリティの検査               |
 
-| コマンド                       | 内容                                                                 |
-| ------------------------------ | -------------------------------------------------------------------- |
-| `bun run test`                 | 全パッケージのテスト（Workers ランタイム上で D1 を含めて実行）       |
-| `bun run typecheck`            | 型チェック（`cf workers types` で binding の型を生成してから `tsc`） |
-| `bun run lint` / `bun run fmt` | Oxlint / oxfmt                                                       |
-| `bun run build`                | 本番用ビルド（`apps/app/.cloudflare/output`）                        |
-| `bun run e2e`                  | E2E とアクセシビリティの検査（下記）                                 |
+E2E は初回に `cd e2e && bunx playwright install chromium` を実行します。5173・5174 番を使うので、`apps/app` と `apps/admin` の開発サーバーを両方止めてから実行してください。
 
-`apps/app` で実行するもの:
+## スキーマの変更
 
-| コマンド                               | 内容                                                             |
-| -------------------------------------- | ---------------------------------------------------------------- |
-| `bun run db:migrate:local`             | ローカル D1 にマイグレーションを適用                             |
-| `bun run assets`                       | Tailwind のビルドと htmx のコピー（`dev` / `build` で自動実行）  |
-| `bun run db:migrate -- --mode staging` | ステージングの D1 にマイグレーションを適用（要 `cf auth login`） |
-| `bun run deploy -- --mode staging`     | ステージングへデプロイ（通常は GitHub Actions から）             |
+- D1: `apps/app/migrations/` に連番で追加する
+- DO: `apps/app/src/ledger/schema.ts` の `MIGRATIONS` の末尾に追加する（適用済みの要素は変更しない）
 
-D1 のマイグレーションファイルは `cf d1 migrations create` で作成するか、`apps/app/migrations/` に連番で追加します。
-DO（KoudenLedger）のスキーマは `apps/app/src/ledger/schema.ts` の `MIGRATIONS` の末尾に追加します（各 DO が次に呼ばれたときに適用されます。適用済みの要素は変更しないでください）。
+本番には利用者のデータがあるので、staging で確かめてから本番にデプロイします。
 
-## E2E（`e2e/`）
+## デプロイ
 
-Playwright で、利用者向けアプリ（:5173）と運営者画面（:5174）の `cf dev` を起動して画面を操作し、各画面を axe（WCAG 2.1 A/AA）で検査します。
+GitHub Actions の「v2 Deploy」を手動で実行します（`staging` / `production`）。production は承認と `main` ブランチが必要です。D1 のマイグレーションはデプロイの中で自動的に適用されます（初回は D1 の作成後に適用）。環境ごとの設定は `apps/*/deploy.settings.ts` にあります。
 
-```sh
-cd e2e
-bunx playwright install chromium   # 初回のみ
-bun run e2e                        # = scripts/prepare.ts → playwright test
-```
+GitHub Environments に登録するシークレット: `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`、`GOOGLE_CLIENT_SECRET`、`SESSION_SECRET`、`STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`
 
-- `scripts/prepare.ts` が専用の保存先（`e2e/.state`）を作り直し、D1 にマイグレーションを当てて、`tests/users.ts` の利用者とセッションを入れます。テストはセッションの Cookie を付けてログイン済みとして操作します（Google のログインは通しません）。開発中のデータ（`apps/app/.cloudflare/state`）には触れません
-- 5173・5174 番を使うため、`bun run dev` を止めてから実行してください
-- 手元の Chromium を使う場合は `PLAYWRIGHT_CHROMIUM_PATH` に実行ファイルのパスを入れます
-- 失敗したテストのトレースは `e2e/test-results/` に残ります（`bunx playwright show-trace …`）
+Stripe の Webhook は `https://<ドメイン>/webhooks/stripe` に、`checkout.session.completed`・`checkout.session.async_payment_succeeded`・`checkout.session.async_payment_failed`・`charge.refunded` を送ります。
 
-## 公開までに必要な作業（運営者が行うもの）
+### Cloudflare Access
 
-### staging
+Zero Trust で次の Self-hosted アプリケーションを作り、運営者のメールアドレスだけを許可します。
 
-独自ドメインを決めるまでは、利用者向けアプリを `https://kouden-app-staging.saedgewell.workers.dev`、運営者画面を `https://kouden-admin-staging.saedgewell.workers.dev` で運用する。staging と本番は Worker・D1・R2 を分ける。バージョンごとのプレビュー URL は無効にし、本番では `workers.dev` も無効にする。
+- 運営者画面: `admin.kouden.app` と `kouden-admin-staging.saedgewell.workers.dev`。AUD は `apps/admin/deploy.settings.ts` の `access` に設定する
+- staging の利用者向けアプリ: `kouden-app-staging.saedgewell.workers.dev`。AUD は `apps/app/deploy.settings.ts` の staging の `access` に設定する
 
-両ホスト名に Cloudflare Access のアプリケーションを作り、開発者のメールだけを許可する。アプリ側でも Access の JWT を検証する。WebSocket を使うため、Worker 単位ではなくホスト名単位で保護する。設定や AUD を変えるときは Cloudflare 側と `deploy.settings.ts` の両方を更新する。
+チームのドメイン（`<team>.cloudflareaccess.com`）も同じ `access` に設定します。設定が欠けていると `deployBlockers` がデプロイを止めます。
 
-Google OAuth の staging 用クライアントに登録する URI は `https://kouden-app-staging.saedgewell.workers.dev/auth/google/callback`。シークレットと十分にランダムな `SESSION_SECRET` は Git に含めず、`cf deploy --secrets-file` または GitHub Environment の secrets から渡す。
-
-現在の staging は `mailFrom: ""` と `billingEnabled: false`。お知らせメールを送信・再試行せず、購入は利用できない。未送信のお知らせがある台帳は、期限到達後に最大 1 日間隔でメール設定の復帰を確認する。有効化後は次のアラームで送信を再開するため、期限を過ぎた通知は最大 24 時間遅れる。送信ドメインと Stripe テストキー・Webhook の準備後に有効化し、実サービスで検証する。GitHub Actions は有効な機能のシークレットだけをデプロイに渡す。
-
-移行データを扱う場合は、別途 `/internal/import/*` 用の Access アプリケーションに Service Auth を設定する。`importAccess` は投入・照合の間だけ有効にする。staging 用の OAuth ユーザーで先に登録すると旧ユーザーの決定的 ID と競合する場合がある。通常の staging にデータがあるときは、[専用の `rehearsal` 環境](tools/migrate-from-supabase/README.md#一時環境でのリハーサル)を使い、既存のユーザーとセッションを変更しない。
-
-### 本番公開と外部サービス
-
-切り戻し用の全件抽出は `rollbackAccess` で別途有効にする。取り込み用のAccess設定・トークンでは抽出できない。専用パスとトークンの設定は [切り戻し手順](tools/migrate-from-supabase/ROLLBACK.md) を参照。
-
-M0 のコードは揃っていますが、以下は Cloudflare・Google・GitHub のアカウントでの作業が必要です。
-
-1. **本番ドメイン**: `kouden.app`（2026-10-19 に Cloudflare Registrar で取得、`apps/app/deploy.settings.ts` の `DOMAIN`）。staging は上記の `workers.dev` を使う。
-2. **Google OAuth クライアントの作成**（Google Cloud Console）:
-   - 本番は Google Cloud プロジェクト `kouden`、staging は `kouden-staging` に分けて作成済み（種類: ウェブ アプリケーション）
-   - 承認済みのリダイレクト URI: 本番は `https://kouden.app/auth/google/callback`、staging は `https://kouden-app-staging.saedgewell.workers.dev/auth/google/callback`
-   - クライアント ID は `apps/app/deploy.settings.ts` の各 mode の `googleClientId` に設定済み。シークレットは Git に入れない
-   - 同意画面のブランド確認のため、取得したドメインを Search Console で所有確認する
-3. **Cloudflare の API トークン作成**: 権限は Workers Scripts・D1・Workers Routes / Custom Domains の編集。
-4. **GitHub の Environments（`staging` / `production`）にシークレットを登録**:
-   - `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`
-   - `GOOGLE_CLIENT_SECRET`
-   - `SESSION_SECRET`（`openssl rand -hex 32`。環境ごとに別の値）
-   - `STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`（下の 6.）
-   - `production` には承認者（Required reviewers）を設定する
-5. **ステージングを Cloudflare Access で保護**: `kouden-app-staging.saedgewell.workers.dev` を Access アプリケーションにし、開発者のメールのみ許可する。staging で決済を有効にするときは、`kouden-app-staging.saedgewell.workers.dev/webhooks/stripe` を別のアプリケーションにして Bypass（Everyone）のポリシーを付ける（本番と同じ）。
-6. **運営者画面を Cloudflare Access で保護**: Zero Trust で `admin.<ドメイン>` と `kouden-admin-staging.saedgewell.workers.dev` を Self-hosted アプリケーションにし、ポリシーで運営者のメールアドレスだけを許可する。チームのドメイン（`<team>.cloudflareaccess.com`）と各アプリケーションの AUD タグを `apps/admin/deploy.settings.ts` の `access` に設定する（設定するまで `deployBlockers` がデプロイを止める）
-   - **一般公開までは本番も Cloudflare Access で運営者限定にする**: Zero Trust で `kouden.app` 全体を Self-hosted アプリケーションにし、運営者のメールだけを許可する。Stripe の Webhook が届くよう、`kouden.app/webhooks/stripe` を別のアプリケーションにして Bypass（Everyone）のポリシーを付ける（アプリ側でも POST `/webhooks/stripe` だけは Access を求めず、署名で検証する）。全体のアプリの AUD を `apps/app/deploy.settings.ts` の production の `access` に設定する。設定している間は Worker も Access の JWT を検証する。一般公開（#200）では `access` を空に戻してデプロイし、全体のアプリを削除する
-7. **Stripe の設定**（ステージングはテストモード、本番はライブモード）:
-   - Webhook のエンドポイント: `https://<ドメイン>/webhooks/stripe`。送るイベントは `checkout.session.completed`・`checkout.session.async_payment_succeeded`・`checkout.session.async_payment_failed`・`charge.refunded`。表示される署名シークレット（`whsec_...`）を `STRIPE_WEBHOOK_SECRET` に登録する
-   - シークレットキー（`sk_...`。制限付きキーなら Checkout Sessions の書き込み権限）を `STRIPE_SECRET_KEY` に登録する
-   - 「カスタマーメール」で支払い成功時の領収書の送信を有効にする（E9-3）
-   - ローカルで試す場合は `.dev.vars` にテストモードのキーを入れ、`stripe listen --forward-to localhost:5173/webhooks/stripe` が表示する `whsec_...` を `STRIPE_WEBHOOK_SECRET` に入れる
-8. **デプロイ**: GitHub Actions の「v2 Deploy」を手動実行する（利用者向けアプリの後に運営者画面もデプロイされる）。初回は D1 がデプロイ時に作成され、続けてマイグレーションが適用される。
+staging で決済を有効にするときは、`apps/app/deploy.settings.ts` の staging の `billingEnabled` を `true` にし、Stripe のテストモードの `STRIPE_SECRET_KEY`・`STRIPE_WEBHOOK_SECRET` を `staging` の Environment に登録してからデプロイします。あわせて `kouden-app-staging.saedgewell.workers.dev/webhooks/stripe` を別の Access アプリケーションにして Bypass（Everyone）のポリシーを付けます（Worker 側の除外だけでは Access を通れません）。
 
 ## `cf`（ベータ）の注意点
 
-ベータ版のため、いくつか回避策を入れています（詳細は [ADR-T15](docs/rebuild/01-decisions.md#adr-t15-cli-は-cfベータ-vite-を使う)）。
+詳細は [ADR-T15](docs/rebuild/01-decisions.md#adr-t15-cli-は-cfベータ-vite-を使う)。
 
-- ログのリアルタイム表示は `cf` にまだないので、Workers Logs のダッシュボードか `npx wrangler tail <Worker 名>` を使う。
-- シークレットは `cf deploy --secrets-file` で渡す（`cf` に 1 件だけ登録するコマンドがまだない）。
-- テスト用の binding は `apps/app/vitest.config.ts` に別途宣言している。`cloudflare.config.ts` に binding を追加したら、こちらにも追加する（不一致はテスト起動時にエラーになる）。
-- `cf d1 migrations apply --local` は応答が返らないことがあるため、ローカルは `bun run db:migrate:local` を使う。
+- ログは Workers Logs のダッシュボードか `npx wrangler tail <Worker 名>` で見る
+- シークレットは `cf deploy --secrets-file` で渡す
+- `cloudflare.config.ts` に binding を追加したら、`apps/app/vitest.config.ts` にも追加する
+- ローカルの D1 マイグレーションは `cf d1 migrations apply --local` ではなく `bun run db:migrate:local` を使う
