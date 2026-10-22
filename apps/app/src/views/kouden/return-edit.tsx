@@ -10,7 +10,17 @@ import type { FC } from "hono/jsx";
 import type { KoudenContext } from "../../kouden/store.ts";
 import type { Caller, History, ReturnDetail, ReturnItemView } from "../../ledger/types.ts";
 import { ConflictDiff, type ConflictField } from "../components/conflict.tsx";
-import { Field, FormAlert, type FormValues, Hidden, Input, Select, Textarea, ui } from "@kouden/ui";
+import {
+	EmptyState,
+	Field,
+	FormAlert,
+	type FormValues,
+	Hidden,
+	Input,
+	Select,
+	Textarea,
+	ui,
+} from "@kouden/ui";
 import { HistoryList } from "../components/history.tsx";
 import { formatDate } from "../format.ts";
 import { StatusBadge } from "./returns.tsx";
@@ -138,7 +148,13 @@ export const ReturnEditPage: FC<{
 					品
 				</h2>
 				{ret.lines.length === 0 ? (
-					<p class="text-sm text-muted">まだ品がありません。</p>
+					<EmptyState
+						compact
+						title="まだ品がありません"
+						description={
+							canWrite ? "下で、カタログから選ぶか品名と単価を入れて追加します。" : undefined
+						}
+					/>
 				) : (
 					<table class={ui.table}>
 						<thead>

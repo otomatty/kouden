@@ -2,7 +2,17 @@ import { type FieldErrors, formatYen, GIFT_KINDS, personLabel } from "@kouden/do
 import type { FC } from "hono/jsx";
 import type { KoudenContext } from "../../kouden/store.ts";
 import type { History, LedgerRelationship, PersonDetail, PersonView } from "../../ledger/types.ts";
-import { Field, FormAlert, type FormValues, Hidden, Input, Select, Textarea, ui } from "@kouden/ui";
+import {
+	EmptyState,
+	Field,
+	FormAlert,
+	type FormValues,
+	Hidden,
+	Input,
+	Select,
+	Textarea,
+	ui,
+} from "@kouden/ui";
 import { yen } from "../format.ts";
 import { LiveRegion } from "./shell.tsx";
 import { type ConflictField, ConflictDiff } from "../components/conflict.tsx";
@@ -76,7 +86,7 @@ export const PersonsPage: FC<{
 					検索
 				</button>
 			</form>
-			{canWrite && (
+			{canWrite && persons.length > 0 && (
 				<p class="text-sm text-muted">
 					「編集」で行を開き、Enter で保存すると次の人の編集に進みます。
 				</p>
@@ -102,43 +112,61 @@ export const PersonsTable: FC<{
 		<p class="text-sm text-muted" role="status">
 			{persons.length} 人
 		</p>
-		<div class="overflow-x-auto rounded-xl border border-line bg-surface">
-			<table class={ui.table}>
-				<thead>
-					<tr>
-						<th class={ui.th} scope="col">
-							氏名
-						</th>
-						<th class={ui.th} scope="col">
-							団体・役職
-						</th>
-						<th class={ui.th} scope="col">
-							関係
-						</th>
-						<th class={ui.th} scope="col">
-							住所
-						</th>
-						<th class={ui.th} scope="col">
-							電話
-						</th>
-						<th class={`${ui.th} text-right`} scope="col">
-							件数
-						</th>
-						<th class={`${ui.th} text-right`} scope="col">
-							香典
-						</th>
-						<th class={ui.th} scope="col">
-							<span class="sr-only">操作</span>
-						</th>
-					</tr>
-				</thead>
-				<tbody>
-					{persons.map((p) => (
-						<PersonRow kouden={kouden} person={p} canWrite={canWrite} q={q} />
-					))}
-				</tbody>
-			</table>
-		</div>
+		{persons.length === 0 ? (
+			q ? (
+				<EmptyState
+					title={`「${q}」に一致する差出人はいません`}
+					description="氏名・ふりがな・団体名・住所の一部で検索できます。"
+				>
+					<a href={`/k/${kouden.id}/persons`} class={ui.buttonSecondary}>
+						検索をクリア
+					</a>
+				</EmptyState>
+			) : (
+				<EmptyState
+					title="まだ差出人がいません"
+					description="受付やいただきものの画面で登録すると、差出人もここに並びます。"
+				/>
+			)
+		) : (
+			<div class="overflow-x-auto rounded-xl border border-line bg-surface">
+				<table class={ui.table}>
+					<thead>
+						<tr>
+							<th class={ui.th} scope="col">
+								氏名
+							</th>
+							<th class={ui.th} scope="col">
+								団体・役職
+							</th>
+							<th class={ui.th} scope="col">
+								関係
+							</th>
+							<th class={ui.th} scope="col">
+								住所
+							</th>
+							<th class={ui.th} scope="col">
+								電話
+							</th>
+							<th class={`${ui.th} text-right`} scope="col">
+								件数
+							</th>
+							<th class={`${ui.th} text-right`} scope="col">
+								香典
+							</th>
+							<th class={ui.th} scope="col">
+								<span class="sr-only">操作</span>
+							</th>
+						</tr>
+					</thead>
+					<tbody>
+						{persons.map((p) => (
+							<PersonRow kouden={kouden} person={p} canWrite={canWrite} q={q} />
+						))}
+					</tbody>
+				</table>
+			</div>
+		)}
 	</LiveRegion>
 );
 

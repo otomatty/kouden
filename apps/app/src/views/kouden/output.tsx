@@ -2,7 +2,7 @@ import type { FC } from "hono/jsx";
 import type { KoudenContext } from "../../kouden/store.ts";
 import type { LedgerEvent } from "../../ledger/types.ts";
 import { formatDate } from "../format.ts";
-import { ui } from "@kouden/ui";
+import { EmptyState, ui } from "@kouden/ui";
 import { RETURN_FILTERS } from "./returns.tsx";
 
 /** 印刷・出力（E7-2, E7-3）: 印刷用ページと Excel の入口 */
@@ -31,7 +31,11 @@ export const OutputPage: FC<{ kouden: KoudenContext; events: LedgerEvent[] }> = 
 				<div class="space-y-2">
 					<h3 class={ui.h3}>芳名一覧</h3>
 					{withGifts.length === 0 ? (
-						<p class="text-sm text-muted">いただきものはまだありません。</p>
+						<EmptyState
+							compact
+							title="いただきものはまだありません"
+							description="登録すると、行事ごとに芳名一覧を印刷できます。"
+						/>
 					) : (
 						<ul class="flex flex-wrap gap-2">
 							<li>

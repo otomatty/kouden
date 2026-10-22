@@ -1,8 +1,8 @@
-import { formatYen, GIFT_KINDS, type GiftFilter, personLabel } from "@kouden/domain";
+import { can, formatYen, GIFT_KINDS, type GiftFilter, personLabel } from "@kouden/domain";
 import type { FC } from "hono/jsx";
 import type { KoudenContext } from "../../kouden/store.ts";
 import type { GiftView, LedgerEvent, LedgerRelationship } from "../../ledger/types.ts";
-import { Field, Input, Select, ui } from "@kouden/ui";
+import { EmptyState, Field, Input, Select, ui } from "@kouden/ui";
 import { yen } from "../format.ts";
 import { LiveRegion } from "./shell.tsx";
 
@@ -109,6 +109,8 @@ export const GiftResults: FC<{ kouden: KoudenContext; gifts: GiftView[]; filter:
 	if (filter.maxAmount !== undefined) query.set("max", String(filter.maxAmount));
 	const filtered = query.size > 0;
 	query.set("partial", "results");
+	// 閲覧者・アーカイブ中は受付を開けない
+	const canRegister = can(kouden.memberRole, "ledger.write") && kouden.status === "active";
 	const kodenTotal = gifts.reduce((sum, g) => sum + (g.kind === "koden" ? (g.amount ?? 0) : 0), 0);
 	return (
 		<LiveRegion
@@ -122,9 +124,27 @@ export const GiftResults: FC<{ kouden: KoudenContext; gifts: GiftView[]; filter:
 			</p>
 
 			{gifts.length === 0 ? (
-				<p class={`${ui.cardTight} text-center text-muted`}>
-					{filtered ? "条件に合ういただきものはありません。" : "まだ登録がありません。"}
-				</p>
+				filtered ? (
+					<EmptyState
+						title="条件に合ういただきものはありません"
+						description="条件を変えるか、クリアしてすべてを表示してください。"
+					>
+						<a href={`${base}/gifts`} class={ui.buttonSecondary}>
+							条件をクリア
+						</a>
+					</EmptyState>
+				) : (
+					<EmptyState
+						title="まだいただきものがありません"
+						description="受付で香典・供物・供花・弔電を登録すると、ここに並びます。"
+					>
+						{canRegister && (
+							<a href={`${base}/reception`} class={ui.buttonPrimary}>
+								受付を始める
+							</a>
+						)}
+					</EmptyState>
+				)
 			) : (
 				<div class="overflow-x-auto rounded-xl border border-line bg-surface">
 					<table class={ui.table}>

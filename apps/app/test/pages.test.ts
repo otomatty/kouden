@@ -76,6 +76,11 @@ describe("公開ページ", () => {
 		expect(html).toContain('action="/logout"');
 		const guest = await (await app.request("/pricing", {}, env)).text();
 		expect(guest).not.toContain("data-user-menu");
+		// 香典帳一覧にはアカウントの欄を置かない（ユーザーメニューの「設定」から開く）
+		const dashboard = await (await taro.request("/")).text();
+		expect(dashboard).toContain("data-user-menu");
+		expect(dashboard).not.toContain('aria-labelledby="account"');
+		expect(dashboard).not.toContain("アカウントの設定");
 	});
 
 	it("ログイン画面のエラー表示は既知のコードだけ", async () => {

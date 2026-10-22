@@ -1,19 +1,17 @@
 import { type FieldErrors, formatYen, ROLES } from "@kouden/domain";
 import type { FC } from "hono/jsx";
-import type { SessionUser } from "../../auth/session-store.ts";
 import type { Transfer } from "../../kouden/members.ts";
 import type { KoudenListItem } from "../../kouden/store.ts";
-import { Field, FormAlert, type FormValues, Input, ui } from "@kouden/ui";
+import { EmptyState, Field, FormAlert, type FormValues, Input, ui } from "@kouden/ui";
 import { formatDateTime } from "../format.ts";
 
-/** 香典帳一覧（E2-3）。アーカイブ済みは別タブ（E2-4） */
+/** 香典帳一覧（E2-3）。アーカイブ済みは別タブ（E2-4）。アカウントの設定はヘッダーのユーザーメニューから開く */
 export const DashboardPage: FC<{
-	user: SessionUser;
 	koudens: KoudenListItem[];
 	tab: "active" | "archived";
 	notice?: string | undefined;
 	transfers?: Transfer[];
-}> = ({ user, koudens, tab, notice, transfers = [] }) => (
+}> = ({ koudens, tab, notice, transfers = [] }) => (
 	<div class={`${ui.container} space-y-8`}>
 		<div class="flex flex-wrap items-center justify-between gap-4">
 			<h1 class={ui.h1}>香典帳</h1>
@@ -55,18 +53,21 @@ export const DashboardPage: FC<{
 			))}
 		</nav>
 		{koudens.length === 0 ? (
-			<div class={`${ui.card} py-12 text-center`}>
-				{tab === "active" ? (
-					<>
-						<p class="font-medium">まだ香典帳がありません</p>
-						<p class="mt-2 text-sm text-muted">
-							「新しい香典帳を作る」から作成するか、家族から届いた招待リンクを開いてください。
-						</p>
-					</>
-				) : (
-					<p class="text-muted">アーカイブした香典帳はありません</p>
-				)}
-			</div>
+			tab === "active" ? (
+				<EmptyState
+					title="まだ香典帳がありません"
+					description="新しく作るか、ご家族から届いた招待リンクを開くと、ここに並びます。"
+				>
+					<a href="/k/new" class={ui.buttonPrimary}>
+						新しい香典帳を作る
+					</a>
+				</EmptyState>
+			) : (
+				<EmptyState
+					title="アーカイブした香典帳はありません"
+					description="使い終わった香典帳は、オーナーが設定からアーカイブすると、ここに移ります。"
+				/>
+			)
 		) : (
 			<ul class="grid gap-4 sm:grid-cols-2">
 				{koudens.map((k) => (
@@ -101,20 +102,6 @@ export const DashboardPage: FC<{
 				))}
 			</ul>
 		)}
-		<section class={`${ui.card} space-y-4`} aria-labelledby="account">
-			<h2 id="account" class={ui.h2}>
-				アカウント
-			</h2>
-			<dl class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
-				<dt class="text-muted">表示名</dt>
-				<dd>{user.displayName}</dd>
-				<dt class="text-muted">メールアドレス</dt>
-				<dd class="break-all">{user.email}</dd>
-			</dl>
-			<a href="/account" class={ui.buttonSecondary}>
-				アカウントの設定
-			</a>
-		</section>
 	</div>
 );
 
