@@ -5,9 +5,11 @@ import {
 	contributorShareSchema,
 	eventSchema,
 	type FieldErrors,
+	findDuplicatePersons,
 	giftEntrySchema,
 	giftSchema,
 	giftPhotoKey,
+	groupDuplicates,
 	koudenSchema,
 	parseGiftFilter,
 	personLabel,
@@ -82,6 +84,7 @@ import { registerMemberRoutes, setStatusAndNotify } from "./members.tsx";
 import { registerBillingRoutes } from "./billing.tsx";
 import { registerOutputRoutes } from "./output.tsx";
 import { registerReturnRoutes } from "./returns.tsx";
+import { registerMergeRoutes } from "./merge.tsx";
 import { registerSheetRoutes } from "./sheet.tsx";
 
 // ---- 香典帳の作成 -------------------------------------------------------------
@@ -626,31 +629,53 @@ k.post("/gifts/:giftId/contributors/:personId/delete", async (c) => {
 
 // ---- 差出人 -------------------------------------------------------------------
 
+registerMergeRoutes(k);
+
 k.get("/persons", async (c) => {
 	const caller = c.get("caller");
-	const q = c.req.query("q")?.trim() || undefined;
+	const canWrite = can(caller.role, "ledger.write");
+	// 同じ人かもしれない差出人だけを、組ごとに並べる（E5-2）。検索の条件は使わない
+	const duplicatesOnly = canWrite && c.req.query("duplicates") === "1";
+	const q = duplicatesOnly ? undefined : c.req.query("q")?.trim() || undefined;
 	const persons = await ledger(c).listPersons(caller, q ? { q } : {});
 	if (!persons.ok) return commonFailure(c, persons.error);
-	if (c.req.query("partial") === "table") {
-		return c.html(
-			<PersonsTable
-				kouden={c.get("kouden")}
-				persons={persons.value}
-				canWrite={can(caller.role, "ledger.write")}
-				q={q}
-			/>,
-		);
+	// 検索していなければ一覧は全員なので、そのまま候補を数える
+	const groups =
+		canWrite && !q
+			? groupDuplicates(
+					persons.value.map((p) => p.id),
+					findDuplicatePersons(persons.value),
+				)
+			: [];
+	let list = persons.value;
+	if (duplicatesOnly) {
+		const byId = new Map(persons.value.map((p) => [p.id, p]));
+		list = groups.flat().flatMap((id) => byId.get(id) ?? []);
 	}
+	const table = (
+		<PersonsTable
+			kouden={c.get("kouden")}
+			persons={list}
+			canWrite={canWrite}
+			q={q}
+			duplicatesOnly={duplicatesOnly}
+		/>
+	);
+	if (c.req.query("partial") === "table") return c.html(table);
 	return koudenPage(
 		c,
 		"差出人",
 		"persons",
 		<PersonsPage
 			kouden={c.get("kouden")}
-			persons={persons.value}
-			canWrite={can(caller.role, "ledger.write")}
+			canWrite={canWrite}
 			q={q}
-		/>,
+			duplicateGroups={groups.length}
+			duplicatesOnly={duplicatesOnly}
+			count={list.length}
+		>
+			{table}
+		</PersonsPage>,
 		{ wide: true },
 	);
 });
@@ -705,14 +730,21 @@ async function renderPerson(
 	} = {},
 ) {
 	const caller = c.get("caller");
-	const [person, relationships, history] = await Promise.all([
+	const canWrite = can(caller.role, "ledger.write");
+	const [person, relationships, history, persons] = await Promise.all([
 		ledger(c).getPerson(caller, personId),
 		ledger(c).listRelationships(caller),
 		ledger(c).history(caller, "person", personId),
+		canWrite ? ledger(c).listPersons(caller, {}) : Promise.resolve(undefined),
 	]);
 	if (!person.ok) return commonFailure(c, person.error);
 	if (!relationships.ok) return commonFailure(c, relationships.error);
 	const latest = personFormValues(person.value);
+	// 同じ人かもしれない差出人（E5-2）
+	const candidateIds = new Set(
+		persons?.ok ? findDuplicatePersons(persons.value).get(personId) : undefined,
+	);
+	const candidates = persons?.ok ? persons.value.filter((p) => candidateIds.has(p.id)) : [];
 	return koudenPage(
 		c,
 		personLabel(person.value),
@@ -721,7 +753,8 @@ async function renderPerson(
 			kouden={c.get("kouden")}
 			person={person.value}
 			relationships={relationships.value}
-			canWrite={can(caller.role, "ledger.write")}
+			canWrite={canWrite}
+			candidates={candidates}
 			values={options.conflictMine ?? options.values ?? latest}
 			errors={options.errors}
 			message={options.message}

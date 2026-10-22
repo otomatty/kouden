@@ -1,5 +1,5 @@
 import { type FieldErrors, formatYen, GIFT_KINDS, personLabel } from "@kouden/domain";
-import type { FC } from "hono/jsx";
+import type { Child, FC } from "hono/jsx";
 import type { KoudenContext } from "../../kouden/store.ts";
 import type { History, LedgerRelationship, PersonDetail, PersonView } from "../../ledger/types.ts";
 import {
@@ -69,13 +69,43 @@ function relationshipOptions(relationships: LedgerRelationship[], current: strin
  */
 export const PersonsPage: FC<{
 	kouden: KoudenContext;
-	persons: PersonView[];
 	canWrite: boolean;
 	q: string | undefined;
-}> = ({ kouden, persons, canWrite, q }) => {
+	/** 同じ人かもしれない差出人の組の数（E5-2） */
+	duplicateGroups: number;
+	/** その組だけを出している */
+	duplicatesOnly: boolean;
+	/** 一覧に出す人数 */
+	count: number;
+	/** 一覧の表（PersonsTable） */
+	children: Child;
+}> = ({ kouden, canWrite, q, duplicateGroups, duplicatesOnly, count, children }) => {
 	const base = `/k/${kouden.id}`;
 	return (
 		<div class="space-y-4">
+			{duplicatesOnly ? (
+				<div class={`${ui.notice} space-y-1`}>
+					<p>
+						名前・ふりがなが同じ差出人を、組ごとに並べています。同姓同名の別の方もいるので、住所などで確かめてください。
+						同じ人なら、残す差出人の「まとめる」から 1 人にまとめられます。
+					</p>
+					<p>
+						<a href={`${base}/persons`} class={ui.link}>
+							すべての差出人を表示
+						</a>
+					</p>
+				</div>
+			) : (
+				duplicateGroups > 0 && (
+					<p class={ui.notice}>
+						名前・ふりがなが同じ差出人が {duplicateGroups} 組あります。同じ人が 2
+						人に分かれていないか{" "}
+						<a href={`${base}/persons?duplicates=1`} class={ui.link}>
+							確かめる
+						</a>
+					</p>
+				)
+			)}
 			<form
 				method="get"
 				action={`${base}/persons`}
@@ -89,12 +119,12 @@ export const PersonsPage: FC<{
 					検索
 				</button>
 			</form>
-			{canWrite && persons.length > 0 && (
+			{canWrite && count > 0 && (
 				<p class="text-sm text-muted">
 					「編集」で行を開き、Enter で保存すると次の人の編集に進みます。
 				</p>
 			)}
-			<PersonsTable kouden={kouden} persons={persons} canWrite={canWrite} q={q} />
+			{children}
 		</div>
 	);
 };
@@ -105,18 +135,30 @@ export const PersonsTable: FC<{
 	persons: PersonView[];
 	canWrite: boolean;
 	q: string | undefined;
-}> = ({ kouden, persons, canWrite, q }) => (
+	duplicatesOnly?: boolean;
+}> = ({ kouden, persons, canWrite, q, duplicatesOnly = false }) => (
 	<LiveRegion
 		id="person-table"
 		entities={["person", "gift", "relationship"]}
-		url={`/k/${kouden.id}/persons?partial=table${q ? `&q=${encodeURIComponent(q)}` : ""}`}
+		url={`/k/${kouden.id}/persons?partial=table${q ? `&q=${encodeURIComponent(q)}` : ""}${
+			duplicatesOnly ? "&duplicates=1" : ""
+		}`}
 		class="space-y-3"
 	>
 		<p class="text-sm text-muted" role="status">
 			{persons.length} 人
 		</p>
 		{persons.length === 0 ? (
-			q ? (
+			duplicatesOnly ? (
+				<EmptyState
+					title="名前・ふりがなが同じ差出人はいません"
+					description="同じ人が 2 人に分かれていると、ここに並びます。"
+				>
+					<a href={`/k/${kouden.id}/persons`} class={ui.buttonSecondary}>
+						すべての差出人を表示
+					</a>
+				</EmptyState>
+			) : q ? (
 				<EmptyState
 					title={`「${q}」に一致する差出人はいません`}
 					description="氏名・ふりがな・団体名・住所の一部で検索できます。"
@@ -164,7 +206,13 @@ export const PersonsTable: FC<{
 					</thead>
 					<tbody>
 						{persons.map((p) => (
-							<PersonRow kouden={kouden} person={p} canWrite={canWrite} q={q} />
+							<PersonRow
+								kouden={kouden}
+								person={p}
+								canWrite={canWrite}
+								q={q}
+								merge={duplicatesOnly}
+							/>
 						))}
 					</tbody>
 				</table>
@@ -182,7 +230,9 @@ export const PersonRow: FC<{
 	oob?: boolean;
 	/** 編集を閉じて戻した行。キーボードの位置を失わないよう「編集」にフォーカスを戻す */
 	focusEdit?: boolean;
-}> = ({ kouden, person: p, canWrite, q, oob, focusEdit }) => {
+	/** 「まとめる」も出す（同じ人かもしれない差出人の一覧、E5-2） */
+	merge?: boolean;
+}> = ({ kouden, person: p, canWrite, q, oob, focusEdit, merge }) => {
 	const base = `/k/${kouden.id}`;
 	const query = q ? `&q=${encodeURIComponent(q)}` : "";
 	return (
@@ -208,7 +258,7 @@ export const PersonRow: FC<{
 			<td class={`${ui.td} text-right tabular-nums whitespace-nowrap`}>
 				{formatYen(p.kodenTotal)}
 			</td>
-			<td class={`${ui.td} text-right`}>
+			<td class={`${ui.td} text-right whitespace-nowrap`}>
 				{canWrite && (
 					<a
 						href={`${base}/persons/${p.id}`}
@@ -220,6 +270,15 @@ export const PersonRow: FC<{
 						aria-label={`${p.name ?? p.organization} を編集`}
 					>
 						編集
+					</a>
+				)}
+				{canWrite && merge && (
+					<a
+						href={`${base}/persons/${p.id}/merge`}
+						class={`${ui.buttonSmall} ml-2`}
+						aria-label={`${personLabel(p)} を残してまとめる`}
+					>
+						まとめる
 					</a>
 				)}
 			</td>
@@ -384,11 +443,14 @@ export const PersonPage: FC<{
 	notice?: string | undefined;
 	conflictLatest?: FormValues | undefined;
 	history?: History | undefined;
+	/** 同じ人かもしれない差出人（E5-2） */
+	candidates?: PersonView[];
 }> = ({
 	kouden,
 	person,
 	relationships,
 	canWrite,
+	candidates = [],
 	values,
 	errors = {},
 	message,
@@ -439,6 +501,36 @@ export const PersonPage: FC<{
 				<p role="status" class={ui.notice}>
 					{notice}
 				</p>
+			)}
+			{canWrite && candidates.length > 0 && (
+				<section aria-labelledby="person-duplicates" class={`${ui.notice} space-y-2`}>
+					<h3 id="person-duplicates" class={ui.h3}>
+						同じ人かもしれない差出人
+					</h3>
+					<p class="text-sm">
+						名前・ふりがなが同じ差出人がほかにいます。同じ人が 2 人に分かれているなら、1
+						人にまとめられます。
+					</p>
+					<ul class="space-y-1 text-sm">
+						{candidates.map((p) => (
+							<li class="flex flex-wrap items-center gap-x-3 gap-y-1">
+								<span>
+									{personLabel(p)}
+									<span class="ml-2 text-muted">
+										{[p.address, `${p.giftCount} 件`].filter(Boolean).join("・")}
+									</span>
+								</span>
+								<a
+									href={`${base}/persons/${person.id}/merge?from=${p.id}`}
+									class={ui.buttonSmall}
+									aria-label={`${personLabel(p)} をこの差出人にまとめる`}
+								>
+									まとめる
+								</a>
+							</li>
+						))}
+					</ul>
+				</section>
 			)}
 			{canWrite ? (
 				<form
@@ -539,10 +631,15 @@ export const PersonPage: FC<{
 
 			<PersonReturnPanel kouden={kouden} person={person} canWrite={canWrite} />
 			{history && <HistoryList history={history} />}
-			<p>
+			<p class="flex flex-wrap gap-x-6 gap-y-2">
 				<a href={`${base}/persons`} class={ui.link}>
 					← 差出人一覧へ
 				</a>
+				{canWrite && (
+					<a href={`${base}/persons/${person.id}/merge`} class={`${ui.link} text-sm`}>
+						ほかの差出人とまとめる
+					</a>
+				)}
 			</p>
 		</div>
 	);

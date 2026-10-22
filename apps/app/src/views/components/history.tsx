@@ -47,6 +47,8 @@ const FIELD_LABELS: Record<string, string> = {
 	ship_postal_code: "送付先の郵便番号",
 	ship_address: "送付先の住所",
 	ship_phone: "送付先の電話番号",
+	merged_from: "まとめた差出人",
+	merged_into: "まとめた先",
 };
 
 const OP_LABELS: Record<string, string> = {
@@ -75,7 +77,12 @@ function formatValue(key: string, value: unknown, names: Record<string, string>)
 		const v = value as { name?: string; unitPrice?: number; quantity?: number };
 		return `${v.name ?? ""} ${formatYen(v.unitPrice ?? 0)} × ${v.quantity ?? 1}`;
 	}
-	if (key === "event_id" || key === "relationship_id" || key === "person_id") {
+	if (
+		key === "event_id" ||
+		key === "relationship_id" ||
+		key === "person_id" ||
+		key === "merged_into"
+	) {
 		return typeof value === "string" ? (names[value] ?? "（削除済み）") : "";
 	}
 	if (key === "contributors") {

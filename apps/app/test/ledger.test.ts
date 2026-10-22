@@ -1,4 +1,10 @@
-import { FREE_GIFT_LIMIT, giftEntrySchema, type GiftInput, uuidv7 } from "@kouden/domain";
+import {
+	FREE_GIFT_LIMIT,
+	giftEntrySchema,
+	type GiftInput,
+	personSchema,
+	uuidv7,
+} from "@kouden/domain";
 import { env, runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 import { ledgerFor } from "../src/ledger/client.ts";
@@ -421,5 +427,195 @@ describe("KoudenLedger", () => {
 		expect(late).toEqual({ ok: false, error: { code: "not_found" } });
 		expect(await ledger.listEvents(caller)).toEqual({ ok: false, error: { code: "not_found" } });
 		expect(await tables()).toEqual([]);
+	});
+});
+
+async function twoPeople() {
+	const ctx = setup({ plan: "paid" });
+	const [funeral] = unwrap(await ctx.ledger.listEvents(ctx.caller));
+	const give = async (fields: Record<string, string>) =>
+		unwrap(await ctx.ledger.createGift(ctx.caller, entry(funeral!.id, fields)));
+	return { ...ctx, eventId: funeral!.id, give };
+}
+
+describe("差出人の統合（E5-2）", () => {
+	it("いただきものを寄せ、空いている欄を埋め、備考はつなげて、まとめた側を消す", async () => {
+		const { caller, ledger, give } = await twoPeople();
+		const a = await give({ amount: "10000", name: "佐藤 一郎", address: "東京都千代田区1-1" });
+		const b = await give({ amount: "5000", name: "佐藤　一郎", nameKana: "さとう いちろう" });
+		unwrap(
+			await ledger.updatePerson(
+				caller,
+				a.personId,
+				1,
+				personSchema.parse({ name: "佐藤 一郎", address: "東京都千代田区1-1", notes: "叔父" }),
+			),
+		);
+		unwrap(
+			await ledger.updatePerson(
+				caller,
+				b.personId,
+				1,
+				personSchema.parse({
+					name: "佐藤　一郎",
+					nameKana: "さとう いちろう",
+					address: "大阪府大阪市1-1",
+					phone: "03-1234-5678",
+					notes: "会社の元同僚",
+				}),
+			),
+		);
+
+		const merged = unwrap(await ledger.mergePersons(caller, a.personId, 2, b.personId, 2));
+		expect(merged.version).toBe(3);
+
+		const person = unwrap(await ledger.getPerson(caller, a.personId));
+		expect(person).toMatchObject({
+			name: "佐藤 一郎",
+			nameKana: "さとう いちろう",
+			// 両方にある欄は、残す側の内容のまま
+			address: "東京都千代田区1-1",
+			phone: "03-1234-5678",
+			notes: "叔父\n会社の元同僚",
+			giftCount: 2,
+			kodenTotal: 15000,
+			version: 3,
+		});
+		expect(person.gifts.map((g) => g.id).toSorted()).toEqual([a.giftId, b.giftId].toSorted());
+		// まとめた側は消え、一覧・検索に出ない
+		expect(await ledger.getPerson(caller, b.personId)).toEqual({
+			ok: false,
+			error: { code: "not_found" },
+		});
+		const list = unwrap(await ledger.listPersons(caller));
+		expect(list.map((p) => p.id)).toEqual([a.personId]);
+		expect(unwrap(await ledger.listPersons(caller, { q: "さとう" })).map((p) => p.id)).toEqual([
+			a.personId,
+		]);
+		// 寄せたいただきものの version が進み、開いていた編集画面は conflict になる
+		const gift = unwrap(await ledger.getGift(caller, b.giftId));
+		expect(gift.version).toBe(2);
+		expect(gift.contributors.map((c) => c.personId)).toEqual([a.personId]);
+		expect(unwrap(await ledger.overview(caller)).totals.personCount).toBe(1);
+
+		// 履歴: 残す側に「統合」と、まとめた差出人の名前。いただきものに差出人の変更
+		const history = unwrap(await ledger.history(caller, "person", a.personId));
+		expect(history.entries[0]).toMatchObject({ op: "merge" });
+		expect(JSON.parse(history.entries[0]!.diff ?? "{}")).toMatchObject({
+			merged_from: [null, "佐藤　一郎"],
+			phone: [null, "03-1234-5678"],
+		});
+		const giftHistory = unwrap(await ledger.history(caller, "gift", b.giftId));
+		expect(JSON.parse(giftHistory.entries[0]!.diff ?? "{}")).toEqual({
+			contributors: [[b.personId], [a.personId]],
+		});
+		expect(giftHistory.names[b.personId]).toBe("佐藤　一郎");
+	});
+
+	it("同じ連名に 2 人とも入っていれば 1 人にし、負担額を足して、代表者を引き継ぐ", async () => {
+		const { caller, ledger, give } = await twoPeople();
+		const a = await give({ amount: "1000", name: "A" });
+		const b = await give({ amount: "10000", name: "B" });
+		// B が代表者の連名に A を加える（負担額 B 6,000・A 4,000）
+		let v = unwrap(
+			await ledger.addContributor(caller, b.giftId, 1, {
+				person: { type: "existing", personId: a.personId },
+				shareAmount: 4000,
+			}),
+		).version;
+		v = unwrap(
+			await ledger.updateContributor(caller, b.giftId, v, b.personId, {
+				shareAmount: 6000,
+				makePrimary: false,
+			}),
+		).version;
+
+		unwrap(await ledger.mergePersons(caller, a.personId, 1, b.personId, 1));
+		const gift = unwrap(await ledger.getGift(caller, b.giftId));
+		expect(gift.version).toBe(v + 1);
+		expect(gift.contributors).toHaveLength(1);
+		expect(gift.contributors[0]).toMatchObject({
+			personId: a.personId,
+			isPrimary: true,
+			shareAmount: 10000,
+		});
+		expect(unwrap(await ledger.getPerson(caller, a.personId)).kodenTotal).toBe(11000);
+	});
+
+	it("連名で片方の負担額が未入力なら、まとめた負担額も未入力にする", async () => {
+		const { caller, ledger, give } = await twoPeople();
+		const a = await give({ amount: "10000", name: "A" });
+		const b = await give({ amount: "1000", name: "B" });
+		unwrap(
+			await ledger.addContributor(caller, a.giftId, 1, {
+				person: { type: "existing", personId: b.personId },
+				shareAmount: 3000,
+			}),
+		);
+		unwrap(await ledger.mergePersons(caller, a.personId, 1, b.personId, 1));
+		const gift = unwrap(await ledger.getGift(caller, a.giftId));
+		expect(gift.contributors).toEqual([
+			expect.objectContaining({ personId: a.personId, isPrimary: true, shareAmount: null }),
+		]);
+	});
+
+	it("香典返しは、まとめた側にだけあれば移す。2 人ともあればまとめない", async () => {
+		const { caller, ledger, give } = await twoPeople();
+		const a = await give({ amount: "10000", name: "A" });
+		const b = await give({ amount: "5000", name: "B" });
+		const c = await give({ amount: "3000", name: "C" });
+		const ret = unwrap(await ledger.createReturn(caller, b.personId));
+
+		unwrap(await ledger.mergePersons(caller, a.personId, 1, b.personId, 1));
+		expect(unwrap(await ledger.getPerson(caller, a.personId)).ret?.id).toBe(ret.id);
+		expect(unwrap(await ledger.getReturn(caller, ret.id)).person.id).toBe(a.personId);
+
+		unwrap(await ledger.createReturn(caller, c.personId));
+		const blocked = await ledger.mergePersons(caller, a.personId, 2, c.personId, 1);
+		expect(blocked).toMatchObject({ ok: false, error: { code: "invalid", field: "_form" } });
+		// 何も変えない
+		expect(unwrap(await ledger.getPerson(caller, c.personId)).giftCount).toBe(1);
+		expect(unwrap(await ledger.getPerson(caller, a.personId)).version).toBe(2);
+	});
+
+	it("関係は空いていれば引き継ぎ、まとめた側の関係は外す（使用中に数えない）", async () => {
+		const { caller, ledger, give } = await twoPeople();
+		const rels = unwrap(await ledger.listRelationships(caller));
+		const friend = rels.find((r) => r.name === "友人")!;
+		const a = await give({ amount: "10000", name: "A" });
+		const b = await give({ amount: "5000", name: "B", relationshipId: friend.id });
+		unwrap(await ledger.mergePersons(caller, a.personId, 1, b.personId, 1));
+		expect(unwrap(await ledger.getPerson(caller, a.personId)).relationshipId).toBe(friend.id);
+
+		// 2 人とも関係があれば残す側の関係のまま。まとめた側の関係は使用中に数えず、削除できる
+		const family = rels.find((r) => r.name === "親族")!;
+		const neighbor = rels.find((r) => r.name === "近所")!;
+		const c = await give({ amount: "1000", name: "C", relationshipId: family.id });
+		const d = await give({ amount: "1000", name: "D", relationshipId: neighbor.id });
+		unwrap(await ledger.mergePersons(caller, c.personId, 1, d.personId, 1));
+		expect(unwrap(await ledger.getPerson(caller, c.personId)).relationshipId).toBe(family.id);
+		const after = unwrap(await ledger.listRelationships(caller));
+		expect(after.find((r) => r.id === neighbor.id)?.personCount).toBe(0);
+		unwrap(await ledger.deleteRelationship(caller, neighbor.id));
+	});
+
+	it("開いた後に変わっていたら conflict。同じ差出人どうし・閲覧者はまとめられない", async () => {
+		const { caller, ledger, give } = await twoPeople();
+		const a = await give({ amount: "10000", name: "A" });
+		const b = await give({ amount: "5000", name: "B" });
+		expect(await ledger.mergePersons(caller, a.personId, 1, b.personId, 2)).toEqual({
+			ok: false,
+			error: { code: "conflict" },
+		});
+		expect(await ledger.mergePersons(caller, a.personId, 1, a.personId, 1)).toMatchObject({
+			ok: false,
+			error: { code: "invalid" },
+		});
+		const viewer = { ...caller, userId: "user-2", role: "viewer" as const };
+		expect(await ledger.mergePersons(viewer, a.personId, 1, b.personId, 1)).toMatchObject({
+			ok: false,
+			error: { code: "forbidden" },
+		});
+		expect(unwrap(await ledger.listPersons(caller))).toHaveLength(2);
 	});
 });

@@ -14,6 +14,7 @@ import {
 	type GiftFilter,
 	type GiftInput,
 	GIFT_KIND_VALUES,
+	joinNotes,
 	type LedgerImportSummary,
 	type LedgerSnapshot,
 	type PersonInput,
@@ -138,6 +139,31 @@ function reminderMail(p: {
 type Row = Record<string, SqlStorageValue>;
 type Diff = Record<string, [unknown, unknown]>;
 type Direction = "up" | "down";
+
+/** 差出人の項目（persons の列） */
+type PersonFields = {
+	name: string | null;
+	name_kana: string | null;
+	organization: string | null;
+	position: string | null;
+	relationship_id: string | null;
+	postal_code: string | null;
+	address: string | null;
+	phone: string | null;
+	notes: string | null;
+};
+
+/** 差出人をまとめるとき、空いていれば相手の内容で埋める項目（備考はつなげる） */
+const MERGE_FILL_FIELDS = [
+	"name",
+	"name_kana",
+	"organization",
+	"position",
+	"relationship_id",
+	"postal_code",
+	"address",
+	"phone",
+] as const satisfies readonly (keyof PersonFields)[];
 
 /** 業務ルール違反。transactionSync の中で投げるとロールバックされ、呼び出し元には LedgerError として返る */
 class LedgerFailure extends Error {
@@ -751,6 +777,154 @@ export class KoudenLedger extends DurableObject<Env> {
 			const { version: _v, ...before } = current;
 			this.log(caller, now, "person", personId, "update", diffOf(before, next));
 			return { version: version + 1 };
+		});
+	}
+
+	/**
+	 * 重複した差出人をまとめる（E5-2）。from のいただきもの・香典返しを into に寄せ、
+	 * into の空いている欄を from の内容で埋めて（備考はつなげる）、from を削除する。
+	 * 同じ連名に 2 人とも入っているいただきものは 1 人にし、負担額は足す（どちらかが未入力なら未入力）。
+	 * 2 人とも香典返しの記録があるときは、どちらを残すか決められないのでまとめない
+	 */
+	async mergePersons(
+		caller: Caller,
+		intoId: string,
+		intoVersion: number,
+		fromId: string,
+		fromVersion: number,
+	): Promise<LedgerResult<{ version: number }>> {
+		return this.mutate(caller, "ledger.write", (now) => {
+			if (intoId === fromId) throw invalid("_form", "同じ差出人はまとめられません");
+			const select = `SELECT name, name_kana, organization, position, relationship_id, postal_code, address, phone,
+                notes, version
+           FROM persons WHERE id = ? AND deleted_at IS NULL`;
+			const into = this.first<PersonFields & { version: number }>(select, intoId);
+			const from = this.first<PersonFields & { version: number }>(select, fromId);
+			if (!into || !from) throw new LedgerFailure({ code: "not_found" });
+			if (into.version !== intoVersion || from.version !== fromVersion) {
+				throw new LedgerFailure({ code: "conflict" });
+			}
+			const returnOf = (personId: string) =>
+				this.first<{ id: string }>("SELECT id FROM returns WHERE person_id = ?", personId);
+			const intoReturn = returnOf(intoId);
+			const fromReturn = returnOf(fromId);
+			if (intoReturn && fromReturn) {
+				throw invalid(
+					"_form",
+					"2 人とも香典返しの記録があるため、まとめられません。片方の香典返しを削除してから、もう一度まとめてください",
+				);
+			}
+
+			// いただきもの: from を into に置き換える（同じ連名に 2 人ともいれば 1 人にする）
+			const fromRows = this.all<{
+				gift_id: string;
+				is_primary: number;
+				share_amount: number | null;
+			}>(
+				"SELECT gift_id, is_primary, share_amount FROM gift_contributors WHERE person_id = ?",
+				fromId,
+			);
+			for (const row of fromRows) {
+				const before = this.contributorIds(row.gift_id);
+				const both = this.first<{ share_amount: number | null }>(
+					"SELECT share_amount FROM gift_contributors WHERE gift_id = ? AND person_id = ?",
+					row.gift_id,
+					intoId,
+				);
+				if (both) {
+					this.sql.exec(
+						"DELETE FROM gift_contributors WHERE gift_id = ? AND person_id = ?",
+						row.gift_id,
+						fromId,
+					);
+					const share =
+						both.share_amount !== null && row.share_amount !== null
+							? both.share_amount + row.share_amount
+							: null;
+					this.sql.exec(
+						`UPDATE gift_contributors SET share_amount = ?, is_primary = max(is_primary, ?)
+              WHERE gift_id = ? AND person_id = ?`,
+						share,
+						row.is_primary,
+						row.gift_id,
+						intoId,
+					);
+				} else {
+					this.sql.exec(
+						"UPDATE gift_contributors SET person_id = ? WHERE gift_id = ? AND person_id = ?",
+						intoId,
+						row.gift_id,
+						fromId,
+					);
+				}
+				// 開いている編集画面が古い差出人のまま保存しないよう、version を進める
+				this.sql.exec(
+					"UPDATE gifts SET version = version + 1, updated_by = ?, updated_at = ? WHERE id = ?",
+					caller.userId,
+					now,
+					row.gift_id,
+				);
+				this.log(caller, now, "gift", row.gift_id, "update", {
+					contributors: [before, this.contributorIds(row.gift_id)],
+				});
+			}
+
+			// 香典返し: from にだけあれば into に移す
+			if (fromReturn) {
+				this.sql.exec(
+					`UPDATE returns SET person_id = ?, version = version + 1, updated_by = ?, updated_at = ?
+            WHERE id = ?`,
+					intoId,
+					caller.userId,
+					now,
+					fromReturn.id,
+				);
+				this.log(caller, now, "return", fromReturn.id, "update", { person_id: [fromId, intoId] });
+			}
+
+			// 差出人: into の空いている欄を from で埋める。備考は両方あればつなげる
+			const { version: _iv, ...intoFields } = into;
+			const { version: _fv, ...fromFields } = from;
+			const next: PersonFields = { ...intoFields };
+			for (const key of MERGE_FILL_FIELDS) next[key] ??= fromFields[key];
+			next.notes = joinNotes(intoFields.notes, fromFields.notes);
+			this.sql.exec(
+				`UPDATE persons SET name = ?, name_kana = ?, organization = ?, position = ?, relationship_id = ?,
+                            postal_code = ?, address = ?, phone = ?, notes = ?, search_text = ?,
+                            version = version + 1, updated_by = ?, updated_at = ?
+          WHERE id = ?`,
+				next.name,
+				next.name_kana,
+				next.organization,
+				next.position,
+				next.relationship_id,
+				next.postal_code,
+				next.address,
+				next.phone,
+				next.notes,
+				this.searchText(next),
+				caller.userId,
+				now,
+				intoId,
+			);
+			const fromLabel = personLabel(fromFields);
+			this.log(caller, now, "person", intoId, "merge", {
+				...diffOf(intoFields, next),
+				merged_from: [null, fromLabel],
+			});
+
+			// まとめた側は履歴の表示名のために残す。関係は外す（関係の使用数に数えず、削除を妨げない）
+			this.sql.exec(
+				`UPDATE persons SET relationship_id = NULL, deleted_at = ?, version = version + 1, updated_by = ?,
+                            updated_at = ?
+          WHERE id = ?`,
+				now,
+				caller.userId,
+				now,
+				fromId,
+			);
+			this.log(caller, now, "person", fromId, "merge", { merged_into: [null, intoId] });
+			return { version: intoVersion + 1 };
 		});
 	}
 
@@ -1496,7 +1670,8 @@ export class KoudenLedger extends DurableObject<Env> {
 				for (const [key, [before, after]] of Object.entries(parseDiff(e.diff))) {
 					if (key === "event_id") addAll(ids.event, [before, after]);
 					else if (key === "relationship_id") addAll(ids.relationship, [before, after]);
-					else if (key === "person_id") addAll(ids.person, [before, after]);
+					else if (key === "person_id" || key === "merged_into")
+						addAll(ids.person, [before, after]);
 					else if (key === "contributors")
 						addAll(ids.person, [...asArray(before), ...asArray(after)]);
 					else if (key.startsWith("contributor:")) ids.person.add(key.slice("contributor:".length));
@@ -2218,7 +2393,7 @@ export class KoudenLedger extends DurableObject<Env> {
 		now: string,
 		entity: string,
 		entityId: string,
-		op: "create" | "update" | "delete",
+		op: "create" | "update" | "delete" | "merge",
 		diff: Diff | null,
 	): void {
 		this.sql.exec(

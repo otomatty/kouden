@@ -36,3 +36,68 @@ export function parseReceiptNo(text: string): number | undefined {
 export function escapeLike(text: string): string {
 	return text.replace(/[\\%_]/g, (ch) => `\\${ch}`);
 }
+
+/**
+ * 同じ人かもしれない差出人の組（E5-2 の候補）。氏名・ふりがなが同じ（表記ゆれを除く）か、
+ * 氏名のない差出人どうしで団体名が同じなら候補にする。同姓同名の別人もいるので、まとめるかは人が決める
+ */
+export function findDuplicatePersons(
+	persons: readonly {
+		id: string;
+		name: string | null;
+		nameKana: string | null;
+		organization: string | null;
+	}[],
+): Map<string, string[]> {
+	const byKey = new Map<string, string[]>();
+	for (const p of persons) {
+		const keys = new Set<string>();
+		if (p.name) keys.add(`n:${toSearchKey(p.name)}`);
+		if (p.nameKana) keys.add(`k:${toSearchKey(p.nameKana)}`);
+		if (!p.name && p.organization) keys.add(`o:${toSearchKey(p.organization)}`);
+		for (const key of keys) {
+			if (key.length <= 2) continue;
+			byKey.set(key, [...(byKey.get(key) ?? []), p.id]);
+		}
+	}
+	const result = new Map<string, string[]>();
+	for (const ids of byKey.values()) {
+		if (ids.length < 2) continue;
+		for (const id of ids) {
+			const others = new Set([...(result.get(id) ?? []), ...ids.filter((o) => o !== id)]);
+			result.set(id, [...others]);
+		}
+	}
+	return result;
+}
+
+/**
+ * 候補（findDuplicatePersons）を組にして、一覧の順に並べる。
+ * a と b、b と c が候補なら a・b・c を 1 組にする。組の中も一覧の順
+ */
+export function groupDuplicates(
+	ids: readonly string[],
+	duplicates: ReadonlyMap<string, readonly string[]>,
+): string[][] {
+	const order = new Map(ids.map((id, i) => [id, i]));
+	const seen = new Set<string>();
+	const groups: string[][] = [];
+	for (const id of ids) {
+		if (seen.has(id) || !duplicates.has(id)) continue;
+		const group: string[] = [];
+		const stack = [id];
+		seen.add(id);
+		while (stack.length > 0) {
+			const current = stack.pop() as string;
+			group.push(current);
+			for (const other of duplicates.get(current) ?? []) {
+				if (!seen.has(other) && order.has(other)) {
+					seen.add(other);
+					stack.push(other);
+				}
+			}
+		}
+		groups.push(group.toSorted((a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0)));
+	}
+	return groups.filter((g) => g.length > 1);
+}
