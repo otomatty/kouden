@@ -1,4 +1,4 @@
-import { formatYen, GIFT_KINDS, type GiftFilter, personLabel } from "@kouden/domain";
+import { can, formatYen, GIFT_KINDS, type GiftFilter, personLabel } from "@kouden/domain";
 import type { FC } from "hono/jsx";
 import type { KoudenContext } from "../../kouden/store.ts";
 import type { GiftView, LedgerEvent, LedgerRelationship } from "../../ledger/types.ts";
@@ -110,7 +110,7 @@ export const GiftResults: FC<{ kouden: KoudenContext; gifts: GiftView[]; filter:
 	const filtered = query.size > 0;
 	query.set("partial", "results");
 	// 閲覧者・アーカイブ中は受付を開けない
-	const canRegister = kouden.memberRole !== "viewer" && kouden.status === "active";
+	const canRegister = can(kouden.memberRole, "ledger.write") && kouden.status === "active";
 	const kodenTotal = gifts.reduce((sum, g) => sum + (g.kind === "koden" ? (g.amount ?? 0) : 0), 0);
 	return (
 		<LiveRegion
