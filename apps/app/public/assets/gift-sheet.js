@@ -150,12 +150,18 @@
 			const data = await res.json();
 			let saved = 0;
 			let failed = 0;
+			const savedRows = [];
 			for (const result of data.rows) {
 				const row = rows.find((r) => r.dataset.key === result.key);
 				if (!row) continue;
-				if (apply(row, result)) saved++;
-				else if (result.status !== "skipped") failed++;
+				if (apply(row, result)) {
+					saved++;
+					savedRows.push([row, result]);
+				} else if (result.status !== "skipped") failed++;
 			}
+			// 同じ差出人のほかの行を合わせるのは、この回の結果をすべて入れた後に、この回に送っていない行だけ
+			// （同じ回に送った行は自分の結果で決まる。競合した行の入力を、先の行の内容で消さない）
+			for (const [row, result] of savedRows) syncPerson(row, result, rows);
 			relabel();
 			if (saved > 0 || failed > 0) {
 				announce(
@@ -203,7 +209,6 @@
 				}
 			}
 			setStatus(row, "保存しました");
-			syncPerson(row, result);
 			return true;
 		}
 		if (result.status === "skipped") {
@@ -233,9 +238,10 @@
 	 * 古い version のまま残すと、ほかの列を直したときに競合になる。まだ送っていない変更のある欄だけは書き換えない
 	 * （フォーカスがあるだけの欄も書き換える。古い値のまま残ると、その行を保存したときに古い値で上書きしてしまう）
 	 */
-	function syncPerson(source, result) {
+	function syncPerson(source, result, sent) {
 		for (const row of editableRows()) {
-			if (row === source || !result.personId || row.dataset.personId !== result.personId) continue;
+			if (sent.includes(row) || !result.personId || row.dataset.personId !== result.personId)
+				continue;
 			row.dataset.personVersion = String(result.personVersion);
 			for (const col of PERSON_COLUMNS) {
 				const el = cellOf(row, col);

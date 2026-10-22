@@ -99,6 +99,19 @@ test.describe("表で入力（08 案 C、PC だけ）", () => {
 		// 2 行目の保存で、古い住所に戻していない
 		await page.reload();
 		await expect(box("住所（番号 1）")).toHaveValue("東京都千代田区千代田1-1");
+
+		// 同じ人の 2 行に違う住所をまとめて貼り付けると、後の行は競合になる。その行の入力は消さない
+		await box("住所（番号 1）").focus();
+		await page.evaluate(() => {
+			const data = new DataTransfer();
+			data.setData("text/plain", "大阪府大阪市1-1\r\n京都府京都市2-2\r\n");
+			document.activeElement?.dispatchEvent(
+				new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }),
+			);
+		});
+		await expect(page.locator("tbody tr").first()).toContainText("保存しました");
+		await expect(page.locator("tbody tr").nth(1)).toContainText("他の人が更新しました");
+		await expect(box("住所（番号 2）")).toHaveValue("京都府京都市2-2");
 	});
 
 	test("郵便番号から住所が入る前に行を離れても、入った住所を保存し、フォーカスを引き戻さない", async ({
