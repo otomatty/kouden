@@ -75,7 +75,8 @@ export function parseYenText(text: string): number | undefined {
 			section += (num ?? 1) * (SMALL_UNITS[ch] ?? 1);
 			num = undefined;
 		} else if (ch === "万") {
-			total += (section + (num ?? 0) || 1) * 10_000;
+			// 「万」だけ（係数を書かない）なら 1 万。「0万」「〇萬」の 0 は 0 として読む
+			total += (num === undefined && section === 0 ? 1 : section + (num ?? 0)) * 10_000;
 			section = 0;
 			num = undefined;
 		} else {

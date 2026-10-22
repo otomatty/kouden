@@ -32,6 +32,8 @@
 	const CONCURRENCY = 2;
 
 	let stream = null;
+	/** カメラを始めている途中（二重に始めない） */
+	let starting = false;
 	let shots = 0;
 	/** 下書きごとの写真（Blob）と状態。キーは下書きの data-key */
 	const drafts = new Map();
@@ -56,12 +58,16 @@
 
 	// ---- カメラ ----
 	async function startCamera() {
+		if (starting || stream) return;
 		if (!navigator.mediaDevices?.getUserMedia) {
 			say("この端末・ブラウザではカメラを使えません。「写真を選ぶ」から撮ってください。");
 			return;
 		}
+		starting = true;
+		startButton.disabled = true;
+		let acquired = null;
 		try {
-			stream = await navigator.mediaDevices.getUserMedia({
+			acquired = await navigator.mediaDevices.getUserMedia({
 				video: {
 					facingMode: { ideal: "environment" },
 					width: { ideal: 1920 },
@@ -74,7 +80,16 @@
 				"カメラを使えませんでした。ブラウザの設定でカメラを許可するか、「写真を選ぶ」から撮ってください。",
 			);
 			return;
+		} finally {
+			starting = false;
+			startButton.disabled = false;
 		}
+		// 許可を待つ間に画面を離れていたら、映さずに止める
+		if (document.hidden) {
+			for (const track of acquired.getTracks()) track.stop();
+			return;
+		}
+		stream = acquired;
 		video.srcObject = stream;
 		await video.play().catch(() => {});
 		viewer.hidden = false;
