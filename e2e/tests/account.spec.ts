@@ -20,7 +20,16 @@ test("表示名を変えると、ヘッダーに反映される。空欄はエ�
 	await field.fill("田中 四郎（長男）");
 	await page.getByRole("button", { name: "保存する" }).click();
 	await expect(page.getByText("表示名を保存しました。")).toBeVisible();
-	await expect(page.getByRole("link", { name: "田中 四郎（長男） さん" })).toBeVisible();
+	// ヘッダーのユーザーメニューに名前を出し、開くと設定・ログアウトがある
+	const header = page.getByRole("banner");
+	const menu = header.locator("summary");
+	await expect(menu).toContainText("田中 四郎（長男）");
+	await menu.click();
+	await expect(header.getByRole("link", { name: "設定" })).toBeVisible();
+	await expect(header.getByRole("button", { name: "ログアウト" })).toBeVisible();
+	await expectAccessible(page, "アカウント（ユーザーメニューを開いた）");
+	await page.keyboard.press("Escape");
+	await expect(header.getByRole("link", { name: "設定" })).toBeHidden();
 });
 
 test("アカウントを削除すると、ログアウトした状態になる（E1-4）", async ({ page, context }) => {

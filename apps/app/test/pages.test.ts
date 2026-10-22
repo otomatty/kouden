@@ -2,6 +2,7 @@ import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 import { safeReturnTo } from "../src/auth/routes.tsx";
 import { createApp } from "../src/app.tsx";
+import { makeApp, TARO } from "./helpers.ts";
 
 const app = createApp();
 
@@ -45,6 +46,36 @@ describe("公開ページ", () => {
 		expect(csp).toMatch(/script-src 'self' 'nonce-[^']+'/);
 		expect(csp).toContain("frame-ancestors 'none'");
 		expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+	});
+
+	it("ログイン画面は Google のボタンを出し、ヘッダーの「ログイン」を出さない", async () => {
+		const html = await (await app.request("/login?return_to=%2Fk%2Fnew", {}, env)).text();
+		expect(html).toContain('href="/auth/google/start?return_to=%2Fk%2Fnew"');
+		expect(html).toContain("Google でログイン");
+		expect(html).toContain('href="/faq#legacy-account"');
+		expect(html).not.toContain('href="/login"');
+		const faq = await (await app.request("/faq", {}, env)).text();
+		expect(faq).toContain('id="legacy-account"');
+	});
+
+	it("トップの「始める」も Google のボタンにする", async () => {
+		const html = await (await app.request("/", {}, env)).text();
+		expect(html).toMatch(
+			/<a href="\/login" class="[^"]*bg-google[^"]*">[\s\S]*?Google でログインして始める/,
+		);
+	});
+
+	it("ログインしていればヘッダーにユーザーメニュー（設定・ログアウト）を出す", async () => {
+		const taro = makeApp(TARO);
+		await taro.login();
+		const html = await (await taro.request("/pricing")).text();
+		expect(html).toContain("data-user-menu");
+		expect(html).toContain("山田 太郎");
+		expect(html).toContain('src="https://lh3.googleusercontent.com/a/taro"');
+		expect(html).toContain('href="/account"');
+		expect(html).toContain('action="/logout"');
+		const guest = await (await app.request("/pricing", {}, env)).text();
+		expect(guest).not.toContain("data-user-menu");
 	});
 
 	it("ログイン画面のエラー表示は既知のコードだけ", async () => {

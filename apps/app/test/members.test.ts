@@ -147,6 +147,10 @@ describe("招待リンク", () => {
 	it("招待の画面は参照元を送らない（失敗した参加の画面も）", async () => {
 		const { invite } = await setup({ maxUses: "1" });
 		const path = await invite();
+		// ログインしていなければ、Google のボタンでログインしてから参加する
+		const page = await (await makeApp(HANAKO).request(path)).text();
+		expect(page).toContain(`href="/auth/google/start?return_to=${encodeURIComponent(path)}"`);
+		expect(page).toContain("Google でログインして参加");
 		expect((await makeApp(HANAKO).request(path)).headers.get("referrer-policy")).toBe(
 			"no-referrer",
 		);

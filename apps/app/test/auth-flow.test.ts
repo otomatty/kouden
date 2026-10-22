@@ -264,7 +264,7 @@ describe("ログアウト", () => {
 		expect(res.status).toBe(302);
 		expect(jar.has("__Host-kouden_session")).toBe(false);
 		const home = await (await request("/")).text();
-		expect(home).toContain("Google アカウントで始める");
+		expect(home).toContain("Google でログインして始める");
 	});
 
 	it("すべての端末からログアウトすると、他端末のセッションも消える", async () => {
@@ -280,7 +280,7 @@ describe("ログアウト", () => {
 		await deviceA.request("/logout/all", { method: "POST" });
 
 		expect(await countSessions(user?.id ?? "")).toBe(0);
-		expect(await (await deviceB.request("/")).text()).toContain("Google アカウントで始める");
+		expect(await (await deviceB.request("/")).text()).toContain("Google でログインして始める");
 	});
 
 	it("Origin のない POST は CSRF として拒否する", async () => {

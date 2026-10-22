@@ -115,7 +115,10 @@ describe("Cloudflare Access（04 §4）", () => {
 	it("有効な JWT なら通し、運営者のメールアドレスを表示する。応答はキャッシュさせない", async () => {
 		const res = await request("/");
 		expect(res.status).toBe(200);
-		expect(await res.text()).toContain(ADMIN);
+		const html = await res.text();
+		expect(html).toContain(ADMIN);
+		// ヘッダーのユーザーメニューから Access のログアウトへ
+		expect(html).toContain('href="/cdn-cgi/access/logout"');
 		expect(res.headers.get("cache-control")).toBe("private, no-store");
 	});
 
