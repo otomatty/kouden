@@ -24,6 +24,16 @@ import {
 export const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
 const PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
+/** 中身の先頭のバイト（シグネチャ）から写真の種類を判定する。写真でなければ null */
+export function sniffPhotoType(bytes: ArrayBuffer): string | null {
+	const head = new Uint8Array(bytes, 0, Math.min(12, bytes.byteLength));
+	const ascii = (from: number, to: number) => String.fromCharCode(...head.slice(from, to));
+	if (head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff) return "image/jpeg";
+	if (ascii(0, 8) === "\x89PNG\r\n\x1a\n") return "image/png";
+	if (ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP") return "image/webp";
+	return null;
+}
+
 /** 写真で登録の画面へのリンク。読み取りが無効か、登録できないロールなら出さない */
 export function scanHref(c: Ctx, eventId?: string): string | undefined {
 	if (!c.get("photoReader")() || !can(c.get("caller").role, "ledger.write")) return undefined;
@@ -70,6 +80,8 @@ export function registerScanRoutes(k: Hono<AppEnv>) {
 			if (!PHOTO_TYPES.has(type)) return c.json({ error: "unsupported_type" }, 415);
 			const bytes = await c.req.arrayBuffer();
 			if (bytes.byteLength === 0) return c.json({ error: "empty" }, 400);
+			// 申告の種類だけを信じない。中身の先頭が写真の形式でなければ、読み取りに送らない
+			if (sniffPhotoType(bytes) !== type) return c.json({ error: "unsupported_type" }, 415);
 
 			const result = await reader
 				.read({ bytes, type })

@@ -82,8 +82,10 @@ export function parseYenText(text: string): number | undefined {
 			return undefined;
 		}
 	}
+	// 「1.1万」は浮動小数点の誤差で 11000.000000000002 になるので、誤差だけを丸める（「1.5円」などは読まない）
 	const value = total + section + (num ?? 0);
-	return Number.isInteger(value) ? value : undefined;
+	const rounded = Math.round(value);
+	return Math.abs(value - rounded) < 1e-6 ? rounded : undefined;
 }
 
 /** 金額・数量の入力を数値にする。数値にできない文字列はそのまま返して検証で弾く */

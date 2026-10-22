@@ -86,7 +86,10 @@ describe("差出人の統合（E5-2）", () => {
 		expect(after).toContain("香典の合計 ¥15,000");
 		expect(after).toMatch(/name="nameKana"[^>]*value="さとう いちろう"/);
 		expect(after).not.toContain("同じ人かもしれない差出人");
+		// 履歴に、まとめた差出人と、埋めた欄が出る
 		expect(after).toContain("統合");
+		expect(after).toMatch(/まとめた差出人:\s*佐藤一郎/);
+		expect(after).toMatch(/ふりがな:\s*（なし） →\s*さとう いちろう/);
 		expect((await taro.request(`/k/${koudenId}/persons/${b}`)).status).toBe(404);
 		const list = await (await taro.request(`/k/${koudenId}/persons`)).text();
 		expect(list).toContain("1 人");

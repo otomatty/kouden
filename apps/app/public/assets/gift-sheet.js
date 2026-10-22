@@ -85,7 +85,10 @@
 	// ---- 変更と保存 ----
 	function markDirty(e) {
 		const row = e.target instanceof Element ? e.target.closest("tr[data-row]") : null;
-		if (row) row.dataset.dirty = "1";
+		if (!row) return;
+		row.dataset.dirty = "1";
+		// まだ送っていない変更のある欄（同じ差出人の行を合わせるときに上書きしない）
+		if (e.target instanceof HTMLElement) e.target.dataset.changed = "1";
 	}
 	tbody.addEventListener("input", markDirty);
 	tbody.addEventListener("change", markDirty);
@@ -128,6 +131,7 @@
 			queue.delete(row);
 			// 送った後にまた入力したら、もう一度保存する（応答の処理で消さない）
 			delete row.dataset.dirty;
+			for (const el of row.querySelectorAll("[data-changed]")) delete el.dataset.changed;
 			setStatus(row, "保存しています…");
 		}
 		inflight = true;
@@ -194,6 +198,7 @@
 				}
 			}
 			setStatus(row, "保存しました");
+			syncPerson(row, result);
 			return true;
 		}
 		if (result.status === "skipped") {
@@ -213,6 +218,26 @@
 			setStatus(row, result.message, true);
 		}
 		return false;
+	}
+
+	/** 差出人の列（同じ差出人の行で同じ値になる） */
+	const PERSON_COLUMNS = ["name", "nameKana", "postalCode", "address", "relationshipId"];
+
+	/**
+	 * 同じ差出人の行（同じ人の香典が何件かある）に、保存した差出人の内容と version を入れる。
+	 * 古い version のまま残すと、ほかの列を直したときに競合になる。まだ送っていない変更のある欄・入力中の欄は書き換えない
+	 */
+	function syncPerson(source, result) {
+		for (const row of editableRows()) {
+			if (row === source || !result.personId || row.dataset.personId !== result.personId) continue;
+			row.dataset.personVersion = String(result.personVersion);
+			for (const col of PERSON_COLUMNS) {
+				const el = cellOf(row, col);
+				if (!el || el.dataset.changed || el === document.activeElement) continue;
+				const value = col === "relationshipId" ? cellOf(source, col)?.value : result.values?.[col];
+				if (value !== undefined) el.value = value;
+			}
+		}
 	}
 
 	// 通信が戻ったら、保存できていない行を送り直す
@@ -269,6 +294,7 @@
 	function setCell(row, col, value) {
 		const el = cellOf(row, col);
 		if (!el) return;
+		el.dataset.changed = "1";
 		const text = value.trim();
 		if (el instanceof HTMLSelectElement) {
 			// 関係は名前で選ぶ（見つからなければ変えない）

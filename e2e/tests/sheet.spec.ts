@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { createKouden, expectAccessible, loginAs } from "./fixtures.ts";
+import { createKouden, expectAccessible, loginAs, registerKoden } from "./fixtures.ts";
 import { USERS } from "./users.ts";
 
 test.beforeEach(async ({ context }) => {
@@ -69,6 +69,32 @@ test.describe("表で入力（08 案 C、PC だけ）", () => {
 		await expect(summary).toContainText("5 件・香典 ¥25,000");
 		await page.goto(`${base}/gifts`);
 		await expect(page.getByRole("status").filter({ hasText: "5 件・香典 ¥25,000" })).toBeVisible();
+	});
+
+	test("同じ差出人の行は、1 行で差出人を直すとほかの行にも入り、続けて直しても競合にしない", async ({
+		page,
+	}) => {
+		const base = await createKouden(page, "表 同じ人");
+		await page.goto(`${base}/gifts/new`);
+		await registerKoden(page, "佐藤 一郎", 3000);
+		// 2 件目は既存の差出人を選んで登録する（同じ人の香典が 2 件）
+		await page.getByLabel("氏名").fill("佐藤 一郎");
+		await page.getByRole("radio", { name: /佐藤 一郎/ }).check();
+		await page.getByLabel("金額", { exact: true }).fill("5000");
+		await page.getByRole("button", { name: "登録して次へ" }).click();
+		await expect(page.locator("#created-gift")).toContainText("No.2、佐藤 一郎 様");
+
+		await page.goto(`${base}/gifts/sheet`);
+		const box = (name: string) => page.getByRole("textbox", { name, exact: true });
+		await box("住所（番号 1）").fill("東京都千代田区千代田1-1");
+		await page.keyboard.press("Enter");
+		await expect(page.locator("tbody tr").first()).toContainText("保存しました");
+		await expect(box("住所（番号 2）")).toHaveValue("東京都千代田区千代田1-1");
+
+		await box("金額（番号 2）").fill("6000");
+		await page.keyboard.press("Enter");
+		await expect(page.locator("tbody tr").nth(1)).toContainText("保存しました");
+		await expect(page.locator("#entry-summary")).toContainText("2 件・香典 ¥9,000");
 	});
 
 	test("スマホの幅では表を出さず、1 件ずつの登録へ案内する", async ({ page }) => {

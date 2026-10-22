@@ -1,7 +1,7 @@
 import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 import type { PhotoReader } from "../src/photo/reader.ts";
-import { PHOTO_MAX_BYTES } from "../src/routes/scan.tsx";
+import { PHOTO_MAX_BYTES, sniffPhotoType } from "../src/routes/scan.tsx";
 import type { AppDeps } from "../src/types.ts";
 import { formPost, HANAKO, makeApp, TARO } from "./helpers.ts";
 
@@ -21,6 +21,21 @@ async function setup(deps: Pick<AppDeps, "photoReader"> = {}) {
 }
 
 const PHOTO = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]);
+
+const bytesOf = (...b: number[]) => new Uint8Array(b).buffer;
+const ascii = (text: string) => Uint8Array.from(text, (ch) => ch.charCodeAt(0)).buffer;
+
+describe("sniffPhotoType", () => {
+	it("JPEG・PNG・WebP を先頭のバイトで見分け、ほかは null", () => {
+		expect(sniffPhotoType(PHOTO.buffer)).toBe("image/jpeg");
+		expect(sniffPhotoType(bytesOf(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0))).toBe(
+			"image/png",
+		);
+		expect(sniffPhotoType(ascii("RIFF\0\0\0\0WEBPVP8 "))).toBe("image/webp");
+		expect(sniffPhotoType(ascii("GIF89a"))).toBeNull();
+		expect(sniffPhotoType(bytesOf(0xff))).toBeNull();
+	});
+});
 
 describe("写真で登録（08 案 D）", () => {
 	it("画面を出し、この画面だけカメラを許す。登録の画面・一覧から開ける", async () => {
@@ -77,6 +92,9 @@ describe("写真で登録（08 案 D）", () => {
 		const { read } = await setup();
 		expect((await read(PHOTO, "text/plain")).status).toBe(415);
 		expect((await read(PHOTO, "application/pdf")).status).toBe(415);
+		// 申告と中身が違う・中身が写真でない
+		expect((await read(PHOTO, "image/png")).status).toBe(415);
+		expect((await read(new TextEncoder().encode("%PDF-1.7 not a photo"))).status).toBe(415);
 		expect((await read(new Uint8Array(PHOTO_MAX_BYTES + 1))).status).toBe(413);
 		expect((await read(new Uint8Array(0))).status).toBe(400);
 
