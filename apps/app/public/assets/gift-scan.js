@@ -371,6 +371,10 @@
 		return saving;
 	}
 
+	function lockFields(card, locked) {
+		for (const input of card.querySelectorAll("[data-field]")) input.readOnly = locked;
+	}
+
 	function clearErrors(card) {
 		for (const el of card.querySelectorAll('[aria-invalid="true"]')) {
 			el.removeAttribute("aria-invalid");
@@ -386,6 +390,8 @@
 		for (const [, draft] of targets) {
 			draft.state = "saving";
 			draft.card.querySelector("[data-draft-save]").disabled = true;
+			// 送った後に直した内容は保存されないので、登録が終わるまで直せないようにする
+			lockFields(draft.card, true);
 			setStatus(draft.card, "登録しています…");
 		}
 		const rows = targets.map(([key, draft]) => {
@@ -417,6 +423,7 @@
 			failed++;
 			draft.state = "ready";
 			draft.card.querySelector("[data-draft-save]").disabled = false;
+			lockFields(draft.card, false);
 			clearErrors(draft.card);
 			if (result?.status === "invalid") {
 				const statusId = draft.card.querySelector("[data-draft-status]").id;

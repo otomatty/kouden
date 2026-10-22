@@ -97,6 +97,30 @@ test.describe("表で入力（08 案 C、PC だけ）", () => {
 		await expect(page.locator("#entry-summary")).toContainText("2 件・香典 ¥9,000");
 	});
 
+	test("郵便番号から住所が入る前に行を離れても、入った住所を保存し、フォーカスを引き戻さない", async ({
+		page,
+	}) => {
+		// 郵便番号のデータを遅れて返す（行を離れた後に住所が入る）
+		await page.route("**/postal/100.json", async (route) => {
+			await new Promise((resolve) => setTimeout(resolve, 800));
+			await route.fulfill({ json: { "0001": ["東京都", "千代田区", "千代田"] } });
+		});
+		const base = await createKouden(page, "表 郵便番号");
+		await page.goto(`${base}/gifts/sheet`);
+		const box = (name: string) => page.getByRole("textbox", { name, exact: true });
+		await box("氏名（1 行目）").fill("佐藤 一郎");
+		await box("金額（1 行目）").fill("5000");
+		await box("郵便番号（1 行目）").fill("1000001");
+		await page.keyboard.press("Enter");
+		await expect(box("氏名（2 行目）")).toBeFocused();
+		await expect(box("住所（番号 1）")).toHaveValue("東京都千代田区千代田");
+		await expect(box("氏名（2 行目）")).toBeFocused();
+		await expect(page.locator("tbody tr").first()).toContainText("保存しました");
+
+		await page.reload();
+		await expect(box("住所（番号 1）")).toHaveValue("東京都千代田区千代田");
+	});
+
 	test("スマホの幅では表を出さず、1 件ずつの登録へ案内する", async ({ page }) => {
 		const base = await createKouden(page, "表 スマホ");
 		await page.setViewportSize({ width: 390, height: 844 });

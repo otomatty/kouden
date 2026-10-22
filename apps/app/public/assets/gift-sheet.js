@@ -92,6 +92,11 @@
 	}
 	tbody.addEventListener("input", markDirty);
 	tbody.addEventListener("change", markDirty);
+	// 行を離れた後の変更（郵便番号から住所が入った、など）は、すぐに保存する
+	tbody.addEventListener("change", (e) => {
+		const row = e.target instanceof Element ? e.target.closest("tr[data-row]") : null;
+		if (row && !row.contains(document.activeElement)) enqueue([row]);
+	});
 
 	// 行を離れたら保存する（同じ行の中での移動・郵便番号からの住所の入力では保存しない）
 	tbody.addEventListener("focusout", (e) => {

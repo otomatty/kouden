@@ -128,8 +128,14 @@
 		const text = found.join("");
 		address.value = text;
 		address.dataset.filled = text;
-		address.focus();
-		address.setSelectionRange(text.length, text.length);
+		// 入れたことを画面のスクリプトに知らせる（表で入力は、行を離れた後に入った住所も保存する）
+		address.dispatchEvent(new Event("input", { bubbles: true }));
+		address.dispatchEvent(new Event("change", { bubbles: true }));
+		// 待つ間にほかの欄へ移っていたら、フォーカスを引き戻さない
+		if (document.activeElement === input) {
+			address.focus();
+			address.setSelectionRange(text.length, text.length);
+		}
 		const status = document.getElementById("sr-status");
 		if (status)
 			status.textContent = `住所に「${text}」を入れました。続けて番地を入力してください。`;
