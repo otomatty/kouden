@@ -24,8 +24,10 @@ export const Layout: FC<{
 	title?: string;
 	description?: string;
 	user: SessionUser | null;
+	/** ヘッダーの「ログイン」を出さない（ログイン画面では同じ操作が並ぶため） */
+	hideLoginLink?: boolean;
 	children?: Child;
-}> = ({ title, description, user, children }) => (
+}> = ({ title, description, user, hideLoginLink, children }) => (
 	<>
 		{raw("<!DOCTYPE html>")}
 		<html lang="ja">
@@ -54,7 +56,7 @@ export const Layout: FC<{
 				<a href="#main" class={ui.skipLink}>
 					本文へ移動
 				</a>
-				<Header user={user} />
+				<Header user={user} hideLoginLink={hideLoginLink} />
 				<main id="main" tabindex={-1} class="flex-1 py-8 focus:outline-none sm:py-12">
 					{children}
 				</main>
@@ -64,7 +66,10 @@ export const Layout: FC<{
 	</>
 );
 
-const Header: FC<{ user: SessionUser | null }> = ({ user }) => (
+const Header: FC<{ user: SessionUser | null; hideLoginLink?: boolean | undefined }> = ({
+	user,
+	hideLoginLink,
+}) => (
 	<header class="border-b border-line bg-surface">
 		<div class={`${ui.container} flex h-14 items-center justify-between`}>
 			<a href="/" class="text-lg font-semibold tracking-widest text-ink">
@@ -90,9 +95,11 @@ const Header: FC<{ user: SessionUser | null }> = ({ user }) => (
 						<a href="/faq" class="hidden text-muted hover:text-ink sm:inline">
 							よくある質問
 						</a>
-						<a href="/login" class={ui.buttonSecondary}>
-							ログイン
-						</a>
+						{!hideLoginLink && (
+							<a href="/login" class={ui.buttonSecondary}>
+								ログイン
+							</a>
+						)}
 					</>
 				)}
 			</nav>

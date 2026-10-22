@@ -4,6 +4,9 @@ export const ui = {
 	containerWide: "mx-auto w-full max-w-7xl px-4 sm:px-6",
 	buttonPrimary:
 		"inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-5 py-3 text-base font-medium text-surface shadow-sm transition-colors hover:bg-accent/85 disabled:opacity-50",
+	/** Google でログインするボタン。Google のロゴ（GoogleLogo）と「Google でログイン」を入れる */
+	buttonGoogle:
+		"inline-flex w-full items-center justify-center gap-3 rounded-lg border border-google-line bg-google px-5 py-3 text-base font-medium text-google-text transition-colors hover:bg-google/85",
 	buttonSecondary:
 		"inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-2 text-sm font-medium text-ink transition-colors hover:bg-paper disabled:opacity-50",
 	buttonSmall:

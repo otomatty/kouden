@@ -47,6 +47,16 @@ describe("公開ページ", () => {
 		expect(res.headers.get("x-content-type-options")).toBe("nosniff");
 	});
 
+	it("ログイン画面は Google のボタンを出し、ヘッダーの「ログイン」を出さない", async () => {
+		const html = await (await app.request("/login?return_to=%2Fk%2Fnew", {}, env)).text();
+		expect(html).toContain('href="/auth/google/start?return_to=%2Fk%2Fnew"');
+		expect(html).toContain("Google でログイン");
+		expect(html).toContain('href="/faq#legacy-account"');
+		expect(html).not.toContain('href="/login"');
+		const faq = await (await app.request("/faq", {}, env)).text();
+		expect(faq).toContain('id="legacy-account"');
+	});
+
 	it("ログイン画面のエラー表示は既知のコードだけ", async () => {
 		const known = await (await app.request("/login?error=expired", {}, env)).text();
 		expect(known).toContain("有効期限が切れました");

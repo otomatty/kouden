@@ -63,7 +63,7 @@ export function authRoutes(deps: AppDeps) {
 		const error = c.req.query("error");
 		const startUrl = `/auth/google/start?return_to=${encodeURIComponent(returnTo)}`;
 		return c.html(
-			<Layout title="ログイン" user={null}>
+			<Layout title="ログイン" user={null} hideLoginLink>
 				<LoginPage startUrl={startUrl} error={isLoginError(error) ? error : undefined} />
 			</Layout>,
 		);

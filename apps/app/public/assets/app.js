@@ -37,4 +37,18 @@
 			: (target?.id && document.getElementById(target.id)) || document;
 		focusFirstInvalid(root);
 	});
+
+	// URL の # が開閉できる項目（よくある質問の <details>）を指していたら開く
+	function openLinkedDetails() {
+		let id = "";
+		try {
+			id = decodeURIComponent(location.hash.slice(1));
+		} catch {
+			return;
+		}
+		const el = id && document.getElementById(id);
+		if (el instanceof HTMLDetailsElement) el.open = true;
+	}
+	document.addEventListener("DOMContentLoaded", openLinkedDetails);
+	window.addEventListener("hashchange", openLinkedDetails);
 })();
