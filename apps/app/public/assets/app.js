@@ -95,7 +95,8 @@
 	);
 
 	// 郵便番号から住所を入れる（08 案 E）。データは /postal/<先頭 3 桁>.json（scripts/build-postal.ts が作る）。
-	// 同じフォームの [data-postal-code] と [data-address] を組にする。自分で入れた住所は書き換えない
+	// 同じフォーム（表で入力では同じ行 [data-postal-scope]）の [data-postal-code] と [data-address] を組にする。
+	// 自分で入れた住所は書き換えない
 	const postalShards = new Map();
 	function postalShard(prefix) {
 		if (!postalShards.has(prefix)) {
@@ -116,7 +117,9 @@
 		const input = e.target;
 		if (!(input instanceof HTMLInputElement) || !("postalCode" in input.dataset)) return;
 		const code = postalDigits(input.value);
-		const address = input.form?.querySelector("[data-address]");
+		const address = (input.closest("[data-postal-scope]") ?? input.form)?.querySelector(
+			"[data-address]",
+		);
 		if (code.length !== 7 || !(address instanceof HTMLInputElement)) return;
 		const found = (await postalShard(code.slice(0, 3)))[code.slice(3)];
 		// 待っている間に書き換えられていたら入れない

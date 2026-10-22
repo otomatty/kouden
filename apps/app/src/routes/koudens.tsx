@@ -5,7 +5,6 @@ import {
 	contributorShareSchema,
 	eventSchema,
 	type FieldErrors,
-	FREE_GIFT_LIMIT,
 	giftEntrySchema,
 	giftSchema,
 	giftPhotoKey,
@@ -43,7 +42,6 @@ import {
 	type CreatedGiftNotice,
 	createdGiftMessage,
 	EntrySummary,
-	type EntrySummaryData,
 	type GiftEntryProps,
 	GiftEntryPanel,
 	GiftNewPage,
@@ -70,6 +68,7 @@ import {
 	commonFailure,
 	CONFLICT_MESSAGE,
 	type Ctx,
+	entrySummary,
 	errorResponse,
 	formValues,
 	isHtmx,
@@ -83,6 +82,7 @@ import { registerMemberRoutes, setStatusAndNotify } from "./members.tsx";
 import { registerBillingRoutes } from "./billing.tsx";
 import { registerOutputRoutes } from "./output.tsx";
 import { registerReturnRoutes } from "./returns.tsx";
+import { registerSheetRoutes } from "./sheet.tsx";
 
 // ---- 香典帳の作成 -------------------------------------------------------------
 
@@ -160,7 +160,6 @@ type EntryOptions = Omit<GiftEntryProps, "kouden" | "events" | "relationships" |
 /** 登録画面に要るもの（行事・関係・選んだ行事の合計・自分の最近の登録）。行事は指定がなければ先頭 */
 async function entryContext(c: Ctx, requestedEventId: string | undefined) {
 	const caller = c.get("caller");
-	const kouden = c.get("kouden");
 	const [events, relationships, overview, recent] = await Promise.all([
 		ledger(c).listEvents(caller),
 		ledger(c).listRelationships(caller),
@@ -173,22 +172,11 @@ async function entryContext(c: Ctx, requestedEventId: string | undefined) {
 	if (!recent.ok) return { failure: commonFailure(c, recent.error) };
 	const event = events.value.find((e) => e.id === requestedEventId) ?? events.value[0];
 	if (!event) return { failure: errorResponse(c, 404) };
-	const byEvent = overview.value.byEvent.find((e) => e.eventId === event.id);
-	const summary: EntrySummaryData = {
-		eventId: event.id,
-		eventName: event.name,
-		count: byEvent?.count ?? 0,
-		kodenTotal: byEvent?.kodenTotal ?? 0,
-		remaining:
-			kouden.plan === "free"
-				? Math.max(0, FREE_GIFT_LIMIT - overview.value.totals.giftCount)
-				: null,
-	};
 	return {
 		events: events.value,
 		relationships: relationships.value,
 		recent: recent.value,
-		summary,
+		summary: entrySummary(c, overview.value, event),
 	};
 }
 
@@ -376,6 +364,9 @@ k.get("/persons/candidates", async (c) => {
 		</>,
 	);
 });
+
+// 表で入力（08 案 C）。/gifts/:giftId より先に登録する
+registerSheetRoutes(k);
 
 // ---- いただきもの -------------------------------------------------------------
 

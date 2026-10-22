@@ -5,6 +5,8 @@ import {
 	giftSchema,
 	parseYenText,
 	pickGiftEntryFields,
+	SHEET_MAX_ROWS,
+	sheetRequestSchema,
 	koudenSchema,
 	parseGiftFilter,
 	personSchema,
@@ -224,5 +226,28 @@ describe("pickGiftEntryFields", () => {
 			itemName: "生花",
 			quantity: "1",
 		});
+	});
+});
+
+describe("sheetRequestSchema", () => {
+	it("行の値は文字列のまま受け取り、ない列は空にする", () => {
+		const r = sheetRequestSchema.parse({
+			eventId: "ev1",
+			rows: [{ key: "r1", name: "山田", amount: "1万" }],
+		});
+		expect(r.rows[0]).toEqual({
+			key: "r1",
+			name: "山田",
+			nameKana: "",
+			amount: "1万",
+			postalCode: "",
+			address: "",
+			relationshipId: "",
+		});
+	});
+
+	it(`1 回に ${SHEET_MAX_ROWS} 行まで`, () => {
+		const rows = Array.from({ length: SHEET_MAX_ROWS + 1 }, (_, i) => ({ key: `r${i}` }));
+		expect(sheetRequestSchema.safeParse({ eventId: "ev1", rows }).success).toBe(false);
 	});
 });

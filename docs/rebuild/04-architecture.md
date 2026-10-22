@@ -132,7 +132,7 @@ GET /k/:koudenId/gifts
 ### CSRF 対策
 
 - Cookie は `SameSite=Lax`。
-- GET 以外の要求は `Origin` ヘッダーが自ドメインと一致することを必須にする（Hono の `csrf` ミドルウェア）。
+- GET 以外の要求は `Origin` ヘッダーが自ドメインと一致することを必須にする（Hono の `csrf` ミドルウェア。`Sec-Fetch-Site: same-origin` も同じ扱い）。Hono の `csrf` はフォームの形の要求だけを確かめるので、JSON の要求（表で入力の保存）も `middleware/security.ts` で同じ条件で確かめる。
 - htmx の要求も通常のフォーム送信と同じ扱い。トークンの埋め込みは不要。
 
 ### 既知の制約（受け入れ済み）
@@ -277,6 +277,7 @@ htmx 本体と、WebSocket を扱う小さな自前スクリプト（`public/ass
 | `/k/:id` | 香典帳トップ（合計・行事別サマリー・最近の登録） | 両方 |
 | `/k/:id/gifts` | いただきもの一覧（絞り込み・番号での検索。PC は表、スマホはカード） | 両方 |
 | `/k/:id/gifts/new?event=…` | いただきものの登録（登録後は同じ画面に戻り、続けて入力する） | 両方 |
+| `/k/:id/gifts/sheet?event=…` | 表で入力（Excel のように香典を続けて入力・貼り付け。行を離れると保存） | PC |
 | `/k/:id/persons/:pid` | 差出人の詳細（いただきもの・香典返し・履歴） | 両方 |
 | `/k/:id/returns` | 香典返し（一括提案・状況の一覧と絞り込み） | PC |
 | `/k/:id/returns/:rid` | 香典返し 1 件（状況・送付先・品・変更履歴） | 両方 |

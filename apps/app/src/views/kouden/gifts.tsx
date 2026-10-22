@@ -37,9 +37,15 @@ export const GiftsPage: FC<{
 				</p>
 			)}
 			{canRegister(kouden) && (
-				<a href={`${base}/gifts/new`} class={`${ui.buttonPrimary} w-full sm:w-auto`}>
-					いただきものを登録する
-				</a>
+				<div class="flex flex-wrap items-center gap-3">
+					<a href={`${base}/gifts/new`} class={`${ui.buttonPrimary} w-full sm:w-auto`}>
+						いただきものを登録する
+					</a>
+					{/* 表での入力は PC だけ（ADR-P19） */}
+					<a href={`${base}/gifts/sheet`} class={`${ui.buttonSecondary} max-md:hidden`}>
+						表で入力する
+					</a>
+				</div>
 			)}
 			<form method="get" action={`${base}/gifts`} class={`${ui.cardTight} space-y-3`} role="search">
 				<div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">

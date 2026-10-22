@@ -1,10 +1,11 @@
-import { formatYen, PAID_PRICE_JPY } from "@kouden/domain";
+import { FREE_GIFT_LIMIT, formatYen, PAID_PRICE_JPY } from "@kouden/domain";
 import type { Context } from "hono";
 import type { Child } from "hono/jsx";
 import { ledgerFor } from "../ledger/client.ts";
-import type { LedgerError, LedgerResult } from "../ledger/types.ts";
+import type { LedgerError, LedgerEvent, LedgerResult, Overview } from "../ledger/types.ts";
 import type { AppEnv } from "../types.ts";
 import type { FormValues } from "@kouden/ui";
+import type { EntrySummaryData } from "../views/kouden/gift-new.tsx";
 import { type KoudenTab, KoudenShell } from "../views/kouden/shell.tsx";
 import { Layout } from "../views/layout.tsx";
 import { ErrorPage } from "../views/pages/error.tsx";
@@ -123,4 +124,19 @@ export function limitMessage(c: Ctx, limit: number) {
 			と、件数の上限がなくなります。
 		</>
 	);
+}
+
+/** 登録の画面の上に出す、行事の件数と香典の合計（無料版は残りの件数）。08 案 A・C */
+export function entrySummary(c: Ctx, overview: Overview, event: LedgerEvent): EntrySummaryData {
+	const byEvent = overview.byEvent.find((e) => e.eventId === event.id);
+	return {
+		eventId: event.id,
+		eventName: event.name,
+		count: byEvent?.count ?? 0,
+		kodenTotal: byEvent?.kodenTotal ?? 0,
+		remaining:
+			c.get("kouden").plan === "free"
+				? Math.max(0, FREE_GIFT_LIMIT - overview.totals.giftCount)
+				: null,
+	};
 }

@@ -331,6 +331,53 @@ export const giftEntrySchema = z
 export type GiftEntryInput = z.output<typeof giftEntrySchema>;
 export type ContributorRef = GiftEntryInput["person"];
 
+// ---- 表で入力（08 案 C） --------------------------------------------------
+
+/** 表の列（香典の 1 件 = 1 行）。順番は画面の列の順で、貼り付けもこの順に入れる */
+export const SHEET_COLUMNS = [
+	"name",
+	"nameKana",
+	"amount",
+	"postalCode",
+	"address",
+	"relationshipId",
+] as const;
+export type SheetColumn = (typeof SHEET_COLUMNS)[number];
+
+/** 1 回に保存できる行の数（貼り付けた行をまとめて保存する） */
+export const SHEET_MAX_ROWS = 200;
+
+const sheetCell = z.string().max(2000).default("");
+
+/**
+ * 表からの保存の要求。行ごとの値は文字列のまま受け取り、行ごとに giftEntrySchema・personSchema で検証する
+ * （1 行のエラーで、ほかの行の保存を止めない）
+ */
+export const sheetRequestSchema = z.object({
+	eventId: z.string().min(1).max(64),
+	rows: z
+		.array(
+			z.object({
+				/** 画面の行の識別子（応答をどの行に返すか） */
+				key: z.string().min(1).max(64),
+				giftId: z.string().max(64).optional(),
+				giftVersion: z.number().int().optional(),
+				personId: z.string().max(64).optional(),
+				personVersion: z.number().int().optional(),
+				name: sheetCell,
+				nameKana: sheetCell,
+				amount: sheetCell,
+				postalCode: sheetCell,
+				address: sheetCell,
+				relationshipId: sheetCell,
+			}),
+		)
+		.min(1)
+		.max(SHEET_MAX_ROWS),
+});
+export type SheetRequest = z.output<typeof sheetRequestSchema>;
+export type SheetRowInput = SheetRequest["rows"][number];
+
 /** 連名の差出人を追加する（既存の差出人を選ぶか、氏名・団体名で新規作成） */
 export const contributorAddSchema = z
 	.object({
