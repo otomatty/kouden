@@ -229,7 +229,7 @@ CREATE TABLE meta (
   value             TEXT NOT NULL
 );
 
--- 行事（通夜・告別式・四十九日…）。受付番号の採番カウンタを持つ
+-- 行事（通夜・告別式・四十九日…）。番号（香典袋に書く番号）の採番カウンタを持つ
 CREATE TABLE events (
   id                TEXT PRIMARY KEY,
   kind              TEXT NOT NULL CHECK (kind IN ('wake','funeral','memorial_49','memorial_1y','memorial_other','other')),
@@ -420,7 +420,7 @@ CREATE INDEX idx_change_log_entity ON change_log(entity, entity_id);
 
 | 不変条件 | 担保方法 |
 |---|---|
-| 受付番号は行事内で重複しない | `events.next_receipt_no` の読み出しと加算を同じトランザクションで行う + 部分ユニーク索引 |
+| 番号は行事内で重複しない | `events.next_receipt_no` の読み出しと加算を同じトランザクションで行う + 部分ユニーク索引 |
 | 無料プランでは有効ないただきものが 30 件以下 | 作成・復元時に `plan` 引数と件数を検査 |
 | 書き込みごとに変更ログが 1 行以上追加される | 書き込みメソッドの共通ラッパーで強制 |
 | 楽観ロック | `UPDATE ... WHERE id = ? AND version = ?` の更新件数が 0 なら `CONFLICT` を返す |
@@ -485,7 +485,7 @@ DO (1 トランザクション):
   コミット後:
   7. 接続中の WebSocket に {type:'changed', seq, entity:'gift', id} を通知
   8. 要約投影を予約（§7）
-Worker: 登録画面へリダイレクトし、登録した内容（受付番号を含む）を上に表示する
+Worker: 登録画面へリダイレクトし、登録した内容と番号を上に表示する
 ```
 
 ### 香典返しの一括提案

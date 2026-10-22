@@ -70,7 +70,7 @@ export function workbookSheets(data: OutputData): Sheet<never>[] {
 		"いただきもの",
 		[
 			{ header: "行事", width: 12 },
-			{ header: "受付番号", width: 9 },
+			{ header: "番号", width: 9 },
 			{ header: "種別", width: 8 },
 			{ header: "差出人", width: 28 },
 			{ header: "ふりがな", width: 18 },

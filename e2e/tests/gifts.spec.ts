@@ -67,6 +67,34 @@ test.describe("いただきものの登録（E4-1）をキーボードだけで�
 });
 
 test.describe("いただきもの・差出人", () => {
+	test("スマホでは一覧をカードで出し、香典袋の番号で探せる", async ({ page }) => {
+		const base = await createKouden(page, "カード 確認");
+		await page.goto(`${base}/gifts/new`);
+		await registerKoden(page, "松本 一郎", 10000);
+		// 登録後は番号を大きく出す（香典袋に書き写すため）
+		await expect(
+			page.getByText("香典袋にこの番号を書いておくと、あとで照合できます。"),
+		).toBeVisible();
+		await registerKoden(page, "井上 二郎", 5000);
+
+		await page.setViewportSize({ width: 390, height: 844 });
+		await page.goto(`${base}/gifts`);
+		await expect(page.getByRole("table")).toBeHidden();
+		const card = page.getByRole("link", { name: /No\.2.*井上 二郎/ });
+		await expect(card).toBeVisible();
+		await expect(card).toContainText("¥5,000");
+		await expectAccessible(page, "いただきもの（スマホ）");
+
+		await page.getByRole("searchbox").fill("No.1");
+		await page.getByRole("searchbox").press("Enter");
+		await expect(page.getByRole("status").filter({ hasText: "1 件" })).toBeVisible();
+		await expect(page.getByRole("link", { name: /松本 一郎/ })).toBeVisible();
+		await expect(page.getByRole("link", { name: /井上 二郎/ })).toHaveCount(0);
+
+		await page.getByRole("link", { name: /松本 一郎/ }).click();
+		await expect(page).toHaveURL(new RegExp(`${base}/gifts/[0-9a-f-]+$`));
+	});
+
 	test("一覧の検索と、差出人の行の中での編集（フォーカスを失わない）", async ({ page }) => {
 		const base = await createKouden(page, "一覧 確認");
 		await page.goto(`${base}/gifts/new`);

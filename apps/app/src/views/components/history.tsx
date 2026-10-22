@@ -15,7 +15,7 @@ import { ui } from "@kouden/ui";
 
 const FIELD_LABELS: Record<string, string> = {
 	event_id: "行事",
-	receipt_no: "受付番号",
+	receipt_no: "番号",
 	kind: "種別",
 	amount: "金額",
 	item_name: "品名",

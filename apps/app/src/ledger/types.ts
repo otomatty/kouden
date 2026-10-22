@@ -250,7 +250,7 @@ export interface ReturnDetail extends ReturnView {
 /** 印刷用ページと Excel の元データ（E7-2, E7-3） */
 export interface OutputData {
 	events: LedgerEvent[];
-	/** 行事の順 → 受付番号の順 */
+	/** 行事の順 → 番号の順 */
 	gifts: GiftView[];
 	/** ふりがなの順 */
 	persons: PersonView[];

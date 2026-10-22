@@ -16,7 +16,7 @@ export const ui = {
 	link: "text-accent underline underline-offset-4 hover:decoration-2",
 	card: "rounded-xl border border-line bg-surface p-6 shadow-sm",
 	cardTight: "rounded-xl border border-line bg-surface p-4 shadow-sm",
-	/** 目立たせたいカード（招待リンク・受付番号など、いま見てほしいもの） */
+	/** 目立たせたいカード（招待リンク・登録した番号など、いま見てほしいもの） */
 	cardEmphasis: "rounded-xl border-2 border-accent bg-surface p-6",
 	h1: "text-2xl font-semibold tracking-wide sm:text-3xl",
 	h2: "text-xl font-semibold tracking-wide",

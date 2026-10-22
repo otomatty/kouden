@@ -43,7 +43,7 @@ export const GiftsPage: FC<{
 			)}
 			<form method="get" action={`${base}/gifts`} class={`${ui.cardTight} space-y-3`} role="search">
 				<div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
-					<Field label="氏名・カナ・団体・住所" name="q" class="sm:col-span-3 lg:col-span-2">
+					<Field label="番号・氏名・カナ・団体・住所" name="q" class="sm:col-span-3 lg:col-span-2">
 						<Input name="q" values={values} type="search" inputmode="search" />
 					</Field>
 					<Field label="行事" name="event">
@@ -153,70 +153,125 @@ export const GiftResults: FC<{ kouden: KoudenContext; gifts: GiftView[]; filter:
 					</EmptyState>
 				)
 			) : (
-				<div class="overflow-x-auto rounded-xl border border-line bg-surface">
-					<table class={ui.table}>
-						<thead>
-							<tr>
-								<th class={ui.th} scope="col">
-									行事・番号
-								</th>
-								<th class={ui.th} scope="col">
-									差出人
-								</th>
-								<th class={`${ui.th} hidden sm:table-cell`} scope="col">
-									関係
-								</th>
-								<th class={ui.th} scope="col">
-									種別
-								</th>
-								<th class={`${ui.th} text-right`} scope="col">
-									金額
-								</th>
-								<th class={`${ui.th} hidden md:table-cell`} scope="col">
-									品名・備考
-								</th>
-							</tr>
-						</thead>
-						<tbody>
-							{gifts.map((g) => {
-								const primary = g.contributors[0];
-								return (
-									<tr class="hover:bg-paper">
-										<td class={`${ui.td} whitespace-nowrap`}>
-											<span class="text-muted">{g.eventName}</span>{" "}
-											<span class="tabular-nums">{g.receiptNo ?? ""}</span>
-										</td>
-										<td class={ui.td}>
-											<a href={`${base}/gifts/${g.id}`} class="font-medium hover:underline">
-												{primary ? personLabel(primary) : "（差出人なし）"}
-											</a>
-											{g.contributors.length > 1 && (
-												<span class="ml-1 text-muted">ほか {g.contributors.length - 1} 名</span>
-											)}
-											<span
-												data-editing-target={`gift:${g.id}`}
-												class="block text-xs text-danger"
-											></span>
-										</td>
-										<td class={`${ui.td} hidden sm:table-cell`}>
-											{primary?.relationshipName ?? ""}
-										</td>
-										<td class={`${ui.td} whitespace-nowrap`}>{GIFT_KINDS[g.kind]}</td>
-										<td class={`${ui.td} text-right whitespace-nowrap tabular-nums`}>
-											{yen(g.amount)}
-										</td>
-										<td class={`${ui.td} hidden text-muted md:table-cell`}>
-											{[g.itemName, g.quantity !== null ? `×${g.quantity}` : null, g.notes]
-												.filter(Boolean)
-												.join(" ")}
-										</td>
-									</tr>
-								);
-							})}
-						</tbody>
-					</table>
-				</div>
+				<>
+					<GiftCards kouden={kouden} gifts={gifts} />
+					<GiftTable kouden={kouden} gifts={gifts} />
+				</>
 			)}
 		</LiveRegion>
+	);
+};
+
+/** 内容の要約（関係・品名・数量・備考）。カードと表で同じものを出す */
+const giftDetail = (g: GiftView) =>
+	[g.itemName, g.quantity !== null ? `×${g.quantity}` : null, g.notes].filter(Boolean).join(" ");
+
+/**
+ * スマホ（md 未満）の一覧。1 件を 1 枚のカードにし、香典袋と照合する番号を左に大きく出す。
+ * カード全体が詳細へのリンク
+ */
+const GiftCards: FC<{ kouden: KoudenContext; gifts: GiftView[] }> = ({ kouden, gifts }) => (
+	<ul class="space-y-2 md:hidden">
+		{gifts.map((g) => {
+			const primary = g.contributors[0];
+			const detail = giftDetail(g);
+			return (
+				<li>
+					<a
+						href={`/k/${kouden.id}/gifts/${g.id}`}
+						class="flex items-start gap-3 rounded-xl border border-line bg-surface p-3 hover:bg-paper"
+					>
+						<span class="w-14 shrink-0 text-center">
+							<span class="block text-xs text-muted">{g.eventName}</span>
+							<span class="block text-lg leading-tight font-semibold tabular-nums">
+								{g.receiptNo !== null ? `No.${g.receiptNo}` : "—"}
+							</span>
+						</span>
+						<span class="min-w-0 flex-1">
+							<span class="block font-medium break-words">
+								{primary ? personLabel(primary) : "（差出人なし）"}
+								{g.contributors.length > 1 && (
+									<span class="ml-1 text-sm font-normal text-muted">
+										ほか {g.contributors.length - 1} 名
+									</span>
+								)}
+							</span>
+							<span class="block text-sm text-muted">
+								{[GIFT_KINDS[g.kind], primary?.relationshipName].filter(Boolean).join("・")}
+							</span>
+							{detail && <span class="block truncate text-sm text-muted">{detail}</span>}
+							<span data-editing-target={`gift:${g.id}`} class="block text-xs text-danger"></span>
+						</span>
+						<span class="shrink-0 text-right font-medium whitespace-nowrap tabular-nums">
+							{yen(g.amount)}
+						</span>
+					</a>
+				</li>
+			);
+		})}
+	</ul>
+);
+
+/** PC（md 以上）の一覧 */
+const GiftTable: FC<{ kouden: KoudenContext; gifts: GiftView[] }> = ({ kouden, gifts }) => {
+	const base = `/k/${kouden.id}`;
+	return (
+		<div class="hidden overflow-x-auto rounded-xl border border-line bg-surface md:block">
+			<table class={ui.table}>
+				<thead>
+					<tr>
+						<th class={ui.th} scope="col">
+							行事・番号
+						</th>
+						<th class={ui.th} scope="col">
+							差出人
+						</th>
+						<th class={`${ui.th} hidden sm:table-cell`} scope="col">
+							関係
+						</th>
+						<th class={ui.th} scope="col">
+							種別
+						</th>
+						<th class={`${ui.th} text-right`} scope="col">
+							金額
+						</th>
+						<th class={`${ui.th} hidden md:table-cell`} scope="col">
+							品名・備考
+						</th>
+					</tr>
+				</thead>
+				<tbody>
+					{gifts.map((g) => {
+						const primary = g.contributors[0];
+						return (
+							<tr class="hover:bg-paper">
+								<td class={`${ui.td} whitespace-nowrap`}>
+									<span class="text-muted">{g.eventName}</span>{" "}
+									<span class="tabular-nums">{g.receiptNo ?? ""}</span>
+								</td>
+								<td class={ui.td}>
+									<a href={`${base}/gifts/${g.id}`} class="font-medium hover:underline">
+										{primary ? personLabel(primary) : "（差出人なし）"}
+									</a>
+									{g.contributors.length > 1 && (
+										<span class="ml-1 text-muted">ほか {g.contributors.length - 1} 名</span>
+									)}
+									<span
+										data-editing-target={`gift:${g.id}`}
+										class="block text-xs text-danger"
+									></span>
+								</td>
+								<td class={`${ui.td} hidden sm:table-cell`}>{primary?.relationshipName ?? ""}</td>
+								<td class={`${ui.td} whitespace-nowrap`}>{GIFT_KINDS[g.kind]}</td>
+								<td class={`${ui.td} text-right whitespace-nowrap tabular-nums`}>
+									{yen(g.amount)}
+								</td>
+								<td class={`${ui.td} hidden text-muted md:table-cell`}>{giftDetail(g)}</td>
+							</tr>
+						);
+					})}
+				</tbody>
+			</table>
+		</div>
 	);
 };

@@ -137,7 +137,7 @@ export const GiftEditPage: FC<{
 							label="行事"
 							name="eventId"
 							error={errors.eventId}
-							hint="行事を変えると、受付番号は移した先の行事で振り直します"
+							hint="行事を変えると、番号は移した先の行事で振り直します（香典袋の番号も書き直してください）"
 						>
 							<Select
 								name="eventId"
@@ -376,7 +376,7 @@ export const GiftEditPage: FC<{
 					</summary>
 					<form method="post" action={`${giftPath}/delete`} class="mt-3 space-y-2">
 						<Hidden name="version" value={gift.version} />
-						<p>削除すると一覧と合計から外れます。受付番号は再利用されません。</p>
+						<p>削除すると一覧と合計から外れます。番号は再利用されません。</p>
 						<button type="submit" class={ui.buttonDanger}>
 							削除する
 						</button>

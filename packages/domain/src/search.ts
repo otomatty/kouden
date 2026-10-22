@@ -22,6 +22,16 @@ export function buildSearchText(parts: readonly (string | null | undefined)[]): 
 		.join(" ");
 }
 
+/**
+ * 検索語が番号（香典袋に書いた番号）なら、その数を返す。「12」「１２」「No.12」「#12」「12番」を受け付ける（E4-2）
+ */
+export function parseReceiptNo(text: string): number | undefined {
+	const m = /^(?:no\.?|#)?(\d{1,6})番?$/.exec(
+		text.normalize("NFKC").toLowerCase().replace(/\s+/g, ""),
+	);
+	return m?.[1] ? Number(m[1]) : undefined;
+}
+
 /** SQL の LIKE に渡すため、ワイルドカード文字をエスケープする（ESCAPE '\'） */
 export function escapeLike(text: string): string {
 	return text.replace(/[\\%_]/g, (ch) => `\\${ch}`);

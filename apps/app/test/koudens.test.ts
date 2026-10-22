@@ -240,6 +240,48 @@ describe("いただきもの・差出人の編集", () => {
 		expect(ranged).not.toContain("高橋 四郎");
 	});
 
+	it("香典袋に書いた番号（「2」「No.2」）で探せる。住所の数字には当てない", async () => {
+		const { taro, koudenId, eventId } = await withGift();
+		await taro.request(
+			`/k/${koudenId}/gifts`,
+			formPost({ eventId, kind: "koden", name: "伊藤 五郎", amount: "10000" }),
+		);
+		// 1 件目（高橋 四郎）の住所に「2」を入れても、「2」の検索には出ない
+		const persons = await (await taro.request(`/k/${koudenId}/persons`)).text();
+		const takahashi = new RegExp(`/k/${koudenId}/persons/([0-9a-f-]{36})"[^>]*>高橋 四郎`).exec(
+			persons,
+		)?.[1];
+		expect(takahashi).toBeDefined();
+		const saved = await taro.request(
+			`/k/${koudenId}/persons/${takahashi}`,
+			formPost({ version: "1", name: "高橋 四郎", address: "東京都千代田区千代田2-2" }),
+		);
+		expect(saved.status).toBe(303);
+		const byAddress = await (
+			await taro.request(`/k/${koudenId}/gifts?q=${encodeURIComponent("千代田2")}`)
+		).text();
+		expect(byAddress).toContain("高橋 四郎");
+		for (const q of ["2", "No.2", "２番"]) {
+			const html = await (
+				await taro.request(`/k/${koudenId}/gifts?q=${encodeURIComponent(q)}`)
+			).text();
+			expect(html, q).toContain("1 件・香典 ¥10,000");
+			expect(html, q).toContain("伊藤 五郎");
+			expect(html, q).not.toContain("高橋 四郎");
+		}
+	});
+
+	it("一覧はスマホではカード、PC では表で出す（どちらも番号を出す）", async () => {
+		const { taro, koudenId, giftId } = await withGift();
+		const html = await (await taro.request(`/k/${koudenId}/gifts`)).text();
+		const cards = /<ul class="[^"]*md:hidden[^"]*">([\s\S]*?)<\/ul>/.exec(html)?.[1] ?? "";
+		expect(cards).toContain(`href="/k/${koudenId}/gifts/${giftId}"`);
+		expect(cards).toContain("No.1");
+		expect(cards).toContain("高橋 四郎");
+		expect(cards).toContain("¥3,000");
+		expect(html).toMatch(/<div class="hidden [^"]*md:block[^"]*"><table/);
+	});
+
 	it("編集すると保存され、古い version での保存は競合として最新を表示する", async () => {
 		const { taro, koudenId, eventId, giftId } = await withGift();
 		const path = `/k/${koudenId}/gifts/${giftId}`;

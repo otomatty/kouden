@@ -17,6 +17,7 @@ import {
 	type LedgerImportSummary,
 	type LedgerSnapshot,
 	type PersonInput,
+	parseReceiptNo,
 	personLabel,
 	type RelationshipInput,
 	type ReturnInput,
@@ -381,7 +382,12 @@ export class KoudenLedger extends DurableObject<Env> {
 			}
 			if (filter.q) {
 				const key = toSearchKey(filter.q);
-				if (key !== "") {
+				const receiptNo = parseReceiptNo(filter.q);
+				if (receiptNo !== undefined) {
+					// 番号だけの検索語は、香典袋に書いた番号として探す（E4-2。住所の数字には当てない）
+					where.push("g.receipt_no = ?");
+					params.push(receiptNo);
+				} else if (key !== "") {
 					where.push(`(EXISTS (SELECT 1 FROM gift_contributors gc JOIN persons p ON p.id = gc.person_id
                        WHERE gc.gift_id = g.id AND p.search_text LIKE ? ESCAPE '\\')
                      OR g.item_name LIKE ? ESCAPE '\\')`);
@@ -460,7 +466,7 @@ export class KoudenLedger extends DurableObject<Env> {
 
 	// ---- いただきもの -------------------------------------------------------
 
-	/** いただきものの登録（E4-1, E4-2）。受付番号は行事ごとの連番で、同時に登録しても重複しない */
+	/** いただきものの登録（E4-1, E4-2）。番号は行事ごとの連番で、同時に登録しても重複しない */
 	async createGift(caller: Caller, input: GiftEntryInput): Promise<LedgerResult<CreatedGift>> {
 		return this.mutate(caller, "ledger.write", (now) => {
 			const event = this.first<{ id: string; name: string; next_receipt_no: number }>(
@@ -528,7 +534,7 @@ export class KoudenLedger extends DurableObject<Env> {
 			const current = this.lockGift(giftId, version);
 			const next: Row = this.giftRecord(input);
 			if (input.eventId !== current.event_id) {
-				// 行事を移したら、移した先の行事で受付番号を振り直す
+				// 行事を移したら、移した先の行事で番号を振り直す
 				const event = this.first<{ next_receipt_no: number }>(
 					"SELECT next_receipt_no FROM events WHERE id = ? AND deleted_at IS NULL",
 					input.eventId,

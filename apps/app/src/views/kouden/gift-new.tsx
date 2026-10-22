@@ -82,12 +82,28 @@ export const GiftNewPage: FC<GiftNewProps> = ({
 			</div>
 
 			{created && (
-				<p id={CREATED_NOTICE_ID} role="status" class={ui.notice}>
-					{createdGiftMessage(created)}{" "}
-					<a href={`${base}/gifts/${created.giftId}`} class={ui.link}>
-						内容を見る・訂正する
-					</a>
-				</p>
+				<div class={`${ui.noticeEmphasis} flex items-center gap-4`}>
+					{/* 香典袋に書き写す番号を大きく出す。読み上げは下の文で行う */}
+					{created.receiptNo !== null && (
+						<p aria-hidden="true" class="shrink-0 text-center">
+							<span class="block text-xs text-muted">{created.eventName}</span>
+							<span class="block text-4xl leading-tight font-bold tabular-nums">
+								{created.receiptNo}
+							</span>
+						</p>
+					)}
+					<div class="space-y-1">
+						<p id={CREATED_NOTICE_ID} role="status">
+							{createdGiftMessage(created)}
+						</p>
+						<p class="text-xs text-muted">
+							{created.receiptNo !== null && "香典袋にこの番号を書いておくと、あとで照合できます。"}{" "}
+							<a href={`${base}/gifts/${created.giftId}`} class={ui.link}>
+								内容を見る・訂正する
+							</a>
+						</p>
+					</div>
+				</div>
 			)}
 
 			<form method="post" action={`${base}/gifts`} class={`${ui.cardTight} space-y-4`} novalidate>

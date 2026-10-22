@@ -35,7 +35,7 @@ describe("KoudenLedger", () => {
 		expect(unwrap(await ledger.listEvents(caller))).toHaveLength(2);
 	});
 
-	it("受付番号は行事ごとに 1 から連番で、同時に登録しても重複しない", async () => {
+	it("番号は行事ごとに 1 から連番で、同時に登録しても重複しない", async () => {
 		const { caller, ledger } = setup({ plan: "paid" });
 		const [wake, funeral] = unwrap(await ledger.listEvents(caller));
 		const results = await Promise.all(
@@ -189,7 +189,7 @@ describe("KoudenLedger", () => {
 		});
 	});
 
-	it("行事を移すと、移した先で受付番号を振り直す", async () => {
+	it("行事を移すと、移した先で番号を振り直す", async () => {
 		const { caller, ledger } = setup();
 		const [wake, funeral] = unwrap(await ledger.listEvents(caller));
 		await ledger.createGift(caller, entry(funeral!.id, { amount: "1", name: "a" }));
