@@ -67,8 +67,17 @@ test("写真で登録（08 案 D）: 撮った写真を裏で読み取り、下�
 	await cards.nth(2).getByRole("button", { name: "捨てる" }).click();
 	await expect(cards).toHaveCount(2);
 
-	// まとめて登録すると、写真を消して番号を大きく出す（香典袋に書き写す）
+	// まとめて登録すると、写真を消して番号を大きく出す（香典袋に書き写す）。
+	// 登録の応答を待つ間は、下書きを直したり捨てたりできない
+	const { promise: held, resolve: release } = Promise.withResolvers<void>();
+	await page.route("**/gifts/sheet", async (route) => {
+		await held;
+		await route.continue();
+	});
 	await page.getByRole("button", { name: "まとめて登録する" }).click();
+	await expect(cards.nth(0).getByRole("button", { name: "捨てる" })).toBeDisabled();
+	await expect(cards.nth(0).getByLabel("氏名")).toHaveAttribute("readonly", "");
+	release();
 	await expect(cards.nth(0)).toContainText("No.1");
 	await expect(cards.nth(1)).toContainText("No.2");
 	await expect(page.getByRole("img", { name: /撮った写真/ })).toHaveCount(0);

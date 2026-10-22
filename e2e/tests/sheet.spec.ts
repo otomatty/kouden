@@ -87,7 +87,8 @@ test.describe("表で入力（08 案 C、PC だけ）", () => {
 		await page.goto(`${base}/gifts/sheet`);
 		const box = (name: string) => page.getByRole("textbox", { name, exact: true });
 		await box("住所（番号 1）").fill("東京都千代田区千代田1-1");
-		await page.keyboard.press("Enter");
+		// 2 行目の住所の欄に移る（1 行目を保存する）。フォーカスがあるだけの欄も新しい住所にする
+		await box("住所（番号 2）").click();
 		await expect(page.locator("tbody tr").first()).toContainText("保存しました");
 		await expect(box("住所（番号 2）")).toHaveValue("東京都千代田区千代田1-1");
 
@@ -95,6 +96,9 @@ test.describe("表で入力（08 案 C、PC だけ）", () => {
 		await page.keyboard.press("Enter");
 		await expect(page.locator("tbody tr").nth(1)).toContainText("保存しました");
 		await expect(page.locator("#entry-summary")).toContainText("2 件・香典 ¥9,000");
+		// 2 行目の保存で、古い住所に戻していない
+		await page.reload();
+		await expect(box("住所（番号 1）")).toHaveValue("東京都千代田区千代田1-1");
 	});
 
 	test("郵便番号から住所が入る前に行を離れても、入った住所を保存し、フォーカスを引き戻さない", async ({

@@ -230,7 +230,8 @@
 
 	/**
 	 * 同じ差出人の行（同じ人の香典が何件かある）に、保存した差出人の内容と version を入れる。
-	 * 古い version のまま残すと、ほかの列を直したときに競合になる。まだ送っていない変更のある欄・入力中の欄は書き換えない
+	 * 古い version のまま残すと、ほかの列を直したときに競合になる。まだ送っていない変更のある欄だけは書き換えない
+	 * （フォーカスがあるだけの欄も書き換える。古い値のまま残ると、その行を保存したときに古い値で上書きしてしまう）
 	 */
 	function syncPerson(source, result) {
 		for (const row of editableRows()) {
@@ -238,7 +239,7 @@
 			row.dataset.personVersion = String(result.personVersion);
 			for (const col of PERSON_COLUMNS) {
 				const el = cellOf(row, col);
-				if (!el || el.dataset.changed || el === document.activeElement) continue;
+				if (!el || el.dataset.changed) continue;
 				const value = col === "relationshipId" ? cellOf(source, col)?.value : result.values?.[col];
 				if (value !== undefined) el.value = value;
 			}

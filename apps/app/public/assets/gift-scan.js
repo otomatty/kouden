@@ -343,6 +343,7 @@
 		const key = card.dataset.key;
 		if (button.matches("[data-draft-save]")) void save([key]);
 		else if (button.matches("[data-draft-discard]")) {
+			if (drafts.get(key)?.state === "saving") return;
 			const next = card.nextElementSibling ?? card.previousElementSibling;
 			discard(key);
 			announce("下書きを捨てました。");
@@ -371,8 +372,11 @@
 		return saving;
 	}
 
+	/** 登録中は直せない・捨てられないようにする（送った後の変更は保存されず、捨てても登録されてしまう） */
 	function lockFields(card, locked) {
 		for (const input of card.querySelectorAll("[data-field]")) input.readOnly = locked;
+		const discardButton = card.querySelector("[data-draft-discard]");
+		if (discardButton) discardButton.disabled = locked;
 	}
 
 	function clearErrors(card) {
@@ -390,7 +394,6 @@
 		for (const [, draft] of targets) {
 			draft.state = "saving";
 			draft.card.querySelector("[data-draft-save]").disabled = true;
-			// 送った後に直した内容は保存されないので、登録が終わるまで直せないようにする
 			lockFields(draft.card, true);
 			setStatus(draft.card, "登録しています…");
 		}
