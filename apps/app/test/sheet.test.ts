@@ -213,6 +213,19 @@ describe("表で入力（08 案 C）", () => {
 		expect(await (await taro.request(`/k/${koudenId}/gifts`)).text()).toContain(
 			"1 件・香典 ¥1,000",
 		);
+
+		// 応答を待つ間に行を直してから送り直したら、作った記録に今の内容を重ねる（記録は 1 件のまま）
+		const [edited] = await rowsOf(await save([{ ...row, amount: "2000", address: "東京都" }]));
+		expect(edited).toMatchObject({
+			status: "saved",
+			giftId: first?.giftId,
+			giftVersion: 2,
+			personVersion: 2,
+			values: { amount: "2,000", address: "東京都" },
+		});
+		expect(await (await taro.request(`/k/${koudenId}/gifts`)).text()).toContain(
+			"1 件・香典 ¥2,000",
+		);
 	});
 
 	it("非表示にした関係は、その関係の差出人の行にだけ選択肢として残り、金額を直しても消えない", async () => {

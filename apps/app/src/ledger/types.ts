@@ -136,6 +136,8 @@ export interface CreatedGift {
 	eventName: string;
 	personId: string;
 	personLabel: string;
+	/** 同じ requestId の 2 回目以降（作らずに、最初に作った記録を返した） */
+	replayed?: boolean;
 }
 
 /** WebSocket の接続要求で、Worker が確認済みの呼び出し元を DO に渡すヘッダー（JSON を URL エンコード） */

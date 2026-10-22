@@ -118,6 +118,17 @@ async function createRow(c: Ctx, eventId: string, row: SheetRowInput): Promise<S
 		}
 		return { key: row.key, status: "error", message: "保存できませんでした" };
 	}
+	if (result.value.replayed) {
+		// 送り直し。最初の応答が届かない間に行を直していたら、作った記録（version 1）に今の内容を重ねる
+		// （version 1 のまま確かめるので、その後に他の人が直していれば競合になる）
+		return updateRow(c, {
+			...row,
+			giftId: result.value.giftId,
+			giftVersion: 1,
+			personId: result.value.personId,
+			personVersion: 1,
+		});
+	}
 	const person = parsed.data.person.type === "new" ? parsed.data.person.input : undefined;
 	return {
 		key: row.key,

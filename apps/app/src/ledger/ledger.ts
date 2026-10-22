@@ -522,7 +522,7 @@ export class KoudenLedger extends DurableObject<Env> {
 		const prior = requestKey
 			? this.ctx.storage.kv.get<{ at: string; result: CreatedGift }>(requestKey)
 			: undefined;
-		if (prior) return { ok: true, value: prior.result };
+		if (prior) return { ok: true, value: { ...prior.result, replayed: true } };
 		return this.mutate(caller, "ledger.write", (now) => {
 			const event = this.first<{ id: string; name: string; next_receipt_no: number }>(
 				"SELECT id, name, next_receipt_no FROM events WHERE id = ? AND deleted_at IS NULL",

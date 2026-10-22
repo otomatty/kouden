@@ -229,7 +229,7 @@ describe("KoudenLedger", () => {
 		const input = entry(funeral!.id, { amount: "5000", name: "佐藤" });
 		const first = unwrap(await ledger.createGift(caller, input, "req-1"));
 		const again = unwrap(await ledger.createGift(caller, input, "req-1"));
-		expect(again).toEqual(first);
+		expect(again).toEqual({ ...first, replayed: true });
 		expect(unwrap(await ledger.listGifts(caller, {}))).toHaveLength(1);
 		// 別の人の同じ値は別の要求
 		const other = unwrap(await ledger.createGift({ ...caller, userId: "user-2" }, input, "req-1"));
