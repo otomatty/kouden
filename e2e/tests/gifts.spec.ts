@@ -101,6 +101,27 @@ test.describe("かんたん登録（08 案 A）", () => {
 	});
 });
 
+test("郵便番号の 7 桁で住所に町域まで入り、住所の欄に移る（08 案 E）", async ({ page }) => {
+	// 郵便番号のデータはデプロイ時に作るので、テストでは 1 件だけの見本を返す
+	await page.route("**/postal/100.json", (route) =>
+		route.fulfill({ json: { "0001": ["東京都", "千代田区", "千代田"] } }),
+	);
+	const base = await createKouden(page, "郵便番号 確認");
+	await page.goto(`${base}/gifts/new`);
+	const address = page.getByLabel("住所", { exact: true });
+	await page.getByLabel("郵便番号").fill("１００－０００１");
+	await expect(address).toHaveValue("東京都千代田区千代田");
+	await expect(address).toBeFocused();
+	await expect(page.locator("#sr-status")).toHaveText(
+		"住所に「東京都千代田区千代田」を入れました。続けて番地を入力してください。",
+	);
+	// 番地を足した住所は、郵便番号を入れ直しても書き換えない
+	await address.press("End");
+	await page.keyboard.type("1-1");
+	await page.getByLabel("郵便番号").fill("1000001");
+	await expect(address).toHaveValue("東京都千代田区千代田1-1");
+});
+
 test.describe("いただきもの・差出人", () => {
 	test("スマホでは一覧をカードで出し、香典袋の番号で探せる", async ({ page }) => {
 		const base = await createKouden(page, "カード 確認");

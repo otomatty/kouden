@@ -94,6 +94,44 @@
 		true,
 	);
 
+	// 郵便番号から住所を入れる（08 案 E）。データは /postal/<先頭 3 桁>.json（scripts/build-postal.ts が作る）。
+	// 同じフォームの [data-postal-code] と [data-address] を組にする。自分で入れた住所は書き換えない
+	const postalShards = new Map();
+	function postalShard(prefix) {
+		if (!postalShards.has(prefix)) {
+			const shard = fetch(`/postal/${prefix}.json`)
+				.then((res) => (res.ok ? res.json() : {}))
+				.catch(() => {
+					postalShards.delete(prefix);
+					return {};
+				});
+			postalShards.set(prefix, shard);
+		}
+		return postalShards.get(prefix);
+	}
+	function postalDigits(value) {
+		return value.normalize("NFKC").replace(/\D/g, "");
+	}
+	document.addEventListener("input", async (e) => {
+		const input = e.target;
+		if (!(input instanceof HTMLInputElement) || !("postalCode" in input.dataset)) return;
+		const code = postalDigits(input.value);
+		const address = input.form?.querySelector("[data-address]");
+		if (code.length !== 7 || !(address instanceof HTMLInputElement)) return;
+		const found = (await postalShard(code.slice(0, 3)))[code.slice(3)];
+		// 待っている間に書き換えられていたら入れない
+		if (!found || postalDigits(input.value) !== code) return;
+		if (address.value !== "" && address.value !== address.dataset.filled) return;
+		const text = found.join("");
+		address.value = text;
+		address.dataset.filled = text;
+		address.focus();
+		address.setSelectionRange(text.length, text.length);
+		const status = document.getElementById("sr-status");
+		if (status)
+			status.textContent = `住所に「${text}」を入れました。続けて番地を入力してください。`;
+	});
+
 	function enhance(root) {
 		syncAmountChips(root);
 		restoreDetails(root);

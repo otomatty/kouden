@@ -13,6 +13,8 @@ apps/*/public/assets/app.css
 # ライブラリからコピーするファイル（scripts/copy-vendor.ts）
 apps/*/public/assets/htmx.min.js
 apps/*/public/assets/admin.css
+# 郵便番号から住所を入れるデータ（apps/app/scripts/build-postal.ts が作る）
+apps/app/public/postal/
 # E2E（e2e/）の保存先と結果
 e2e/.state/
 e2e/test-results/

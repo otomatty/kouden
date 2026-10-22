@@ -60,6 +60,11 @@ jobs:
         working-directory: apps/app
         run: bun run db:migrate -- --mode "$MODE" --allow-missing
 
+      # 郵便番号から住所を入れるデータ（docs/rebuild/08 案 E）。日本郵便の最新のデータから、デプロイのたびに作る
+      - name: Build postal code data
+        working-directory: apps/app
+        run: bun run postal -- --download
+
       # シークレットはシェルに直接展開せず、環境変数経由で書き出す
       - name: Write secrets file
         working-directory: apps/app

@@ -328,7 +328,12 @@ export const GiftEntryPanel: FC<GiftEntryProps> = ({
 						</span>
 					</legend>
 					<div class="grid gap-2 sm:grid-cols-[10rem_1fr]">
-						<Field label="郵便番号" name="postalCode" error={errors.postalCode}>
+						<Field
+							label="郵便番号"
+							name="postalCode"
+							error={errors.postalCode}
+							hint="7 桁で町域まで入り、住所の欄に移ります"
+						>
 							<Input
 								name="postalCode"
 								values={values}

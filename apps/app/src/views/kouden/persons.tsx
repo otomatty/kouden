@@ -39,6 +39,9 @@ function personConflictFields(relationships: LedgerRelationship[]): ConflictFiel
 	];
 }
 
+/** 郵便番号から住所を入れること（app.js）を、入力の前に知らせる（フォーカスが移るため） */
+const POSTAL_HINT = "7 桁で町域まで住所に入り、住所の欄に移ります";
+
 export function personFormValues(p: PersonView): FormValues {
 	return {
 		name: p.name ?? undefined,
@@ -253,10 +256,26 @@ export const PersonEditRow: FC<{
 	const field = (
 		name: string,
 		label: string,
-		extra: { inputmode?: "numeric" | "tel"; autofocus?: boolean } = {},
+		{
+			data,
+			hint,
+			...extra
+		}: {
+			inputmode?: "numeric" | "tel";
+			autofocus?: boolean;
+			data?: Record<string, string>;
+			hint?: string;
+		} = {},
 	) => (
-		<Field label={label} name={name} idPrefix={prefix} error={errors[name]}>
-			<Input name={name} idPrefix={prefix} values={values} errors={errors} {...extra} />
+		<Field label={label} name={name} idPrefix={prefix} error={errors[name]} hint={hint}>
+			<Input
+				name={name}
+				idPrefix={prefix}
+				values={values}
+				errors={errors}
+				extra={data}
+				{...extra}
+			/>
 		</Field>
 	);
 	return (
@@ -305,9 +324,15 @@ export const PersonEditRow: FC<{
 								options={relationshipOptions(relationships, values.relationshipId)}
 							/>
 						</Field>
-						{field("postalCode", "郵便番号", { inputmode: "numeric" })}
+						{field("postalCode", "郵便番号", {
+							inputmode: "numeric",
+							data: { "data-postal-code": "" },
+							hint: POSTAL_HINT,
+						})}
 						{field("phone", "電話番号", { inputmode: "tel" })}
-						<div class="sm:col-span-4">{field("address", "住所")}</div>
+						<div class="sm:col-span-4">
+							{field("address", "住所", { data: { "data-address": "" } })}
+						</div>
 					</div>
 					<div class="flex flex-wrap gap-2">
 						{/* Enter での送信は先頭の送信ボタンになる → 次の人へ進む */}
@@ -375,10 +400,27 @@ export const PersonPage: FC<{
 	const text = (
 		name: string,
 		label: string,
-		opts: { inputmode?: "numeric" | "tel"; span?: boolean } = {},
+		opts: {
+			inputmode?: "numeric" | "tel";
+			span?: boolean;
+			data?: Record<string, string>;
+			hint?: string;
+		} = {},
 	) => (
-		<Field label={label} name={name} error={errors[name]} class={opts.span ? "sm:col-span-2" : ""}>
-			<Input name={name} values={values} errors={errors} inputmode={opts.inputmode} />
+		<Field
+			label={label}
+			name={name}
+			error={errors[name]}
+			hint={opts.hint}
+			class={opts.span ? "sm:col-span-2" : ""}
+		>
+			<Input
+				name={name}
+				values={values}
+				errors={errors}
+				inputmode={opts.inputmode}
+				extra={opts.data}
+			/>
 		</Field>
 	);
 	return (
@@ -432,8 +474,12 @@ export const PersonPage: FC<{
 							/>
 						</Field>
 						{text("phone", "電話番号", { inputmode: "tel" })}
-						{text("postalCode", "郵便番号", { inputmode: "numeric" })}
-						{text("address", "住所", { span: true })}
+						{text("postalCode", "郵便番号", {
+							inputmode: "numeric",
+							data: { "data-postal-code": "" },
+							hint: POSTAL_HINT,
+						})}
+						{text("address", "住所", { span: true, data: { "data-address": "" } })}
 						<Field label="備考" name="notes" error={errors.notes} class="sm:col-span-2">
 							<Textarea name="notes" values={values} errors={errors} rows={2} />
 						</Field>
