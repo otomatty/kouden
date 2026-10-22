@@ -3,7 +3,7 @@ import type { FC } from "hono/jsx";
 import { returnItemImageUrl } from "../../kouden/files.ts";
 import type { KoudenContext } from "../../kouden/store.ts";
 import type { Caller, ReturnItemView, ReturnRuleView } from "../../ledger/types.ts";
-import { Field, Hidden, Input, Select, Textarea, ui } from "@kouden/ui";
+import { EmptyState, Field, Hidden, Input, Select, Textarea, ui } from "@kouden/ui";
 import { MoveButtons } from "./settings.tsx";
 import { LiveRegion } from "./shell.tsx";
 
@@ -64,7 +64,17 @@ export const ReturnItemsSection: FC<{
 					一括提案で選ばれる品です。無効にした品は提案・明細の選択肢に出ません。画像は
 					JPEG・PNG・WebP（5 MB まで）です。
 				</p>
-				{items.length === 0 && <p class="text-sm text-muted">まだ品がありません。</p>}
+				{items.length === 0 && (
+					<EmptyState
+						compact
+						title="まだ品がありません"
+						description={
+							canEdit
+								? "下の「品を追加」から、お返しに使う品を登録してください。"
+								: "オーナー・編集者が登録すると、ここに並びます。"
+						}
+					/>
+				)}
 				<ul class="space-y-4">
 					{items.map((item, i) => {
 						const image = returnItemImageUrl(kouden.id, item.imageKey);
@@ -241,7 +251,13 @@ export const ReturnRulesSection: FC<{
 				<p class="text-sm text-muted">
 					いただいた額の帯ごとに、返礼の目安（半返しなど）と推奨品を決めます。当てはまるルールがなければ半返しで、目安額に近い品を提案します。帯が重なる場合は下限の高い方を使います。
 				</p>
-				{rules.length === 0 && <p class="text-sm text-muted">まだルールがありません。</p>}
+				{rules.length === 0 && (
+					<EmptyState
+						compact
+						title="まだルールがありません"
+						description="ルールがないあいだは、半返しで目安額に近い品を提案します。"
+					/>
+				)}
 				<ul class="space-y-3">
 					{rules.map((r) =>
 						canEdit ? (

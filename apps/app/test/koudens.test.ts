@@ -356,8 +356,30 @@ describe("いただきもの・差出人の編集", () => {
 		);
 		expect(res.headers.get("location")).toBe(`/k/${koudenId}/gifts?notice=deleted`);
 		expect(await (await taro.request(`/k/${koudenId}/gifts`)).text()).toContain(
-			"まだ登録がありません",
+			"まだいただきものがありません",
 		);
+	});
+
+	it("一覧が空のときは、何がないかと次の操作を出す（閲覧者には受付への案内を出さない）", async () => {
+		const { taro, koudenId } = await setup();
+		const gifts = await (await taro.request(`/k/${koudenId}/gifts`)).text();
+		expect(gifts).toContain("まだいただきものがありません");
+		expect(gifts).toContain(`href="/k/${koudenId}/reception"`);
+		const filtered = await (await taro.request(`/k/${koudenId}/gifts?q=該当なし`)).text();
+		expect(filtered).toContain("条件に合ういただきものはありません");
+		expect(filtered).toContain("条件をクリア");
+
+		const persons = await (await taro.request(`/k/${koudenId}/persons`)).text();
+		expect(persons).toContain("まだ差出人がいません");
+		const searched = await (await taro.request(`/k/${koudenId}/persons?q=佐々木`)).text();
+		expect(searched).toContain("「佐々木」に一致する差出人はいません");
+
+		const hanako = makeApp(HANAKO);
+		await hanako.login();
+		await addMember(koudenId, HANAKO.email, "viewer");
+		const viewerGifts = await (await hanako.request(`/k/${koudenId}/gifts`)).text();
+		expect(viewerGifts).toContain("まだいただきものがありません");
+		expect(viewerGifts).not.toContain("受付を始める");
 	});
 
 	it("差出人一覧の行で編集し、「保存して次へ」で次の行が編集状態で返る", async () => {

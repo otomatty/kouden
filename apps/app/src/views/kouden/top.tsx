@@ -3,7 +3,7 @@ import type { FC } from "hono/jsx";
 import type { KoudenContext } from "../../kouden/store.ts";
 import type { Caller, Overview } from "../../ledger/types.ts";
 import { formatDate, formatDateTime, yen } from "../format.ts";
-import { ui } from "@kouden/ui";
+import { EmptyState, ui } from "@kouden/ui";
 import { LiveRegion } from "./shell.tsx";
 
 /** 香典帳トップ: 合計・行事別・種別別・関係別・最近の登録（E7-1）。他の人の変更で取り直す（E8-1） */
@@ -94,7 +94,11 @@ export const KoudenTopPage: FC<{ kouden: KoudenContext; caller: Caller; overview
 					</a>
 				</div>
 				{overview.recent.length === 0 ? (
-					<p class="text-sm text-muted">まだ登録がありません。</p>
+					<EmptyState
+						compact
+						title="まだ登録がありません"
+						description="受付やいただきものの画面で登録すると、ここに新しい順に並びます。"
+					/>
 				) : (
 					<ul class="divide-y divide-line rounded-xl border border-line bg-surface">
 						{overview.recent.map((g) => (

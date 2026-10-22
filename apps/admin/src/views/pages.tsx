@@ -1,5 +1,5 @@
 import { formatYen, ROLES } from "@kouden/domain";
-import { Field, FormAlert, Input, ui } from "@kouden/ui";
+import { EmptyState, Field, FormAlert, Input, ui } from "@kouden/ui";
 import type { Child, FC } from "hono/jsx";
 import type {
 	AuditLog,
@@ -98,6 +98,12 @@ export const SearchPage: FC<{ q: string; users: UserRow[]; koudens: KoudenRow[] 
 				検索
 			</button>
 		</form>
+		{!q && (
+			<EmptyState
+				title="検索する言葉を入れてください"
+				description="ユーザーはメールアドレス・表示名・ID、香典帳は名前・ID の一部で探せます。"
+			/>
+		)}
 		{q && (
 			<>
 				<section aria-labelledby="users" class="space-y-2">
@@ -119,7 +125,7 @@ export const SearchPage: FC<{ q: string; users: UserRow[]; koudens: KoudenRow[] 
 
 const UsersTable: FC<{ users: UserRow[] }> = ({ users }) =>
 	users.length === 0 ? (
-		<p class="text-sm text-muted">該当なし</p>
+		<EmptyState compact title="該当するユーザーはいません" />
 	) : (
 		<Table head={["表示名", "メールアドレス", "参加", "登録", "状態"]}>
 			{users.map((u) => (
@@ -151,7 +157,7 @@ const UserState: FC<{ user: UserRow }> = ({ user }) =>
 
 const KoudensTable: FC<{ koudens: KoudenRow[] }> = ({ koudens }) =>
 	koudens.length === 0 ? (
-		<p class="text-sm text-muted">該当なし</p>
+		<EmptyState compact title="該当する香典帳はありません" />
 	) : (
 		<Table head={["香典帳", "オーナー", "料金", "状態", "いただきもの", "最終更新"]}>
 			{koudens.map((k) => (
@@ -215,7 +221,7 @@ export const UserPage: FC<{ user: UserDetail }> = ({ user }) => (
 				参加している香典帳
 			</h2>
 			{user.memberships.length === 0 ? (
-				<p class="text-sm text-muted">なし</p>
+				<EmptyState compact title="参加している香典帳はありません" />
 			) : (
 				<Table head={["香典帳", "ロール", "料金", "状態"]}>
 					{user.memberships.map((m) => (
@@ -332,7 +338,7 @@ const PurchasesTable: FC<{
 	revocable?: boolean;
 }> = ({ purchases, showKouden, revocable }) =>
 	purchases.length === 0 ? (
-		<p class="text-sm text-muted">なし</p>
+		<EmptyState compact title="購入はありません" />
 	) : (
 		<Table
 			head={[
@@ -427,7 +433,18 @@ export const LegacyListPage: FC<{ q: string; unlinkedOnly: boolean; rows: Legacy
 			</button>
 		</form>
 		{rows.length === 0 ? (
-			<p class="text-sm text-muted">該当なし</p>
+			<EmptyState
+				title={
+					unlinkedOnly ? "紐づけを待っている旧ユーザーはいません" : "該当する旧ユーザーはいません"
+				}
+				description={
+					q
+						? "検索の言葉を変えるか、「紐づけ済みも表示」を選んでください。"
+						: unlinkedOnly
+							? "旧サービスの利用者は、すべて新しいアカウントに紐づいています。"
+							: undefined
+				}
+			/>
 		) : (
 			<Table head={["旧サービスのメールアドレス", "名前", "ログイン方法", "香典帳", "状態"]}>
 				{rows.map((r) => (
@@ -489,10 +506,11 @@ export const LinkPage: FC<{
 		</form>
 		{email &&
 			(candidates.length === 0 ? (
-				<p class="text-sm text-muted">
-					このメールアドレスで Google
-					ログインしたアカウントはありません。本人に一度ログインしてもらってください。
-				</p>
+				<EmptyState
+					compact
+					title="このメールアドレスで Google ログインしたアカウントはありません"
+					description="本人に一度ログインしてもらってから、もう一度探してください。"
+				/>
 			) : (
 				<ul class="space-y-3">
 					{candidates.map((u) => (
@@ -522,7 +540,10 @@ export const LinkPage: FC<{
 
 export const AuditPage: FC<{ logs: AuditLog[] }> = ({ logs }) =>
 	logs.length === 0 ? (
-		<p class="text-sm text-muted">まだ記録はありません。</p>
+		<EmptyState
+			title="まだ記録はありません"
+			description="有料にする・購入を取り消す・旧アカウントに紐づけるといった運営者の操作が、ここに残ります。"
+		/>
 	) : (
 		<Table head={["日時", "運営者", "操作", "対象", "内容"]}>
 			{logs.map((l) => (

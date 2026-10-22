@@ -28,7 +28,7 @@ test("招待で参加したメンバーの画面に、他の人の登録が読�
 		await editor.getByRole("button", { name: "参加する" }).click();
 		await editor.waitForURL((url) => url.pathname === `${base}/reception`);
 		await editor.goto(`${base}/gifts`);
-		await expect(editor.getByText("まだ登録がありません。")).toBeVisible();
+		await expect(editor.getByText("まだいただきものがありません")).toBeVisible();
 
 		// オーナーが受付で登録すると、編集者の一覧に現れる。閲覧中のメンバーも互いに見える
 		await owner.goto(`${base}/reception`);

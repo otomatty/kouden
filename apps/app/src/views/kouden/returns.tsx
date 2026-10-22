@@ -15,7 +15,7 @@ import type {
 	ReturnsBoard,
 	ReturnView,
 } from "../../ledger/types.ts";
-import { Hidden, ui } from "@kouden/ui";
+import { EmptyState, Hidden, ui } from "@kouden/ui";
 import { formatDate, yen } from "../format.ts";
 import { LiveRegion } from "./shell.tsx";
 
@@ -299,7 +299,19 @@ const StatusList: FC<{
 				</ul>
 			</nav>
 			{rows.length === 0 ? (
-				<p class="text-sm text-muted">該当する差出人はいません。</p>
+				board.rows.length === 0 ? (
+					<EmptyState
+						compact
+						title="香典返しの対象の方はまだいません"
+						description="いただきものを登録すると、差出人ごとに香典返しの状況をここで管理できます。"
+					/>
+				) : (
+					<EmptyState
+						compact
+						title="該当する差出人はいません"
+						description="ほかの状況を選ぶと表示されます。"
+					/>
+				)
 			) : (
 				<div class="overflow-x-auto">
 					<table class={ui.table}>
