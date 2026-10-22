@@ -24,7 +24,8 @@ jobs:
       # cf は Node.js 22 以上で動く
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
+          check-latest: true
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -59,7 +60,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
+          check-latest: true
 
       - uses: oven-sh/setup-bun@v2
         with:
