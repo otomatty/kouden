@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { formPost, makeApp, TARO } from "./helpers.ts";
 
-/** ログインして香典帳を 1 冊作り、その ID と、受付で使う行事の ID を返す */
+/** ログインして香典帳を 1 冊作り、その ID と、登録で使う行事の ID を返す */
 async function setup() {
 	const taro = makeApp(TARO);
 	await taro.login();
 	const created = await taro.request("/k", formPost({ deceasedName: "山田 一郎", title: "" }));
 	const koudenId = created.headers.get("location")?.split("/").pop() ?? "";
-	const reception = await (await taro.request(`/k/${koudenId}/reception`)).text();
-	const eventId = /name="eventId" value="([^"]+)"/.exec(reception)?.[1] ?? "";
+	const form = await (await taro.request(`/k/${koudenId}/gifts/new`)).text();
+	const eventId = /name="eventId"[^>]*><option value="([^"]+)"/.exec(form)?.[1] ?? "";
 	return { taro, koudenId, eventId };
 }
 
@@ -21,26 +21,30 @@ const srStatusOob = (html: string) =>
 describe("読み上げとフォーカス（02 非機能要件: アクセシビリティ）", () => {
 	it("香典帳の画面には、最初から空の読み上げ領域がある", async () => {
 		const { taro, koudenId } = await setup();
-		const html = await (await taro.request(`/k/${koudenId}/reception`)).text();
+		const html = await (await taro.request(`/k/${koudenId}/gifts/new`)).text();
 		expect(html).toContain('<p id="sr-status" role="status" class="sr-only"></p>');
 	});
 
-	it("受付で登録すると、受付番号と差出人を読み上げ領域に入れる", async () => {
+	it("登録して戻った画面では、氏名の欄に移ったところで登録結果を読み上げる", async () => {
 		const { taro, koudenId, eventId } = await setup();
 		const res = await taro.request(
-			`/k/${koudenId}/reception`,
-			formPost({ eventId, kind: "koden", name: "佐藤 一郎", amount: "10000" }, { htmx: true }),
+			`/k/${koudenId}/gifts`,
+			formPost({ eventId, kind: "koden", name: "佐藤 一郎", amount: "10000" }),
 		);
-		expect(res.status).toBe(200);
-		expect(srStatusOob(await res.text())).toBe(
-			"登録しました。通夜 の受付番号 1、佐藤 一郎 様、香典 ¥10,000。",
+		expect(res.status).toBe(303);
+		const html = await (await taro.request(res.headers.get("location") ?? "")).text();
+		expect(html).toMatch(
+			/<p id="created-gift" role="status"[^>]*>登録しました。通夜 No\.1、佐藤 一郎 様、香典 ¥10,000。/,
+		);
+		expect(html).toMatch(
+			/<input[^>]*name="name"[^>]*autofocus[^>]*aria-describedby="created-gift"/,
 		);
 	});
 
 	it("差出人の候補の件数を読み上げ領域に入れ、検索語がなければ空にする", async () => {
 		const { taro, koudenId, eventId } = await setup();
 		await taro.request(
-			`/k/${koudenId}/reception`,
+			`/k/${koudenId}/gifts`,
 			formPost({ eventId, kind: "koden", name: "佐藤 一郎", amount: "10000" }),
 		);
 		const found = await (
@@ -57,12 +61,12 @@ describe("読み上げとフォーカス（02 非機能要件: アクセシビ�
 
 	it("入力エラーがあるときは autofocus を付けない（最初のエラーの欄へ app.js が移す）", async () => {
 		const { taro, koudenId, eventId } = await setup();
-		const ok = await (await taro.request(`/k/${koudenId}/reception`)).text();
+		const ok = await (await taro.request(`/k/${koudenId}/gifts/new`)).text();
 		expect(ok).toMatch(/<input[^>]*name="name"[^>]*autofocus/);
 
 		const res = await taro.request(
-			`/k/${koudenId}/reception`,
-			formPost({ eventId, kind: "koden", name: "佐藤 一郎", amount: "" }, { htmx: true }),
+			`/k/${koudenId}/gifts`,
+			formPost({ eventId, kind: "koden", name: "佐藤 一郎", amount: "" }),
 		);
 		expect(res.status).toBe(422);
 		const html = await res.text();
@@ -73,7 +77,7 @@ describe("読み上げとフォーカス（02 非機能要件: アクセシビ�
 	it("差出人の行の編集を閉じると、その行の「編集」にフォーカスを戻す", async () => {
 		const { taro, koudenId, eventId } = await setup();
 		await taro.request(
-			`/k/${koudenId}/reception`,
+			`/k/${koudenId}/gifts`,
 			formPost({ eventId, kind: "koden", name: "佐藤 一郎", amount: "10000" }),
 		);
 		const list = await (await taro.request(`/k/${koudenId}/persons`)).text();

@@ -210,10 +210,10 @@ export const giftSchema = z.object(giftFields).superRefine(refineGift);
 export type GiftInput = z.output<typeof giftSchema>;
 
 /**
- * 受付での登録。いただきものと差出人を一度に入力する。
+ * いただきものの登録。いただきものと差出人を一度に入力する。
  * 既存の差出人を選んだ場合（personId あり）は、差出人の入力欄は使わない（E5-1）。
  */
-export const receptionSchema = z
+export const giftEntrySchema = z
 	.object({ ...giftFields, personId: optionalId, ...personFields })
 	.superRefine((v, ctx) => {
 		refineGift(v, ctx);
@@ -241,8 +241,8 @@ export const receptionSchema = z
 					: ({ type: "existing", personId } as const),
 		}),
 	);
-export type ReceptionInput = z.output<typeof receptionSchema>;
-export type ContributorRef = ReceptionInput["person"];
+export type GiftEntryInput = z.output<typeof giftEntrySchema>;
+export type ContributorRef = GiftEntryInput["person"];
 
 /** 連名の差出人を追加する（既存の差出人を選ぶか、氏名・団体名で新規作成） */
 export const contributorAddSchema = z

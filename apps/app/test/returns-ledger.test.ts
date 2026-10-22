@@ -1,6 +1,6 @@
 import {
 	eventSchema,
-	receptionSchema,
+	giftEntrySchema,
 	returnItemSchema,
 	returnRuleSchema,
 	returnSchema,
@@ -41,9 +41,9 @@ async function withGifts() {
 	const [wake] = unwrap(await ctx.ledger.listEvents(ctx.caller));
 	const give = async (name: string, amount: string) =>
 		unwrap(
-			await ctx.ledger.createAtReception(
+			await ctx.ledger.createGift(
 				ctx.caller,
-				receptionSchema.parse({ eventId: wake!.id, kind: "koden", name, amount }),
+				giftEntrySchema.parse({ eventId: wake!.id, kind: "koden", name, amount }),
 			),
 		).personId;
 	const taro = await give("山田 太郎", "10000");

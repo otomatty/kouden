@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
 	eventSchema,
+	giftEntrySchema,
 	giftSchema,
 	koudenSchema,
 	parseGiftFilter,
 	personSchema,
-	receptionSchema,
 	returnItemSchema,
 	returnLineSchema,
 	returnRuleSchema,
@@ -17,11 +17,11 @@ function errorsOf(result: { success: boolean; error?: unknown }) {
 	return toFieldErrors(result.error as Parameters<typeof toFieldErrors>[0]);
 }
 
-describe("receptionSchema", () => {
+describe("giftEntrySchema", () => {
 	const base = { eventId: "ev1", kind: "koden" };
 
 	it("全角数字・カンマ・円の付いた金額を数値にする", () => {
-		const r = receptionSchema.parse({ ...base, amount: "１０，０００円", name: " 山田 太郎 " });
+		const r = giftEntrySchema.parse({ ...base, amount: "１０，０００円", name: " 山田 太郎 " });
 		expect(r.gift.amount).toBe(10000);
 		expect(r.person).toEqual({
 			type: "new",
@@ -30,37 +30,37 @@ describe("receptionSchema", () => {
 	});
 
 	it("香典は金額が必須", () => {
-		const r = receptionSchema.safeParse({ ...base, amount: "", name: "山田" });
+		const r = giftEntrySchema.safeParse({ ...base, amount: "", name: "山田" });
 		expect(errorsOf(r)).toEqual({ amount: "香典の金額を入力してください" });
 	});
 
 	it("供花は金額なしで登録できる", () => {
-		const r = receptionSchema.safeParse({ ...base, kind: "kyoka", organization: "ABC 商事" });
+		const r = giftEntrySchema.safeParse({ ...base, kind: "kyoka", organization: "ABC 商事" });
 		expect(r.success).toBe(true);
 	});
 
 	it("弔電には金額を入れられない", () => {
-		const r = receptionSchema.safeParse({ ...base, kind: "choden", amount: "1000", name: "山田" });
+		const r = giftEntrySchema.safeParse({ ...base, kind: "choden", amount: "1000", name: "山田" });
 		expect(errorsOf(r).amount).toBe("弔電には金額を入力できません");
 	});
 
 	it("氏名も団体名もなく、既存の差出人も選んでいなければエラー", () => {
-		const r = receptionSchema.safeParse({ ...base, amount: "5000", name: "  " });
+		const r = giftEntrySchema.safeParse({ ...base, amount: "5000", name: "  " });
 		expect(errorsOf(r).name).toBe("氏名か団体名のどちらかを入力してください");
 	});
 
 	it("既存の差出人を選んだ場合は氏名がなくてもよい", () => {
-		const r = receptionSchema.parse({ ...base, amount: "5000", personId: "p1" });
+		const r = giftEntrySchema.parse({ ...base, amount: "5000", personId: "p1" });
 		expect(r.person).toEqual({ type: "existing", personId: "p1" });
 	});
 
 	it("数字でない金額はエラー", () => {
-		const r = receptionSchema.safeParse({ ...base, amount: "五千", name: "山田" });
+		const r = giftEntrySchema.safeParse({ ...base, amount: "五千", name: "山田" });
 		expect(errorsOf(r).amount).toBe("金額は数字で入力してください");
 	});
 
 	it("種別が不正ならエラー", () => {
-		const r = receptionSchema.safeParse({ ...base, kind: "cash", amount: "1", name: "山田" });
+		const r = giftEntrySchema.safeParse({ ...base, kind: "cash", amount: "1", name: "山田" });
 		expect(errorsOf(r).kind).toBe("種別を選んでください");
 	});
 });

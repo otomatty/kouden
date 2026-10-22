@@ -16,7 +16,7 @@ export interface NewInvite {
 }
 
 const INVITE_ROLE_HELP = {
-	editor: "受付・記録の入力や編集ができます",
+	editor: "記録の入力や編集ができます",
 	viewer: "閲覧のみできます",
 } as const;
 

@@ -129,7 +129,7 @@ export interface Overview {
 	recent: GiftView[];
 }
 
-export interface ReceptionResult {
+export interface CreatedGift {
 	giftId: string;
 	receiptNo: number;
 	eventId: string;

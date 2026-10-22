@@ -1,4 +1,4 @@
-import { FREE_GIFT_LIMIT, type GiftInput, receptionSchema, uuidv7 } from "@kouden/domain";
+import { FREE_GIFT_LIMIT, giftEntrySchema, type GiftInput, uuidv7 } from "@kouden/domain";
 import { env, runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 import { ledgerFor } from "../src/ledger/client.ts";
@@ -21,8 +21,8 @@ function unwrap<T>(result: LedgerResult<T>): T {
 	return result.value;
 }
 
-const reception = (eventId: string, fields: Record<string, string>) =>
-	receptionSchema.parse({ eventId, kind: "koden", ...fields });
+const entry = (eventId: string, fields: Record<string, string>) =>
+	giftEntrySchema.parse({ eventId, kind: "koden", ...fields });
 
 describe("KoudenLedger", () => {
 	it("初回の呼び出しで既定の行事と関係を用意する", async () => {
@@ -40,20 +40,14 @@ describe("KoudenLedger", () => {
 		const [wake, funeral] = unwrap(await ledger.listEvents(caller));
 		const results = await Promise.all(
 			Array.from({ length: 10 }, (_, i) =>
-				ledger.createAtReception(
-					caller,
-					reception(wake!.id, { amount: "5000", name: `参列者${i}` }),
-				),
+				ledger.createGift(caller, entry(wake!.id, { amount: "5000", name: `参列者${i}` })),
 			),
 		);
 		const numbers = results.map((r) => unwrap(r).receiptNo).toSorted((a, b) => a - b);
 		expect(numbers).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 
 		const other = unwrap(
-			await ledger.createAtReception(
-				caller,
-				reception(funeral!.id, { amount: "3000", name: "別の人" }),
-			),
+			await ledger.createGift(caller, entry(funeral!.id, { amount: "3000", name: "別の人" })),
 		);
 		expect(other.receiptNo).toBe(1);
 	});
@@ -63,9 +57,9 @@ describe("KoudenLedger", () => {
 		const [wake] = unwrap(await ledger.listEvents(caller));
 		const rels = unwrap(await ledger.listRelationships(caller));
 		const created = unwrap(
-			await ledger.createAtReception(
+			await ledger.createGift(
 				caller,
-				reception(wake!.id, {
+				entry(wake!.id, {
 					amount: "10000",
 					name: "山田 太郎",
 					nameKana: "ヤマダ タロウ",
@@ -104,19 +98,16 @@ describe("KoudenLedger", () => {
 		const { caller, ledger } = setup();
 		const [wake, funeral] = unwrap(await ledger.listEvents(caller));
 		const first = unwrap(
-			await ledger.createAtReception(
-				caller,
-				reception(wake!.id, { amount: "5000", name: "佐藤 一郎" }),
-			),
+			await ledger.createGift(caller, entry(wake!.id, { amount: "5000", name: "佐藤 一郎" })),
 		);
 		const candidates = unwrap(await ledger.listPersons(caller, { q: "さとう", limit: 5 }));
 		expect(candidates).toEqual([]);
 		const byName = unwrap(await ledger.listPersons(caller, { q: "佐藤", limit: 5 }));
 		expect(byName.map((p) => p.id)).toEqual([first.personId]);
 
-		await ledger.createAtReception(
+		await ledger.createGift(
 			caller,
-			receptionSchema.parse({ eventId: funeral!.id, kind: "kyoka", personId: first.personId }),
+			giftEntrySchema.parse({ eventId: funeral!.id, kind: "kyoka", personId: first.personId }),
 		);
 		const person = unwrap(await ledger.getPerson(caller, first.personId));
 		expect(person.giftCount).toBe(2);
@@ -127,9 +118,9 @@ describe("KoudenLedger", () => {
 	it("カナの表記ゆれ（ひらがな・半角）でも検索できる", async () => {
 		const { caller, ledger } = setup();
 		const [wake] = unwrap(await ledger.listEvents(caller));
-		await ledger.createAtReception(
+		await ledger.createGift(
 			caller,
-			reception(wake!.id, { amount: "5000", name: "鈴木 次郎", nameKana: "スズキ ジロウ" }),
+			entry(wake!.id, { amount: "5000", name: "鈴木 次郎", nameKana: "スズキ ジロウ" }),
 		);
 		for (const q of ["すずき", "ｽｽﾞｷ", "スズキジロウ", "鈴木"]) {
 			expect(unwrap(await ledger.listPersons(caller, { q }))).toHaveLength(1);
@@ -143,10 +134,7 @@ describe("KoudenLedger", () => {
 		const [wake] = unwrap(await ledger.listEvents(caller));
 		for (let i = 0; i < 101; i++) {
 			unwrap(
-				await ledger.createAtReception(
-					caller,
-					reception(wake!.id, { amount: "1000", name: `差出人${i}` }),
-				),
+				await ledger.createGift(caller, entry(wake!.id, { amount: "1000", name: `差出人${i}` })),
 			);
 		}
 		const gifts = unwrap(await ledger.listGifts(caller, {}));
@@ -158,10 +146,7 @@ describe("KoudenLedger", () => {
 		const { caller, ledger } = setup();
 		const [wake] = unwrap(await ledger.listEvents(caller));
 		const viewer = { ...caller, userId: "user-2", role: "viewer" as const };
-		const res = await ledger.createAtReception(
-			viewer,
-			reception(wake!.id, { amount: "1", name: "x" }),
-		);
+		const res = await ledger.createGift(viewer, entry(wake!.id, { amount: "1", name: "x" }));
 		expect(res).toEqual({ ok: false, error: { code: "forbidden" } });
 		expect(unwrap(await ledger.listGifts(viewer, {}))).toEqual([]);
 	});
@@ -170,22 +155,14 @@ describe("KoudenLedger", () => {
 		const { caller, ledger } = setup();
 		const [wake] = unwrap(await ledger.listEvents(caller));
 		for (let i = 0; i < FREE_GIFT_LIMIT; i++) {
-			unwrap(
-				await ledger.createAtReception(
-					caller,
-					reception(wake!.id, { amount: "1000", name: `p${i}` }),
-				),
-			);
+			unwrap(await ledger.createGift(caller, entry(wake!.id, { amount: "1000", name: `p${i}` })));
 		}
-		const over = await ledger.createAtReception(
-			caller,
-			reception(wake!.id, { amount: "1000", name: "x" }),
-		);
+		const over = await ledger.createGift(caller, entry(wake!.id, { amount: "1000", name: "x" }));
 		expect(over).toEqual({ ok: false, error: { code: "limit_reached", limit: FREE_GIFT_LIMIT } });
 		// 有料なら登録できる
-		const paid = await ledger.createAtReception(
+		const paid = await ledger.createGift(
 			{ ...caller, plan: "paid" },
-			reception(wake!.id, { amount: "1000", name: "x" }),
+			entry(wake!.id, { amount: "1000", name: "x" }),
 		);
 		expect(paid.ok).toBe(true);
 	});
@@ -194,7 +171,7 @@ describe("KoudenLedger", () => {
 		const { caller, ledger } = setup();
 		const [wake] = unwrap(await ledger.listEvents(caller));
 		const { giftId } = unwrap(
-			await ledger.createAtReception(caller, reception(wake!.id, { amount: "5000", name: "x" })),
+			await ledger.createGift(caller, entry(wake!.id, { amount: "5000", name: "x" })),
 		);
 		const input: GiftInput = { eventId: wake!.id, kind: "koden", amount: 10000 } as GiftInput;
 		expect(unwrap(await ledger.updateGift(caller, giftId, 1, input))).toEqual({ version: 2 });
@@ -215,9 +192,9 @@ describe("KoudenLedger", () => {
 	it("行事を移すと、移した先で受付番号を振り直す", async () => {
 		const { caller, ledger } = setup();
 		const [wake, funeral] = unwrap(await ledger.listEvents(caller));
-		await ledger.createAtReception(caller, reception(funeral!.id, { amount: "1", name: "a" }));
+		await ledger.createGift(caller, entry(funeral!.id, { amount: "1", name: "a" }));
 		const { giftId } = unwrap(
-			await ledger.createAtReception(caller, reception(wake!.id, { amount: "1", name: "b" })),
+			await ledger.createGift(caller, entry(wake!.id, { amount: "1", name: "b" })),
 		);
 		await ledger.updateGift(caller, giftId, 1, {
 			eventId: funeral!.id,
@@ -234,7 +211,7 @@ describe("KoudenLedger", () => {
 		const { caller, ledger } = setup();
 		const [wake] = unwrap(await ledger.listEvents(caller));
 		const { giftId, personId: a } = unwrap(
-			await ledger.createAtReception(caller, reception(wake!.id, { amount: "10000", name: "A" })),
+			await ledger.createGift(caller, entry(wake!.id, { amount: "10000", name: "A" })),
 		);
 		let v = unwrap(
 			await ledger.addContributor(caller, giftId, 1, {
@@ -280,15 +257,15 @@ describe("KoudenLedger", () => {
 		const [wake] = unwrap(await ledger.listEvents(caller));
 		const [family, friend] = unwrap(await ledger.listRelationships(caller));
 		const { giftId } = unwrap(
-			await ledger.createAtReception(
+			await ledger.createGift(
 				caller,
-				reception(wake!.id, { amount: "10000", name: "A", relationshipId: family!.id }),
+				entry(wake!.id, { amount: "10000", name: "A", relationshipId: family!.id }),
 			),
 		);
 		const b = unwrap(
-			await ledger.createAtReception(
+			await ledger.createGift(
 				caller,
-				reception(wake!.id, { amount: "1000", name: "B", relationshipId: friend!.id }),
+				entry(wake!.id, { amount: "1000", name: "B", relationshipId: friend!.id }),
 			),
 		);
 		unwrap(
@@ -307,7 +284,7 @@ describe("KoudenLedger", () => {
 		const { caller, ledger } = setup();
 		const [wake] = unwrap(await ledger.listEvents(caller));
 		const { giftId, personId } = unwrap(
-			await ledger.createAtReception(caller, reception(wake!.id, { amount: "1000", name: "A" })),
+			await ledger.createGift(caller, entry(wake!.id, { amount: "1000", name: "A" })),
 		);
 		const before = unwrap(await ledger.getGift(caller, giftId)).updatedAt;
 		await new Promise((r) => setTimeout(r, 5));
@@ -325,7 +302,7 @@ describe("KoudenLedger", () => {
 		const { caller, ledger } = setup();
 		const [wake] = unwrap(await ledger.listEvents(caller));
 		const { giftId, personId } = unwrap(
-			await ledger.createAtReception(caller, reception(wake!.id, { amount: "10000", name: "A" })),
+			await ledger.createGift(caller, entry(wake!.id, { amount: "10000", name: "A" })),
 		);
 		const over = await ledger.addContributor(caller, giftId, 1, {
 			person: { type: "new", input: { name: "B", organization: undefined } },
@@ -351,7 +328,7 @@ describe("KoudenLedger", () => {
 	it("行事: 記録があるものと最後の 1 つは削除できない。並べ替えできる", async () => {
 		const { caller, ledger } = setup();
 		const [wake, funeral] = unwrap(await ledger.listEvents(caller));
-		await ledger.createAtReception(caller, reception(wake!.id, { amount: "1", name: "a" }));
+		await ledger.createGift(caller, entry(wake!.id, { amount: "1", name: "a" }));
 		expect(await ledger.deleteEvent(caller, wake!.id)).toMatchObject({
 			ok: false,
 			error: { message: "記録がある行事は削除できません" },
@@ -373,16 +350,16 @@ describe("KoudenLedger", () => {
 		const { caller, ledger } = setup();
 		const [wake] = unwrap(await ledger.listEvents(caller));
 		const [family] = unwrap(await ledger.listRelationships(caller));
-		await ledger.createAtReception(
+		await ledger.createGift(
 			caller,
-			reception(wake!.id, { amount: "1", name: "a", relationshipId: family!.id }),
+			entry(wake!.id, { amount: "1", name: "a", relationshipId: family!.id }),
 		);
 		expect((await ledger.deleteRelationship(caller, family!.id)).ok).toBe(false);
 		unwrap(await ledger.setRelationshipHidden(caller, family!.id, true));
 		// 非表示の関係は新しく選べない
-		const res = await ledger.createAtReception(
+		const res = await ledger.createGift(
 			caller,
-			reception(wake!.id, { amount: "1", name: "b", relationshipId: family!.id }),
+			entry(wake!.id, { amount: "1", name: "b", relationshipId: family!.id }),
 		);
 		expect(res).toMatchObject({ ok: false, error: { field: "relationshipId" } });
 
@@ -402,10 +379,10 @@ describe("KoudenLedger", () => {
 			).bind(caller.koudenId),
 		]);
 		const [wake] = unwrap(await ledger.listEvents(caller));
-		await ledger.createAtReception(caller, reception(wake!.id, { amount: "3000", name: "a" }));
-		await ledger.createAtReception(
+		await ledger.createGift(caller, entry(wake!.id, { amount: "3000", name: "a" }));
+		await ledger.createGift(
 			caller,
-			receptionSchema.parse({ eventId: wake!.id, kind: "kyoka", name: "b" }),
+			giftEntrySchema.parse({ eventId: wake!.id, kind: "kyoka", name: "b" }),
 		);
 		expect(await runDurableObjectAlarm(ledger)).toBe(true);
 		const stats = await env.DB.prepare("SELECT * FROM kouden_stats WHERE kouden_id = ?")
@@ -417,7 +394,7 @@ describe("KoudenLedger", () => {
 	it("deleteAll で中身をすべて消し、遅れて届いた要求でも台帳を作り直さない", async () => {
 		const { caller, ledger } = setup();
 		const [wake] = unwrap(await ledger.listEvents(caller));
-		await ledger.createAtReception(caller, reception(wake!.id, { amount: "1", name: "a" }));
+		await ledger.createGift(caller, entry(wake!.id, { amount: "1", name: "a" }));
 		await ledger.deleteAll();
 		const tables = () =>
 			runInDurableObject(ledger, (_obj, state) =>
@@ -430,10 +407,7 @@ describe("KoudenLedger", () => {
 		expect(await tables()).toEqual([]);
 
 		// 削除の直前に権限確認を通った要求が、削除後に届いた場合
-		const late = await ledger.createAtReception(
-			caller,
-			reception(wake!.id, { amount: "1", name: "b" }),
-		);
+		const late = await ledger.createGift(caller, entry(wake!.id, { amount: "1", name: "b" }));
 		expect(late).toEqual({ ok: false, error: { code: "not_found" } });
 		expect(await ledger.listEvents(caller)).toEqual({ ok: false, error: { code: "not_found" } });
 		expect(await tables()).toEqual([]);

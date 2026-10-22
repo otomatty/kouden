@@ -471,7 +471,7 @@ await stub.createGift(caller, input);
 
 ## 6. 主要な処理の流れ
 
-### いただきものの登録（受付）
+### いただきものの登録
 
 ```
 Worker: セッション確認 → D1 で role/plan 取得 → stub.createGift(caller, input)
@@ -485,7 +485,7 @@ DO (1 トランザクション):
   コミット後:
   7. 接続中の WebSocket に {type:'changed', seq, entity:'gift', id} を通知
   8. 要約投影を予約（§7）
-Worker: 受付番号入りの完了 HTML を返す
+Worker: 登録画面へリダイレクトし、登録した内容（受付番号を含む）を上に表示する
 ```
 
 ### 香典返しの一括提案

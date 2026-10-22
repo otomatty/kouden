@@ -14,7 +14,7 @@ test.beforeEach(async ({ context }) => {
 
 test("カタログの登録・一括提案の確定（E6）と、印刷・Excel の出力（E7）", async ({ page }) => {
 	const base = await createKouden(page, "返礼 確認");
-	await page.goto(`${base}/reception`);
+	await page.goto(`${base}/gifts/new`);
 	await registerKoden(page, "小林 七郎", 10000);
 	await registerKoden(page, "加藤 八郎", 5000);
 

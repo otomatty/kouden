@@ -49,7 +49,7 @@ async function join(claims: typeof HANAKO, invitePath: string) {
 }
 
 describe("招待リンク", () => {
-	it("ログイン前は香典帳名とログインボタン、参加すると受付画面へ", async () => {
+	it("ログイン前は香典帳名とログインボタン、参加すると香典帳のトップへ", async () => {
 		const { koudenId, invite } = await setup();
 		const path = await invite();
 
@@ -60,7 +60,7 @@ describe("招待リンク", () => {
 
 		const { client, res } = await join(HANAKO, path);
 		expect(res.status).toBe(303);
-		expect(res.headers.get("location")).toBe(`/k/${koudenId}/reception`);
+		expect(res.headers.get("location")).toBe(`/k/${koudenId}`);
 		expect(await role(koudenId, HANAKO.email)).toBe("editor");
 		// もう一度開くとそのまま香典帳へ
 		const again = await client.request(path);
@@ -188,7 +188,7 @@ describe("ロール変更・除外・退出", () => {
 		const hanakoId = await userId(HANAKO.email);
 		await taro.request(`/k/${koudenId}/members/${hanakoId}/role`, formPost({ role: "viewer" }));
 		expect(await role(koudenId, HANAKO.email)).toBe("viewer");
-		expect((await client.request(`/k/${koudenId}/reception`)).status).toBe(403);
+		expect((await client.request(`/k/${koudenId}/gifts/new`)).status).toBe(403);
 
 		await taro.request(`/k/${koudenId}/members/${hanakoId}/remove`, formPost({}));
 		expect(await role(koudenId, HANAKO.email)).toBeNull();

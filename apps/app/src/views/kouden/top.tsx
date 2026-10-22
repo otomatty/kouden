@@ -45,8 +45,8 @@ export const KoudenTopPage: FC<{ kouden: KoudenContext; caller: Caller; overview
 					</p>
 				)}
 				{can(caller.role, "ledger.write") && (
-					<a href={`${base}/reception`} class={`${ui.buttonPrimary} w-full sm:w-auto`}>
-						受付を始める
+					<a href={`${base}/gifts/new`} class={`${ui.buttonPrimary} w-full sm:w-auto`}>
+						いただきものを登録する
 					</a>
 				)}
 			</section>
@@ -97,7 +97,7 @@ export const KoudenTopPage: FC<{ kouden: KoudenContext; caller: Caller; overview
 					<EmptyState
 						compact
 						title="まだ登録がありません"
-						description="受付やいただきものの画面で登録すると、ここに新しい順に並びます。"
+						description="いただきものを登録すると、ここに新しい順に並びます。"
 					/>
 				) : (
 					<ul class="divide-y divide-line rounded-xl border border-line bg-surface">

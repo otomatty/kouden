@@ -6,14 +6,15 @@ test.beforeEach(async ({ context }) => {
 	await loginAs(context, USERS.ledger);
 });
 
-test.describe("受付（E4-1）をキーボードだけで操作する", () => {
+test.describe("いただきものの登録（E4-1）をキーボードだけで操作する", () => {
 	test("登録・入力エラー・既存の差出人の選択", async ({ page }) => {
-		const base = await createKouden(page, "受付 確認");
-		await page.goto(`${base}/reception`);
+		const base = await createKouden(page, "登録 確認");
+		await page.goto(`${base}/gifts/new`);
 		await expectAccessible(page);
 
 		const name = page.getByLabel("氏名");
 		const amount = page.getByLabel("金額");
+		const created = page.locator("#created-gift");
 		const status = page.locator("#sr-status");
 
 		// 開くと氏名の欄にフォーカスがある。氏名 → Tab → 金額 → Enter で登録できる
@@ -24,11 +25,12 @@ test.describe("受付（E4-1）をキーボードだけで操作する", () => {
 		await page.keyboard.type("10000");
 		await page.keyboard.press("Enter");
 
-		// 結果は画面に大きく出し、読み上げ領域でも知らせる。次の入力のため氏名の欄に戻る
-		await expect(page.getByText("佐藤 一郎 様", { exact: true })).toBeVisible();
-		await expect(status).toHaveText(/^登録しました。通夜 の受付番号 1、佐藤 一郎 様、香典 /);
+		// 同じ画面に戻り、登録した内容を上に出す。次の入力のため氏名の欄に戻り、その説明として読み上げる
+		await expect(created).toHaveText(/^登録しました。通夜 No\.1、佐藤 一郎 様、香典 /);
 		await expect(name).toBeFocused();
 		await expect(name).toHaveValue("");
+		await expect(name).toHaveAccessibleDescription(/^登録しました。通夜 No\.1、佐藤 一郎 様/);
+		await expectAccessible(page, "いただきものの登録（登録後）");
 
 		// 香典で金額がないとエラー。最初のエラーの欄（金額）にフォーカスが移る
 		await page.keyboard.type("鈴木 花子");
@@ -36,17 +38,17 @@ test.describe("受付（E4-1）をキーボードだけで操作する", () => {
 		await expect(page.getByRole("alert")).toContainText("入力内容を確認してください");
 		await expect(amount).toBeFocused();
 		await expect(amount).toHaveAttribute("aria-invalid", "true");
-		await expectAccessible(page, "受付（入力エラー）");
+		await expectAccessible(page, "いただきものの登録（入力エラー）");
 		await page.keyboard.type("5000");
 		await page.keyboard.press("Enter");
-		await expect(status).toContainText("受付番号 2、鈴木 花子 様");
+		await expect(created).toContainText("No.2、鈴木 花子 様");
 
 		// 同じ名前を入れると候補が出て、件数が読み上げられる。矢印キーで既存の差出人を選べる
 		await expect(name).toBeFocused();
 		await page.keyboard.type("佐藤");
 		await expect(page.getByRole("group", { name: "同じ人が登録されていませんか？" })).toBeVisible();
 		await expect(status).toHaveText("同じ人の候補が 1 件あります。");
-		await expectAccessible(page, "受付（候補）");
+		await expectAccessible(page, "いただきものの登録（候補）");
 		await page.keyboard.press("Tab");
 		await expect(page.getByLabel("新しい差出人として登録する")).toBeFocused();
 		await page.keyboard.press("ArrowDown");
@@ -55,7 +57,7 @@ test.describe("受付（E4-1）をキーボードだけで操作する", () => {
 		await expect(amount).toBeFocused();
 		await page.keyboard.type("3000");
 		await page.keyboard.press("Enter");
-		await expect(status).toContainText("受付番号 3、佐藤 一郎 様");
+		await expect(created).toContainText("No.3、佐藤 一郎 様");
 
 		// 差出人は 2 人のまま（佐藤 一郎 は 2 件）
 		await page.goto(`${base}/persons`);
@@ -67,7 +69,7 @@ test.describe("受付（E4-1）をキーボードだけで操作する", () => {
 test.describe("いただきもの・差出人", () => {
 	test("一覧の検索と、差出人の行の中での編集（フォーカスを失わない）", async ({ page }) => {
 		const base = await createKouden(page, "一覧 確認");
-		await page.goto(`${base}/reception`);
+		await page.goto(`${base}/gifts/new`);
 		await registerKoden(page, "高橋 次郎", 30000);
 		await registerKoden(page, "伊藤 三郎", 5000);
 
@@ -104,9 +106,11 @@ test.describe("いただきもの・差出人", () => {
 });
 
 test.describe("通信が遅いとき", () => {
-	test("差出人の候補は最新の入力で出し、登録と重なった候補の検索は取り消す", async ({ page }) => {
+	test("差出人の候補は最新の入力で出し、登録と重なった候補の検索の結果は出さない", async ({
+		page,
+	}) => {
 		const base = await createKouden(page, "遅延 確認");
-		await page.goto(`${base}/reception`);
+		await page.goto(`${base}/gifts/new`);
 		await registerKoden(page, "佐藤 一郎", 10000);
 		await registerKoden(page, "鈴木 花子", 5000);
 
@@ -139,16 +143,17 @@ test.describe("通信が遅いとき", () => {
 		await pending;
 		await page.getByLabel("金額").fill("1000");
 		await page.getByRole("button", { name: "登録する" }).click();
-		await expect(status).toContainText("受付番号 3、佐藤 一郎 様");
+		const created = page.locator("#created-gift");
+		await expect(created).toContainText("No.3、佐藤 一郎 様");
 		await page.waitForTimeout(2000);
 		await expect(candidates).toHaveCount(0);
-		await expect(status).toContainText("受付番号 3、佐藤 一郎 様");
+		await expect(created).toContainText("No.3、佐藤 一郎 様");
 	});
 });
 
 test("複数の行を編集中でも、エラーのフォーカスは保存した行の欄に移る", async ({ page }) => {
 	const base = await createKouden(page, "複数行 確認");
-	await page.goto(`${base}/reception`);
+	await page.goto(`${base}/gifts/new`);
 	await registerKoden(page, "山本 九郎", 3000);
 	await registerKoden(page, "中村 十郎", 3000);
 	await page.goto(`${base}/persons`);

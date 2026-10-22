@@ -6,6 +6,10 @@ import { EmptyState, Field, Input, Select, ui } from "@kouden/ui";
 import { yen } from "../format.ts";
 import { LiveRegion } from "./shell.tsx";
 
+/** 閲覧者・アーカイブ中は登録の画面を開けない */
+const canRegister = (kouden: KoudenContext) =>
+	can(kouden.memberRole, "ledger.write") && kouden.status === "active";
+
 /** いただきもの一覧（E4-6 の絞り込み・検索） */
 export const GiftsPage: FC<{
 	kouden: KoudenContext;
@@ -31,6 +35,11 @@ export const GiftsPage: FC<{
 				<p role="status" class={ui.notice}>
 					{notice}
 				</p>
+			)}
+			{canRegister(kouden) && (
+				<a href={`${base}/gifts/new`} class={`${ui.buttonPrimary} w-full sm:w-auto`}>
+					いただきものを登録する
+				</a>
 			)}
 			<form method="get" action={`${base}/gifts`} class={`${ui.cardTight} space-y-3`} role="search">
 				<div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -109,8 +118,6 @@ export const GiftResults: FC<{ kouden: KoudenContext; gifts: GiftView[]; filter:
 	if (filter.maxAmount !== undefined) query.set("max", String(filter.maxAmount));
 	const filtered = query.size > 0;
 	query.set("partial", "results");
-	// 閲覧者・アーカイブ中は受付を開けない
-	const canRegister = can(kouden.memberRole, "ledger.write") && kouden.status === "active";
 	const kodenTotal = gifts.reduce((sum, g) => sum + (g.kind === "koden" ? (g.amount ?? 0) : 0), 0);
 	return (
 		<LiveRegion
@@ -136,11 +143,11 @@ export const GiftResults: FC<{ kouden: KoudenContext; gifts: GiftView[]; filter:
 				) : (
 					<EmptyState
 						title="まだいただきものがありません"
-						description="受付で香典・供物・供花・弔電を登録すると、ここに並びます。"
+						description="香典・供物・供花・弔電を登録すると、ここに並びます。"
 					>
-						{canRegister && (
-							<a href={`${base}/reception`} class={ui.buttonPrimary}>
-								受付を始める
+						{canRegister(kouden) && (
+							<a href={`${base}/gifts/new`} class={ui.buttonPrimary}>
+								いただきものを登録する
 							</a>
 						)}
 					</EmptyState>

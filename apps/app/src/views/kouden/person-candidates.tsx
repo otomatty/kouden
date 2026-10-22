@@ -41,3 +41,7 @@ export const PersonCandidates: FC<{ persons: PersonView[]; selected?: string | u
 		</fieldset>
 	);
 };
+
+/** 候補の件数の読み上げ（候補は入力欄の外に出るため） */
+export const candidatesAnnouncement = (count: number) =>
+	count > 0 ? `同じ人の候補が ${count} 件あります。` : "";

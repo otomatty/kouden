@@ -10,6 +10,7 @@ import {
 	FREE_GIFT_LIMIT,
 	type ContributorAddInput,
 	type ContributorRef,
+	type GiftEntryInput,
 	type GiftFilter,
 	type GiftInput,
 	GIFT_KIND_VALUES,
@@ -17,7 +18,6 @@ import {
 	type LedgerSnapshot,
 	type PersonInput,
 	personLabel,
-	type ReceptionInput,
 	type RelationshipInput,
 	type ReturnInput,
 	type ReturnItemInput,
@@ -40,6 +40,7 @@ import {
 	type ChangeNotice,
 	type History,
 	type ContributorView,
+	type CreatedGift,
 	type GiftView,
 	type LedgerError,
 	type LedgerEvent,
@@ -48,7 +49,6 @@ import {
 	type Overview,
 	type PersonDetail,
 	type PersonView,
-	type ReceptionResult,
 	type ReturnConfirmEntry,
 	type ReturnDetail,
 	type ReturnItemView,
@@ -460,11 +460,8 @@ export class KoudenLedger extends DurableObject<Env> {
 
 	// ---- いただきもの -------------------------------------------------------
 
-	/** 受付での登録（E4-1, E4-2）。受付番号は行事ごとの連番で、同時に登録しても重複しない */
-	async createAtReception(
-		caller: Caller,
-		input: ReceptionInput,
-	): Promise<LedgerResult<ReceptionResult>> {
+	/** いただきものの登録（E4-1, E4-2）。受付番号は行事ごとの連番で、同時に登録しても重複しない */
+	async createGift(caller: Caller, input: GiftEntryInput): Promise<LedgerResult<CreatedGift>> {
 		return this.mutate(caller, "ledger.write", (now) => {
 			const event = this.first<{ id: string; name: string; next_receipt_no: number }>(
 				"SELECT id, name, next_receipt_no FROM events WHERE id = ? AND deleted_at IS NULL",

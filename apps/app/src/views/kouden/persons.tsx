@@ -125,7 +125,7 @@ export const PersonsTable: FC<{
 			) : (
 				<EmptyState
 					title="まだ差出人がいません"
-					description="受付やいただきものの画面で登録すると、差出人もここに並びます。"
+					description="いただきものを登録すると、差出人もここに並びます。"
 				/>
 			)
 		) : (

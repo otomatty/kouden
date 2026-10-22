@@ -5,13 +5,13 @@ import {
 	contributorShareSchema,
 	eventSchema,
 	type FieldErrors,
+	giftEntrySchema,
 	giftSchema,
 	giftPhotoKey,
 	koudenSchema,
 	parseGiftFilter,
 	personLabel,
 	personSchema,
-	receptionSchema,
 	relationshipSchema,
 	toFieldErrors,
 	versionSchema,
@@ -32,8 +32,13 @@ import { requireUser } from "../middleware/session.ts";
 import type { AppEnv } from "../types.ts";
 import type { FormValues } from "@kouden/ui";
 import { GiftEditPage, giftFormValues } from "../views/kouden/gift-edit.tsx";
+import {
+	type CreatedGiftNotice,
+	GiftNewPage,
+	type GiftNewProps,
+} from "../views/kouden/gift-new.tsx";
 import { GiftResults, GiftsPage } from "../views/kouden/gifts.tsx";
-import { PersonCandidates } from "../views/kouden/person-candidates.tsx";
+import { candidatesAnnouncement, PersonCandidates } from "../views/kouden/person-candidates.tsx";
 import {
 	PersonEditRow,
 	PersonPage,
@@ -43,14 +48,6 @@ import {
 	PersonsTable,
 	personFormValues,
 } from "../views/kouden/persons.tsx";
-import {
-	candidatesAnnouncement,
-	type ReceptionDone,
-	ReceptionPage,
-	ReceptionPanel,
-	type ReceptionProps,
-	receptionAnnouncement,
-} from "../views/kouden/reception.tsx";
 import { SrStatus } from "../views/kouden/shell.tsx";
 import { EventsSection, RelationshipsSection, SettingsPage } from "../views/kouden/settings.tsx";
 import { KoudenTopPage } from "../views/kouden/top.tsx";
@@ -126,7 +123,7 @@ k.get("/", async (c) => {
 	);
 });
 
-// ---- 受付 ---------------------------------------------------------------------
+// ---- いただきものの登録 -------------------------------------------------------
 
 /**
  * 入力エラーで再表示するときの差出人の候補。選んでいた候補は、氏名欄が空でも必ず残す
@@ -147,38 +144,46 @@ async function candidatesForRetry(c: Ctx, values: FormValues): Promise<PersonVie
 	return list;
 }
 
-async function receptionProps(
+/** 登録画面を描画する。行事は指定がなければ先頭のものを選んでおく */
+async function renderGiftNew(
 	c: Ctx,
-	requestedEventId: string | undefined,
-	rest: Omit<ReceptionProps, "kouden" | "events" | "relationships" | "eventId">,
-): Promise<ReceptionProps | null> {
+	rest: Omit<GiftNewProps, "kouden" | "events" | "relationships">,
+	status: 200 | 422 = 200,
+) {
 	const caller = c.get("caller");
 	const [events, relationships] = await Promise.all([
 		ledger(c).listEvents(caller),
 		ledger(c).listRelationships(caller),
 	]);
-	if (!events.ok || !relationships.ok) return null;
-	const event = events.value.find((e) => e.id === requestedEventId) ?? events.value[0];
-	if (!event) return null;
-	return {
-		kouden: c.get("kouden"),
-		events: events.value,
-		relationships: relationships.value,
-		eventId: event.id,
-		...rest,
-	};
+	if (!events.ok) return commonFailure(c, events.error);
+	if (!relationships.ok) return commonFailure(c, relationships.error);
+	const event = events.value.find((e) => e.id === rest.values.eventId) ?? events.value[0];
+	if (!event) return errorResponse(c, 404);
+	return koudenPage(
+		c,
+		"いただきものの登録",
+		"gifts",
+		<GiftNewPage
+			kouden={c.get("kouden")}
+			events={events.value}
+			relationships={relationships.value}
+			{...rest}
+			values={{ ...rest.values, eventId: event.id }}
+		/>,
+		{ status },
+	);
 }
 
-k.get("/reception", async (c) => {
+k.get("/gifts/new", async (c) => {
 	const caller = c.get("caller");
 	if (!can(caller.role, "ledger.write")) return errorResponse(c, 403);
-	let done: ReceptionDone | undefined;
-	const doneId = c.req.query("done");
-	if (doneId) {
-		const gift = await ledger(c).getGift(caller, doneId);
+	let created: CreatedGiftNotice | undefined;
+	const createdId = c.req.query("created");
+	if (createdId) {
+		const gift = await ledger(c).getGift(caller, createdId);
 		if (gift.ok) {
 			const primary = gift.value.contributors[0];
-			done = {
+			created = {
 				giftId: gift.value.id,
 				receiptNo: gift.value.receiptNo,
 				eventName: gift.value.eventName,
@@ -188,74 +193,49 @@ k.get("/reception", async (c) => {
 			};
 		}
 	}
-	const props = await receptionProps(c, c.req.query("event"), { values: { kind: "koden" }, done });
-	if (!props) return errorResponse(c, 404);
-	return koudenPage(c, "受付", "reception", <ReceptionPage {...props} />);
+	return renderGiftNew(c, { values: { kind: "koden", eventId: c.req.query("event") }, created });
 });
 
-k.post("/reception", async (c) => {
+k.post("/gifts", async (c) => {
 	const caller = c.get("caller");
+	if (!can(caller.role, "ledger.write")) return errorResponse(c, 403);
 	const values = await formValues(c);
-	const render = async (
-		rest: Omit<ReceptionProps, "kouden" | "events" | "relationships" | "eventId">,
-		status: 200 | 422,
-	) => {
-		const props = await receptionProps(c, values.eventId, rest);
-		if (!props) return errorResponse(c, 404);
-		return isHtmx(c)
-			? c.html(
-					<>
-						<ReceptionPanel {...props} />
-						{rest.done && <SrStatus oob>{receptionAnnouncement(rest.done)}</SrStatus>}
-					</>,
-					status,
-				)
-			: koudenPage(c, "受付", "reception", <ReceptionPage {...props} />, { status });
-	};
-	const candidatesFor = () => candidatesForRetry(c, values);
-
-	const parsed = receptionSchema.safeParse(values);
+	const parsed = giftEntrySchema.safeParse(values);
 	if (!parsed.success) {
-		return render(
-			{ values, errors: toFieldErrors(parsed.error), candidates: await candidatesFor() },
+		return renderGiftNew(
+			c,
+			{
+				values,
+				errors: toFieldErrors(parsed.error),
+				candidates: await candidatesForRetry(c, values),
+			},
 			422,
 		);
 	}
-	const result = await ledger(c).createAtReception(caller, parsed.data);
+	const result = await ledger(c).createGift(caller, parsed.data);
 	if (!result.ok) {
 		const { error } = result;
 		if (error.code === "limit_reached") {
-			return render({ values, message: limitMessage(c, error.limit) }, 422);
+			return renderGiftNew(c, { values, message: limitMessage(c, error.limit) }, 422);
 		}
 		if (error.code === "invalid") {
-			return render(
-				{ values, errors: { [error.field]: error.message }, candidates: await candidatesFor() },
+			return renderGiftNew(
+				c,
+				{
+					values,
+					errors: { [error.field]: error.message },
+					candidates: await candidatesForRetry(c, values),
+				},
 				422,
 			);
 		}
 		return commonFailure(c, error);
 	}
-
+	// 続けて入力できるよう、同じ行事を選んだ登録画面に戻す
 	const created = result.value;
-	if (!isHtmx(c)) {
-		return c.redirect(
-			`${basePath(c)}/reception?event=${created.eventId}&done=${created.giftId}`,
-			303,
-		);
-	}
-	return render(
-		{
-			values: { kind: "koden" },
-			done: {
-				giftId: created.giftId,
-				receiptNo: created.receiptNo,
-				eventName: created.eventName,
-				personLabel: created.personLabel,
-				kind: parsed.data.gift.kind,
-				amount: parsed.data.gift.amount ?? null,
-			},
-		},
-		200,
+	return c.redirect(
+		`${basePath(c)}/gifts/new?event=${created.eventId}&created=${created.giftId}`,
+		303,
 	);
 });
 

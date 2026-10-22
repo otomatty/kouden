@@ -1,7 +1,7 @@
 // 全画面共通の小さな補助（CSP のため外部ファイルにする）
 (() => {
 	// htmx でフォームを送信するときは、その中の入力欄が出している要求（差出人の候補の検索）を取り消し、
-	// 送信中は新しく出さない。受付で登録した後の入力欄に、登録前の入力で求めた候補が出ないようにする
+	// 送信中は新しく出さない。送信の結果で差し替えた入力欄に、送信前の入力で求めた候補が出ないようにする
 	document.addEventListener("htmx:beforeRequest", (e) => {
 		const elt = e.detail.elt;
 		if (elt instanceof HTMLFormElement) {

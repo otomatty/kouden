@@ -2,12 +2,12 @@ import { ATTENDANCES, type FieldErrors, GIFT_KINDS, type GiftKind } from "@koude
 import type { Child, FC } from "hono/jsx";
 import type { KoudenContext } from "../../kouden/store.ts";
 import type { LedgerEvent, LedgerRelationship, PersonView } from "../../ledger/types.ts";
-import { Field, FormAlert, type FormValues, Hidden, Input, Select, Textarea, ui } from "@kouden/ui";
+import { Field, FormAlert, type FormValues, Input, Select, Textarea, ui } from "@kouden/ui";
 import { yen } from "../format.ts";
 import { PersonCandidates } from "./person-candidates.tsx";
 
-/** 登録直後に大きく表示する内容（E4-1） */
-export interface ReceptionDone {
+/** 直前に登録したもの。続けて入力できるよう同じ画面に戻り、上に知らせる */
+export interface CreatedGiftNotice {
 	giftId: string;
 	receiptNo: number | null;
 	eventName: string;
@@ -16,63 +16,46 @@ export interface ReceptionDone {
 	amount: number | null;
 }
 
-export interface ReceptionProps {
+export interface GiftNewProps {
 	kouden: KoudenContext;
 	events: LedgerEvent[];
 	relationships: LedgerRelationship[];
-	eventId: string;
+	/** eventId を含む。行事は直前の登録と同じものを選んでおく */
 	values: FormValues;
 	errors?: FieldErrors;
 	/** 項目に属さないメッセージ（上限に達した、など） */
 	message?: Child;
-	done?: ReceptionDone | undefined;
+	created?: CreatedGiftNotice | undefined;
 	candidates?: PersonView[];
 }
 
-/** 受付画面（スマホ向け）。行事の切り替え・登録結果・入力欄 */
-export const ReceptionPage: FC<ReceptionProps> = (props) => {
-	const base = `/k/${props.kouden.id}`;
-	return (
-		<div class="mx-auto max-w-xl space-y-4">
-			<nav aria-label="行事" class="flex flex-wrap gap-2">
-				{props.events.map((e) => (
-					<a
-						href={`${base}/reception?event=${e.id}`}
-						aria-current={e.id === props.eventId ? "page" : undefined}
-						class={`rounded-full border px-4 py-1.5 text-sm ${
-							e.id === props.eventId
-								? "border-accent bg-accent text-surface"
-								: "border-line bg-surface text-ink hover:bg-paper"
-						}`}
-					>
-						{e.name}
-					</a>
-				))}
-			</nav>
-			<ReceptionPanel {...props} />
-		</div>
-	);
-};
+export const createdGiftMessage = (created: CreatedGiftNotice) =>
+	`登録しました。${created.eventName}${
+		created.receiptNo !== null ? ` No.${created.receiptNo}` : ""
+	}、${created.personLabel} 様、${GIFT_KINDS[created.kind]}${
+		created.amount !== null ? ` ${yen(created.amount)}` : ""
+	}。`;
 
-/** 登録したことの読み上げ（htmx の応答で SrStatus に入れる） */
-export const receptionAnnouncement = (done: ReceptionDone) =>
-	`登録しました。${done.eventName} の受付番号 ${done.receiptNo ?? "なし"}、${done.personLabel} 様、${
-		GIFT_KINDS[done.kind]
-	}${done.amount !== null ? ` ${yen(done.amount)}` : ""}。`;
+const CREATED_NOTICE_ID = "created-gift";
 
-/** 差出人の候補の件数の読み上げ（候補は入力欄の外に出るため） */
-export const candidatesAnnouncement = (count: number) =>
-	count > 0 ? `同じ人の候補が ${count} 件あります。` : "";
+/** 差出人の候補を、入力に合わせて取り直す（E5-1）。候補の要求は新しい入力で置き換える */
+const candidatesTrigger = (base: string) => ({
+	"hx-get": `${base}/persons/candidates`,
+	"hx-trigger": "input changed delay:300ms",
+	"hx-target": "#candidates",
+	"hx-swap": "innerHTML",
+	"hx-sync": "this:replace",
+});
 
-/** htmx で丸ごと差し替える部分（登録結果 + 次の入力欄） */
-export const ReceptionPanel: FC<ReceptionProps> = ({
+/** いただきものの登録（E4-1, E4-3）。差出人といただきものを一度に入力する */
+export const GiftNewPage: FC<GiftNewProps> = ({
 	kouden,
+	events,
 	relationships,
-	eventId,
 	values,
 	errors = {},
 	message,
-	done,
+	created,
 	candidates = [],
 }) => {
 	const base = `/k/${kouden.id}`;
@@ -90,37 +73,34 @@ export const ReceptionPanel: FC<ReceptionProps> = ({
 	];
 	const openDetails = detailKeys.some((k) => errors[k] || values[k]);
 	return (
-		<div id="reception-panel" class="space-y-4">
-			{/* 読み上げは画面の上の SrStatus が行う（receptionAnnouncement） */}
-			{done && (
-				<div class={`${ui.cardEmphasis} text-center shadow-sm`}>
-					<p class="text-sm text-muted">{done.eventName} の受付番号</p>
-					<p class="text-7xl leading-tight font-bold tabular-nums text-accent">
-						{done.receiptNo ?? "—"}
-					</p>
-					<p class="mt-1 text-lg font-medium">{done.personLabel} 様</p>
-					<p class="text-sm text-muted">
-						{GIFT_KINDS[done.kind]} {done.amount !== null && yen(done.amount)}
-					</p>
-					<p class="mt-2 text-sm">
-						<a href={`${base}/gifts/${done.giftId}`} class={ui.link}>
-							内容を訂正する
-						</a>
-					</p>
-				</div>
+		<div class="mx-auto max-w-xl space-y-4">
+			<div class="flex flex-wrap items-baseline justify-between gap-2">
+				<h2 class={ui.h2}>いただきものの登録</h2>
+				<a href={`${base}/gifts`} class={`${ui.link} text-sm`}>
+					一覧に戻る
+				</a>
+			</div>
+
+			{created && (
+				<p id={CREATED_NOTICE_ID} role="status" class={ui.notice}>
+					{createdGiftMessage(created)}{" "}
+					<a href={`${base}/gifts/${created.giftId}`} class={ui.link}>
+						内容を見る・訂正する
+					</a>
+				</p>
 			)}
 
-			<form
-				method="post"
-				action={`${base}/reception`}
-				hx-post={`${base}/reception`}
-				hx-target="#reception-panel"
-				hx-swap="outerHTML"
-				class={`${ui.cardTight} space-y-4`}
-				novalidate
-			>
-				<Hidden name="eventId" value={eventId} />
+			<form method="post" action={`${base}/gifts`} class={`${ui.cardTight} space-y-4`} novalidate>
 				<FormAlert errors={errors} message={message} />
+
+				<Field label="行事" name="eventId" error={errors.eventId}>
+					<Select
+						name="eventId"
+						values={values}
+						errors={errors}
+						options={events.map((e) => ({ value: e.id, label: e.name }))}
+					/>
+				</Field>
 
 				<fieldset class="space-y-2">
 					<legend class={ui.label}>種別</legend>
@@ -155,12 +135,9 @@ export const ReceptionPanel: FC<ReceptionProps> = ({
 						autofocus
 						class="text-lg"
 						extra={{
-							"hx-get": `${base}/persons/candidates`,
-							"hx-trigger": "input changed delay:300ms",
-							"hx-target": "#candidates",
-							"hx-swap": "innerHTML",
-							// 候補の要求は新しい入力で置き換える。登録の送信と重なった候補の要求は app.js が取り消す
-							"hx-sync": "this:replace",
+							...candidatesTrigger(base),
+							// 続けて入力するとき、氏名の欄に戻ったところで直前の登録結果を読み上げる
+							...(created && !errors.name ? { "aria-describedby": CREATED_NOTICE_ID } : {}),
 						}}
 					/>
 				</Field>
@@ -207,13 +184,7 @@ export const ReceptionPanel: FC<ReceptionProps> = ({
 							name="organization"
 							values={values}
 							errors={errors}
-							extra={{
-								"hx-get": `${base}/persons/candidates`,
-								"hx-trigger": "input changed delay:300ms",
-								"hx-target": "#candidates",
-								"hx-swap": "innerHTML",
-								"hx-sync": "this:replace",
-							}}
+							extra={candidatesTrigger(base)}
 						/>
 					</Field>
 				</div>
@@ -268,7 +239,7 @@ export const ReceptionPanel: FC<ReceptionProps> = ({
 					</p>
 				</details>
 
-				<button type="submit" class={`${ui.buttonPrimary} w-full text-lg`} data-requires-online>
+				<button type="submit" class={`${ui.buttonPrimary} w-full`} data-requires-online>
 					登録する
 				</button>
 			</form>
