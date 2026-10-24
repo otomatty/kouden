@@ -12,7 +12,9 @@ import { parseArgs } from "node:util";
 import { buildPostalShards } from "@kouden/domain";
 import { unzipSync } from "fflate";
 
-const SOURCE_URL = "https://www.post.japanpost.jp/zipcode/dl/utf/zip/utf_ken_all.zip";
+// 2026-05 に配布先が移った。旧 /zipcode/dl/utf/zip/ は転送されず 404 になる
+const SOURCE_URL =
+	"https://www.post.japanpost.jp/service/search/zipcode/download/utf/zip/utf_ken_all.zip";
 
 const { values } = parseArgs({
 	options: {
